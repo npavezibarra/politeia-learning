@@ -48,6 +48,7 @@ class PCG_CPT {
             'public'             => true,
             'show_in_rest'       => true,
             'show_in_menu'       => false,
+            'show_in_admin_bar'  => true,
             'supports'           => [ 'title', 'editor', 'thumbnail' ],
             'has_archive'        => false,
             'rewrite'            => [ 'slug' => 'programa-filosofico' ],
