@@ -1,67 +1,71 @@
 <?php
 /**
  * Plugin Name: Politeia Course Group
- * Description: Crea el nivel superior de “Programas Filosóficos” que agrupa grupos de cursos LearnDash.
+ * Description: Custom functionalities for Politeia website related to courses, grouping, selling, and creating courses.
  * Author: Nico / Politeia
- * Version: 1.0.0
+ * Version: 1.1.0
  * Text Domain: politeia-course-group
  * Codex Enabled: true
- * Codex Enabled: true
- * Codex Enabled: true
  */
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+if (!defined('ABSPATH'))
+    exit;
 
-define( 'PCG_PATH', plugin_dir_path( __FILE__ ) );
-define( 'PCG_URL', plugin_dir_url( __FILE__ ) );
+// Core Constants
+define('PCG_PATH', plugin_dir_path(__FILE__));
+define('PCG_URL', plugin_dir_url(__FILE__));
 
 /**
- * Autoload classes
+ * Load Global Dependencies
  */
-spl_autoload_register( function ( $class ) {
-    if ( strpos( $class, 'PCG_' ) === 0 ) {
-        $file = PCG_PATH . 'includes/class-' . strtolower( str_replace( '_', '-', $class ) ) . '.php';
-        if ( file_exists( $file ) ) require_once $file;
-    }
-});
+// Composer Autoloader
+if (file_exists(PCG_PATH . 'vendor/autoload.php')) {
+    require_once PCG_PATH . 'vendor/autoload.php';
+}
+
+// Codex Init
+if (file_exists(PCG_PATH . 'codex/init.php')) {
+    require_once PCG_PATH . 'codex/init.php';
+}
 
 /**
- * Initialize
+ * Module Loader Class
+ * Manages the different standalone modules of the plugin.
  */
-add_action( 'plugins_loaded', function() {
-    // Register CPT
-    new PCG_CPT();
+class PCG_Module_Loader
+{
+    /**
+     * List of available modules and their status.
+     * In the future, this could be managed via an admin UI or settings.
+     */
+    private static $modules = [
+        'course-programs' => true,
+        'course-integration' => true,
+    ];
 
-    // Register ACF fields (if ACF active)
-    if ( class_exists('ACF') ) {
-        new PCG_ACF();
+    /**
+     * Initialize active modules.
+     */
+    public static function init()
+    {
+        foreach (self::$modules as $module_slug => $enabled) {
+            if ($enabled) {
+                $init_file = PCG_PATH . 'modules/' . $module_slug . '/init.php';
+                if (file_exists($init_file)) {
+                    require_once $init_file;
+                }
+            }
+        }
     }
 
-    // Relations and templates
-    new PCG_Relations();
-    new PCG_Templates();
-
-    // REST endpoints
-    new PCG_REST();
-
-    // Metaboxes
-    new PCG_Metaboxes();
-
-});
-
-add_action( 'plugins_loaded', function() {
-    require_once plugin_dir_path(__FILE__) . 'includes/class-pcg-admin.php';
-    if ( class_exists( 'PCG_Admin_Menu' ) ) {
-        new PCG_Admin_Menu();
+    /**
+     * Check if a module is enabled.
+     */
+    public static function is_module_enabled($module_slug)
+    {
+        return isset(self::$modules[$module_slug]) && self::$modules[$module_slug];
     }
-});
+}
 
-/**
- * Enqueue assets
- */
-add_action( 'wp_enqueue_scripts', function() {
-    wp_enqueue_style( 'pcg-style', PCG_URL . 'assets/css/pcg-style.css', [], '1.0' );
-    wp_enqueue_script( 'pcg-script', PCG_URL . 'assets/js/pcg-script.js', ['jquery'], '1.0', true );
-});
-require_once __DIR__ . '/vendor/autoload.php';
-require_once __DIR__ . '/codex/init.php';
+// Start the modules
+PCG_Module_Loader::init();
