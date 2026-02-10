@@ -66,7 +66,7 @@ class PCG_Core_Admin
                 'name' => 'LearnDash LMS',
                 'url' => 'https://www.learndash.com/',
             ],
-            'learndash-woocommerce/learndash-woocommerce.php' => [
+            'learndash-woocommerce/learndash_woocommerce.php' => [
                 'name' => 'LearnDash WooCommerce Integration',
                 'url' => 'https://www.learndash.com/support/docs/add-ons/woocommerce/',
             ],
