@@ -42,6 +42,7 @@ class PCG_Module_Loader
         'core' => true,
         'course-programs' => true,
         'course-integration' => true,
+        'course-creator' => true,
     ];
 
     /**
