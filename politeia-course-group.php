@@ -39,6 +39,7 @@ class PCG_Module_Loader
      * In the future, this could be managed via an admin UI or settings.
      */
     private static $modules = [
+        'core' => true,
         'course-programs' => true,
         'course-integration' => true,
     ];
