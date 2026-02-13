@@ -24,12 +24,12 @@ class PCG_CC_Creator_Dashboard
     }
 
     /**
-     * Add custom rewrite rules for /{user}-dashboard
+     * Add custom rewrite rules for /members/{user}/central
      */
     public function add_rewrite_rules()
     {
         add_rewrite_rule(
-            '([^/]+)-dashboard/?$',
+            'members/([^/]+)/central/?$',
             'index.php?' . self::REWRITE_TAG . '=$matches[1]',
             'top'
         );
@@ -86,8 +86,22 @@ class PCG_CC_Creator_Dashboard
     public function enqueue_assets()
     {
         if (get_query_var(self::REWRITE_TAG)) {
+            wp_enqueue_media();
             wp_enqueue_style('pcg-creator-css', PCG_CC_URL . 'assets/css/creator-dashboard.css', [], '1.0.0');
-            wp_enqueue_script('pcg-creator-js', PCG_CC_URL . 'assets/js/creator-dashboard.js', ['jquery'], '1.0.0', true);
+
+            // Inject Custom Styles from Admin Options
+            $creator_max_width = get_option('pcg_creator_max_width', '1400px');
+            $container_max_width = get_option('pcg_container_max_width', '1200px');
+
+            $custom_css = "
+                .pcg-creator-container { max-width: {$creator_max_width} !important; }
+                .container { max-width: {$container_max_width} !important; }
+                .pcg-creator-dashboard-wrapper { padding: 0px !important; }
+                div#content { padding-left: 0px !important; padding-right: 0px !important; }
+            ";
+            wp_add_inline_style('pcg-creator-css', $custom_css);
+
+            wp_enqueue_script('pcg-creator-js', PCG_CC_URL . 'assets/js/creator-dashboard.js', ['jquery', 'jquery-ui-sortable'], '1.0.0', true);
 
             wp_localize_script('pcg-creator-js', 'pcgCreatorData', [
                 'ajaxUrl' => admin_url('admin-ajax.php'),

@@ -29,4 +29,7 @@ add_action('plugins_loaded', function () {
     if (class_exists('PCG_CC_Creator_Dashboard')) {
         new PCG_CC_Creator_Dashboard();
     }
+    if (class_exists('PCG_CC_Course_Save_Handler')) {
+        new PCG_CC_Course_Save_Handler();
+    }
 }, 20);

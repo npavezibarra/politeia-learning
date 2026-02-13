@@ -29,6 +29,15 @@ class PCG_Core_Admin
             'dashicons-welcome-learn-more',
             30
         );
+
+        add_submenu_page(
+            'politeia-learning',
+            __('Style Options', 'politeia-course-group'),
+            __('Style Options', 'politeia-course-group'),
+            'manage_options',
+            'pcg-style-options',
+            [$this, 'render_style_options']
+        );
     }
 
     /**
@@ -36,7 +45,7 @@ class PCG_Core_Admin
      */
     public function enqueue_assets($hook)
     {
-        if ('toplevel_page_politeia-learning' !== $hook) {
+        if ('toplevel_page_politeia-learning' !== $hook && 'politeia-learning_page_pcg-style-options' !== $hook) {
             return;
         }
 
@@ -50,6 +59,27 @@ class PCG_Core_Admin
     {
         $plugins_status = $this->check_plugins_status();
         include PCG_CORE_PATH . 'templates/dashboard.php';
+    }
+
+    /**
+     * Render the Style Options page.
+     */
+    public function render_style_options()
+    {
+        if (isset($_POST['pcg_style_options_submitted']) && check_admin_referer('pcg_save_style_options')) {
+            $creator_max_width = sanitize_text_field($_POST['pcg_creator_max_width'] ?? '1400px');
+            $container_max_width = sanitize_text_field($_POST['pcg_container_max_width'] ?? '1200px');
+
+            update_option('pcg_creator_max_width', $creator_max_width);
+            update_option('pcg_container_max_width', $container_max_width);
+
+            echo '<div class="updated"><p>' . __('Settings saved.', 'politeia-course-group') . '</p></div>';
+        }
+
+        $creator_max_width = get_option('pcg_creator_max_width', '1400px');
+        $container_max_width = get_option('pcg_container_max_width', '1200px');
+
+        include PCG_CORE_PATH . 'templates/style-options.php';
     }
 
     /**

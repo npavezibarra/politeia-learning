@@ -22,7 +22,7 @@ get_header();
 <div class="pcg-creator-dashboard-wrapper">
     <div class="pcg-creator-container">
 
-        <aside class="pcg-creator-sidebar">
+        <aside id="pcg-creator-sidebar" class="pcg-creator-sidebar">
             <div class="pcg-user-info">
                 <?php echo get_avatar($user->ID, 64); ?>
                 <h2>
@@ -38,55 +38,32 @@ get_header();
                     <li class="<?php echo $current_section === 'create-course' ? 'active' : ''; ?>">
                         <a href="?section=create-course">
                             <span class="dashicons dashicons-plus-alt"></span>
-                            <?php _e('Crear Curso', 'politeia-course-group'); ?>
+                            <?php _e('MIS CURSOS', 'politeia-course-group'); ?>
                         </a>
                     </li>
                     <li class="<?php echo $current_section === 'create-group' ? 'active' : ''; ?>">
                         <a href="?section=create-group">
                             <span class="dashicons dashicons-category"></span>
-                            <?php _e('Crear Grupo de Cursos', 'politeia-course-group'); ?>
+                            <?php _e('PROGRAMAS', 'politeia-course-group'); ?>
                         </a>
                     </li>
                     <li class="<?php echo $current_section === 'sales' ? 'active' : ''; ?>">
                         <a href="?section=sales">
                             <span class="dashicons dashicons-chart-area"></span>
-                            <?php _e('Sales Dashboard', 'politeia-course-group'); ?>
+                            <?php _e('VENTAS', 'politeia-course-group'); ?>
                         </a>
                     </li>
                     <li class="<?php echo $current_section === 'stats' ? 'active' : ''; ?>">
                         <a href="?section=stats">
                             <span class="dashicons dashicons-groups"></span>
-                            <?php _e('Student Stats', 'politeia-course-group'); ?>
+                            <?php _e('ESTUDIANTES', 'politeia-course-group'); ?>
                         </a>
                     </li>
                 </ul>
             </nav>
         </aside>
 
-        <main class="pcg-creator-content">
-            <header class="pcg-content-header">
-                <h1>
-                    <?php
-                    switch ($current_section) {
-                        case 'create-course':
-                            echo __('Nuevo Curso LearnDash', 'politeia-course-group');
-                            break;
-                        case 'create-group':
-                            echo __('Nuevo Programa de Cursos', 'politeia-course-group');
-                            break;
-                        case 'sales':
-                            echo __('Resumen de Ventas', 'politeia-course-group');
-                            break;
-                        case 'stats':
-                            echo __('Estadísticas de Estudiantes', 'politeia-course-group');
-                            break;
-                        default:
-                            echo __('Dashboard', 'politeia-course-group');
-                            break;
-                    }
-                    ?>
-                </h1>
-            </header>
+        <main id="pcg-creator-content" class="pcg-creator-content">
 
             <div class="pcg-section-container">
                 <?php

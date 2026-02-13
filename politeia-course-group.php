@@ -43,6 +43,7 @@ class PCG_Module_Loader
         'course-programs' => true,
         'course-integration' => true,
         'course-creator' => true,
+        'quiz-creator' => true,
     ];
 
     /**
