@@ -310,6 +310,10 @@
     function clearForm() { $('#pqc-quiz-form')[0].reset(); clearFileSelection(); }
 
     function showSuccess(data) {
+        // Hide the form and the header/progress bar to focus on the result
+        $('.pqc-quiz-form').hide();
+        $('.pqc-header').hide();
+
         const $result = $('.pqc-result');
         const currentUrl = window.location.href.split('?')[0];
         const editUrl = currentUrl + '?edit_quiz=' + data.quiz_id;
