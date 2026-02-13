@@ -139,51 +139,40 @@ class PQC_Ajax_Handler
             ]);
         }
 
-        // Check if file was uploaded
-        if (empty($_FILES['quiz_file'])) {
+        // Check if file OR text was provided
+        $file = !empty($_FILES['quiz_file']) ? $_FILES['quiz_file'] : null;
+        $json_text = isset($_POST['quiz_json_text']) ? stripslashes($_POST['quiz_json_text']) : '';
+
+        if (!$file && empty($json_text)) {
             wp_send_json_error([
-                'message' => __('No file uploaded.', 'politeia-quiz-creator')
+                'message' => __('No questions data provided (file or text).', 'politeia-quiz-creator')
             ]);
         }
 
-        $file = $_FILES['quiz_file'];
+        $parsed_questions = [];
 
-        // Check for upload errors
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            wp_send_json_error([
-                'message' => __('File upload error.', 'politeia-quiz-creator')
-            ]);
+        if ($file) {
+            // Check for upload errors
+            if ($file['error'] !== UPLOAD_ERR_OK) {
+                wp_send_json_error(['message' => __('File upload error.', 'politeia-quiz-creator')]);
+            }
+
+            $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $parsed_questions = PQC_File_Parser::parse_file($file['tmp_name'], $file_ext);
+        } else {
+            // Parse from raw JSON text
+            $parsed_questions = json_decode($json_text, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                wp_send_json_error(['message' => __('Invalid JSON format in pasted text.', 'politeia-quiz-creator')]);
+            }
         }
-
-        // Get file extension
-        $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        $allowed_extensions = ['json', 'csv', 'xml', 'txt'];
-
-        if (!in_array($file_ext, $allowed_extensions)) {
-            wp_send_json_error([
-                'message' => __('Invalid file type. Allowed: JSON, CSV, XML, TXT', 'politeia-quiz-creator')
-            ]);
-        }
-
-        // Parse the file (questions only)
-        $log_file = WP_CONTENT_DIR . '/pqc-debug.log';
-        file_put_contents($log_file, date('Y-m-d H:i:s') . " - Starting file parse\n", FILE_APPEND);
-
-        error_log('PQC: Starting file parse - ' . $file['name']);
-        $parsed_questions = PQC_File_Parser::parse_file($file['tmp_name'], $file_ext);
 
         if (is_wp_error($parsed_questions)) {
-            file_put_contents($log_file, date('Y-m-d H:i:s') . " - Parse error: " . $parsed_questions->get_error_message() . "\n", FILE_APPEND);
-            error_log('PQC: File parse error - ' . $parsed_questions->get_error_message());
             wp_send_json_error([
                 'message' => $parsed_questions->get_error_message(),
                 'code' => $parsed_questions->get_error_code()
             ]);
         }
-
-        $question_count = count($parsed_questions);
-        file_put_contents($log_file, date('Y-m-d H:i:s') . " - Parsed {$question_count} questions\n", FILE_APPEND);
-        error_log('PQC: Parsed ' . $question_count . ' questions');
 
         // Merge settings from form with questions from file
         $quiz_data = [

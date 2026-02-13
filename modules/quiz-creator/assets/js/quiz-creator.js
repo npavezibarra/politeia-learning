@@ -1,14 +1,16 @@
 /**
  * Politeia Quiz Creator - JavaScript
- * Compact unified form with inline prompt copy and Slide Editor
+ * Compact unified form with Wizard navigation and Slide Editor
  */
 
 (function ($) {
     'use strict';
 
     let selectedFile = null;
+    let selectedText = null;
 
     $(document).ready(function () {
+        initWizardNavigation();
         initUploadArea();
         initFileInput();
         initFormSubmit();
@@ -22,6 +24,42 @@
     });
 
     /**
+     * Wizard Navigation logic
+     */
+    function initWizardNavigation() {
+        // NEXT button
+        $(document).on('click', '.pqc-wizard-next', function () {
+            const nextSlide = $(this).data('next');
+            const currentSlide = nextSlide - 1;
+
+            // Simple validation before going to next slide
+            if (currentSlide === 1) {
+                const title = $('#pqc-quiz-title').val().trim();
+                const num = $('#pqc-num-questions').val();
+                if (!title) { alert('Please enter a Quiz Title.'); return; }
+                if (!num || num < 1) { alert('Please enter number of questions.'); return; }
+            }
+
+            goToSlide(nextSlide);
+        });
+
+        // PREV button
+        $(document).on('click', '.pqc-wizard-prev', function () {
+            const prevSlide = $(this).data('prev');
+            goToSlide(prevSlide);
+        });
+
+        function goToSlide(slideNum) {
+            $('.pqc-wizard-slide').removeClass('active');
+            $(`.pqc-wizard-slide[data-slide="${slideNum}"]`).addClass('active');
+
+            // Update Progress dots
+            $('.pqc-progress-step').removeClass('active');
+            $(`.pqc-progress-step[data-step="${slideNum}"]`).addClass('active');
+        }
+    }
+
+    /**
      * Initialize Quiz Editor (Slider + Inline Editing)
      */
     function initQuizEditor() {
@@ -33,13 +71,10 @@
         function updateSlider() {
             const offset = -(currentSlide * 100);
             $viewport.css('transform', `translateX(${offset}%)`);
-
-            // Sync all arrows state in all slides (optional, but good for consistency)
             $('.pqc-prev-slide').prop('disabled', currentSlide === 0);
             $('.pqc-next-slide').prop('disabled', currentSlide === totalSlides - 1);
         }
 
-        // Handle navigation clicks from any slide
         $(document).on('click', '.pqc-next-slide', function () {
             if (currentSlide < totalSlides - 1) {
                 currentSlide++;
@@ -70,9 +105,6 @@
         });
     }
 
-    /**
-     * Save Quiz Changes via AJAX
-     */
     function saveQuizChanges() {
         const $allButtons = $('.pqc-save-quiz-btn');
         const $msg = $('#pqc-edit-msg');
@@ -106,7 +138,6 @@
             quizData.questions.push(question);
         });
 
-        // Loading state for all save buttons
         $allButtons.prop('disabled', true).addClass('loading').find('span').text('Saving...');
         $msg.hide();
 
@@ -136,34 +167,27 @@
     }
 
     function initFormValidation() {
-        $('#pqc-quiz-title, #pqc-file-input').on('change keyup', function () {
+        $('#pqc-quiz-title, #pqc-json-paste').on('change keyup', function () {
             const hasTitle = $('#pqc-quiz-title').val().trim().length > 0;
-            const hasFile = selectedFile !== null;
-            $('.pqc-submit-btn').prop('disabled', !(hasTitle && hasFile));
+            const hasInput = selectedFile !== null || $('#pqc-json-paste').val().trim().length > 0;
+            $('.pqc-submit-btn').prop('disabled', !(hasTitle && hasInput));
         });
     }
 
     function initUploadArea() {
         const $uploadArea = $('.pqc-upload-area-compact');
         $uploadArea.on('click', function (e) {
-            if (e.target !== this && !$(e.target).closest('.pqc-upload-icon-small, .pqc-upload-text-compact').length) {
-                return;
-            }
+            if (e.target !== this && !$(e.target).closest('.pqc-upload-icon-small, .pqc-upload-text-compact').length) return;
             $('#pqc-file-input').click();
         });
         $uploadArea.on('dragover', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            $(this).addClass('drag-over');
+            e.preventDefault(); e.stopPropagation(); $(this).addClass('drag-over');
         });
         $uploadArea.on('dragleave', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            $(this).removeClass('drag-over');
+            e.preventDefault(); e.stopPropagation(); $(this).removeClass('drag-over');
         });
         $uploadArea.on('drop', function (e) {
-            e.preventDefault(); e.stopPropagation();
-            $(this).removeClass('drag-over');
+            e.preventDefault(); e.stopPropagation(); $(this).removeClass('drag-over');
             const files = e.originalEvent.dataTransfer.files;
             if (files.length > 0) handleFileSelect(files[0]);
         });
@@ -182,22 +206,13 @@
     function handleFileSelect(file) {
         const allowedExtensions = ['json', 'csv', 'xml', 'txt'];
         const fileExtension = file.name.split('.').pop().toLowerCase();
-        if (!allowedExtensions.includes(fileExtension)) {
-            showError('Invalid file type.');
-            return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-            showError('File size exceeds 5MB limit.');
-            return;
-        }
+        if (!allowedExtensions.includes(fileExtension)) { showError('Invalid file type.'); return; }
+        if (file.size > 10 * 1024 * 1024) { showError('File size exceeds 10MB limit.'); return; }
         selectedFile = file;
         $('.pqc-file-name').text(file.name);
-        $('.pqc-file-size').text(formatFileSize(file.size));
         $('.pqc-file-info').show();
         $('.pqc-upload-area-compact').hide();
-        $('.pqc-result').hide();
-        const hasTitle = $('#pqc-quiz-title').val().trim().length > 0;
-        $('.pqc-submit-btn').prop('disabled', !hasTitle);
+        $('.pqc-paste-area').css('opacity', '0.5'); // Dim paste area
     }
 
     function clearFileSelection() {
@@ -205,7 +220,7 @@
         $('#pqc-file-input').val('');
         $('.pqc-file-info').hide();
         $('.pqc-upload-area-compact').show();
-        $('.pqc-submit-btn').prop('disabled', true);
+        $('.pqc-paste-area').css('opacity', '1');
     }
 
     function initCopyPrompt() {
@@ -214,21 +229,16 @@
             const numQuestions = $('#pqc-num-questions').val();
             const keywords = $('#pqc-keywords').val().trim();
             if (!title) { alert('Please enter a quiz title'); return; }
-            const prompt = buildChatGPTPrompt(title, numQuestions, keywords);
-            copyToClipboard(prompt);
+            copyToClipboard(buildChatGPTPrompt(title, numQuestions, keywords));
             const $btn = $(this);
             $btn.find('.pqc-btn-text').hide();
             $btn.find('.pqc-btn-copied').show();
-            setTimeout(function () {
-                $btn.find('.pqc-btn-text').show();
-                $btn.find('.pqc-btn-copied').hide();
-            }, 2000);
+            setTimeout(function () { $btn.find('.pqc-btn-text').show(); $btn.find('.pqc-btn-copied').hide(); }, 2000);
         });
     }
 
     function buildChatGPTPrompt(title, numQuestions, keywords) {
-        let prompt = `Create ${numQuestions} quiz questions about "${title}" in JSON format:\n\n[\n  {\n    "title": "Question title",\n    "question_text": "Full question text",\n    "answer_type": "single",\n    "points": 5,\n    "answers": [\n      {"text": "Answer 1", "correct": true, "points": 5},\n      {"text": "Answer 2", "correct": false, "points": 0}\n    ]\n  }\n]\n\nRequirements:\n- Return ONLY JSON object.`;
-        return prompt;
+        return `Create ${numQuestions} quiz questions about "${title}" in JSON format:\n\n[\n  {\n    "title": "Question title",\n    "question_text": "Full question text",\n    "answer_type": "single",\n    "points": 5,\n    "answers": [\n      {"text": "Answer 1", "correct": true, "points": 5},\n      {"text": "Answer 2", "correct": false, "points": 0}\n    ]\n  }\n]\n\nRequirements:\n- Return ONLY JSON. Keywords to use: ${keywords}`;
     }
 
     function copyToClipboard(text) {
@@ -261,12 +271,23 @@
         const formData = new FormData();
         formData.append('action', 'pqc_upload_quiz');
         formData.append('nonce', pqcData.nonce);
-        formData.append('quiz_file', selectedFile);
+
+        // Handle either file or pasted JSON
+        const pastedJson = $('#pqc-json-paste').val().trim();
+        if (selectedFile) {
+            formData.append('quiz_file', selectedFile);
+        } else if (pastedJson) {
+            formData.append('quiz_json_text', pastedJson);
+        } else {
+            alert('Please upload a file or paste JSON data.');
+            return;
+        }
+
         formData.append('quiz_settings', JSON.stringify(settings));
 
-        $('.pqc-btn-text').hide();
-        $('.pqc-btn-loading').show();
-        $('.pqc-submit-btn').prop('disabled', true);
+        const $btn = $('.pqc-submit-btn');
+        $btn.prop('disabled', true).find('.pqc-btn-loading').show();
+        $btn.find('.pqc-btn-text').hide();
 
         $.ajax({
             url: pqcData.ajaxUrl,
@@ -278,8 +299,8 @@
                 else showError(response.data.message || 'Error');
             },
             complete: function () {
-                $('.pqc-btn-text').show();
-                $('.pqc-btn-loading').hide();
+                $btn.prop('disabled', false).find('.pqc-btn-loading').hide();
+                $btn.find('.pqc-btn-text').show();
             }
         });
     }
@@ -288,16 +309,13 @@
 
     function showSuccess(data) {
         const $result = $('.pqc-result');
+        const currentUrl = window.location.href.split('?')[0];
+        const editUrl = currentUrl + '?edit_quiz=' + data.quiz_id;
         let html = `<div class="pqc-result-message"><div class="pqc-success-icon">✓</div><h3>${data.message}</h3>`;
-        if (data.quiz_id) {
-            html += `<div class="pqc-result-details"><p><strong>Quiz ID:</strong> ${data.quiz_id}</p></div>`;
-            const currentUrl = window.location.href.split('?')[0];
-            const editUrl = currentUrl + '?edit_quiz=' + data.quiz_id;
-            html += `<div class="pqc-result-links">
-                <a href="${data.quiz_url}" class="pqc-result-link" target="_blank">View Quiz</a>
-                <a href="${editUrl}" class="pqc-result-link pqc-link-edit">Edit Quiz</a>
-            </div>`;
-        }
+        html += `<div class="pqc-result-links">
+            <a href="${data.quiz_url}" class="pqc-result-link" target="_blank">View</a>
+            <a href="${editUrl}" class="pqc-result-link pqc-link-edit">Edit Slide Editor</a>
+        </div>`;
         $result.removeClass('error').addClass('success').html(html).show();
     }
 
