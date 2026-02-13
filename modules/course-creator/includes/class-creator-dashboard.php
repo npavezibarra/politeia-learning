@@ -18,23 +18,63 @@ class PCG_CC_Creator_Dashboard
         add_filter('query_vars', [$this, 'add_query_vars']);
         add_filter('template_include', [$this, 'load_dashboard_template']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_assets']);
+        add_action('bp_setup_nav', [$this, 'add_bp_nav_item'], 100);
 
         // Shortcode as fallback or alternative
         add_shortcode('pcg_course_creator_dashboard', [$this, 'render_dashboard_shortcode']);
     }
 
     /**
-     * Add custom rewrite rules for /members/{user}/central
+     * Add custom rewrite rules for /members/{user}/center
      */
     public function add_rewrite_rules()
     {
         add_rewrite_rule(
-            'members/([^/]+)/central/?$',
+            'members/([^/]+)/center/?$',
             'index.php?' . self::REWRITE_TAG . '=$matches[1]',
             'top'
         );
+    }
 
-        // Optional: Flush rules on plugin activation would be better, but we do it manually or via a hook if needed.
+    /**
+     * Register BuddyBoss profile tab
+     */
+    public function add_bp_nav_item()
+    {
+        if (!function_exists('bp_core_new_nav_item')) {
+            return;
+        }
+
+        bp_core_new_nav_item([
+            'name' => __('Center', 'politeia-course-group'),
+            'slug' => 'center',
+            'position' => 10,
+            'screen_function' => [$this, 'dashboard_screen'],
+            'default_subnav_slug' => 'create-course',
+            'item_css_id' => 'pcg-center'
+        ]);
+    }
+
+    /**
+     * Screen function for BuddyBoss tab
+     */
+    public function dashboard_screen()
+    {
+        $user_slug = bp_get_displayed_user_username();
+        set_query_var(self::REWRITE_TAG, $user_slug);
+
+        add_action('bp_template_content', function () {
+            $this->render_dashboard_content();
+        });
+
+        // If we want it to look EXACTLY as it looks now (with get_header/get_footer),
+        // we should probably NOT use bp_core_load_template which wraps it in profile template.
+        // Instead, we can just load the template directly if it's the main page.
+        $template = PCG_CC_PATH . 'templates/main-dashboard.php';
+        if (file_exists($template)) {
+            load_template($template);
+            exit;
+        }
     }
 
     /**
