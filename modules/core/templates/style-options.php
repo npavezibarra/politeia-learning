@@ -51,7 +51,7 @@ if (!defined('ABSPATH'))
                             <input name="pcg_container_max_width" type="text" id="pcg_container_max_width"
                                 value="<?php echo esc_attr($container_max_width); ?>" class="regular-text">
                             <p class="description">
-                                <?php _e('Define el max-width para .container dentro de la página central del miembro.', 'politeia-course-group'); ?>
+                                <?php _e('Define el max-width para .container dentro de la página center del miembro.', 'politeia-course-group'); ?>
                             </p>
                         </td>
                     </tr>
