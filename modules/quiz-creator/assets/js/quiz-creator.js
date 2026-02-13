@@ -228,8 +228,10 @@
             const title = $('#pqc-quiz-title').val().trim();
             const numQuestions = $('#pqc-num-questions').val();
             const keywords = $('#pqc-keywords').val().trim();
+            const answersPerQuestion = $('#pqc-answers-per-question').val() || 4;
+
             if (!title) { alert('Please enter a quiz title'); return; }
-            copyToClipboard(buildChatGPTPrompt(title, numQuestions, keywords));
+            copyToClipboard(buildChatGPTPrompt(title, numQuestions, keywords, answersPerQuestion));
             const $btn = $(this);
             $btn.find('.pqc-btn-text').hide();
             $btn.find('.pqc-btn-copied').show();
@@ -237,8 +239,8 @@
         });
     }
 
-    function buildChatGPTPrompt(title, numQuestions, keywords) {
-        return `Create ${numQuestions} quiz questions about "${title}" in JSON format:\n\n[\n  {\n    "title": "Question title",\n    "question_text": "Full question text",\n    "answer_type": "single",\n    "points": 5,\n    "answers": [\n      {"text": "Answer 1", "correct": true, "points": 5},\n      {"text": "Answer 2", "correct": false, "points": 0}\n    ]\n  }\n]\n\nRequirements:\n- Return ONLY JSON. Keywords to use: ${keywords}`;
+    function buildChatGPTPrompt(title, numQuestions, keywords, answersPerQuestion) {
+        return `Create ${numQuestions} quiz questions about "${title}" in JSON format:\n\n[\n  {\n    "title": "Question title",\n    "question_text": "Full question text",\n    "answer_type": "single",\n    "points": 5,\n    "answers": [\n      {"text": "Answer 1", "correct": true, "points": 5},\n      {"text": "Answer 2", "correct": false, "points": 0}\n    ]\n  }\n]\n\nRequirements:\n- Return ONLY JSON.\n- Keywords to use: ${keywords}\n- Each question MUST have exactly ${answersPerQuestion} answers (1 correct, the rest incorrect).`;
     }
 
     function copyToClipboard(text) {
@@ -259,8 +261,8 @@
     function uploadQuiz() {
         const settings = {
             title: $('#pqc-quiz-title').val().trim(),
-            time_limit: (parseInt($('#pqc-time-limit').val()) || 0) * 60,
             passing_percentage: parseInt($('#pqc-passing-percentage').val()) || 80,
+            answers_per_question: $('#pqc-answers-per-question').val(),
             random_questions: $('#pqc-random-questions').is(':checked') ? 1 : 0,
             random_answers: $('#pqc-random-answers').is(':checked') ? 1 : 0,
             run_once: $('#pqc-run-once').is(':checked') ? 1 : 0,

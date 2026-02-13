@@ -14,13 +14,16 @@ if (!defined('ABSPATH')) {
         <h2><?php echo esc_html($atts['title']); ?></h2>
         <div class="pqc-wizard-progress">
             <div class="pqc-progress-step active" data-step="1">
-                <span>1</span><label><?php _e('Config', 'politeia-quiz-creator'); ?></label></div>
+                <span>1</span><label><?php _e('Config', 'politeia-quiz-creator'); ?></label>
+            </div>
             <div class="pqc-progress-line"></div>
             <div class="pqc-progress-step" data-step="2">
-                <span>2</span><label><?php _e('Questions', 'politeia-quiz-creator'); ?></label></div>
+                <span>2</span><label><?php _e('Questions', 'politeia-quiz-creator'); ?></label>
+            </div>
             <div class="pqc-progress-line"></div>
             <div class="pqc-progress-step" data-step="3">
-                <span>3</span><label><?php _e('Settings', 'politeia-quiz-creator'); ?></label></div>
+                <span>3</span><label><?php _e('Settings', 'politeia-quiz-creator'); ?></label>
+            </div>
         </div>
     </div>
 
@@ -51,8 +54,10 @@ if (!defined('ABSPATH')) {
                             required />
                     </div>
                     <div class="pqc-field">
-                        <label for="pqc-time-limit"><?php _e('Time Limit (min)', 'politeia-quiz-creator'); ?></label>
-                        <input type="number" id="pqc-time-limit" name="time_limit" min="0" value="0" />
+                        <label
+                            for="pqc-answers-per-question"><?php _e('Answers per Question', 'politeia-quiz-creator'); ?></label>
+                        <input type="number" id="pqc-answers-per-question" name="answers_per_question" min="2" max="6"
+                            value="4" />
                     </div>
                     <div class="pqc-field">
                         <label for="pqc-passing-percentage"><?php _e('Pass %', 'politeia-quiz-creator'); ?></label>
@@ -100,7 +105,8 @@ if (!defined('ABSPATH')) {
                                     <line x1="12" y1="3" x2="12" y2="15"></line>
                                 </svg></div>
                             <div class="pqc-upload-text-compact">
-                                <span><?php _e('Drop file here', 'politeia-quiz-creator'); ?></span></div>
+                                <span><?php _e('Drop file here', 'politeia-quiz-creator'); ?></span>
+                            </div>
                             <input type="file" id="pqc-file-input" name="quiz_file" accept=".json,.csv,.xml,.txt" />
                         </div>
                         <div class="pqc-file-info" style="display: none;">
