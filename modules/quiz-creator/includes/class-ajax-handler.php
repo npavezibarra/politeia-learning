@@ -185,6 +185,7 @@ class PQC_Ajax_Handler
                 'run_once' => intval($quiz_settings['run_once'] ?? 0),
                 'force_solve' => intval($quiz_settings['force_solve'] ?? 0),
                 'show_points' => intval($quiz_settings['show_points'] ?? 0),
+                'course_id' => intval($_POST['course_id'] ?? 0),
             ],
             'questions' => $parsed_questions
         ];

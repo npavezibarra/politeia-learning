@@ -6,6 +6,7 @@ jQuery(document).ready(function ($) {
 
     let currentCourseId = 0;
     let thumbnailId = 0;
+    let coverPhotoId = 0; // Added for cover photo
     let currentCoursePermalink = '';
 
     const $list = $('#pcg-lessons-list');
@@ -14,12 +15,17 @@ jQuery(document).ready(function ($) {
 
     function resetForm() {
         currentCourseId = 0;
+        $('#pcg-current-course-id').val(0);
         thumbnailId = 0;
+        coverPhotoId = 0; // Reset cover photo ID
         $('#pcg-course-title').val('');
         $('#pcg-course-description').val('');
         $('#pcg-course-price').val('');
         $('#pcg-thumbnail-preview').hide().find('img').attr('src', '');
+        $('#pcg-cover-preview').hide().find('img').attr('src', ''); // Reset cover preview
         $('#pcg-upload-thumbnail').show();
+        // Maybe show pcg-select-background if it was hidden? Usually it stays visible.
+
         $list.empty();
         $('#pcg-course-progression').prop('checked', false);
         $('.pcg-empty-lessons-state').show();
@@ -31,7 +37,7 @@ jQuery(document).ready(function ($) {
         // Reset Tabs to "CURSO"
         $('.pcg-segment').removeClass('active');
         $('.pcg-segment[data-value="curso"]').addClass('active');
-        $('#pcg-mode-lecciones').hide();
+        $('.pcg-mode-content').hide();
         $('#pcg-mode-curso').show();
     }
 
@@ -82,20 +88,29 @@ jQuery(document).ready(function ($) {
         }
     });
 
-    // Toggle between Curso and Lecciones
+    // Toggle between Curso, Lecciones and Evaluaciones
     $(document).on('click', '.pcg-segment', function () {
         $('.pcg-segment').removeClass('active');
         $(this).addClass('active');
 
         const mode = $(this).data('value');
+        $('.pcg-mode-content').hide();
 
         if (mode === 'curso') {
-            $('#pcg-mode-lecciones').hide();
             $('#pcg-mode-curso').fadeIn(300);
-        } else {
-            $('#pcg-mode-curso').hide();
+        } else if (mode === 'lecciones') {
             $('#pcg-mode-lecciones').fadeIn(300);
             initSortable();
+        } else if (mode === 'evaluacion') {
+            const courseId = typeof currentCourseId !== 'undefined' ? currentCourseId : 0;
+            if (courseId === 0) {
+                $('#pcg-quiz-not-created-msg').show();
+                $('#pcg-quiz-creator-container').hide();
+            } else {
+                $('#pcg-quiz-not-created-msg').hide();
+                $('#pcg-quiz-creator-container').show();
+            }
+            $('#pcg-mode-evaluacion').fadeIn(300);
         }
     });
 
@@ -223,12 +238,12 @@ jQuery(document).ready(function ($) {
         });
     });
 
-    // Media Uploader
-    $('#pcg-upload-thumbnail, #pcg-select-background').on('click', function (e) {
+    // Media Uploader: Thumbnail (Course Cover)
+    $('#pcg-upload-thumbnail').on('click', function (e) {
         e.preventDefault();
         const frame = wp.media({
-            title: 'Selecionar Imagen del Curso',
-            button: { text: 'Usar esta imagen' },
+            title: 'Seleccionar Imagen del Curso (Thumbnail)',
+            button: { text: 'Usar imagen como portada del curso' },
             multiple: false
         });
         frame.on('select', function () {
@@ -241,10 +256,35 @@ jQuery(document).ready(function ($) {
         frame.open();
     });
 
+    // Media Uploader: Cover Photo (Fondo)
+    $('#pcg-select-background').on('click', function (e) {
+        e.preventDefault();
+        const frame = wp.media({
+            title: 'Seleccionar Foto de Portada (Fondo)',
+            button: { text: 'Usar como fondo' },
+            multiple: false
+        });
+        frame.on('select', function () {
+            const attachment = frame.state().get('selection').first().toJSON();
+            coverPhotoId = attachment.id;
+            $('#pcg-cover-preview img').attr('src', attachment.url);
+            $('#pcg-cover-preview').fadeIn();
+            // Do not hide the button; allow changing it easily? Or hide it? Usually we keep it or change text.
+            // Let's keep it visible or maybe rename to 'Change Cover Photo' but for now just leave it.
+            // Actually, usually previews replace the button, but here they are separate. ok.
+        });
+        frame.open();
+    });
+
     $('#pcg-remove-thumbnail').on('click', function () {
         thumbnailId = 0;
         $('#pcg-thumbnail-preview').fadeOut();
         $('#pcg-upload-thumbnail').fadeIn();
+    });
+
+    $('#pcg-remove-cover').on('click', function () {
+        coverPhotoId = 0;
+        $('#pcg-cover-preview').fadeOut();
     });
 
     // Handle Enter key on inputs to "save" (blur)
@@ -265,6 +305,7 @@ jQuery(document).ready(function ($) {
             description: $('#pcg-course-description').val(),
             price: $('#pcg-course-price').val(),
             thumbnail_id: thumbnailId,
+            cover_photo_id: coverPhotoId, // New field for cover photo
             progression: $('#pcg-course-progression').is(':checked') ? 'on' : '',
             content: []
         };
@@ -296,6 +337,7 @@ jQuery(document).ready(function ($) {
             success: function (response) {
                 if (response.success) {
                     currentCourseId = response.data.course_id;
+                    $('#pcg-current-course-id').val(currentCourseId);
                     $btn.text('¡GUARDADO!').addClass('success');
                     loadMyCourses();
                     setTimeout(() => {
@@ -392,6 +434,7 @@ jQuery(document).ready(function ($) {
                 if (response.success) {
                     const data = response.data;
                     currentCourseId = data.id;
+                    $('#pcg-current-course-id').val(currentCourseId);
                     $('#pcg-course-title').val(data.title);
                     $('#pcg-course-description').val(data.description);
                     $('#pcg-course-price').val(data.price);
@@ -429,7 +472,7 @@ jQuery(document).ready(function ($) {
                     // Reset Tabs to "CURSO"
                     $('.pcg-segment').removeClass('active');
                     $('.pcg-segment[data-value="curso"]').addClass('active');
-                    $('#pcg-mode-lecciones').hide();
+                    $('.pcg-mode-content').hide();
                     $('#pcg-mode-curso').show();
 
                     // Show form
@@ -462,6 +505,7 @@ jQuery(document).ready(function ($) {
                     // If we are currently editing THIS course, reset form
                     if (currentCourseId === courseId) {
                         currentCourseId = 0;
+                        $('#pcg-current-course-id').val(0);
                         $('#pcg-course-form-section').hide();
                         $('#pcg-creator-intro-section').fadeIn();
                         $('#pcg-my-courses-section').fadeIn();

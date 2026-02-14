@@ -216,7 +216,7 @@
     border-radius: 0px;
     animation: pcgFadeIn 0.4s ease forwards;
     max-width: 900px;
-    margin: 0 auto;
+    margin: 0;
 }
 
 @keyframes pcgFadeIn {

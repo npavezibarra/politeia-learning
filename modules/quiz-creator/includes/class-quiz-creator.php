@@ -143,6 +143,14 @@ class PQC_Quiz_Creator
         $sfwd_settings = self::create_sfwd_quiz_settings($quiz_data, $quiz_pro_id);
         update_post_meta($quiz_post_id, '_sfwd-quiz', $sfwd_settings);
 
+        // Link quiz to course if course_id is provided
+        $course_id = intval($settings['course_id'] ?? 0);
+        if ($course_id > 0) {
+            update_post_meta($course_id, '_first_quiz_id', $quiz_post_id);
+            update_post_meta($course_id, '_final_quiz_id', $quiz_post_id);
+            // Also update the quiz-course association in LD meta if needed (already handled in create_sfwd_quiz_settings)
+        }
+
         // Add questions
         $question_results = [];
         $builder_questions = [];

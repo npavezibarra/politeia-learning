@@ -59,6 +59,16 @@ class PCG_CC_Course_Save_Handler
             set_post_thumbnail($course_id, $thumbnail_id);
         }
 
+        // 2b. Set Cover Photo (BuddyBoss)
+        $cover_photo_id = intval($data['cover_photo_id'] ?? 0);
+        if ($cover_photo_id > 0) {
+            update_post_meta($course_id, '_buddyboss_cover_image', $cover_photo_id);
+        } else {
+            // Optional: delete if 0? Or keep existing? For now, if 0 is passed, maybe user removed it?
+            // The JS sends 0 if removed.
+            // delete_post_meta($course_id, '_buddyboss_cover_image');
+        }
+
         // 3. Save Course Settings (Price etc)
         $formatted_price = '0';
         $price_type = 'free';

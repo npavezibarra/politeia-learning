@@ -287,6 +287,10 @@
 
         formData.append('quiz_settings', JSON.stringify(settings));
 
+        // Add course context if available
+        const courseId = $('#pcg-current-course-id').val() || 0;
+        formData.append('course_id', courseId);
+
         const $btn = $('.pqc-submit-btn');
         $btn.prop('disabled', true).find('.pqc-btn-loading').show();
         $btn.find('.pqc-btn-text').hide();
