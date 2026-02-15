@@ -15,6 +15,70 @@ class PCG_CC_Course_Save_Handler
         add_action('wp_ajax_pcg_get_my_courses', [$this, 'handle_get_my_courses']);
         add_action('wp_ajax_pcg_delete_course', [$this, 'handle_delete_course']);
         add_action('wp_ajax_pcg_get_course_for_edit', [$this, 'handle_get_course_for_edit']);
+        add_action('wp_ajax_pcg_upload_cropped_image', [$this, 'handle_upload_cropped_image']);
+    }
+
+    /**
+     * Handles uploading and saving a cropped image from the cropper.
+     */
+    public function handle_upload_cropped_image()
+    {
+        check_ajax_referer('pcg_creator_nonce', 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error(['message' => 'No autorizado.']);
+        }
+
+        $image_data = $_POST['image_data'] ?? '';
+        $type = $_POST['type'] ?? 'thumbnail'; // thumbnail or cover
+
+        if (empty($image_data)) {
+            wp_send_json_error(['message' => 'No image data received.']);
+        }
+
+        // Remove the data:image/png;base64, part
+        if (strpos($image_data, 'base64,') !== false) {
+            $image_data = substr($image_data, strpos($image_data, 'base64,') + 7);
+        }
+
+        $decoded_image = base64_decode($image_data);
+
+        if (!$decoded_image) {
+            wp_send_json_error(['message' => 'Invalid image data.']);
+        }
+
+        $upload_dir = wp_upload_dir();
+        $filename = 'course-' . $type . '-' . get_current_user_id() . '-' . time() . '.png';
+        $file_path = $upload_dir['path'] . '/' . $filename;
+
+        // Save to file
+        if (false === file_put_contents($file_path, $decoded_image)) {
+            wp_send_json_error(['message' => 'No se pudo guardar el archivo en el servidor.']);
+        }
+
+        $filetype = wp_check_filetype($filename, null);
+        $attachment = [
+            'post_mime_type' => $filetype['type'],
+            'post_title' => sanitize_file_name($filename),
+            'post_content' => '',
+            'post_status' => 'inherit',
+            'post_author' => get_current_user_id()
+        ];
+
+        $attach_id = wp_insert_attachment($attachment, $file_path);
+
+        if (is_wp_error($attach_id)) {
+            wp_send_json_error(['message' => 'Error al crear el attachment: ' . $attach_id->get_error_message()]);
+        }
+
+        require_once(ABSPATH . 'wp-admin/includes/image.php');
+        $attach_data = wp_generate_attachment_metadata($attach_id, $file_path);
+        wp_update_attachment_metadata($attach_id, $attach_data);
+
+        wp_send_json_success([
+            'id' => $attach_id,
+            'url' => wp_get_attachment_url($attach_id)
+        ]);
     }
 
     public function handle_save_course()
@@ -29,6 +93,7 @@ class PCG_CC_Course_Save_Handler
         $course_id = intval($data['id'] ?? 0);
         $title = sanitize_text_field($data['title']);
         $description = wp_kses_post($data['description']);
+        $excerpt = wp_kses_post($data['excerpt'] ?? '');
         $price = sanitize_text_field($data['price']);
         $thumbnail_id = intval($data['thumbnail_id'] ?? 0);
         $progression = sanitize_text_field($data['progression'] ?? '');
@@ -38,6 +103,7 @@ class PCG_CC_Course_Save_Handler
         $post_data = [
             'post_title' => $title,
             'post_content' => $description,
+            'post_excerpt' => $excerpt,
             'post_status' => 'publish',
             'post_type' => 'sfwd-courses',
             'post_author' => get_current_user_id()
@@ -57,16 +123,17 @@ class PCG_CC_Course_Save_Handler
         // 2. Set Featured Image
         if ($thumbnail_id > 0) {
             set_post_thumbnail($course_id, $thumbnail_id);
+        } else {
+            delete_post_thumbnail($course_id);
         }
 
-        // 2b. Set Cover Photo (BuddyBoss)
+        // 2b. Set Cover Photo (BuddyBoss MultiPostThumbnails)
         $cover_photo_id = intval($data['cover_photo_id'] ?? 0);
+        $cover_meta_key = 'sfwd-courses_course-cover-image_thumbnail_id';
         if ($cover_photo_id > 0) {
-            update_post_meta($course_id, '_buddyboss_cover_image', $cover_photo_id);
+            update_post_meta($course_id, $cover_meta_key, $cover_photo_id);
         } else {
-            // Optional: delete if 0? Or keep existing? For now, if 0 is passed, maybe user removed it?
-            // The JS sends 0 if removed.
-            // delete_post_meta($course_id, '_buddyboss_cover_image');
+            delete_post_meta($course_id, $cover_meta_key);
         }
 
         // 3. Save Course Settings (Price etc)
@@ -121,6 +188,7 @@ class PCG_CC_Course_Save_Handler
         $product_id = get_post_meta($course_id, '_pcg_woo_product_id', true);
         $title = sanitize_text_field($data['title']);
         $description = wp_kses_post($data['description']);
+        $excerpt = wp_kses_post($data['excerpt'] ?? '');
         $price = intval(preg_replace('/[^0-9]/', '', $data['price'] ?? '0'));
         $thumbnail_id = intval($data['thumbnail_id'] ?? 0);
 
@@ -136,6 +204,7 @@ class PCG_CC_Course_Save_Handler
         $post_data = [
             'post_title' => $title,
             'post_content' => $description,
+            'post_excerpt' => $excerpt,
             'post_status' => 'publish',
             'post_type' => 'product',
         ];
@@ -356,6 +425,10 @@ class PCG_CC_Course_Save_Handler
         $thumbnail_id = get_post_thumbnail_id($course_id);
         $thumbnail_url = wp_get_attachment_url($thumbnail_id);
 
+        $cover_meta_key = 'sfwd-courses_course-cover-image_thumbnail_id';
+        $cover_photo_id = get_post_meta($course_id, $cover_meta_key, true);
+        $cover_photo_url = wp_get_attachment_url($cover_photo_id);
+
         // Get content structure (lessons/sections) from ld_course_steps
         $steps = get_post_meta($course_id, 'ld_course_steps', true);
         $content = [];
@@ -396,9 +469,12 @@ class PCG_CC_Course_Save_Handler
             'id' => $post->ID,
             'title' => $post->post_title,
             'description' => $post->post_content,
+            'excerpt' => $post->post_excerpt,
             'price' => preg_replace('/[^0-9]/', '', $price_settings['sfwd-courses_course_price'] ?? '0'),
             'thumbnail_id' => $thumbnail_id,
             'thumbnail_url' => $thumbnail_url,
+            'cover_photo_id' => $cover_photo_id,
+            'cover_photo_url' => $cover_photo_url,
             'permalink' => get_permalink($course_id),
             'progression' => $price_settings['sfwd-courses_course_disable_lesson_progression'] ?? '',
             'content' => $content

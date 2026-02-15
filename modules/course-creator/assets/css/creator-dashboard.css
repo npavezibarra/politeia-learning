@@ -278,23 +278,28 @@
 }
 
 .pcg-btn-preview {
-    background: var(--pcg-subtle-gray);
-    border: none;
+    background: none !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
     color: var(--pcg-light-gray);
     width: 32px;
     height: 32px;
-    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease;
 }
 
-.pcg-btn-preview:hover {
-    background: var(--pcg-pure-black);
-    color: #fff;
-    transform: scale(1.1);
+.pcg-btn-preview:hover,
+.pcg-btn-preview:focus,
+.pcg-btn-preview:active {
+    background: none !important;
+    background-color: transparent !important;
+    color: var(--pcg-pure-black);
+    transform: none;
 }
 
 .pcg-btn-preview .dashicons {
@@ -446,11 +451,24 @@
     box-shadow: 0 4px 15px rgba(120, 63, 39, 0.4);
 }
 
+/* Media Row — side by side previews + buttons */
+.pcg-media-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
+    margin-bottom: 30px;
+}
+
+.pcg-media-row .pcg-thumbnail-preview {
+    flex: 0 0 auto;
+}
+
 /* Asset Actions */
 .pcg-asset-actions {
     display: flex;
     gap: 15px;
-    margin-bottom: 30px;
+    align-self: center;
 }
 
 .pcg-btn-outline {
@@ -481,6 +499,82 @@
 /* Description */
 .pcg-description-field {
     margin-bottom: 30px;
+}
+
+/* Tab switcher */
+.pcg-desc-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.pcg-desc-tab {
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #a0aec0;
+    background: none !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    border-bottom: 2px solid transparent !important;
+    margin-bottom: -1px;
+    cursor: pointer;
+    outline: none !important;
+    box-shadow: none !important;
+    transition: color 0.2s ease;
+}
+
+.pcg-desc-tab:hover,
+.pcg-desc-tab:focus,
+.pcg-desc-tab:active {
+    background: none !important;
+    background-color: transparent !important;
+    color: #4a5568;
+}
+
+.pcg-desc-tab.active {
+    color: #1a202c;
+    font-weight: 700;
+    border-bottom: 2px solid #1a202c !important;
+}
+
+/* Tab content */
+.pcg-tab-content {
+    display: none;
+}
+
+.pcg-tab-content.active {
+    display: block;
+}
+
+.pcg-tab-content .pcg-modern-textarea {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: none;
+}
+
+/* Excerpt textarea — shorter */
+.pcg-excerpt-textarea {
+    min-height: 100px !important;
+}
+
+/* Word counter */
+.pcg-word-count {
+    display: block;
+    text-align: right;
+    font-size: 12px;
+    color: #a0aec0;
+    margin-top: 6px;
+    font-weight: 500;
+}
+
+.pcg-word-count.over-limit {
+    color: #e53e3e;
+    font-weight: 600;
 }
 
 .pcg-modern-textarea {
@@ -980,10 +1074,10 @@ input:checked+.pcg-slider:before {
 }
 
 .pcg-section-header h3 {
-    font-size: 1.25rem;
-    font-weight: 800;
+    font-size: 15px !important;
+    letter-spacing: 2px !important;
+    font-weight: 600 !important;
     color: #1a202c;
-    letter-spacing: -0.02em;
 }
 
 .pcg-my-courses-grid {
@@ -1072,7 +1166,7 @@ input:checked+.pcg-slider:before {
 }
 
 .pcg-course-price {
-    font-weight: 800;
+    font-weight: 400;
     color: var(--pcg-deep-gray);
     font-size: 1.125rem;
 }

@@ -13,6 +13,42 @@ jQuery(document).ready(function ($) {
     const $courseLabel = $('#pcg-current-course-label');
     const $previewBtn = $('#pcg-btn-preview-course');
 
+    // ── Tab Switcher ──
+    $(document).on('click', '.pcg-desc-tab', function () {
+        var target = $(this).data('target');
+        $('.pcg-desc-tab').removeClass('active');
+        $(this).addClass('active');
+        $('.pcg-tab-content').removeClass('active');
+        $('#' + target).addClass('active');
+    });
+
+    // ── Word Counter ──
+    function countWords(text) {
+        text = text.trim();
+        if (!text) return 0;
+        return text.split(/\s+/).length;
+    }
+
+    function updateWordCount(textareaId, counterId, maxWords) {
+        var text = $(textareaId).val();
+        var count = countWords(text);
+        var $counter = $(counterId);
+        $counter.text(count + ' / ' + maxWords + ' palabras');
+        if (count > maxWords) {
+            $counter.addClass('over-limit');
+        } else {
+            $counter.removeClass('over-limit');
+        }
+    }
+
+    $(document).on('input', '#pcg-course-description', function () {
+        updateWordCount('#pcg-course-description', '#pcg-desc-word-count', 700);
+    });
+
+    $(document).on('input', '#pcg-course-excerpt', function () {
+        updateWordCount('#pcg-course-excerpt', '#pcg-excerpt-word-count', 50);
+    });
+
     function resetForm() {
         currentCourseId = 0;
         $('#pcg-current-course-id').val(0);
@@ -20,11 +56,14 @@ jQuery(document).ready(function ($) {
         coverPhotoId = 0; // Reset cover photo ID
         $('#pcg-course-title').val('');
         $('#pcg-course-description').val('');
+        $('#pcg-course-excerpt').val('');
+        updateWordCount('#pcg-course-description', '#pcg-desc-word-count', 700);
+        updateWordCount('#pcg-course-excerpt', '#pcg-excerpt-word-count', 50);
         $('#pcg-course-price').val('');
         $('#pcg-thumbnail-preview').hide().find('img').attr('src', '');
         $('#pcg-cover-preview').hide().find('img').attr('src', ''); // Reset cover preview
         $('#pcg-upload-thumbnail').show();
-        // Maybe show pcg-select-background if it was hidden? Usually it stays visible.
+        $('#pcg-select-background').show();
 
         $list.empty();
         $('#pcg-course-progression').prop('checked', false);
@@ -241,40 +280,62 @@ jQuery(document).ready(function ($) {
     // Media Uploader: Thumbnail (Course Cover)
     $('#pcg-upload-thumbnail').on('click', function (e) {
         e.preventDefault();
-        const frame = wp.media({
-            title: 'Seleccionar Imagen del Curso (Thumbnail)',
-            button: { text: 'Usar imagen como portada del curso' },
-            multiple: false
+        PCG_Cropper.open({
+            title: 'Course Cover',
+            width: 360,
+            height: 238,
+            onSave: function (dataUrl) {
+                saveCroppedImage(dataUrl, 'thumbnail');
+            }
         });
-        frame.on('select', function () {
-            const attachment = frame.state().get('selection').first().toJSON();
-            thumbnailId = attachment.id;
-            $('#pcg-thumbnail-preview img').attr('src', attachment.url);
-            $('#pcg-thumbnail-preview').fadeIn();
-            $('#pcg-upload-thumbnail').hide();
-        });
-        frame.open();
     });
 
-    // Media Uploader: Cover Photo (Fondo)
+    // Media Uploader: Cover Photo (Background)
     $('#pcg-select-background').on('click', function (e) {
         e.preventDefault();
-        const frame = wp.media({
-            title: 'Seleccionar Foto de Portada (Fondo)',
-            button: { text: 'Usar como fondo' },
-            multiple: false
+        PCG_Cropper.open({
+            title: 'Cover Photo',
+            width: 360,
+            height: 238,
+            onSave: function (dataUrl) {
+                saveCroppedImage(dataUrl, 'cover');
+            }
         });
-        frame.on('select', function () {
-            const attachment = frame.state().get('selection').first().toJSON();
-            coverPhotoId = attachment.id;
-            $('#pcg-cover-preview img').attr('src', attachment.url);
-            $('#pcg-cover-preview').fadeIn();
-            // Do not hide the button; allow changing it easily? Or hide it? Usually we keep it or change text.
-            // Let's keep it visible or maybe rename to 'Change Cover Photo' but for now just leave it.
-            // Actually, usually previews replace the button, but here they are separate. ok.
-        });
-        frame.open();
     });
+
+    function saveCroppedImage(dataUrl, type) {
+        $.ajax({
+            url: pcgCreatorData.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'pcg_upload_cropped_image',
+                nonce: pcgCreatorData.nonce,
+                image_data: dataUrl,
+                type: type
+            },
+            success: function (response) {
+                if (response.success) {
+                    const attachment = response.data;
+                    if (type === 'thumbnail') {
+                        thumbnailId = attachment.id;
+                        $('#pcg-thumbnail-preview img').attr('src', attachment.url);
+                        $('#pcg-thumbnail-preview').fadeIn();
+                        $('#pcg-upload-thumbnail').hide();
+                    } else {
+                        coverPhotoId = attachment.id;
+                        $('#pcg-cover-preview img').attr('src', attachment.url);
+                        $('#pcg-cover-preview').fadeIn();
+                        $('#pcg-select-background').hide();
+                    }
+                } else {
+                    alert('Error: ' + response.data.message);
+                }
+            },
+            error: function () {
+                alert('Ocurrió un error al subir la imagen.');
+            }
+        });
+    }
 
     $('#pcg-remove-thumbnail').on('click', function () {
         thumbnailId = 0;
@@ -285,6 +346,7 @@ jQuery(document).ready(function ($) {
     $('#pcg-remove-cover').on('click', function () {
         coverPhotoId = 0;
         $('#pcg-cover-preview').fadeOut();
+        $('#pcg-select-background').fadeIn();
     });
 
     // Handle Enter key on inputs to "save" (blur)
@@ -303,6 +365,7 @@ jQuery(document).ready(function ($) {
             id: currentCourseId,
             title: $('#pcg-course-title').val(),
             description: $('#pcg-course-description').val(),
+            excerpt: $('#pcg-course-excerpt').val(),
             price: $('#pcg-course-price').val(),
             thumbnail_id: thumbnailId,
             cover_photo_id: coverPhotoId, // New field for cover photo
@@ -437,6 +500,9 @@ jQuery(document).ready(function ($) {
                     $('#pcg-current-course-id').val(currentCourseId);
                     $('#pcg-course-title').val(data.title);
                     $('#pcg-course-description').val(data.description);
+                    $('#pcg-course-excerpt').val(data.excerpt || '');
+                    updateWordCount('#pcg-course-description', '#pcg-desc-word-count', 700);
+                    updateWordCount('#pcg-course-excerpt', '#pcg-excerpt-word-count', 50);
                     $('#pcg-course-price').val(data.price);
                     thumbnailId = data.thumbnail_id;
                     if (data.thumbnail_url) {
@@ -446,6 +512,16 @@ jQuery(document).ready(function ($) {
                     } else {
                         $('#pcg-thumbnail-preview').hide();
                         $('#pcg-upload-thumbnail').show();
+                    }
+
+                    coverPhotoId = data.cover_photo_id;
+                    if (data.cover_photo_url) {
+                        $('#pcg-cover-preview img').attr('src', data.cover_photo_url);
+                        $('#pcg-cover-preview').show();
+                        $('#pcg-select-background').hide();
+                    } else {
+                        $('#pcg-cover-preview').hide();
+                        $('#pcg-select-background').show();
                     }
 
                     if (data.permalink) {

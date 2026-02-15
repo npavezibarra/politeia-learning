@@ -74,43 +74,65 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
             </div>
         </div>
 
-        <!-- Assets Buttons -->
-        <!-- Thumbnail Preview -->
-        <div id="pcg-thumbnail-preview" class="pcg-thumbnail-preview" style="display:none; margin-bottom: 20px;">
-            <p style="font-size: 12px; color: #666; margin-bottom: 5px;">Course Cover Preview:</p>
-            <img src="" style="max-width: 200px; border-radius: 8px; display: block;">
-            <button type="button" id="pcg-remove-thumbnail" class="pcg-btn-remove-thumb"
-                style="color: #e53e3e; font-size: 12px; border: none; background: none; cursor: pointer; padding: 5px 0; font-weight: 600;">
-                <?php _e('Remove Cover', 'politeia-course-group'); ?>
-            </button>
+        <div class="pcg-media-row">
+            <!-- Thumbnail Preview -->
+            <div id="pcg-thumbnail-preview" class="pcg-thumbnail-preview" style="display:none;">
+                <p style="font-size: 12px; color: #666; margin-bottom: 5px;">Course Cover Preview:</p>
+                <img src="" style="max-width: 200px; border-radius: 8px; display: block;">
+                <button type="button" id="pcg-remove-thumbnail" class="pcg-btn-remove-thumb"
+                    style="color: #e53e3e; font-size: 12px; border: none; background: none; cursor: pointer; padding: 5px 0; font-weight: 600;">
+                    <?php _e('Remove Cover', 'politeia-course-group'); ?>
+                </button>
+            </div>
+
+            <!-- Cover Photo Preview -->
+            <div id="pcg-cover-preview" class="pcg-thumbnail-preview" style="display:none;">
+                <p style="font-size: 12px; color: #666; margin-bottom: 5px;">Cover Photo Preview:</p>
+                <img src="" style="max-width: 200px; height: 100px; object-fit: cover; border-radius: 8px; display: block;">
+                <button type="button" id="pcg-remove-cover" class="pcg-btn-remove-thumb"
+                    style="color: #e53e3e; font-size: 12px; border: none; background: none; cursor: pointer; padding: 5px 0; font-weight: 600;">
+                    <?php _e('Remove Photo', 'politeia-course-group'); ?>
+                </button>
+            </div>
+
+            <!-- Upload Buttons -->
+            <div class="pcg-asset-actions">
+                <button type="button" class="pcg-btn-outline" id="pcg-upload-thumbnail">
+                    <span class="dashicons dashicons-upload"></span>
+                    <?php _e('Course Cover', 'politeia-course-group'); ?>
+                </button>
+                <button type="button" class="pcg-btn-outline" id="pcg-select-background">
+                    <?php _e('Cover Photo', 'politeia-course-group'); ?>
+                </button>
+            </div>
         </div>
 
-        <!-- Cover Photo Preview -->
-        <div id="pcg-cover-preview" class="pcg-thumbnail-preview" style="display:none; margin-bottom: 20px;">
-            <p style="font-size: 12px; color: #666; margin-bottom: 5px;">Cover Photo Preview:</p>
-            <img src="" style="max-width: 100%; height: 100px; object-fit: cover; border-radius: 8px; display: block;">
-            <button type="button" id="pcg-remove-cover" class="pcg-btn-remove-thumb"
-                style="color: #e53e3e; font-size: 12px; border: none; background: none; cursor: pointer; padding: 5px 0; font-weight: 600;">
-                <?php _e('Remove Photo', 'politeia-course-group'); ?>
-            </button>
-        </div>
-
-        <div class="pcg-asset-actions">
-            <button type="button" class="pcg-btn-outline" id="pcg-upload-thumbnail">
-                <span class="dashicons dashicons-upload"></span>
-                <?php _e('Course Cover', 'politeia-course-group'); ?>
-            </button>
-            <button type="button" class="pcg-btn-outline" id="pcg-select-background">
-                <?php _e('Cover Photo', 'politeia-course-group'); ?>
-            </button>
-        </div>
-
-        <!-- Description -->
+        <!-- Description / Excerpt Tabs -->
         <div class="pcg-description-field">
-            <label><?php _e('DESCRIPCIÓN', 'politeia-course-group'); ?></label>
-            <textarea id="pcg-course-description"
-                placeholder="<?php _e('Escribe la descripción del curso aquí...', 'politeia-course-group'); ?>"
-                class="pcg-modern-textarea"></textarea>
+            <div class="pcg-desc-tabs">
+                <button type="button" class="pcg-desc-tab active" data-target="pcg-tab-description">
+                    <?php _e('DESCRIPCIÓN', 'politeia-course-group'); ?>
+                </button>
+                <button type="button" class="pcg-desc-tab" data-target="pcg-tab-excerpt">
+                    <?php _e('EXTRACTO', 'politeia-course-group'); ?>
+                </button>
+            </div>
+
+            <div id="pcg-tab-description" class="pcg-tab-content active">
+                <textarea id="pcg-course-description"
+                    placeholder="<?php _e('Escribe la descripción del curso aquí... (máx. 700 palabras)', 'politeia-course-group'); ?>"
+                    class="pcg-modern-textarea"></textarea>
+                <span class="pcg-word-count" id="pcg-desc-word-count">0 / 700
+                    <?php _e('palabras', 'politeia-course-group'); ?></span>
+            </div>
+
+            <div id="pcg-tab-excerpt" class="pcg-tab-content">
+                <textarea id="pcg-course-excerpt"
+                    placeholder="<?php _e('Escribe un resumen breve del curso... (máx. 50 palabras)', 'politeia-course-group'); ?>"
+                    class="pcg-modern-textarea pcg-excerpt-textarea"></textarea>
+                <span class="pcg-word-count" id="pcg-excerpt-word-count">0 / 50
+                    <?php _e('palabras', 'politeia-course-group'); ?></span>
+            </div>
         </div>
 
         <!-- Price -->

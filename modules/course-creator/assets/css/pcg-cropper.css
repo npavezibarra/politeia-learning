@@ -1,0 +1,211 @@
+/* Course Creator Cropper Styles (Based on Bookshelf Styles) */
+
+.pcg-cropper-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100000;
+    backdrop-filter: blur(8px);
+    font-family: 'Poppins', sans-serif;
+}
+
+.pcg-cropper-content {
+    background: #111827;
+    /* Dark theme like Bookshelf */
+    width: 90%;
+    max-width: 600px;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pcg-cropper-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pcg-cropper-header h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.125rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.pcg-cropper-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    font-size: 24px;
+    line-height: 1;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.pcg-cropper-close:hover {
+    color: #fff;
+}
+
+.pcg-cropper-body {
+    padding: 24px;
+}
+
+/* Drag & Drop Area / Stage */
+.pcg-cropper-stage {
+    width: 100%;
+    height: 400px;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.pcg-cropper-stage.drag-active {
+    border-color: #c79f32;
+    background: rgba(199, 159, 50, 0.05);
+}
+
+.pcg-cropper-placeholder {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.pcg-cropper-placeholder svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.pcg-cropper-placeholder p {
+    margin: 0 0 4px 0;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.pcg-cropper-placeholder span {
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+/* Cropper Container (When image is loaded) */
+.pcg-cropper-container {
+    width: 100%;
+    height: 100%;
+}
+
+.pcg-cropper-container img {
+    max-width: 100%;
+    display: block;
+}
+
+.pcg-cropper-footer {
+    padding: 16px 24px;
+    background: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pcg-cropper-status {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.pcg-cropper-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.pcg-btn-cropper {
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+}
+
+.pcg-btn-cropper-cancel {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.pcg-btn-cropper-cancel:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.pcg-btn-cropper-save {
+    background: linear-gradient(135deg, #8A6B1E, #C79F32, #E9D18A);
+    border: none;
+    color: #000;
+}
+
+.pcg-btn-cropper-save:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(199, 159, 50, 0.3);
+}
+
+.pcg-btn-cropper-save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Hidden File Input */
+.pcg-hidden-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+/* Cropper.js Overrides for Sleek Look */
+.cropper-view-box {
+    outline: 1px solid rgba(255, 255, 255, 0.5);
+    outline-color: #c79f32;
+}
+
+.cropper-line {
+    background-color: #c79f32;
+}
+
+.cropper-point {
+    background-color: #c79f32;
+}
+
+.cropper-face {
+    background-color: inherit;
+}
+
+.cropper-bg {
+    background-image: none !important;
+    background-color: #000;
+}

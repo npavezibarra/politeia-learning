@@ -127,7 +127,13 @@ class PCG_CC_Creator_Dashboard
     {
         if (get_query_var(self::REWRITE_TAG)) {
             wp_enqueue_media();
+
+            // Enqueue Cropper.js from BuddyBoss Platform if available
+            wp_enqueue_style('cropperjs', plugins_url('buddyboss-platform/bp-core/css/vendor/cropper.min.css'), [], '1.5.12');
+            wp_enqueue_script('cropperjs', plugins_url('buddyboss-platform/bp-core/js/vendor/cropper.min.js'), ['jquery'], '1.5.12', true);
+
             wp_enqueue_style('pcg-creator-css', PCG_CC_URL . 'assets/css/creator-dashboard.css', [], '1.0.0');
+            wp_enqueue_style('pcg-cropper-css', PCG_CC_URL . 'assets/css/pcg-cropper.css', ['cropperjs'], '1.0.0');
 
             // Inject Custom Styles from Admin Options
             $creator_max_width = get_option('pcg_creator_max_width', '1400px');
@@ -141,7 +147,8 @@ class PCG_CC_Creator_Dashboard
             ";
             wp_add_inline_style('pcg-creator-css', $custom_css);
 
-            wp_enqueue_script('pcg-creator-js', PCG_CC_URL . 'assets/js/creator-dashboard.js', ['jquery', 'jquery-ui-sortable'], '1.0.0', true);
+            wp_enqueue_script('pcg-cropper-js', PCG_CC_URL . 'assets/js/pcg-course-cropper.js', ['jquery', 'cropperjs'], '1.0.0', true);
+            wp_enqueue_script('pcg-creator-js', PCG_CC_URL . 'assets/js/creator-dashboard.js', ['jquery', 'jquery-ui-sortable', 'pcg-cropper-js'], '1.0.0', true);
 
             wp_localize_script('pcg-creator-js', 'pcgCreatorData', [
                 'ajaxUrl' => admin_url('admin-ajax.php'),
