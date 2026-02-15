@@ -7,15 +7,15 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Define module constants
-define( 'PCG_CP_PATH', plugin_dir_path( __FILE__ ) );
-define( 'PCG_CP_URL', plugin_dir_url( __FILE__ ) );
+define( 'PL_CP_PATH', plugin_dir_path( __FILE__ ) );
+define( 'PL_CP_URL', plugin_dir_url( __FILE__ ) );
 
 /**
  * Autoload classes for this module
  */
 spl_autoload_register( function ( $class ) {
-    if ( strpos( $class, 'PCG_' ) === 0 ) {
-        $file = PCG_CP_PATH . 'includes/class-' . strtolower( str_replace( '_', '-', $class ) ) . '.php';
+    if ( strpos( $class, 'PL_' ) === 0 ) {
+        $file = PL_CP_PATH . 'includes/class-' . strtolower( str_replace( '_', '-', $class ) ) . '.php';
         if ( file_exists( $file ) ) {
             require_once $file;
         }
@@ -27,41 +27,41 @@ spl_autoload_register( function ( $class ) {
  */
 add_action( 'plugins_loaded', function() {
     // Register CPT
-    if ( class_exists( 'PCG_CPT' ) ) {
-        new PCG_CPT();
+    if ( class_exists( 'PL_CPT' ) ) {
+        new PL_CPT();
     }
 
     // Register ACF fields (if ACF active)
-    if ( class_exists( 'ACF' ) && class_exists( 'PCG_ACF' ) ) {
-        new PCG_ACF();
+    if ( class_exists( 'ACF' ) && class_exists( 'PL_ACF' ) ) {
+        new PL_ACF();
     }
 
     // Relations and templates
-    if ( class_exists( 'PCG_Relations' ) ) {
-        new PCG_Relations();
+    if ( class_exists( 'PL_Relations' ) ) {
+        new PL_Relations();
     }
     
-    if ( class_exists( 'PCG_Templates' ) ) {
-        new PCG_Templates();
+    if ( class_exists( 'PL_Templates' ) ) {
+        new PL_Templates();
     }
 
     // REST endpoints
-    if ( class_exists( 'PCG_REST' ) ) {
-        new PCG_REST();
+    if ( class_exists( 'PL_REST' ) ) {
+        new PL_REST();
     }
 
     // Metaboxes
-    if ( class_exists( 'PCG_Metaboxes' ) ) {
-        new PCG_Metaboxes();
+    if ( class_exists( 'PL_Metaboxes' ) ) {
+        new PL_Metaboxes();
     }
 }, 20 );
 
 add_action( 'plugins_loaded', function() {
-    $admin_file = PCG_CP_PATH . 'includes/class-pcg-admin.php';
+    $admin_file = PL_CP_PATH . 'includes/class-pcg-admin.php';
     if ( file_exists( $admin_file ) ) {
         require_once $admin_file;
-        if ( class_exists( 'PCG_Admin_Menu' ) ) {
-            new PCG_Admin_Menu();
+        if ( class_exists( 'PL_Admin_Menu' ) ) {
+            new PL_Admin_Menu();
         }
     }
 }, 25 );
@@ -70,14 +70,14 @@ add_action( 'plugins_loaded', function() {
  * Enqueue assets for this module
  */
 add_action( 'wp_enqueue_scripts', function() {
-    wp_enqueue_style( 'pcg-style', PCG_CP_URL . 'assets/css/pcg-style.css', [], '1.0' );
-    wp_enqueue_script( 'pcg-script', PCG_CP_URL . 'assets/js/pcg-script.js', ['jquery'], '1.0', true );
+    wp_enqueue_style( 'pcg-style', PL_CP_URL . 'assets/css/pcg-style.css', [], '1.0' );
+    wp_enqueue_script( 'pcg-script', PL_CP_URL . 'assets/js/pcg-script.js', ['jquery'], '1.0', true );
 });
 
 /**
  * Template loading filters
- * We need to update PCG_Templates to look into the module's template folder
+ * We need to update PL_Templates to look into the module's template folder
  */
 add_filter( 'pcg_course_programs_template_path', function() {
-    return PCG_CP_PATH . 'templates/';
+    return PL_CP_PATH . 'templates/';
 });

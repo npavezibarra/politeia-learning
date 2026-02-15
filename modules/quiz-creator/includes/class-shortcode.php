@@ -33,7 +33,11 @@ class PQC_Shortcode
      */
     public function render_shortcode($atts)
     {
-        error_log('PQC: Shortcode render_shortcode() called');
+        $atts = shortcode_atts([
+            'course_id' => 0,
+            'quiz_id' => 0,
+            'title' => __('Quiz Creator', 'politeia-quiz-creator'),
+        ], $atts);
 
         // Check permissions
         if (!current_user_can('edit_posts')) {
@@ -42,12 +46,32 @@ class PQC_Shortcode
 
         $this->enqueue_shortcode_assets();
 
-        $quiz_id = isset($_GET['edit_quiz']) ? intval($_GET['edit_quiz']) : 0;
+        $course_id = intval($atts['course_id']);
+        if (!$course_id && isset($_GET['course_id'])) {
+            $course_id = intval($_GET['course_id']);
+        }
+
+        $quiz_id = intval($atts['quiz_id']);
+        if (!$quiz_id && isset($_GET['edit_quiz'])) {
+            $quiz_id = intval($_GET['edit_quiz']);
+        }
+
+        // If course_id is provided but no quiz_id, try to find linked quiz
+        if ($course_id && !$quiz_id) {
+            $quiz_id = PQC_Quiz_Creator::get_quiz_id_by_course($course_id);
+        }
+
+        $course_title = '';
+        if ($course_id) {
+            $course_title = get_the_title($course_id);
+        }
 
         ob_start();
         if ($quiz_id && get_post_type($quiz_id) === 'sfwd-quiz') {
             include PQC_PLUGIN_DIR . 'templates/quiz-editor.php';
         } else {
+            // Default quiz title to course title if available
+            $default_quiz_title = !empty($course_title) ? $course_title : '';
             include PQC_PLUGIN_DIR . 'templates/upload-form.php';
         }
         return ob_get_clean();

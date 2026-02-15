@@ -26,6 +26,8 @@ class PQC_Ajax_Handler
         add_action('wp_ajax_pqc_upload_quiz', [$this, 'handle_upload']);
         add_action('wp_ajax_pqc_download_sample', [$this, 'handle_download_sample']);
         add_action('wp_ajax_pqc_save_quiz_changes', [$this, 'handle_save_changes']);
+        add_action('wp_ajax_pqc_get_quiz_module', [$this, 'handle_get_quiz_module']);
+        add_action('wp_ajax_pqc_delete_quiz', [$this, 'handle_delete_quiz']);
     }
 
     /**
@@ -248,5 +250,51 @@ class PQC_Ajax_Handler
 
         echo $sample_data;
         exit;
+    }
+
+    /**
+     * Get quiz module HTML via AJAX
+     */
+    public function handle_get_quiz_module()
+    {
+        $course_id = isset($_POST['course_id']) ? intval($_POST['course_id']) : 0;
+
+        if (!$course_id) {
+            wp_send_json_error(__('Course ID is required.', 'politeia-quiz-creator'));
+        }
+
+        $html = do_shortcode('[politeia_quiz_creator course_id="' . $course_id . '"]');
+
+        wp_send_json_success(['html' => $html]);
+    }
+
+    /**
+     * Delete quiz via AJAX
+     */
+    public function handle_delete_quiz()
+    {
+        // Verify nonce
+        if (!check_ajax_referer('pqc_upload_nonce', 'nonce', false)) {
+            wp_send_json_error(__('Security check failed.', 'politeia-quiz-creator'));
+        }
+
+        $quiz_id = isset($_POST['quiz_id']) ? intval($_POST['quiz_id']) : 0;
+
+        if (!$quiz_id) {
+            wp_send_json_error(__('Quiz ID is required.', 'politeia-quiz-creator'));
+        }
+
+        // Check permissions
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(__('You do not have permission to delete quizzes.', 'politeia-quiz-creator'));
+        }
+
+        $success = PQC_Quiz_Creator::delete_quiz($quiz_id);
+
+        if ($success) {
+            wp_send_json_success(['message' => __('Quiz deleted successfully.', 'politeia-quiz-creator')]);
+        } else {
+            wp_send_json_error(__('Failed to delete quiz.', 'politeia-quiz-creator'));
+        }
     }
 }

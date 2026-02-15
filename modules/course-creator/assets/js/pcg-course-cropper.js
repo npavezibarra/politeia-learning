@@ -2,7 +2,7 @@
  * PCG Course Creator Cropper Utility
  * Handles image uploading and cropping with 360x238 dimensions.
  */
-var PCG_Cropper = (function ($) {
+var PL_Cropper = (function ($) {
     'use strict';
 
     let cropper = null;

@@ -21,18 +21,8 @@ if (!$quiz_data) {
         <div class="pqc-header-top">
             <h2 contenteditable="true" class="pqc-editable-title" data-field="quiz_title"
                 title="<?php _e('Click to edit quiz title', 'politeia-quiz-creator'); ?>">
-                <?php echo esc_html($quiz_data['title']); ?></h2>
-            <div class="pqc-editor-badge">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                </svg>
-                <span><?php _e('Editor Mode', 'politeia-quiz-creator'); ?></span>
-            </div>
-        </div>
-        <div class="pqc-description pqc-editor-meta">
-            <span><strong><?php echo count($quiz_data['questions']); ?></strong>
-                <?php _e('Questions found', 'politeia-quiz-creator'); ?></span>
+                <?php echo esc_html($quiz_data['title']); ?>
+            </h2>
         </div>
     </div>
 
@@ -47,7 +37,7 @@ if (!$quiz_data) {
                         <!-- UNIFIED CONTROL ROW: Question Tag + Arrows + Save -->
                         <div class="pqc-slide-controls-row">
                             <div class="pqc-question-num-tag">
-                                <?php echo sprintf(__('QUESTION %d', 'politeia-quiz-creator'), $index + 1); ?>
+                                <?php echo sprintf(__('Question %d/%d', 'politeia-quiz-creator'), $index + 1, count($quiz_data['questions'])); ?>
                             </div>
 
                             <div class="pqc-slide-nav-mini">
@@ -65,17 +55,12 @@ if (!$quiz_data) {
                                 </button>
                             </div>
 
-                            <div class="pqc-slide-actions-mini">
-                                <button type="button" class="pqc-save-quiz-btn pqc-submit-btn-mini">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2">
-                                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                                        <polyline points="7 3 7 8 15 8"></polyline>
-                                    </svg>
-                                    <span><?php _e('SAVE', 'politeia-quiz-creator'); ?></span>
-                                </button>
-                            </div>
+                            <button type="button" class="pqc-delete-quiz-btn"
+                                style="margin-left: auto; background: none; border: none; color: #e53e3e; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                                <span class="dashicons dashicons-trash" style="font-size: 16px; width: 16px; height: 16px;"></span>
+                                <?php _e('Delete Quiz', 'politeia-quiz-creator'); ?>
+                            </button>
+
                         </div>
 
                         <div class="pqc-slide-header">

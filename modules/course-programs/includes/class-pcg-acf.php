@@ -1,5 +1,5 @@
 <?php
-class PCG_ACF {
+class PL_ACF {
     public function __construct() {
         add_action('acf/init', [$this, 'register_fields']);
     }

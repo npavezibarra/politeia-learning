@@ -3,7 +3,7 @@ description: >
   Extiende LearnDash añadiendo el nivel jerárquico "Programas Filosóficos",
   agrupando varios grupos de cursos bajo una misma estructura de programa.
 version: 1.0.0
-entrypoint: politeia-course-group.php
+entrypoint: politeia-learning.php
 language: php
 type: wordpress-plugin
 autoload: composer

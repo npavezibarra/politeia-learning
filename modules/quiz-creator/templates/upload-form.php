@@ -11,7 +11,20 @@ if (!defined('ABSPATH')) {
 
 <div class="pqc-container pqc-wizard-container">
     <div class="pqc-header">
-        <h2><?php echo esc_html($atts['title']); ?></h2>
+        <div class="pqc-header-top"
+            style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <h2><?php _e('Quiz Creator', 'politeia-quiz-creator'); ?></h2>
+            <?php if ($quiz_id): ?>
+                <button type="button" class="pqc-delete-quiz-btn" data-quiz-id="<?php echo esc_attr($quiz_id); ?>"
+                    style="background: none; border: none; color: #e53e3e; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                    <span class="dashicons dashicons-trash" style="font-size: 16px; width: 16px; height: 16px;"></span>
+                    <?php _e('Delete Existing Quiz', 'politeia-quiz-creator'); ?>
+                </button>
+            <?php endif; ?>
+        </div>
+        <p class="pqc-description">
+            <?php _e('Set up your quiz parameters and upload your content to generate the evaluation.', 'politeia-quiz-creator'); ?>
+        </p>
         <div class="pqc-wizard-progress">
             <div class="pqc-progress-step active" data-step="1">
                 <span>1</span><label><?php _e('Config', 'politeia-quiz-creator'); ?></label>
@@ -35,35 +48,26 @@ if (!defined('ABSPATH')) {
                     <h3><?php _e('Step 1: Quiz Goals', 'politeia-quiz-creator'); ?></h3>
                 </div>
                 <div class="pqc-settings-grid">
+                    <input type="hidden" id="pqc-course-id" name="course_id"
+                        value="<?php echo esc_attr($course_id); ?>">
                     <div class="pqc-field pqc-field-full">
-                        <label for="pqc-quiz-title"><?php _e('Quiz Title', 'politeia-quiz-creator'); ?> <span
-                                class="pqc-required">*</span></label>
                         <input type="text" id="pqc-quiz-title" name="quiz_title"
-                            placeholder="<?php _e('e.g., Introduction to Ancient Rome', 'politeia-quiz-creator'); ?>"
-                            required />
+                            placeholder="<?php _e('Quiz Title', 'politeia-quiz-creator'); ?>"
+                            value="<?php echo esc_attr($default_quiz_title); ?>" required />
                     </div>
                     <div class="pqc-field pqc-field-full">
-                        <label for="pqc-keywords"><?php _e('Specific Subjects', 'politeia-quiz-creator'); ?></label>
                         <input type="text" id="pqc-keywords" name="keywords"
-                            placeholder="<?php _e('e.g., early republic, economy, demography', 'politeia-quiz-creator'); ?>" />
+                            placeholder="<?php _e('Specific Subjects (e.g., economy, demography)', 'politeia-quiz-creator'); ?>" />
                     </div>
                     <div class="pqc-field">
-                        <label for="pqc-num-questions"><?php _e('Number of Questions', 'politeia-quiz-creator'); ?>
-                            <span class="pqc-required">*</span></label>
                         <input type="number" id="pqc-num-questions" name="num_questions" min="1" max="100" value="10"
-                            required />
+                            placeholder="<?php _e('Number of Questions', 'politeia-quiz-creator'); ?>" required />
                     </div>
                     <div class="pqc-field">
-                        <label
-                            for="pqc-answers-per-question"><?php _e('Answers per Question', 'politeia-quiz-creator'); ?></label>
                         <input type="number" id="pqc-answers-per-question" name="answers_per_question" min="2" max="6"
-                            value="4" />
+                            value="4" placeholder="<?php _e('Answers per Question', 'politeia-quiz-creator'); ?>" />
                     </div>
-                    <div class="pqc-field">
-                        <label for="pqc-passing-percentage"><?php _e('Pass %', 'politeia-quiz-creator'); ?></label>
-                        <input type="number" id="pqc-passing-percentage" name="passing_percentage" min="0" max="100"
-                            value="80" />
-                    </div>
+
                 </div>
                 <div class="pqc-wizard-footer">
                     <button type="button" class="pqc-wizard-next pqc-btn-primary"
@@ -95,8 +99,6 @@ if (!defined('ABSPATH')) {
 
                 <div class="pqc-input-choice-grid">
                     <div class="pqc-upload-compact">
-                        <label
-                            class="pqc-upload-label-text"><?php _e('Option A: Upload File', 'politeia-quiz-creator'); ?></label>
                         <div class="pqc-upload-area-compact">
                             <div class="pqc-upload-icon-small"><svg width="24" height="24" viewBox="0 0 24 24"
                                     fill="none" stroke="currentColor" stroke-width="2">
@@ -116,10 +118,8 @@ if (!defined('ABSPATH')) {
                     </div>
 
                     <div class="pqc-paste-area">
-                        <label
-                            class="pqc-upload-label-text"><?php _e('Option B: Paste JSON', 'politeia-quiz-creator'); ?></label>
                         <textarea id="pqc-json-paste"
-                            placeholder='[{"title":"...","question_text":"...","answers":[...]}]'></textarea>
+                            placeholder="<?php _e('Paste JSON questions here...', 'politeia-quiz-creator'); ?>"></textarea>
                     </div>
                 </div>
 

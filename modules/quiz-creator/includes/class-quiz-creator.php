@@ -453,4 +453,107 @@ class PQC_Quiz_Creator
             'questions' => $questions
         ];
     }
+
+    /**
+     * Get the quiz ID linked to a course
+     */
+    public static function get_quiz_id_by_course($course_id)
+    {
+        if (!$course_id)
+            return 0;
+
+        // Check LearnDash standard meta first
+        $quiz_id = get_post_meta($course_id, '_final_quiz_id', true);
+        if ($quiz_id && get_post_type($quiz_id) === 'sfwd-quiz') {
+            return intval($quiz_id);
+        }
+
+        // Alternative check: quizzes belonging to this course
+        $quizzes = get_posts([
+            'post_type' => 'sfwd-quiz',
+            'meta_query' => [
+                [
+                    'key' => 'course_id',
+                    'value' => $course_id
+                ]
+            ],
+            'posts_per_page' => 1,
+            'fields' => 'ids'
+        ]);
+
+        if (!empty($quizzes)) {
+            return intval($quizzes[0]);
+        }
+
+        // Try LD core meta
+        $sfwd_quizzes = get_posts([
+            'post_type' => 'sfwd-quiz',
+            'posts_per_page' => -1,
+            'fields' => 'ids'
+        ]);
+
+        foreach ($sfwd_quizzes as $sq_id) {
+            $meta = get_post_meta($sq_id, '_sfwd-quiz', true);
+            if (isset($meta['sfwd-quiz_course']) && intval($meta['sfwd-quiz_course']) === intval($course_id)) {
+                return intval($sq_id);
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Delete a quiz and its questions
+     */
+    public static function delete_quiz($quiz_id)
+    {
+        if (get_post_type($quiz_id) !== 'sfwd-quiz')
+            return false;
+
+        // Get and delete questions
+        $questions = get_post_meta($quiz_id, 'ld_quiz_questions', true);
+        if (is_array($questions)) {
+            foreach ($questions as $q_post_id => $q_pro_id) {
+                // Delete from DB ProQuiz table directly is handled by LD usually, 
+                // but we should delete the post at least
+                wp_delete_post($q_post_id, true);
+            }
+        }
+
+        // Delete from ProQuiz Master table
+        global $wpdb;
+        $pro_id = get_post_meta($quiz_id, 'quiz_pro_id', true);
+        if ($pro_id) {
+            $wpdb->delete($wpdb->prefix . 'learndash_pro_quiz_master', ['id' => $pro_id]);
+            $wpdb->delete($wpdb->prefix . 'learndash_pro_quiz_question', ['quiz_id' => $pro_id]);
+        }
+
+        // Clear associations in courses
+        $courses = get_posts([
+            'post_type' => 'sfwd-courses',
+            'meta_query' => [
+                'relation' => 'OR',
+                [
+                    'key' => '_first_quiz_id',
+                    'value' => $quiz_id
+                ],
+                [
+                    'key' => '_final_quiz_id',
+                    'value' => $quiz_id
+                ]
+            ],
+            'posts_per_page' => -1,
+            'fields' => 'ids'
+        ]);
+
+        foreach ($courses as $c_id) {
+            delete_post_meta($c_id, '_first_quiz_id');
+            delete_post_meta($c_id, '_final_quiz_id');
+        }
+
+        // Finally delete the quiz post
+        wp_delete_post($quiz_id, true);
+
+        return true;
+    }
 }

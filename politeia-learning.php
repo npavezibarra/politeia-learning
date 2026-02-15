@@ -1,10 +1,10 @@
 <?php
 /**
- * Plugin Name: Politeia Course Group
+ * Plugin Name: Politeia Learning
  * Description: Custom functionalities for Politeia website related to courses, grouping, selling, and creating courses.
  * Author: Nico / Politeia
- * Version: 1.1.0
- * Text Domain: politeia-course-group
+ * Version: 1.2.0
+ * Text Domain: politeia-learning
  * Codex Enabled: true
  */
 
@@ -12,27 +12,27 @@ if (!defined('ABSPATH'))
     exit;
 
 // Core Constants
-define('PCG_PATH', plugin_dir_path(__FILE__));
-define('PCG_URL', plugin_dir_url(__FILE__));
+define('PL_PATH', plugin_dir_path(__FILE__));
+define('PL_URL', plugin_dir_url(__FILE__));
 
 /**
  * Load Global Dependencies
  */
 // Composer Autoloader
-if (file_exists(PCG_PATH . 'vendor/autoload.php')) {
-    require_once PCG_PATH . 'vendor/autoload.php';
+if (file_exists(PL_PATH . 'vendor/autoload.php')) {
+    require_once PL_PATH . 'vendor/autoload.php';
 }
 
 // Codex Init
-if (file_exists(PCG_PATH . 'codex/init.php')) {
-    require_once PCG_PATH . 'codex/init.php';
+if (file_exists(PL_PATH . 'codex/init.php')) {
+    require_once PL_PATH . 'codex/init.php';
 }
 
 /**
  * Module Loader Class
  * Manages the different standalone modules of the plugin.
  */
-class PCG_Module_Loader
+class PL_Module_Loader
 {
     /**
      * List of available modules and their status.
@@ -44,6 +44,7 @@ class PCG_Module_Loader
         'course-integration' => true,
         'course-creator' => true,
         'quiz-creator' => true,
+        'quiz-control' => true,
     ];
 
     /**
@@ -53,7 +54,7 @@ class PCG_Module_Loader
     {
         foreach (self::$modules as $module_slug => $enabled) {
             if ($enabled) {
-                $init_file = PCG_PATH . 'modules/' . $module_slug . '/init.php';
+                $init_file = PL_PATH . 'modules/' . $module_slug . '/init.php';
                 if (file_exists($init_file)) {
                     require_once $init_file;
                 }
@@ -71,4 +72,4 @@ class PCG_Module_Loader
 }
 
 // Start the modules
-PCG_Module_Loader::init();
+PL_Module_Loader::init();

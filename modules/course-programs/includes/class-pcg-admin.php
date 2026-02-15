@@ -1,5 +1,5 @@
 <?php
-class PCG_Admin_Menu {
+class PL_Admin_Menu {
     public function __construct() {
         add_action( 'admin_menu', [ $this, 'add_admin_page' ], 90 );
     }
@@ -18,11 +18,11 @@ class PCG_Admin_Menu {
     }
 
     public function render_page() {
-        if ( ! class_exists( 'PCG_Programs_Table' ) ) {
+        if ( ! class_exists( 'PL_Programs_Table' ) ) {
             require_once plugin_dir_path( __FILE__ ) . 'class-pcg-programs-table.php';
         }
 
-        $table = new PCG_Programs_Table();
+        $table = new PL_Programs_Table();
         $table->prepare_items();
 
         $new_program_url = admin_url( 'post-new.php?post_type=course_program' );

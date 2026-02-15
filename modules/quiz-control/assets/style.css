@@ -1,0 +1,41 @@
+/* AWAITING LABEL COURSE PAGE */
+
+.ld-awaiting-test {
+    font-size: 12px; 
+    background: #ffbc25; 
+    padding: 0px 10px; 
+    border-radius: 6px; 
+    color: white;
+}
+
+/* COURE CONTENT MESSAGE */
+
+.learndash-wrapper .ld-item-list .ld-section-heading {
+    justify-content: normal !important;
+}
+
+.politeia-course-content-msg {
+    margin-left: 10px;
+    font-size: 12px !important;
+    border: 1px solid black !important;
+    padding: 0px 10px;
+    border-radius: 2px;
+}
+
+/* HACE BARRA GRIS DE RESULTADOS INVISIBLE */
+
+
+.wpProQuiz_points.wpProQuiz_points--message {
+	display: none !important;
+}
+
+p.wpProQuiz_quiz_time {
+    margin-bottom: -10px;
+}
+
+/* MESSAGE REPEATED COURSE PURCHASE */
+
+div#repeat-course-purchase-message {
+    background: white;
+    border-radius: 9px;
+}

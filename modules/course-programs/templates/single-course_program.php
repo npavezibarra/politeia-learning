@@ -51,8 +51,8 @@ if ( have_posts() ) {
             'politeia_program_teachers_placeholder',
             array(
                 array(
-                    'name'  => __( 'Próximamente', 'politeia-course-group' ),
-                    'role'  => __( 'Profesor/a', 'politeia-course-group' ),
+                    'name'  => __( 'Próximamente', 'politeia-learning' ),
+                    'role'  => __( 'Profesor/a', 'politeia-learning' ),
                     'image' => '',
                 ),
             ),
@@ -65,7 +65,7 @@ if ( have_posts() ) {
         $header_meta_segments = array();
 
         if ( $group_count > 0 ) {
-            $header_meta_segments[] = sprintf( _n( '%s Grupo', '%s Grupos', $group_count, 'politeia-course-group' ), number_format_i18n( $group_count ) );
+            $header_meta_segments[] = sprintf( _n( '%s Grupo', '%s Grupos', $group_count, 'politeia-learning' ), number_format_i18n( $group_count ) );
         }
 
         if ( ! empty( $program_duration ) ) {
@@ -106,7 +106,7 @@ if ( have_posts() ) {
                                 <div class="pcg-header-tags">
                                     <?php if ( $group_count > 0 ) : ?>
                                         <span class="pcg-header-tag">
-                                            <?php printf( _n( '%s Ramo', '%s Ramos', $group_count, 'politeia-course-group' ), number_format_i18n( $group_count ) ); ?>
+                                            <?php printf( _n( '%s Ramo', '%s Ramos', $group_count, 'politeia-learning' ), number_format_i18n( $group_count ) ); ?>
                                         </span>
                                     <?php endif; ?>
 
@@ -123,7 +123,7 @@ if ( have_posts() ) {
 
                 <section id="politeia-program-content" class="pcg-program-content">
                     <div class="pcg-program-description">
-                        <h2 class="pcg-section-title"><?php esc_html_e( 'Descripción Programa', 'politeia-course-group' ); ?></h2>
+                        <h2 class="pcg-section-title"><?php esc_html_e( 'Descripción Programa', 'politeia-learning' ); ?></h2>
                         <div class="pcg-card pcg-description-card" id="descripcion-texto">
                             <?php the_content(); ?>
                         </div>
@@ -131,7 +131,7 @@ if ( have_posts() ) {
 
                     <aside class="pcg-program-ramos">
                         <div class="lg:col-span-1">
-                            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2"><?php esc_html_e( 'Ramos', 'politeia-course-group' ); ?></h2>
+                            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2"><?php esc_html_e( 'Ramos', 'politeia-learning' ); ?></h2>
                             <div class="bg-white p-5 rounded-lg border border-gray-300 card-shadow">
                                 <?php
                                 $group_ids = get_post_meta( get_the_ID(), 'politeia_program_groups', true );
@@ -177,12 +177,12 @@ if ( have_posts() ) {
                                     }
 
                                     if ( ! $has_valid_groups ) {
-                                        echo '<p class="text-gray-600 italic">' . esc_html__( 'No hay grupos asociados a este programa.', 'politeia-course-group' ) . '</p>';
+                                        echo '<p class="text-gray-600 italic">' . esc_html__( 'No hay grupos asociados a este programa.', 'politeia-learning' ) . '</p>';
                                     }
 
                                     echo '</div>';
                                 } else {
-                                    echo '<p class="text-gray-600 italic">' . esc_html__( 'No hay grupos asociados a este programa.', 'politeia-course-group' ) . '</p>';
+                                    echo '<p class="text-gray-600 italic">' . esc_html__( 'No hay grupos asociados a este programa.', 'politeia-learning' ) . '</p>';
                                 }
                                 ?>
                             </div>
@@ -191,7 +191,7 @@ if ( have_posts() ) {
                 </section>
 
                 <section id="politeia-program-teachers" class="pcg-program-teachers">
-                    <h2 class="pcg-section-title"><?php esc_html_e( 'Profesores', 'politeia-course-group' ); ?></h2>
+                    <h2 class="pcg-section-title"><?php esc_html_e( 'Profesores', 'politeia-learning' ); ?></h2>
                     <div id="profesores-list" class="pcg-card pcg-teachers">
                         <?php if ( ! empty( $teachers ) ) : ?>
                             <?php foreach ( $teachers as $teacher ) :
@@ -228,7 +228,7 @@ if ( have_posts() ) {
                                 </article>
                             <?php endforeach; ?>
                         <?php else : ?>
-                            <p class="pcg-teachers-empty"><?php esc_html_e( 'Pronto anunciaremos a los profesores de este programa.', 'politeia-course-group' ); ?></p>
+                            <p class="pcg-teachers-empty"><?php esc_html_e( 'Pronto anunciaremos a los profesores de este programa.', 'politeia-learning' ); ?></p>
                         <?php endif; ?>
                     </div>
                 </section>

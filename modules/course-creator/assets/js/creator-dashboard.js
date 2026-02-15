@@ -148,6 +148,8 @@ jQuery(document).ready(function ($) {
             } else {
                 $('#pcg-quiz-not-created-msg').hide();
                 $('#pcg-quiz-creator-container').show();
+                // Dynamically refresh quiz module for current course
+                $(document).trigger('pqc_refresh', { courseId: courseId });
             }
             $('#pcg-mode-evaluacion').fadeIn(300);
         }
@@ -280,7 +282,7 @@ jQuery(document).ready(function ($) {
     // Media Uploader: Thumbnail (Course Cover)
     $('#pcg-upload-thumbnail').on('click', function (e) {
         e.preventDefault();
-        PCG_Cropper.open({
+        PL_Cropper.open({
             title: 'Course Cover',
             width: 360,
             height: 238,
@@ -293,7 +295,7 @@ jQuery(document).ready(function ($) {
     // Media Uploader: Cover Photo (Background)
     $('#pcg-select-background').on('click', function (e) {
         e.preventDefault();
-        PCG_Cropper.open({
+        PL_Cropper.open({
             title: 'Cover Photo',
             width: 1024,
             height: 768,
@@ -358,6 +360,9 @@ jQuery(document).ready(function ($) {
 
     // Save Course Logic
     $('.pcg-btn-save').on('click', function () {
+        // Trigger Quiz Save if the editor is active
+        $(document).trigger('pqc_save');
+
         const $btn = $(this);
         const originalText = $btn.text();
 

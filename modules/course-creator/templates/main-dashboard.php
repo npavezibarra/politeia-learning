@@ -11,7 +11,7 @@ $user_slug = get_query_var('pcg_creator_user');
 $user = get_user_by('slug', $user_slug);
 
 if (!$user) {
-    wp_die(__('Usuario no encontrado.', 'politeia-course-group'));
+    wp_die(__('Usuario no encontrado.', 'politeia-learning'));
 }
 
 $current_section = isset($_GET['section']) ? sanitize_text_field($_GET['section']) : 'create-course';
@@ -29,7 +29,7 @@ get_header();
                     <?php echo esc_html($user->display_name); ?>
                 </h2>
                 <span class="user-role">
-                    <?php _e('Creador de Cursos', 'politeia-course-group'); ?>
+                    <?php _e('Creador de Cursos', 'politeia-learning'); ?>
                 </span>
             </div>
 
@@ -38,25 +38,25 @@ get_header();
                     <li class="<?php echo $current_section === 'create-course' ? 'active' : ''; ?>">
                         <a href="?section=create-course">
                             <span class="dashicons dashicons-plus-alt"></span>
-                            <?php _e('MIS CURSOS', 'politeia-course-group'); ?>
+                            <?php _e('MIS CURSOS', 'politeia-learning'); ?>
                         </a>
                     </li>
                     <li class="<?php echo $current_section === 'create-group' ? 'active' : ''; ?>">
                         <a href="?section=create-group">
                             <span class="dashicons dashicons-category"></span>
-                            <?php _e('PROGRAMAS', 'politeia-course-group'); ?>
+                            <?php _e('PROGRAMAS', 'politeia-learning'); ?>
                         </a>
                     </li>
                     <li class="<?php echo $current_section === 'sales' ? 'active' : ''; ?>">
                         <a href="?section=sales">
                             <span class="dashicons dashicons-chart-area"></span>
-                            <?php _e('VENTAS', 'politeia-course-group'); ?>
+                            <?php _e('VENTAS', 'politeia-learning'); ?>
                         </a>
                     </li>
                     <li class="<?php echo $current_section === 'stats' ? 'active' : ''; ?>">
                         <a href="?section=stats">
                             <span class="dashicons dashicons-groups"></span>
-                            <?php _e('ESTUDIANTES', 'politeia-course-group'); ?>
+                            <?php _e('ESTUDIANTES', 'politeia-learning'); ?>
                         </a>
                     </li>
                 </ul>
@@ -67,11 +67,11 @@ get_header();
 
             <div class="pcg-section-container">
                 <?php
-                $template_file = PCG_CC_PATH . 'templates/sections/' . $current_section . '.php';
+                $template_file = PL_CC_PATH . 'templates/sections/' . $current_section . '.php';
                 if (file_exists($template_file)) {
                     include $template_file;
                 } else {
-                    echo '<p>' . __('Sección en construcción...', 'politeia-course-group') . '</p>';
+                    echo '<p>' . __('Sección en construcción...', 'politeia-learning') . '</p>';
                 }
                 ?>
             </div>

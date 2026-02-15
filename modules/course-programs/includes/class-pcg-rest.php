@@ -1,5 +1,5 @@
 <?php
-class PCG_REST {
+class PL_REST {
     public function __construct() {
         add_action( 'rest_api_init', [ $this, 'register_routes' ] );
     }

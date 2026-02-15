@@ -3,7 +3,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class PCG_Metaboxes
+class PL_Metaboxes
 {
 
     const PRICE_META_KEY = 'politeia_program_price';
@@ -23,7 +23,7 @@ class PCG_Metaboxes
     {
         add_meta_box(
             'pcg-program-details',
-            __('Detalles del Programa Politeia', 'politeia-course-group'),
+            __('Detalles del Programa Politeia', 'politeia-learning'),
             [$this, 'render_metabox'],
             'course_program',
             'normal',
@@ -41,14 +41,14 @@ class PCG_Metaboxes
         $group_ids = array_map('absint', array_keys($groups));
         ?>
         <div class="pcg-program-field components-base-control">
-            <label for="pcg-program-price"><strong><?php esc_html_e('Precio', 'politeia-course-group'); ?></strong></label>
+            <label for="pcg-program-price"><strong><?php esc_html_e('Precio', 'politeia-learning'); ?></strong></label>
             <input type="number" id="pcg-program-price" name="<?php echo esc_attr(self::PRICE_META_KEY); ?>"
                 value="<?php echo esc_attr($price); ?>" class="widefat" step="0.01" min="0" />
         </div>
 
         <div class="pcg-program-field components-base-control">
             <label
-                for="pcg-program-groups-input"><strong><?php esc_html_e('Grupos', 'politeia-course-group'); ?></strong></label>
+                for="pcg-program-groups-input"><strong><?php esc_html_e('Grupos', 'politeia-learning'); ?></strong></label>
             <div class="pcg-groups-field">
                 <div class="pcg-groups-tags tagchecklist" aria-live="polite">
                     <?php foreach ($groups as $group_id => $group_title): ?>
@@ -56,12 +56,12 @@ class PCG_Metaboxes
                             data-group-title="<?php echo esc_attr($group_title); ?>">
                             <span class="pcg-group-tag__label"><?php echo esc_html($group_title); ?></span>
                             <button type="button" class="pcg-group-tag__remove"
-                                aria-label="<?php esc_attr_e('Eliminar grupo', 'politeia-course-group'); ?>">&times;</button>
+                                aria-label="<?php esc_attr_e('Eliminar grupo', 'politeia-learning'); ?>">&times;</button>
                         </span>
                     <?php endforeach; ?>
                 </div>
                 <input type="text" id="pcg-program-groups-input" class="pcg-groups-input"
-                    placeholder="<?php esc_attr_e('Busca y selecciona grupos...', 'politeia-course-group'); ?>"
+                    placeholder="<?php esc_attr_e('Busca y selecciona grupos...', 'politeia-learning'); ?>"
                     autocomplete="off" />
                 <input type="hidden" class="pcg-groups-hidden" name="<?php echo esc_attr(self::GROUPS_META_KEY); ?>"
                     value='<?php echo esc_attr(wp_json_encode($group_ids)); ?>' />
@@ -131,14 +131,14 @@ class PCG_Metaboxes
             return;
         }
 
-        wp_enqueue_style('pcg-metaboxes', PCG_CP_URL . 'assets/css/pcg-metaboxes.css', [], '1.0.0');
-        wp_enqueue_script('pcg-groups-field', PCG_CP_URL . 'assets/js/pcg-groups-field.js', ['jquery'], '1.0.0', true);
+        wp_enqueue_style('pcg-metaboxes', PL_CP_URL . 'assets/css/pcg-metaboxes.css', [], '1.0.0');
+        wp_enqueue_script('pcg-groups-field', PL_CP_URL . 'assets/js/pcg-groups-field.js', ['jquery'], '1.0.0', true);
         wp_localize_script('pcg-groups-field', 'pcgGroupsField', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('pcg_groups_search'),
             'action' => self::AJAX_ACTION,
             'labels' => [
-                'remove' => __('Eliminar grupo', 'politeia-course-group'),
+                'remove' => __('Eliminar grupo', 'politeia-learning'),
             ],
         ]);
     }
@@ -148,7 +148,7 @@ class PCG_Metaboxes
         check_ajax_referer('pcg_groups_search', 'nonce');
 
         if (!current_user_can('edit_posts')) {
-            wp_send_json_error(__('No tienes permisos suficientes.', 'politeia-course-group'), 403);
+            wp_send_json_error(__('No tienes permisos suficientes.', 'politeia-learning'), 403);
         }
 
         $query = isset($_POST['q']) ? sanitize_text_field(wp_unslash($_POST['q'])) : '';

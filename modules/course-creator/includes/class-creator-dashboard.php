@@ -6,7 +6,7 @@
 if (!defined('ABSPATH'))
     exit;
 
-class PCG_CC_Creator_Dashboard
+class PL_CC_Creator_Dashboard
 {
 
     const REWRITE_TAG = 'pcg_creator_user';
@@ -46,7 +46,7 @@ class PCG_CC_Creator_Dashboard
         }
 
         bp_core_new_nav_item([
-            'name' => __('Center', 'politeia-course-group'),
+            'name' => __('Center', 'politeia-learning'),
             'slug' => 'center',
             'position' => 10,
             'screen_function' => [$this, 'dashboard_screen'],
@@ -70,7 +70,7 @@ class PCG_CC_Creator_Dashboard
         // If we want it to look EXACTLY as it looks now (with get_header/get_footer),
         // we should probably NOT use bp_core_load_template which wraps it in profile template.
         // Instead, we can just load the template directly if it's the main page.
-        $template = PCG_CC_PATH . 'templates/main-dashboard.php';
+        $template = PL_CC_PATH . 'templates/main-dashboard.php';
         if (file_exists($template)) {
             load_template($template);
             exit;
@@ -103,7 +103,7 @@ class PCG_CC_Creator_Dashboard
                 $current_user_id = get_current_user_id();
 
                 if ($current_user_id === $user->ID || current_user_can('manage_options')) {
-                    $custom_template = PCG_CC_PATH . 'templates/main-dashboard.php';
+                    $custom_template = PL_CC_PATH . 'templates/main-dashboard.php';
                     if (file_exists($custom_template)) {
                         return $custom_template;
                     }
@@ -132,8 +132,8 @@ class PCG_CC_Creator_Dashboard
             wp_enqueue_style('cropperjs', plugins_url('buddyboss-platform/bp-core/css/vendor/cropper.min.css'), [], '1.5.12');
             wp_enqueue_script('cropperjs', plugins_url('buddyboss-platform/bp-core/js/vendor/cropper.min.js'), ['jquery'], '1.5.12', true);
 
-            wp_enqueue_style('pcg-creator-css', PCG_CC_URL . 'assets/css/creator-dashboard.css', [], '1.0.0');
-            wp_enqueue_style('pcg-cropper-css', PCG_CC_URL . 'assets/css/pcg-cropper.css', ['cropperjs'], '1.0.0');
+            wp_enqueue_style('pcg-creator-css', PL_CC_URL . 'assets/css/creator-dashboard.css', [], '1.0.0');
+            wp_enqueue_style('pcg-cropper-css', PL_CC_URL . 'assets/css/pcg-cropper.css', ['cropperjs'], '1.0.0');
 
             // Inject Custom Styles from Admin Options
             $creator_max_width = get_option('pcg_creator_max_width', '1400px');
@@ -147,8 +147,8 @@ class PCG_CC_Creator_Dashboard
             ";
             wp_add_inline_style('pcg-creator-css', $custom_css);
 
-            wp_enqueue_script('pcg-cropper-js', PCG_CC_URL . 'assets/js/pcg-course-cropper.js', ['jquery', 'cropperjs'], '1.0.0', true);
-            wp_enqueue_script('pcg-creator-js', PCG_CC_URL . 'assets/js/creator-dashboard.js', ['jquery', 'jquery-ui-sortable', 'pcg-cropper-js'], '1.0.0', true);
+            wp_enqueue_script('pcg-cropper-js', PL_CC_URL . 'assets/js/pcg-course-cropper.js', ['jquery', 'cropperjs'], '1.0.0', true);
+            wp_enqueue_script('pcg-creator-js', PL_CC_URL . 'assets/js/creator-dashboard.js', ['jquery', 'jquery-ui-sortable', 'pcg-cropper-js'], '1.0.0', true);
 
             wp_localize_script('pcg-creator-js', 'pcgCreatorData', [
                 'ajaxUrl' => admin_url('admin-ajax.php'),
@@ -179,6 +179,6 @@ class PCG_CC_Creator_Dashboard
         if (!$user)
             return;
 
-        include PCG_CC_PATH . 'templates/main-dashboard.php';
+        include PL_CC_PATH . 'templates/main-dashboard.php';
     }
 }

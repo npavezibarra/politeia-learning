@@ -6,7 +6,7 @@
 if (!defined('ABSPATH'))
     exit;
 
-class PCG_CC_Course_Save_Handler
+class PL_CC_Course_Save_Handler
 {
 
     public function __construct()
@@ -355,7 +355,7 @@ class PCG_CC_Course_Save_Handler
             // Clean display if price is 0 or empty
             $numeric_price = intval(preg_replace('/[^0-9]/', '', $price));
             if ($numeric_price === 0) {
-                $price = __('Gratis', 'politeia-course-group');
+                $price = __('Gratis', 'politeia-learning');
             }
 
             // Count lessons using LD relationship
@@ -370,7 +370,7 @@ class PCG_CC_Course_Save_Handler
             $data[] = [
                 'id' => $post->ID,
                 'title' => $post->post_title,
-                'thumbnail_url' => $thumbnail_url ? $thumbnail_url : PCG_CC_URL . 'assets/img/default-course.jpg',
+                'thumbnail_url' => $thumbnail_url ? $thumbnail_url : PL_CC_URL . 'assets/img/default-course.jpg',
                 'price' => $price,
                 'lesson_count' => count($lessons)
             ];

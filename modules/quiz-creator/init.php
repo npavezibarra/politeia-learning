@@ -9,22 +9,22 @@ if (!defined('ABSPATH')) {
 }
 
 // Define module constants
-define('PCG_QC_VERSION', '1.0.0');
-define('PCG_QC_PATH', plugin_dir_path(__FILE__));
-define('PCG_QC_URL', plugin_dir_url(__FILE__));
+define('PL_QC_VERSION', '1.0.0');
+define('PL_QC_PATH', plugin_dir_path(__FILE__));
+define('PL_QC_URL', plugin_dir_url(__FILE__));
 
 // Map old constants to new ones to maintain compatibility in included files
 if (!defined('PQC_VERSION'))
-    define('PQC_VERSION', PCG_QC_VERSION);
+    define('PQC_VERSION', PL_QC_VERSION);
 if (!defined('PQC_PLUGIN_DIR'))
-    define('PQC_PLUGIN_DIR', PCG_QC_PATH);
+    define('PQC_PLUGIN_DIR', PL_QC_PATH);
 if (!defined('PQC_PLUGIN_URL'))
-    define('PQC_PLUGIN_URL', PCG_QC_URL);
+    define('PQC_PLUGIN_URL', PL_QC_URL);
 
 /**
  * Quiz Creator Module Class
  */
-class PCG_QC_Module
+class PL_QC_Module
 {
     private static $instance = null;
 
@@ -44,10 +44,10 @@ class PCG_QC_Module
 
     private function load_dependencies()
     {
-        require_once PCG_QC_PATH . 'includes/class-quiz-creator.php';
-        require_once PCG_QC_PATH . 'includes/class-file-parser.php';
-        require_once PCG_QC_PATH . 'includes/class-shortcode.php';
-        require_once PCG_QC_PATH . 'includes/class-ajax-handler.php';
+        require_once PL_QC_PATH . 'includes/class-quiz-creator.php';
+        require_once PL_QC_PATH . 'includes/class-file-parser.php';
+        require_once PL_QC_PATH . 'includes/class-shortcode.php';
+        require_once PL_QC_PATH . 'includes/class-ajax-handler.php';
     }
 
     private function init_hooks()
@@ -73,17 +73,17 @@ class PCG_QC_Module
         // CSS
         wp_enqueue_style(
             'pqc-styles',
-            PCG_QC_URL . 'assets/css/quiz-creator.css',
+            PL_QC_URL . 'assets/css/quiz-creator.css',
             [],
-            PCG_QC_VERSION
+            PL_QC_VERSION
         );
 
         // JS
         wp_enqueue_script(
             'pqc-scripts',
-            PCG_QC_URL . 'assets/js/quiz-creator.js',
+            PL_QC_URL . 'assets/js/quiz-creator.js',
             ['jquery'],
-            PCG_QC_VERSION,
+            PL_QC_VERSION,
             true
         );
 
@@ -102,4 +102,4 @@ class PCG_QC_Module
 }
 
 // Initialize the module
-PCG_QC_Module::get_instance();
+PL_QC_Module::get_instance();

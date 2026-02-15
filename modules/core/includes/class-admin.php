@@ -6,7 +6,7 @@
 if (!defined('ABSPATH'))
     exit;
 
-class PCG_Core_Admin
+class PL_Core_Admin
 {
 
     public function __construct()
@@ -21,8 +21,8 @@ class PCG_Core_Admin
     public function register_menu()
     {
         add_menu_page(
-            __('Politeia Learning', 'politeia-course-group'),
-            __('Politeia Learning', 'politeia-course-group'),
+            __('Politeia Learning', 'politeia-learning'),
+            __('Politeia Learning', 'politeia-learning'),
             'manage_options',
             'politeia-learning',
             [$this, 'render_dashboard'],
@@ -32,8 +32,8 @@ class PCG_Core_Admin
 
         add_submenu_page(
             'politeia-learning',
-            __('Style Options', 'politeia-course-group'),
-            __('Style Options', 'politeia-course-group'),
+            __('Style Options', 'politeia-learning'),
+            __('Style Options', 'politeia-learning'),
             'manage_options',
             'pcg-style-options',
             [$this, 'render_style_options']
@@ -49,7 +49,7 @@ class PCG_Core_Admin
             return;
         }
 
-        wp_enqueue_style('pcg-core-admin', PCG_CORE_URL . 'assets/css/core-admin.css', [], '1.0.0');
+        wp_enqueue_style('pcg-core-admin', PL_CORE_URL . 'assets/css/core-admin.css', [], '1.0.0');
     }
 
     /**
@@ -58,7 +58,7 @@ class PCG_Core_Admin
     public function render_dashboard()
     {
         $plugins_status = $this->check_plugins_status();
-        include PCG_CORE_PATH . 'templates/dashboard.php';
+        include PL_CORE_PATH . 'templates/dashboard.php';
     }
 
     /**
@@ -73,13 +73,13 @@ class PCG_Core_Admin
             update_option('pcg_creator_max_width', $creator_max_width);
             update_option('pcg_container_max_width', $container_max_width);
 
-            echo '<div class="updated"><p>' . __('Settings saved.', 'politeia-course-group') . '</p></div>';
+            echo '<div class="updated"><p>' . __('Settings saved.', 'politeia-learning') . '</p></div>';
         }
 
         $creator_max_width = get_option('pcg_creator_max_width', '1400px');
         $container_max_width = get_option('pcg_container_max_width', '1200px');
 
-        include PCG_CORE_PATH . 'templates/style-options.php';
+        include PL_CORE_PATH . 'templates/style-options.php';
     }
 
     /**

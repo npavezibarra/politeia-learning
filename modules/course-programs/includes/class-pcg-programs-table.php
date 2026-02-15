@@ -3,7 +3,7 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
     require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 }
 
-class PCG_Programs_Table extends WP_List_Table {
+class PL_Programs_Table extends WP_List_Table {
     public function get_columns() {
         return [
             'title'            => __( 'Programa', 'pcg' ),

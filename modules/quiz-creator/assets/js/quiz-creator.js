@@ -7,7 +7,6 @@
     'use strict';
 
     let selectedFile = null;
-    let selectedText = null;
 
     $(document).ready(function () {
         initWizardNavigation();
@@ -21,6 +20,20 @@
         if ($('.pqc-editor-container').length) {
             initQuizEditor();
         }
+
+        // External refresh trigger
+        $(document).on('pqc_refresh', function (e, data) {
+            if (data && data.courseId) {
+                refreshQuizModule(data.courseId);
+            }
+        });
+
+        // External save trigger
+        $(document).on('pqc_save', function () {
+            if ($('.pqc-editor-container').length) {
+                saveQuizChanges();
+            }
+        });
     });
 
     /**
@@ -34,7 +47,7 @@
 
             // Simple validation before going to next slide
             if (currentSlide === 1) {
-                const title = $('#pqc-quiz-title').val().trim();
+                const title = $('#pqc-quiz-title').val() ? $('#pqc-quiz-title').val().trim() : '';
                 const num = $('#pqc-num-questions').val();
                 if (!title) { alert('Please enter a Quiz Title.'); return; }
                 if (!num || num < 1) { alert('Please enter number of questions.'); return; }
@@ -63,45 +76,135 @@
      * Initialize Quiz Editor (Slider + Inline Editing)
      */
     function initQuizEditor() {
-        let currentSlide = 0;
+        // Reset slider on init
+        const $viewport = $('.pqc-slides-container');
+        if ($viewport.length) {
+            $viewport.css('transform', 'translateX(0)');
+            $('.pqc-editor-container').data('current-slide', 0);
+            updateNavState(0, $('.pqc-slide').length);
+        }
+    }
+
+    // Global Slider Navigation
+    $(document).on('click', '.pqc-next-slide', function () {
+        const $container = $('.pqc-editor-container');
         const $viewport = $('.pqc-slides-container');
         const $slides = $('.pqc-slide');
         const totalSlides = $slides.length;
+        if (!totalSlides) return;
 
-        function updateSlider() {
+        let currentSlide = $container.data('current-slide') || 0;
+
+        if (currentSlide < totalSlides - 1) {
+            currentSlide++;
+            $container.data('current-slide', currentSlide);
             const offset = -(currentSlide * 100);
             $viewport.css('transform', `translateX(${offset}%)`);
-            $('.pqc-prev-slide').prop('disabled', currentSlide === 0);
-            $('.pqc-next-slide').prop('disabled', currentSlide === totalSlides - 1);
+            updateNavState(currentSlide, totalSlides);
         }
+    });
 
-        $(document).on('click', '.pqc-next-slide', function () {
-            if (currentSlide < totalSlides - 1) {
-                currentSlide++;
-                updateSlider();
+    $(document).on('click', '.pqc-prev-slide', function () {
+        const $container = $('.pqc-editor-container');
+        const $viewport = $('.pqc-slides-container');
+        const $slides = $('.pqc-slide');
+        const totalSlides = $slides.length;
+        if (!totalSlides) return;
+
+        let currentSlide = $container.data('current-slide') || 0;
+
+        if (currentSlide > 0) {
+            currentSlide--;
+            $container.data('current-slide', currentSlide);
+            const offset = -(currentSlide * 100);
+            $viewport.css('transform', `translateX(${offset}%)`);
+            updateNavState(currentSlide, totalSlides);
+        }
+    });
+
+    function updateNavState(current, total) {
+        $('.pqc-prev-slide').prop('disabled', current === 0);
+        $('.pqc-next-slide').prop('disabled', current === total - 1);
+    }
+
+    $(document).on('click', '.pqc-save-quiz-btn', function () {
+        saveQuizChanges();
+    });
+
+    $(document).on('click', '.pqc-delete-quiz-btn', function () {
+        if (!confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) return;
+
+        const quizId = $(this).data('quiz-id') || $('.pqc-editor-container').data('quiz-id');
+        if (!quizId) return;
+
+        const $btn = $(this);
+        const originalHtml = $btn.html();
+
+        $btn.prop('disabled', true).html('Deleting...');
+
+        $.ajax({
+            url: pqcData.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'pqc_delete_quiz',
+                nonce: pqcData.nonce,
+                quiz_id: quizId
+            },
+            success: function (response) {
+                if (response.success) {
+                    if ($('#pcg-current-course-id').length) {
+                        const courseId = $('#pcg-current-course-id').val();
+                        refreshQuizModule(courseId);
+                    } else {
+                        location.reload();
+                    }
+                } else {
+                    alert(response.data || 'Delete failed');
+                    $btn.prop('disabled', false).html(originalHtml);
+                }
+            },
+            error: function () {
+                alert('Network error occurred.');
+                $btn.prop('disabled', false).html(originalHtml);
             }
         });
+    });
 
-        $(document).on('click', '.pqc-prev-slide', function () {
-            if (currentSlide > 0) {
-                currentSlide--;
-                updateSlider();
+    // Delegated Change Handler for checkboxes
+    $(document).on('change', '.pqc-answer-correct-check', function () {
+        const $row = $(this).closest('.pqc-answer-edit-row');
+        if ($(this).is(':checked')) {
+            $(this).closest('.pqc-answers-editor-list').find('.pqc-answer-correct-check').not(this).prop('checked', false);
+            $(this).closest('.pqc-answers-editor-list').find('.pqc-answer-edit-row').removeClass('is-correct');
+            $row.addClass('is-correct');
+        } else {
+            $row.removeClass('is-correct');
+        }
+    });
+
+    function refreshQuizModule(courseId) {
+        const $container = $('#pcg-quiz-creator-container');
+        if (!$container.length) return;
+        $container.css('opacity', '0.5');
+
+        $.ajax({
+            url: pqcData.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'pqc_get_quiz_module',
+                course_id: courseId
+            },
+            success: function (response) {
+                if (response.success) {
+                    $container.html(response.data.html);
+                    if ($('.pqc-editor-container').length) {
+                        initQuizEditor();
+                    }
+                }
+            },
+            complete: function () {
+                $container.css('opacity', '1');
             }
-        });
-
-        $('.pqc-answer-correct-check').on('change', function () {
-            const $row = $(this).closest('.pqc-answer-edit-row');
-            if ($(this).is(':checked')) {
-                $(this).closest('.pqc-answers-editor-list').find('.pqc-answer-correct-check').not(this).prop('checked', false);
-                $(this).closest('.pqc-answers-editor-list').find('.pqc-answer-edit-row').removeClass('is-correct');
-                $row.addClass('is-correct');
-            } else {
-                $row.removeClass('is-correct');
-            }
-        });
-
-        $(document).on('click', '.pqc-save-quiz-btn', function () {
-            saveQuizChanges();
         });
     }
 
@@ -109,6 +212,7 @@
         const $allButtons = $('.pqc-save-quiz-btn');
         const $msg = $('#pqc-edit-msg');
         const quizId = $('.pqc-editor-container').data('quiz-id');
+        if (!quizId) return;
 
         const quizData = {
             quiz_id: quizId,
@@ -167,26 +271,28 @@
     }
 
     function initFormValidation() {
-        $('#pqc-quiz-title, #pqc-json-paste').on('change keyup', function () {
-            const hasTitle = $('#pqc-quiz-title').val().trim().length > 0;
-            const hasInput = selectedFile !== null || $('#pqc-json-paste').val().trim().length > 0;
+        $(document).on('change keyup', '#pqc-quiz-title, #pqc-json-paste', function () {
+            const hasTitle = $('#pqc-quiz-title').val() ? $('#pqc-quiz-title').val().trim().length > 0 : false;
+            const hasInput = selectedFile !== null || ($('#pqc-json-paste').val() ? $('#pqc-json-paste').val().trim().length > 0 : false);
             $('.pqc-submit-btn').prop('disabled', !(hasTitle && hasInput));
         });
     }
 
     function initUploadArea() {
-        const $uploadArea = $('.pqc-upload-area-compact');
-        $uploadArea.on('click', function (e) {
+        $(document).on('click', '.pqc-upload-area-compact', function (e) {
             if (e.target !== this && !$(e.target).closest('.pqc-upload-icon-small, .pqc-upload-text-compact').length) return;
             $('#pqc-file-input').click();
         });
-        $uploadArea.on('dragover', function (e) {
+
+        $(document).on('dragover', '.pqc-upload-area-compact', function (e) {
             e.preventDefault(); e.stopPropagation(); $(this).addClass('drag-over');
         });
-        $uploadArea.on('dragleave', function (e) {
+
+        $(document).on('dragleave', '.pqc-upload-area-compact', function (e) {
             e.preventDefault(); e.stopPropagation(); $(this).removeClass('drag-over');
         });
-        $uploadArea.on('drop', function (e) {
+
+        $(document).on('drop', '.pqc-upload-area-compact', function (e) {
             e.preventDefault(); e.stopPropagation(); $(this).removeClass('drag-over');
             const files = e.originalEvent.dataTransfer.files;
             if (files.length > 0) handleFileSelect(files[0]);
@@ -194,11 +300,12 @@
     }
 
     function initFileInput() {
-        $('#pqc-file-input').on('change', function (e) {
+        $(document).on('change', '#pqc-file-input', function (e) {
             const files = e.target.files;
             if (files.length > 0) handleFileSelect(files[0]);
         });
-        $('.pqc-remove-file').on('click', function () {
+
+        $(document).on('click', '.pqc-remove-file', function () {
             clearFileSelection();
         });
     }
@@ -212,7 +319,7 @@
         $('.pqc-file-name').text(file.name);
         $('.pqc-file-info').show();
         $('.pqc-upload-area-compact').hide();
-        $('.pqc-paste-area').css('opacity', '0.5'); // Dim paste area
+        $('.pqc-paste-area').css('opacity', '0.5');
     }
 
     function clearFileSelection() {
@@ -224,18 +331,33 @@
     }
 
     function initCopyPrompt() {
-        $('.pqc-copy-prompt-btn').on('click', function () {
-            const title = $('#pqc-quiz-title').val().trim();
-            const numQuestions = $('#pqc-num-questions').val();
-            const keywords = $('#pqc-keywords').val().trim();
+        $(document).on('click', '.pqc-copy-prompt-btn', function () {
+            const title = $('#pqc-quiz-title').val() ? $('#pqc-quiz-title').val().trim() : '';
+            const numQuestions = $('#pqc-num-questions').val() || 10;
+            const keywords = $('#pqc-keywords').val() ? $('#pqc-keywords').val().trim() : '';
             const answersPerQuestion = $('#pqc-answers-per-question').val() || 4;
 
-            if (!title) { alert('Please enter a quiz title'); return; }
-            copyToClipboard(buildChatGPTPrompt(title, numQuestions, keywords, answersPerQuestion));
+            if (!title) {
+                alert('Please enter a quiz title first');
+                $('.pqc-wizard-prev[data-prev="1"]').click();
+                $('#pqc-quiz-title').focus();
+                return;
+            }
+
+            const promptText = buildChatGPTPrompt(title, numQuestions, keywords, answersPerQuestion);
+            copyToClipboard(promptText);
+
             const $btn = $(this);
-            $btn.find('.pqc-btn-text').hide();
-            $btn.find('.pqc-btn-copied').show();
-            setTimeout(function () { $btn.find('.pqc-btn-text').show(); $btn.find('.pqc-btn-copied').hide(); }, 2000);
+            const $text = $btn.find('.pqc-btn-text');
+            const $copied = $btn.find('.pqc-btn-copied');
+
+            $text.hide();
+            $copied.show();
+
+            setTimeout(function () {
+                $text.show();
+                $copied.hide();
+            }, 2000);
         });
     }
 
@@ -252,7 +374,7 @@
     }
 
     function initFormSubmit() {
-        $('#pqc-quiz-form').on('submit', function (e) {
+        $(document).on('submit', '#pqc-quiz-form', function (e) {
             e.preventDefault();
             uploadQuiz();
         });
@@ -261,21 +383,20 @@
     function uploadQuiz() {
         const settings = {
             title: $('#pqc-quiz-title').val().trim(),
-            passing_percentage: parseInt($('#pqc-passing-percentage').val()) || 80,
+            passing_percentage: 80,
             answers_per_question: $('#pqc-answers-per-question').val(),
-            random_questions: $('#pqc-random-questions').is(':checked') ? 1 : 0,
-            random_answers: $('#pqc-random-answers').is(':checked') ? 1 : 0,
-            run_once: $('#pqc-run-once').is(':checked') ? 1 : 0,
-            force_solve: $('#pqc-force-solve').is(':checked') ? 1 : 0,
-            show_points: $('#pqc-show-points').is(':checked') ? 1 : 0
+            random_questions: 0,
+            random_answers: 0,
+            run_once: 0,
+            force_solve: 0,
+            show_points: 0
         };
 
         const formData = new FormData();
         formData.append('action', 'pqc_upload_quiz');
         formData.append('nonce', pqcData.nonce);
 
-        // Handle either file or pasted JSON
-        const pastedJson = $('#pqc-json-paste').val().trim();
+        const pastedJson = $('#pqc-json-paste').val() ? $('#pqc-json-paste').val().trim() : '';
         if (selectedFile) {
             formData.append('quiz_file', selectedFile);
         } else if (pastedJson) {
@@ -287,8 +408,7 @@
 
         formData.append('quiz_settings', JSON.stringify(settings));
 
-        // Add course context if available
-        const courseId = $('#pcg-current-course-id').val() || 0;
+        const courseId = $('#pqc-course-id').val() || 0;
         formData.append('course_id', courseId);
 
         const $btn = $('.pqc-submit-btn');
@@ -301,8 +421,11 @@
             data: formData,
             processData: false, contentType: false,
             success: function (response) {
-                if (response.success) { showSuccess(response.data); clearForm(); }
-                else showError(response.data.message || 'Error');
+                if (response.success) {
+                    showSuccess(response.data);
+                } else {
+                    showError(response.data.message || 'Error');
+                }
             },
             complete: function () {
                 $btn.prop('disabled', false).find('.pqc-btn-loading').hide();
@@ -311,10 +434,13 @@
         });
     }
 
-    function clearForm() { $('#pqc-quiz-form')[0].reset(); clearFileSelection(); }
-
     function showSuccess(data) {
-        // Hide the form and the header/progress bar to focus on the result
+        if ($('#pcg-current-course-id').length) {
+            const courseId = $('#pcg-current-course-id').val();
+            refreshQuizModule(courseId);
+            return;
+        }
+
         $('.pqc-quiz-form').hide();
         $('.pqc-header').hide();
 
@@ -331,13 +457,6 @@
 
     function showError(message) {
         $('.pqc-result').removeClass('success').addClass('error').html('<strong>✗ ' + message + '</strong>').show();
-    }
-
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + ['Bytes', 'KB', 'MB'][i];
     }
 
 })(jQuery);

@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class PCG_CI_Course_Authors
+class PL_CI_Course_Authors
 {
 
     const META_KEY = '_pcg_course_teachers';
@@ -29,7 +29,7 @@ class PCG_CI_Course_Authors
     {
         add_meta_box(
             'pcg-course-teachers-metabox',
-            __('Profesores del Curso (Politeia)', 'politeia-course-group'),
+            __('Profesores del Curso (Politeia)', 'politeia-learning'),
             [$this, 'render_metabox'],
             'sfwd-courses',
             'side',
@@ -78,14 +78,14 @@ class PCG_CI_Course_Authors
                             <?php echo esc_html($teacher['name']); ?>
                         </span>
                         <button type="button" class="pcg-tag-remove"
-                            aria-label="<?php esc_attr_e('Eliminar profesor', 'politeia-course-group'); ?>">&times;</button>
+                            aria-label="<?php esc_attr_e('Eliminar profesor', 'politeia-learning'); ?>">&times;</button>
                     </span>
                 <?php endforeach; ?>
             </div>
 
             <div class="pcg-search-wrapper">
                 <input type="text" id="pcg-teacher-search" class="widefat"
-                    placeholder="<?php esc_attr_e('Buscar profesor...', 'politeia-course-group'); ?>" autocomplete="off" />
+                    placeholder="<?php esc_attr_e('Buscar profesor...', 'politeia-learning'); ?>" autocomplete="off" />
                 <div class="pcg-search-results" style="display:none;"></div>
             </div>
 
@@ -206,7 +206,7 @@ class PCG_CI_Course_Authors
             return;
         }
 
-        wp_enqueue_script('pcg-course-authors', PCG_CI_URL . 'assets/js/pcg-course-authors.js', ['jquery'], '1.0.0', true);
+        wp_enqueue_script('pcg-course-authors', PL_CI_URL . 'assets/js/pcg-course-authors.js', ['jquery'], '1.0.0', true);
 
         $screen = get_current_screen();
         $post_id = isset($_GET['post']) ? absint($_GET['post']) : 0;

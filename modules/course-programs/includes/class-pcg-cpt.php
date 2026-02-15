@@ -3,7 +3,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class PCG_CPT {
+class PL_CPT {
     public function __construct() {
         add_action( 'init', [ $this, 'register_cpt' ] );
     }
@@ -14,33 +14,33 @@ class PCG_CPT {
         }
 
         $labels = [
-            'name'                     => __( 'Programa Politeia', 'politeia-course-group' ),
-            'singular_name'            => __( 'Programa Politeia', 'politeia-course-group' ),
-            'menu_name'                => __( 'Programa Politeia', 'politeia-course-group' ),
-            'add_new'                  => __( 'Agregar nuevo', 'politeia-course-group' ),
-            'add_new_item'             => __( 'Agregar nuevo Programa Politeia', 'politeia-course-group' ),
-            'edit_item'                => __( 'Editar Programa Politeia', 'politeia-course-group' ),
-            'new_item'                 => __( 'Nuevo Programa Politeia', 'politeia-course-group' ),
-            'view_item'                => __( 'Ver Programa Politeia', 'politeia-course-group' ),
-            'view_items'               => __( 'Ver Programas Politeia', 'politeia-course-group' ),
-            'search_items'             => __( 'Buscar Programas Politeia', 'politeia-course-group' ),
-            'not_found'                => __( 'No se encontraron Programas Politeia', 'politeia-course-group' ),
-            'not_found_in_trash'       => __( 'No hay Programas Politeia en la papelera', 'politeia-course-group' ),
-            'all_items'                => __( 'Todos los Programas Politeia', 'politeia-course-group' ),
-            'archives'                 => __( 'Archivo de Programas Politeia', 'politeia-course-group' ),
-            'attributes'               => __( 'Atributos del Programa Politeia', 'politeia-course-group' ),
-            'insert_into_item'         => __( 'Insertar en Programa Politeia', 'politeia-course-group' ),
-            'uploaded_to_this_item'    => __( 'Subido a este Programa Politeia', 'politeia-course-group' ),
-            'featured_image'           => __( 'Imagen destacada', 'politeia-course-group' ),
-            'set_featured_image'       => __( 'Establecer imagen destacada', 'politeia-course-group' ),
-            'remove_featured_image'    => __( 'Eliminar imagen destacada', 'politeia-course-group' ),
-            'use_featured_image'       => __( 'Usar como imagen destacada', 'politeia-course-group' ),
-            'filter_items_list'        => __( 'Filtrar lista de Programas Politeia', 'politeia-course-group' ),
-            'items_list'               => __( 'Lista de Programas Politeia', 'politeia-course-group' ),
-            'items_list_navigation'    => __( 'Navegación de lista de Programas Politeia', 'politeia-course-group' ),
-            'name_admin_bar'           => __( 'Programa Politeia', 'politeia-course-group' ),
-            'item_published'           => __( 'Programa Politeia publicado.', 'politeia-course-group' ),
-            'item_updated'             => __( 'Programa Politeia actualizado.', 'politeia-course-group' ),
+            'name'                     => __( 'Programa Politeia', 'politeia-learning' ),
+            'singular_name'            => __( 'Programa Politeia', 'politeia-learning' ),
+            'menu_name'                => __( 'Programa Politeia', 'politeia-learning' ),
+            'add_new'                  => __( 'Agregar nuevo', 'politeia-learning' ),
+            'add_new_item'             => __( 'Agregar nuevo Programa Politeia', 'politeia-learning' ),
+            'edit_item'                => __( 'Editar Programa Politeia', 'politeia-learning' ),
+            'new_item'                 => __( 'Nuevo Programa Politeia', 'politeia-learning' ),
+            'view_item'                => __( 'Ver Programa Politeia', 'politeia-learning' ),
+            'view_items'               => __( 'Ver Programas Politeia', 'politeia-learning' ),
+            'search_items'             => __( 'Buscar Programas Politeia', 'politeia-learning' ),
+            'not_found'                => __( 'No se encontraron Programas Politeia', 'politeia-learning' ),
+            'not_found_in_trash'       => __( 'No hay Programas Politeia en la papelera', 'politeia-learning' ),
+            'all_items'                => __( 'Todos los Programas Politeia', 'politeia-learning' ),
+            'archives'                 => __( 'Archivo de Programas Politeia', 'politeia-learning' ),
+            'attributes'               => __( 'Atributos del Programa Politeia', 'politeia-learning' ),
+            'insert_into_item'         => __( 'Insertar en Programa Politeia', 'politeia-learning' ),
+            'uploaded_to_this_item'    => __( 'Subido a este Programa Politeia', 'politeia-learning' ),
+            'featured_image'           => __( 'Imagen destacada', 'politeia-learning' ),
+            'set_featured_image'       => __( 'Establecer imagen destacada', 'politeia-learning' ),
+            'remove_featured_image'    => __( 'Eliminar imagen destacada', 'politeia-learning' ),
+            'use_featured_image'       => __( 'Usar como imagen destacada', 'politeia-learning' ),
+            'filter_items_list'        => __( 'Filtrar lista de Programas Politeia', 'politeia-learning' ),
+            'items_list'               => __( 'Lista de Programas Politeia', 'politeia-learning' ),
+            'items_list_navigation'    => __( 'Navegación de lista de Programas Politeia', 'politeia-learning' ),
+            'name_admin_bar'           => __( 'Programa Politeia', 'politeia-learning' ),
+            'item_published'           => __( 'Programa Politeia publicado.', 'politeia-learning' ),
+            'item_updated'             => __( 'Programa Politeia actualizado.', 'politeia-learning' ),
         ];
 
         $args = [
