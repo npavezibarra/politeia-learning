@@ -16,8 +16,8 @@
 }
 
 .pcg-cropper-content {
-    background: #111827;
-    /* Dark theme like Bookshelf */
+    background: #000;
+    /* Black theme */
     width: 90%;
     max-width: 600px;
     border-radius: 12px;
@@ -42,6 +42,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    font-family: 'Poppins', sans-serif;
 }
 
 .pcg-cropper-close {
@@ -146,6 +147,7 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     transition: all 0.2s;
+    font-family: 'Poppins', sans-serif;
 }
 
 .pcg-btn-cropper-cancel {

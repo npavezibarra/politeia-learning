@@ -295,8 +295,8 @@ jQuery(document).ready(function ($) {
         e.preventDefault();
         PCG_Cropper.open({
             title: 'Cover Photo',
-            width: 360,
-            height: 238,
+            width: 1024,
+            height: 768,
             onSave: function (dataUrl) {
                 saveCroppedImage(dataUrl, 'cover');
             }
