@@ -49,7 +49,7 @@
             </div>
 
             <div class="pcg-sales-metrics">
-                <div class="pcg-metric-card pcg-metric-gold">
+                <div id="politeia-user-sales-all" class="pcg-metric-card pcg-metric-gold">
                     <div class="pcg-metric-top">
                         <span class="pcg-metric-icon dashicons dashicons-chart-line"></span>
                         <span class="pcg-metric-tag"><?php _e('General', 'politeia-learning'); ?></span>
@@ -59,7 +59,7 @@
                     <div class="pcg-metric-foot"><?php _e('Desempeño total', 'politeia-learning'); ?></div>
                 </div>
 
-                <div class="pcg-metric-card pcg-metric-silver">
+                <div id="politeia-user-sales-courses" class="pcg-metric-card pcg-metric-silver">
                     <div class="pcg-metric-top">
                         <span class="pcg-metric-icon dashicons dashicons-welcome-learn-more"></span>
                         <span class="pcg-metric-tag"><?php _e('Cursos', 'politeia-learning'); ?></span>
@@ -69,7 +69,7 @@
                     <div class="pcg-metric-foot" data-metric-pct="courses" data-suffix="<?php _e('del total', 'politeia-learning'); ?>">0%</div>
                 </div>
 
-                <div class="pcg-metric-card pcg-metric-silver">
+                <div id="politeia-user-sales-books" class="pcg-metric-card pcg-metric-silver">
                     <div class="pcg-metric-top">
                         <span class="pcg-metric-icon dashicons dashicons-book"></span>
                         <span class="pcg-metric-tag"><?php _e('Libros', 'politeia-learning'); ?></span>
@@ -79,7 +79,7 @@
                     <div class="pcg-metric-foot" data-metric-pct="books" data-suffix="<?php _e('del total', 'politeia-learning'); ?>">0%</div>
                 </div>
 
-                <div class="pcg-metric-card pcg-metric-copper">
+                <div id="politeia-user-sales-patronage" class="pcg-metric-card pcg-metric-copper">
                     <div class="pcg-metric-top">
                         <span class="pcg-metric-icon dashicons dashicons-heart"></span>
                         <span class="pcg-metric-tag"><?php _e('Apoyo', 'politeia-learning'); ?></span>
