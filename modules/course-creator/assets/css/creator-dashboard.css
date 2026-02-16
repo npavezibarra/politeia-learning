@@ -1284,3 +1284,7 @@ input:checked+.pcg-slider:before {
 .round {
     border-radius: 25px !important;
 }
+
+div#pcg-mode-lecciones {
+    padding: 20px;
+}
