@@ -104,8 +104,14 @@
      * Manual Mode UI Generation
      */
     function renderManualQuestions() {
-        const numQuestions = parseInt($('#pqc-num-questions').val()) || 10;
-        const answersPerQuestion = parseInt($('#pqc-answers-per-question').val()) || 4;
+        const numQuestions = parseInt($('#pqc-num-questions').val(), 10);
+        if (!numQuestions || numQuestions < 1) {
+            alert('Please enter number of questions.');
+            return;
+        }
+
+        // Keep the input empty if the user wants, but default behavior still assumes 4 answers.
+        const answersPerQuestion = parseInt($('#pqc-answers-per-question').val(), 10) || 4;
         const $slidesWrap = $('#pqc-manual-slides-wrap');
 
         $slidesWrap.empty();
@@ -323,7 +329,6 @@
 
         const quizData = {
             quiz_id: quizId,
-            title: $('.pqc-editable-title').text().trim(),
             questions: []
         };
 
@@ -477,9 +482,9 @@
     function initCopyPrompt() {
         $(document).on('click', '.pqc-copy-prompt-btn', function () {
             const title = $('#pqc-quiz-title').val() ? $('#pqc-quiz-title').val().trim() : '';
-            const numQuestions = $('#pqc-num-questions').val() || 10;
+            const numQuestions = $('#pqc-num-questions').val();
             const keywords = $('#pqc-keywords').val() ? $('#pqc-keywords').val().trim() : '';
-            const answersPerQuestion = $('#pqc-answers-per-question').val() || 4;
+            const answersPerQuestion = parseInt($('#pqc-answers-per-question').val(), 10) || 4;
             const uploadDocs = $('#pqc-upload-docs-llm').is(':checked');
 
             if (!title) {
@@ -531,7 +536,7 @@
         const settings = {
             title: $('#pqc-quiz-title').val().trim(),
             passing_percentage: 80,
-            answers_per_question: $('#pqc-answers-per-question').val(),
+            answers_per_question: parseInt($('#pqc-answers-per-question').val(), 10) || 4,
             random_questions: $('#pqc-random-questions').is(':checked') ? 1 : 0,
             random_answers: $('#pqc-random-answers').is(':checked') ? 1 : 0,
             run_once: $('#pqc-run-once').is(':checked') ? 1 : 0,

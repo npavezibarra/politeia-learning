@@ -17,6 +17,20 @@
     padding: 0;
 }
 
+/* Prevent browser/theme focus/tap highlight from applying blue backgrounds/borders */
+.pcg-creator-dashboard-wrapper button,
+.pcg-creator-dashboard-wrapper [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.pcg-creator-dashboard-wrapper button:focus,
+.pcg-creator-dashboard-wrapper button:focus-visible,
+.pcg-creator-dashboard-wrapper button:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+}
+
 .pcg-creator-container {
     display: flex;
     max-width: 1400px;
@@ -237,8 +251,267 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 0px;
-    padding: 0px 20px;
+    padding: 0px 0px 0px 20px;
     border-bottom: 1px solid #e5e5e5;
+    min-height: 40px;
+}
+
+/* Sales page uses pcg-form-nav as a generic header bar */
+.pcg-sales-nav {
+    /* padding-right: 20px; */
+    margin-bottom: 25px;
+}
+
+.pcg-form-nav.pcg-sales-nav {
+    max-width: 1160px;
+}
+
+.pcg-sales-dashboard {
+    max-width: 1180px;
+    padding: 0px 20px;
+}
+
+.pcg-sales-dashboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.pcg-sales-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.pcg-sales-title {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: #000;
+}
+
+.pcg-sales-subtitle {
+    margin: 4px 0 0 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
+}
+
+.pcg-sales-timeframes {
+    display: inline-flex;
+    gap: 0;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    padding: 2px;
+    border-radius: 6px;
+}
+
+.pcg-sales-tf-btn {
+    border: none;
+    background: transparent;
+    color: #333;
+    cursor: pointer;
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 6px;
+    transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.pcg-sales-tf-btn:hover {
+    opacity: 0.92;
+}
+
+.pcg-sales-tf-btn.active {
+    color: #fff;
+    background: var(--pcg-gold-grad);
+}
+
+.pcg-sales-custom-range {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    justify-content: flex-end;
+}
+
+.pcg-sales-date {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pcg-sales-date label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: #333;
+}
+
+.pcg-sales-date input[type="date"] {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    outline: none;
+}
+
+.pcg-sales-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+@media (max-width: 980px) {
+    .pcg-sales-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .pcg-sales-dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .pcg-sales-controls {
+        align-items: flex-start;
+        width: 100%;
+    }
+    .pcg-sales-custom-range {
+        justify-content: flex-start;
+        width: 100%;
+    }
+}
+
+.pcg-metric-card {
+    border-radius: 6px;
+    padding: 18px;
+    min-height: 176px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 1px solid #e5e5e5;
+    background: #fff;
+}
+
+.pcg-metric-gold {
+    border: none;
+    background: var(--pcg-gold-grad);
+    color: #fff;
+}
+
+.pcg-metric-silver {
+    background: #fff;
+}
+
+.pcg-metric-copper {
+    background: #fff;
+}
+
+.pcg-metric-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.pcg-metric-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+}
+
+.pcg-metric-gold .pcg-metric-icon {
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.pcg-metric-tag {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.85;
+}
+
+.pcg-metric-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-top: 12px;
+}
+
+.pcg-metric-value {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-top: 6px;
+}
+
+.pcg-metric-foot {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-top: 10px;
+    opacity: 0.85;
+}
+
+.pcg-metric-silver .pcg-metric-label,
+.pcg-metric-copper .pcg-metric-label {
+    color: #333;
+}
+
+.pcg-metric-silver .pcg-metric-value,
+.pcg-metric-copper .pcg-metric-value {
+    color: #000;
+}
+
+.pcg-metric-silver .pcg-metric-foot,
+.pcg-metric-copper .pcg-metric-foot,
+.pcg-metric-silver .pcg-metric-tag,
+.pcg-metric-copper .pcg-metric-tag {
+    color: #a8a8a8;
+    opacity: 1;
+}
+
+.pcg-sales-chart-card {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    padding: 20px;
+}
+
+.pcg-sales-chart-head h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #000;
+}
+
+.pcg-sales-chart-head p {
+    margin: 6px 0 0 0;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: #a8a8a8;
+}
+
+.pcg-sales-nav .pcg-current-course-label {
+    font-weight: 600;
+}
+
+.pcg-sales-chart-wrap {
+    height: 420px;
+    margin-top: 16px;
 }
 
 .pcg-nav-left {
@@ -258,11 +531,37 @@
     align-items: center;
     gap: 5px;
     padding: 0;
-    transition: color 0.2s ease;
+    transition: none;
+}
+
+.pcg-creator-dashboard-wrapper button.pcg-btn-back,
+.pcg-creator-dashboard-wrapper button.pcg-btn-back:hover,
+.pcg-creator-dashboard-wrapper button.pcg-btn-back:focus,
+.pcg-creator-dashboard-wrapper button.pcg-btn-back:focus-visible,
+.pcg-creator-dashboard-wrapper button.pcg-btn-back:active {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .pcg-btn-back:hover {
-    color: var(--pcg-pure-black);
+    color: var(--pcg-light-gray);
+}
+
+.pcg-btn-back:focus,
+.pcg-btn-back:focus-visible,
+.pcg-btn-back:active,
+.pcg-btn-back:visited {
+    color: var(--pcg-light-gray);
+    background: none !important;
+    background-color: transparent !important;
+    box-shadow: none;
+    outline: none;
 }
 
 .pcg-btn-back .dashicons {
@@ -273,7 +572,7 @@
 
 .pcg-nav-right {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     gap: 12px;
 }
 
@@ -335,13 +634,17 @@ div#pcg-mode-curso {
     padding: 20px;
 }
 
+div#pcg-quiz-creator-container {
+    padding-bottom: 40px;
+}
+
 .pcg-segmented-control {
     display: inline-flex;
     background: #ffffff;
     padding: 0px;
     border-radius: 0px;
     /* border: 1px solid #e5e5e5; */
-    margin-right: 12px;
+    /* margin-right: 12px; */
 }
 
 .pcg-segment {
@@ -354,12 +657,14 @@ div#pcg-mode-curso {
     transition: all 0.2s ease;
     text-transform: uppercase;
     background: #ffffff;
+    letter-spacing: 1px;
 }
 
 .pcg-segment.active {
     background: #f0f0f0;
     color: #000000;
-    font-weight: 800;
+    font-weight: 600;
+    letter-spacing: 1px;
 }
 
 /* Form Header Layout */
@@ -458,11 +763,15 @@ div#pcg-mode-curso {
 
 .pcg-btn-save-compact {
     width: 36px;
-    height: 36px;
-    padding: 0;
+    height: auto;
+    padding: 0 !important;
+    margin: 0 !important;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 0 !important;
+    line-height: 1 !important;
+    box-sizing: border-box;
 }
 
 .pcg-btn-save-compact .dashicons {
@@ -575,7 +884,7 @@ div#pcg-mode-curso {
 .pcg-desc-tab {
     padding: 10px 20px;
     font-size: 13px;
-    font-weight: 400;
+    font-weight: 500;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: #a3a3a3;
@@ -644,7 +953,7 @@ div#pcg-mode-curso {
     width: 100%;
     min-height: 250px;
     padding: 20px;
-    border: 1px solid #f0f0f0;
+    border: 1px solid #dddddd;
     border-radius: 10px;
     font-size: 1rem;
     line-height: 1.6;
@@ -733,7 +1042,7 @@ div#pcg-mode-curso {
 .pcg-lessons-header h3 {
     margin: 0;
     font-size: 1.125rem;
-    font-weight: 800;
+    font-weight: 600;
     color: #171717;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -754,7 +1063,7 @@ div#pcg-mode-curso {
 
 .pcg-progression-label {
     font-size: 0.7rem;
-    font-weight: 800;
+    font-weight: 600;
     color: #525252;
     letter-spacing: 0.05em;
 }
@@ -900,7 +1209,7 @@ input:checked+.pcg-slider:before {
 .pcg-item-header {
     display: flex;
     align-items: center;
-    padding: 10px 20px;
+    padding: 20px 20px;
     gap: 15px;
     width: 100%;
     min-height: 54px;
@@ -1041,7 +1350,7 @@ input:checked+.pcg-slider:before {
     border: 1px solid transparent;
     background: transparent;
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: 500;
     color: #262626;
     padding: 4px 8px;
     margin-left: -8px;
@@ -1062,6 +1371,43 @@ input:checked+.pcg-slider:before {
 .pcg-item-input::placeholder {
     color: #d4d4d4;
     font-weight: 400;
+}
+
+.pcg-teacher-identity {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+}
+
+.pcg-teacher-item .pcg-item-input-wrapper {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pcg-teacher-identity-hidden {
+    display: none;
+}
+
+.pcg-teacher-full-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #171717;
+}
+
+.pcg-teacher-email {
+    font-size: 12px;
+    font-weight: 500;
+    color: #8b8b8b;
+}
+
+.pcg-teacher-share-badge {
+    background: #f6f6f6;
+    color: #171717;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 999px;
 }
 
 .pcg-item-actions {
@@ -1132,11 +1478,15 @@ input:checked+.pcg-slider:before {
 .pcg-my-courses-container {
     background: #f6f6f6;
     margin-top: 0px;
-    padding: 40px;
+    padding: 20px;
     padding-bottom: 50px;
 }
 
 .pcg-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     margin-bottom: 25px;
 }
 
@@ -1145,6 +1495,7 @@ input:checked+.pcg-slider:before {
     letter-spacing: 2px !important;
     font-weight: 600 !important;
     color: #171717;
+    margin-bottom: 0 !important;
 }
 
 .pcg-my-courses-grid {
@@ -1333,19 +1684,18 @@ div#pcg-mode-lecciones {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
-    margin-top: 20px;
+    /* margin-bottom: 24px; */
     padding-bottom: 12px;
-    border-bottom: 2px solid #f0f0f0;
-    padding-left: 20px;
+    /* border-bottom: 2px solid #f0f0f0; */
 }
 
 .pcg-teachers-header h3 {
     margin: 0;
-    font-size: 1.1rem;
-    font-weight: 800;
+    font-size: 14px;
+    font-weight: 500;
     color: #171717;
     letter-spacing: 0.05em;
+    padding: 20px;
 }
 
 .pcg-teachers-list {

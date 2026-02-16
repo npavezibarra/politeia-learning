@@ -55,6 +55,12 @@ class PL_QC_Module
         add_action('wp_enqueue_scripts', [$this, 'enqueue_assets']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
         add_action('init', [$this, 'init_components']);
+        add_action('plugins_loaded', [$this, 'load_textdomain'], 5);
+    }
+
+    public function load_textdomain()
+    {
+        load_plugin_textdomain('politeia-quiz-creator', false, dirname(plugin_basename(__FILE__)) . '/languages');
     }
 
     public function init_components()

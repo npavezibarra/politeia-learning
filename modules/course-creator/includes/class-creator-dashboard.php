@@ -149,6 +149,8 @@ class PL_CC_Creator_Dashboard
 
             wp_enqueue_script('pcg-cropper-js', PL_CC_URL . 'assets/js/pcg-course-cropper.js', ['jquery', 'cropperjs'], '1.0.0', true);
             wp_enqueue_script('pcg-creator-js', PL_CC_URL . 'assets/js/creator-dashboard.js', ['jquery', 'jquery-ui-sortable', 'pcg-cropper-js'], '1.0.0', true);
+            wp_enqueue_script('pcg-chartjs', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', [], '4.4.1', true);
+            wp_enqueue_script('pcg-sales-dashboard', PL_CC_URL . 'assets/js/pcg-sales-dashboard.js', ['pcg-chartjs'], '1.0.0', true);
 
             $current_user = wp_get_current_user();
             $full_name = trim($current_user->first_name . ' ' . $current_user->last_name);

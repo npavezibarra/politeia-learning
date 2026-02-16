@@ -1,0 +1,238 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: politeia-learning\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-16 00:00+0000\n"
+"PO-Revision-Date: 2026-02-16 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Codex\n"
+
+msgid "Usuario no encontrado."
+msgstr "User not found."
+
+msgid "Creador de Cursos"
+msgstr "Course Creator"
+
+msgid "MIS CURSOS"
+msgstr "MY COURSES"
+
+msgid "PROGRAMAS"
+msgstr "PROGRAMS"
+
+msgid "VENTAS"
+msgstr "SALES"
+
+msgid "ESTUDIANTES"
+msgstr "STUDENTS"
+
+msgid "Sección en construcción..."
+msgstr "Section under construction..."
+
+msgid "Gestiona tus programas"
+msgstr "Manage your programs"
+
+msgid "Los programas agrupan cursos relacionados en una ruta coherente."
+msgstr "Programs group related courses into a coherent learning path."
+
+msgid "Configura un nuevo programa de cursos"
+msgstr "Set up a new course program"
+
+msgid "Agrupa tus cursos existentes en un programa coherente."
+msgstr "Group your existing courses into a coherent program."
+
+msgid "Monitorea el rendimiento de tus estudiantes"
+msgstr "Track student performance"
+
+msgid "Revisa el progreso y desempeño de tus estudiantes en tiempo real."
+msgstr "Review your students' progress and performance in real time."
+
+msgid "Analítica de estudiantes"
+msgstr "Student analytics"
+
+msgid "Monitorea el progreso y el rendimiento de tus estudiantes en tiempo real."
+msgstr "Monitor your students' progress and performance in real time."
+
+msgid "Crea tu curso y véndelo en nuestra plataforma"
+msgstr "Create your course and sell it on our platform"
+
+msgid "Empieza hoy mismo a compartir tu conocimiento con el mundo."
+msgstr "Start sharing your knowledge with the world today."
+
+msgid "Crear un curso"
+msgstr "Create a course"
+
+msgid "Volver"
+msgstr "Back"
+
+msgid "CURSO"
+msgstr "COURSE"
+
+msgid "LECCIONES"
+msgstr "LESSONS"
+
+msgid "EVALUACIÓN"
+msgstr "EVALUATION"
+
+msgid "Vista Previa"
+msgstr "Preview"
+
+msgid "Guardar"
+msgstr "Save"
+
+msgid "Título del curso"
+msgstr "Course title"
+
+msgid "Vista previa de la portada del curso:"
+msgstr "Course cover preview:"
+
+msgid "Quitar portada"
+msgstr "Remove cover"
+
+msgid "Vista previa de la foto de portada:"
+msgstr "Cover photo preview:"
+
+msgid "Quitar foto"
+msgstr "Remove photo"
+
+msgid "Portada del curso"
+msgstr "Course cover"
+
+msgid "Foto de portada"
+msgstr "Cover photo"
+
+msgid "PRECIO"
+msgstr "PRICE"
+
+msgid "Gratis"
+msgstr "Free"
+
+msgid "DESCRIPCIÓN"
+msgstr "DESCRIPTION"
+
+msgid "EXTRACTO"
+msgstr "EXCERPT"
+
+msgid "PROFESORES"
+msgstr "TEACHERS"
+
+msgid "Escribe la descripción del curso aquí... (máx. 700 palabras)"
+msgstr "Write the course description here... (max. 700 words)"
+
+msgid "palabras"
+msgstr "words"
+
+msgid "Escribe un resumen breve del curso... (máx. 50 palabras)"
+msgstr "Write a short course summary... (max. 50 words)"
+
+msgid "PROFESORES & COLABORADORES"
+msgstr "TEACHERS & COLLABORATORS"
+
+msgid "No hay colaboradores asignados."
+msgstr "No collaborators assigned."
+
+msgid "Lecciones del curso"
+msgstr "Course lessons"
+
+msgid "FLUJO LIBRE"
+msgstr "FREE FLOW"
+
+msgid "Agregar lección"
+msgstr "Add lesson"
+
+msgid "Agregar sección"
+msgstr "Add section"
+
+msgid "No hay contenido aún. Haz clic en el botón + para añadir una lección o sección."
+msgstr "No content yet. Click the + button to add a lesson or section."
+
+msgid "Antes de crear una evaluación, primero debes crear un curso."
+msgstr "Before creating an evaluation, you must first create a course."
+
+msgid "MIS CURSOS PUBLICADOS"
+msgstr "MY PUBLISHED COURSES"
+
+msgid "Cargando tus cursos..."
+msgstr "Loading your courses..."
+
+msgid "Gestiona tus ingresos y ventas"
+msgstr "Manage your earnings and sales"
+
+msgid "Aquí podrás ver tus ventas totales de cursos, artículos, libros y más."
+msgstr "Here you can see your total sales of courses, articles, books, and more."
+
+msgid "Ventas totales"
+msgstr "Total sales"
+
+msgid "Cursos vendidos"
+msgstr "Courses sold"
+
+msgid "GENERAL"
+msgstr "GENERAL"
+
+msgid "CURSOS"
+msgstr "COURSES"
+
+msgid "LIBROS"
+msgstr "BOOKS"
+
+msgid "Panel de ventas"
+msgstr "Sales dashboard"
+
+msgid "Resumen de desempeño por periodo"
+msgstr "Performance overview by timeframe"
+
+msgid "Periodo"
+msgstr "Timeframe"
+
+msgid "Día"
+msgstr "Day"
+
+msgid "Semana"
+msgstr "Week"
+
+msgid "Mes"
+msgstr "Month"
+
+msgid "Año"
+msgstr "Year"
+
+msgid "Personalizado"
+msgstr "Custom"
+
+msgid "Fecha inicio"
+msgstr "Start date"
+
+msgid "Fecha fin"
+msgstr "End date"
+
+msgid "General"
+msgstr "General"
+
+msgid "Cursos"
+msgstr "Courses"
+
+msgid "Libros"
+msgstr "Books"
+
+msgid "Apoyo"
+msgstr "Support"
+
+msgid "Desempeño total"
+msgstr "Overall performance"
+
+msgid "del total"
+msgstr "of total"
+
+msgid "Distribución de ingresos"
+msgstr "Revenue distribution"
+
+msgid "Desglose por día"
+msgstr "Daily breakdown"
+
+msgid "Patrocinio"
+msgstr "Patronage"

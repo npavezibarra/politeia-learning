@@ -17,15 +17,6 @@ if (!$quiz_data) {
 ?>
 
 <div class="pqc-container pqc-editor-container" data-quiz-id="<?php echo esc_attr($quiz_data['id']); ?>">
-    <div class="pqc-header pqc-editor-header">
-        <div class="pqc-header-top">
-            <h2 contenteditable="true" class="pqc-editable-title" data-field="quiz_title"
-                title="<?php _e('Click to edit quiz title', 'politeia-quiz-creator'); ?>">
-                <?php echo esc_html($quiz_data['title']); ?>
-            </h2>
-        </div>
-    </div>
-
     <div class="pqc-slider-viewport">
         <div class="pqc-slides-container">
             <?php foreach ($quiz_data['questions'] as $index => $question): ?>

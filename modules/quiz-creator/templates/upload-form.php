@@ -41,18 +41,15 @@ if (!defined('ABSPATH')) {
                 <div class="pqc-settings-grid">
                     <input type="hidden" id="pqc-course-id" name="course_id"
                         value="<?php echo esc_attr($course_id); ?>">
-                    <div class="pqc-field pqc-field-full">
-                        <input type="text" id="pqc-quiz-title" name="quiz_title"
-                            placeholder="<?php _e('Quiz Title', 'politeia-quiz-creator'); ?>"
-                            value="<?php echo esc_attr($default_quiz_title); ?>" required />
-                    </div>
+                    <input type="hidden" id="pqc-quiz-title" name="quiz_title"
+                        value="<?php echo esc_attr($default_quiz_title); ?>" />
                     <div class="pqc-field">
-                        <input type="number" id="pqc-num-questions" name="num_questions" min="1" max="100" value="10"
+                        <input type="number" id="pqc-num-questions" name="num_questions" min="1" max="100"
                             placeholder="<?php _e('Number of Questions', 'politeia-quiz-creator'); ?>" required />
                     </div>
                     <div class="pqc-field">
                         <input type="number" id="pqc-answers-per-question" name="answers_per_question" min="2" max="6"
-                            value="4" placeholder="<?php _e('Answers per Question', 'politeia-quiz-creator'); ?>" />
+                            placeholder="<?php _e('Answers per Question', 'politeia-quiz-creator'); ?>" />
                     </div>
                 </div>
                 <div class="pqc-wizard-footer">

@@ -13,6 +13,7 @@ jQuery(document).ready(function ($) {
     const $teachersList = $('#pcg-teachers-list');
     const $courseLabel = $('#pcg-current-course-label');
     const $previewBtn = $('#pcg-btn-preview-course');
+    let editCourseRequest = null;
 
     // ── Tab Switcher ──
     $(document).on('click', '.pcg-desc-tab', function () {
@@ -92,7 +93,7 @@ jQuery(document).ready(function ($) {
 
     // Show form when "CREATE COURSE" button is clicked
     $('#pcg-show-creator-form').on('click', function () {
-        $('#pcg-creator-intro-section').fadeOut(300, function () {
+        $('#pcg-my-courses-section').fadeOut(300, function () {
             resetForm();
             // Automatically add current user as main author
             addTeacherItem({
@@ -104,14 +105,12 @@ jQuery(document).ready(function ($) {
                 profit_percentage: 100
             });
             $('#pcg-course-form-section').fadeIn(400);
-            $('#pcg-my-courses-section').hide();
         });
     });
 
     // Back to list / Cancel Edit
     $('#pcg-btn-back-to-list, #pcg-btn-cancel-edit').on('click', function () {
         $('#pcg-course-form-section').fadeOut(300, function () {
-            $('#pcg-creator-intro-section').fadeIn();
             $('#pcg-my-courses-section').fadeIn();
             resetForm();
         });
@@ -177,16 +176,40 @@ jQuery(document).ready(function ($) {
     // ── Teacher Management Logic ──
     let teacherSearchTimeout = null;
 
+    function normalizePercentInt(value) {
+        const n = Math.round(parseFloat(String(value).replace(',', '.')) || 0);
+        if (Number.isNaN(n)) return 0;
+        return Math.min(100, Math.max(0, n));
+    }
+
+    function normalizeTeacherIdentity(rawName = '', rawEmail = '') {
+        let name = (rawName || '').trim();
+        let email = (rawEmail || '').trim();
+
+        const match = name.match(/^(.*)\s+\(([^()]+@[^()]+)\)$/);
+        if (match) {
+            name = match[1].trim();
+            if (!email) {
+                email = match[2].trim();
+            }
+        }
+
+        return { name, email };
+    }
+
     function addTeacherItem(data = {}) {
         $('.pcg-empty-teachers-state').hide();
 
         const userId = data.user_id || '';
-        const userName = data.user_name || '';
+        const identity = normalizeTeacherIdentity(data.user_name || '', data.user_email || data.email || '');
+        const userName = identity.name;
+        const userEmail = identity.email;
         const avatarUrl = data.avatar || '';
         const roleSlug = data.role_slug || '';
         const roleDescription = data.role_description || '';
-        const profitPercentage = data.profit_percentage || '0';
+        const profitPercentage = String(normalizePercentInt(data.profit_percentage ?? 0));
         const isMainAuthor = data.is_main_author || false;
+        const hasSelectedUser = Boolean(userId && userName);
 
         const iconHtml = avatarUrl ? `<img src="${avatarUrl}" class="pcg-item-avatar">` : '<span class="dashicons dashicons-admin-users"></span>';
 
@@ -207,13 +230,19 @@ jQuery(document).ready(function ($) {
                     </div>
                     <div class="pcg-item-input-wrapper">
                         <input type="text" class="pcg-item-input pcg-teacher-name-input" 
-                               value="${userName}" 
+                               value="${hasSelectedUser ? '' : userName}" 
                                placeholder="Buscar colaborador..." 
                                ${isMainAuthor ? 'readonly' : ''} 
-                               autocomplete="off">
+                               autocomplete="off"
+                               style="${hasSelectedUser ? 'display:none;' : ''}">
+                        <div class="pcg-teacher-identity ${hasSelectedUser ? '' : 'pcg-teacher-identity-hidden'}">
+                            <span class="pcg-teacher-full-name">${userName}</span>
+                            <span class="pcg-teacher-email">${userEmail}</span>
+                        </div>
                         <div class="pcg-search-results" style="display:none;"></div>
                     </div>
                     <div class="pcg-item-actions">
+                        <span class="pcg-teacher-share-badge">${profitPercentage}%</span>
                         ${isMainAuthor ? '<span class="pcg-badge-main-author">Principal</span>' : ''}
                         ${removeBtnHtml}
                     </div>
@@ -226,7 +255,7 @@ jQuery(document).ready(function ($) {
                         </div>
                         <div class="pcg-detail-field">
                             <label>Participación (%)</label>
-                            <input type="number" class="pcg-teacher-profit" value="${profitPercentage}" min="0" max="100" step="0.01">
+                            <input type="number" class="pcg-teacher-profit" value="${profitPercentage}" min="0" max="100" step="1">
                         </div>
                     </div>
                     <div class="pcg-detail-row">
@@ -295,10 +324,15 @@ jQuery(document).ready(function ($) {
                                 </div>
                             `);
                             $resItem.on('click', function () {
-                                $input.val(user.name);
+                                const selectedIdentity = normalizeTeacherIdentity(user.name || '', user.email || '');
+                                $input.val('');
                                 const $item = $input.closest('.pcg-teacher-item');
                                 $item.attr('data-user-id', user.id);
                                 $item.find('.pcg-item-icon').html(`<img src="${user.avatar}" class="pcg-item-avatar">`);
+                                $item.find('.pcg-teacher-full-name').text(selectedIdentity.name);
+                                $item.find('.pcg-teacher-email').text(selectedIdentity.email);
+                                $item.find('.pcg-teacher-identity').removeClass('pcg-teacher-identity-hidden');
+                                $input.hide();
                                 $results.hide().empty();
                             });
                             $results.append($resItem);
@@ -316,6 +350,12 @@ jQuery(document).ready(function ($) {
         if (!$(e.target).closest('.pcg-item-input-wrapper').length) {
             $('.pcg-teacher-item .pcg-search-results').hide().empty();
         }
+    });
+
+    $(document).on('input change', '.pcg-teacher-profit', function () {
+        const intValue = normalizePercentInt($(this).val());
+        $(this).val(intValue);
+        $(this).closest('.pcg-teacher-item').find('.pcg-teacher-share-badge').text(`${intValue}%`);
     });
 
     function initSortable() {
@@ -548,7 +588,7 @@ jQuery(document).ready(function ($) {
                 courseData.teachers.push({
                     user_id: userId,
                     role_slug: $(this).find('.pcg-teacher-role-slug').val(),
-                    profit_percentage: $(this).find('.pcg-teacher-profit').val(),
+                    profit_percentage: normalizePercentInt($(this).find('.pcg-teacher-profit').val()),
                     role_description: $(this).find('.pcg-teacher-description').val()
                 });
             }
@@ -663,10 +703,43 @@ jQuery(document).ready(function ($) {
         });
     }
 
+    function showEditLoadingState() {
+        resetForm();
+        $('#pcg-my-courses-section').hide();
+        $('#pcg-course-form-section').show();
+        $('.pcg-mode-content').hide();
+
+        if (!$('#pcg-edit-loading').length) {
+            $('#pcg-course-form-section').append(`
+                <div id="pcg-edit-loading" class="pcg-loading-placeholder">
+                    <span class="dashicons dashicons-update spin"></span>
+                    <p>Cargando curso...</p>
+                </div>
+            `);
+        }
+
+        $('#pcg-edit-loading').show();
+    }
+
+    function hideEditLoadingState() {
+        $('#pcg-edit-loading').hide();
+        $('#pcg-mode-curso').show();
+    }
+
     // Edit Course
     $(document).on('click', '.pcg-btn-edit-course', function () {
-        const courseId = $(this).closest('.pcg-course-card').data('id');
-        $.ajax({
+        const $editBtn = $(this);
+        const courseId = $editBtn.closest('.pcg-course-card').data('id');
+        if (!courseId) return;
+
+        showEditLoadingState();
+        $editBtn.prop('disabled', true);
+
+        if (editCourseRequest && editCourseRequest.readyState !== 4) {
+            editCourseRequest.abort();
+        }
+
+        editCourseRequest = $.ajax({
             url: pcgCreatorData.ajaxUrl,
             type: 'POST',
             data: {
@@ -759,19 +832,23 @@ jQuery(document).ready(function ($) {
                     $('.pcg-mode-content').hide();
                     $('#pcg-mode-curso').show();
 
-                    // Show form
-                    $('#pcg-creator-intro-section').hide();
-                    $('#pcg-my-courses-section').hide();
-                    $('#pcg-course-form-section').fadeIn(400);
-                    $('html, body').animate({
-                        scrollTop: $("#pcg-course-form-section").offset().top - 100
-                    }, 500);
+                    hideEditLoadingState();
                 } else {
+                    $('#pcg-course-form-section').hide();
+                    $('#pcg-my-courses-section').show();
                     alert('Error al obtener los datos del curso: ' + (response.data ? response.data.message : 'Error desconocido'));
                 }
             },
-            error: function () {
+            error: function (jqXHR, textStatus) {
+                if (textStatus === 'abort') {
+                    return;
+                }
+                $('#pcg-course-form-section').hide();
+                $('#pcg-my-courses-section').show();
                 alert('Ocurrió un error al cargar el curso para editar.');
+            },
+            complete: function () {
+                $editBtn.prop('disabled', false);
             }
         });
     });
@@ -796,7 +873,6 @@ jQuery(document).ready(function ($) {
                         currentCourseId = 0;
                         $('#pcg-current-course-id').val(0);
                         $('#pcg-course-form-section').hide();
-                        $('#pcg-creator-intro-section').fadeIn();
                         $('#pcg-my-courses-section').fadeIn();
                     }
 

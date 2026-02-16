@@ -5,6 +5,7 @@
  * Author: Nico / Politeia
  * Version: 1.2.0
  * Text Domain: politeia-learning
+ * Domain Path: /languages
  * Codex Enabled: true
  */
 
@@ -22,6 +23,47 @@ require_once PL_PATH . 'includes/class-upgrader.php';
 
 // Automatic Database Upgrades
 add_action('plugins_loaded', ['PL_Upgrader', 'maybe_upgrade']);
+
+// Load translations. WordPress will prefer WP_LANG_DIR/plugins first.
+add_action('plugins_loaded', function () {
+    load_plugin_textdomain('politeia-learning', false, dirname(plugin_basename(__FILE__)) . '/languages');
+}, 5);
+
+/**
+ * Prefer "FirstName LastName" on LearnDash course pages when templates ask for display_name.
+ * Keeps global display_name unchanged, only affects rendering.
+ */
+function pl_get_user_full_name_or_display_name(int $user_id, string $fallback = ''): string
+{
+    $user = get_userdata($user_id);
+    if (!$user) {
+        return $fallback;
+    }
+
+    $full_name = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+    if ($full_name !== '') {
+        return $full_name;
+    }
+
+    return $user->display_name ?: $fallback;
+}
+
+add_filter('get_the_author_display_name', function ($display_name, $user_id) {
+    if (!is_singular('sfwd-courses')) {
+        return $display_name;
+    }
+
+    return pl_get_user_full_name_or_display_name((int) $user_id, (string) $display_name);
+}, 10, 2);
+
+// BuddyBoss/BuddyPress display name (if used by the theme on course pages).
+add_filter('bp_core_get_user_displayname', function ($display_name, $user_id) {
+    if (!is_singular('sfwd-courses')) {
+        return $display_name;
+    }
+
+    return pl_get_user_full_name_or_display_name((int) $user_id, (string) $display_name);
+}, 10, 2);
 
 /**
  * Load Global Dependencies

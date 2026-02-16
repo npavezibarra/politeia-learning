@@ -6,17 +6,6 @@ $pcg_is_editing_quiz = isset($_GET['edit_quiz']) && !empty($_GET['edit_quiz']);
 $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
 ?>
 
-<!-- Intro Section (Initial State) -->
-<div id="pcg-creator-intro-section" class="pcg-creator-intro-card" <?php echo $pcg_is_editing_quiz ? 'style="display:none;"' : ''; ?>>
-    <div class="pcg-intro-text">
-        <h2><?php _e('Create your course and sell them in our platform', 'politeia-learning'); ?></h2>
-        <p><?php _e('Empieza hoy mismo a compartir tu conocimiento con el mundo.', 'politeia-learning'); ?></p>
-        <button type="button" id="pcg-show-creator-form" class="pcg-btn-intro-create">
-            <?php _e('Crea un Curso', 'politeia-learning'); ?>
-        </button>
-    </div>
-</div>
-
 <!-- Creation Form (Hidden Initially) -->
 <div id="pcg-course-form-section" class="pcg-create-course-container" <?php echo $pcg_is_editing_quiz ? 'style="display:block;"' : 'style="display:none;"'; ?>>
     <?php
@@ -32,7 +21,7 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
         <div class="pcg-nav-left">
             <button type="button" id="pcg-btn-back-to-list" class="pcg-btn-back">
                 <span class="dashicons dashicons-arrow-left-alt2"></span>
-                <?php _e('Back', 'politeia-learning'); ?>
+                <?php _e('Volver', 'politeia-learning'); ?>
             </button>
             <span id="pcg-current-course-label" class="pcg-current-course-label"></span>
         </div>
@@ -73,21 +62,25 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
             <div class="pcg-media-left-col">
                 <!-- Thumbnail Preview -->
                 <div id="pcg-thumbnail-preview" class="pcg-thumbnail-preview" style="display:none;">
-                    <p style="font-size: 12px; color: #666; margin-bottom: 5px;">Course Cover Preview:</p>
+                    <p style="font-size: 12px; color: #666; margin-bottom: 5px;">
+                        <?php _e('Vista previa de la portada del curso:', 'politeia-learning'); ?>
+                    </p>
                     <img src="" style="height: 140px; width: auto; border-radius: 8px; display: block;">
                     <button type="button" id="pcg-remove-thumbnail" class="pcg-btn-remove-thumb"
                         style="color: #e53e3e; font-size: 12px; border: none; background: none; cursor: pointer; padding: 5px 0; font-weight: 600;">
-                        <?php _e('Remove Cover', 'politeia-learning'); ?>
+                        <?php _e('Quitar portada', 'politeia-learning'); ?>
                     </button>
                 </div>
 
                 <!-- Cover Photo Preview -->
                 <div id="pcg-cover-preview" class="pcg-thumbnail-preview" style="display:none;">
-                    <p style="font-size: 12px; color: #666; margin-bottom: 5px;">Cover Photo Preview:</p>
+                    <p style="font-size: 12px; color: #666; margin-bottom: 5px;">
+                        <?php _e('Vista previa de la foto de portada:', 'politeia-learning'); ?>
+                    </p>
                     <img src="" style="height: 140px; width: auto; border-radius: 8px; display: block;">
                     <button type="button" id="pcg-remove-cover" class="pcg-btn-remove-thumb"
                         style="color: #e53e3e; font-size: 12px; border: none; background: none; cursor: pointer; padding: 5px 0; font-weight: 600;">
-                        <?php _e('Remove Photo', 'politeia-learning'); ?>
+                        <?php _e('Quitar foto', 'politeia-learning'); ?>
                     </button>
                 </div>
 
@@ -95,10 +88,10 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
                 <div class="pcg-asset-actions">
                     <button type="button" class="pcg-btn-outline" id="pcg-upload-thumbnail">
                         <span class="dashicons dashicons-upload"></span>
-                        <?php _e('Course Cover', 'politeia-learning'); ?>
+                        <?php _e('Portada del curso', 'politeia-learning'); ?>
                     </button>
                     <button type="button" class="pcg-btn-outline" id="pcg-select-background">
-                        <?php _e('Cover Photo', 'politeia-learning'); ?>
+                        <?php _e('Foto de portada', 'politeia-learning'); ?>
                     </button>
                 </div>
             </div>
@@ -172,7 +165,7 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
     <!-- START: LECCIONES MODE -->
     <div id="pcg-mode-lecciones" class="pcg-mode-content" <?php echo $pcg_active_segment !== 'lecciones' ? 'style="display:none;"' : ''; ?>>
         <div class="pcg-lessons-header">
-            <h3><?php _e('CONTENIDO DEL CURSO', 'politeia-learning'); ?></h3>
+            <h3><?php _e('Lecciones del curso', 'politeia-learning'); ?></h3>
             <div class="pcg-progression-container">
                 <span class="pcg-progression-label"><?php _e('FLUJO LIBRE', 'politeia-learning'); ?></span>
                 <label class="pcg-switch">
@@ -187,11 +180,11 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
                 <div class="pcg-add-dropdown" id="pcg-add-dropdown">
                     <button type="button" class="pcg-add-option" data-type="lesson">
                         <span class="dashicons dashicons-media-text"></span>
-                        <?php _e('Add Lesson', 'politeia-learning'); ?>
+                        <?php _e('Agregar lección', 'politeia-learning'); ?>
                     </button>
                     <button type="button" class="pcg-add-option" data-type="section">
                         <span class="dashicons dashicons-menu-alt3"></span>
-                        <?php _e('Add Section', 'politeia-learning'); ?>
+                        <?php _e('Agregar sección', 'politeia-learning'); ?>
                     </button>
                 </div>
             </div>
@@ -212,7 +205,7 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
         <div id="pcg-quiz-not-created-msg" class="pcg-empty-state-msg"
             style="display:none; padding: 40px; text-align: center; background: #f8fafc; border-radius: 10px; border: 1px dashed #cbd5e0;">
             <p style="font-weight: 600; color: #4a5568; margin: 0;">
-                <?php _e('Before creating a quiz you must create a course first', 'politeia-learning'); ?>
+                <?php _e('Antes de crear una evaluación, primero debes crear un curso.', 'politeia-learning'); ?>
             </p>
         </div>
         <div id="pcg-quiz-creator-container">
@@ -227,6 +220,9 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
 <div id="pcg-my-courses-section" class="pcg-my-courses-container" <?php echo $pcg_is_editing_quiz ? 'style="display:none;"' : ''; ?>>
     <div class="pcg-section-header">
         <h3><?php _e('MIS CURSOS PUBLICADOS', 'politeia-learning'); ?></h3>
+        <button type="button" id="pcg-show-creator-form" class="pcg-btn-intro-create">
+            <?php _e('Crear un curso', 'politeia-learning'); ?>
+        </button>
     </div>
 
     <div id="pcg-my-courses-grid" class="pcg-my-courses-grid">
