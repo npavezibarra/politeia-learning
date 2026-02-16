@@ -120,6 +120,21 @@ msgstr "EXCERPT"
 msgid "PROFESORES"
 msgstr "TEACHERS"
 
+msgid "Propietario del producto"
+msgstr "Product owner"
+
+msgid "Busca y selecciona un usuario (solo uno)."
+msgstr "Search and select a user (only one)."
+
+msgid "Escribe un nombre o email..."
+msgstr "Type a name or email..."
+
+msgid "Quitar"
+msgstr "Remove"
+
+msgid "Sin resultados"
+msgstr "No results"
+
 msgid "Escribe la descripción del curso aquí... (máx. 700 palabras)"
 msgstr "Write the course description here... (max. 700 words)"
 

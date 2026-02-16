@@ -95,6 +95,7 @@ class PL_Module_Loader
         'course-creator' => true,
         'quiz-creator' => true,
         'quiz-control' => true,
+        'woo' => true,
     ];
 
     /**

@@ -249,6 +249,12 @@ class PL_CC_Course_Save_Handler
         update_post_meta($product_id, '_price', $price);
         update_post_meta($product_id, '_thumbnail_id', $thumbnail_id);
 
+        // Product owner: the course main author.
+        $author_id = (int) get_post_field('post_author', $course_id);
+        if ($author_id > 0) {
+            update_post_meta($product_id, 'product_owner', $author_id);
+        }
+
         // Link to LearnDash Course (Addon meta key discovered: _related_course)
         // Store as array to match expected serialized format a:1:{i:0;i:XX;}
         update_post_meta($product_id, '_related_course', [$course_id]);
