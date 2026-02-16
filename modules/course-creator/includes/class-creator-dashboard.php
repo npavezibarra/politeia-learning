@@ -152,6 +152,12 @@ class PL_CC_Creator_Dashboard
             wp_enqueue_script('pcg-chartjs', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', [], '4.4.1', true);
             wp_enqueue_script('pcg-sales-dashboard', PL_CC_URL . 'assets/js/pcg-sales-dashboard.js', ['pcg-chartjs'], '1.0.0', true);
 
+            wp_localize_script('pcg-sales-dashboard', 'pcgSalesData', [
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'action' => 'pl_get_user_sales_metrics',
+                'nonce' => wp_create_nonce('pl_user_sales_metrics'),
+            ]);
+
             $current_user = wp_get_current_user();
             $full_name = trim($current_user->first_name . ' ' . $current_user->last_name);
             if (empty($full_name)) {

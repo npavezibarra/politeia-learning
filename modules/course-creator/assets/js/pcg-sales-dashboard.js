@@ -8,8 +8,10 @@
         return Array.from((root || document).querySelectorAll(sel));
     }
 
-    function money(value) {
-        return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(value);
+    function money(value, locale, currency) {
+        const loc = locale || 'es-CL';
+        const cur = currency || 'CLP';
+        return new Intl.NumberFormat(loc, { style: 'currency', currency: cur, maximumFractionDigits: 0 }).format(value || 0);
     }
 
     function pct(value, total) {
@@ -17,33 +19,11 @@
         return `${((value / safe) * 100).toFixed(1)}%`;
     }
 
-    function isoDate(d) {
-        return d.toISOString().split('T')[0];
-    }
-
-    function displayDate(d) {
-        return d.toLocaleDateString('es-CL', { month: 'short', day: 'numeric' });
-    }
-
-    function generateMockData(days) {
-        const data = [];
-        const now = new Date();
-        for (let i = days; i >= 0; i--) {
-            const date = new Date(now);
-            date.setDate(now.getDate() - i);
-            const courses = Math.floor(Math.random() * 50000) + 20000;
-            const books = Math.floor(Math.random() * 30000) + 10000;
-            const patronage = Math.floor(Math.random() * 15000) + 5000;
-            data.push({
-                date: isoDate(date),
-                displayDate: displayDate(date),
-                courses,
-                books,
-                patronage,
-                total: courses + books + patronage,
-            });
-        }
-        return data;
+    function displayDate(iso, locale) {
+        const loc = locale || 'es-CL';
+        const d = new Date(iso + 'T00:00:00');
+        if (isNaN(d.getTime())) return iso;
+        return d.toLocaleDateString(loc, { month: 'short', day: 'numeric' });
     }
 
     function initDashboard(root) {
@@ -66,71 +46,49 @@
         const elBooksPct = qs(root, '[data-metric-pct="books"]');
         const elPatronagePct = qs(root, '[data-metric-pct="patronage"]');
 
-        const allData = generateMockData(365);
         let currentTimeframe = 'month';
         let currentChart = null;
+        let currentLocale = 'es-CL';
+        let currentCurrency = 'CLP';
+        let inFlight = null;
 
         function setActiveBtn(tf) {
             btns.forEach(b => b.classList.toggle('active', b.getAttribute('data-timeframe') === tf));
         }
 
-        function filterData() {
-            const now = new Date();
-            let start = new Date(now);
-
-            if (currentTimeframe === 'day') {
-                start.setDate(now.getDate() - 1);
-            } else if (currentTimeframe === 'week') {
-                start.setDate(now.getDate() - 7);
-            } else if (currentTimeframe === 'month') {
-                start.setMonth(now.getMonth() - 1);
-            } else if (currentTimeframe === 'year') {
-                start.setFullYear(now.getFullYear() - 1);
-            } else if (currentTimeframe === 'custom') {
-                const s = startInput && startInput.value;
-                const e = endInput && endInput.value;
-                if (!s || !e) return [];
-                return allData.filter(d => d.date >= s && d.date <= e);
-            }
-
-            const startStr = isoDate(start);
-            return allData.filter(d => d.date >= startStr);
+        function setMetricText(el, text) {
+            if (!el) return;
+            el.textContent = text;
         }
 
-        function renderMetrics(data) {
-            const totals = data.reduce(
-                (acc, cur) => ({
-                    total: acc.total + cur.total,
-                    courses: acc.courses + cur.courses,
-                    books: acc.books + cur.books,
-                    patronage: acc.patronage + cur.patronage,
-                }),
-                { total: 0, courses: 0, books: 0, patronage: 0 }
-            );
+        function renderMetrics(totals) {
+            const t = totals || { total: 0, courses: 0, books: 0, patronage: 0 };
 
-            if (elTotal) elTotal.textContent = money(totals.total);
-            if (elCourses) elCourses.textContent = money(totals.courses);
-            if (elBooks) elBooks.textContent = money(totals.books);
-            if (elPatronage) elPatronage.textContent = money(totals.patronage);
+            setMetricText(elTotal, money(t.total, currentLocale, currentCurrency));
+            setMetricText(elCourses, money(t.courses, currentLocale, currentCurrency));
+            setMetricText(elBooks, money(t.books, currentLocale, currentCurrency));
+            setMetricText(elPatronage, money(t.patronage, currentLocale, currentCurrency));
 
-            if (elCoursesPct) elCoursesPct.textContent = `${pct(totals.courses, totals.total)} ${elCoursesPct.getAttribute('data-suffix') || ''}`.trim();
-            if (elBooksPct) elBooksPct.textContent = `${pct(totals.books, totals.total)} ${elBooksPct.getAttribute('data-suffix') || ''}`.trim();
-            if (elPatronagePct) elPatronagePct.textContent = `${pct(totals.patronage, totals.total)} ${elPatronagePct.getAttribute('data-suffix') || ''}`.trim();
+            if (elCoursesPct) setMetricText(elCoursesPct, `${pct(t.courses, t.total)} ${elCoursesPct.getAttribute('data-suffix') || ''}`.trim());
+            if (elBooksPct) setMetricText(elBooksPct, `${pct(t.books, t.total)} ${elBooksPct.getAttribute('data-suffix') || ''}`.trim());
+            if (elPatronagePct) setMetricText(elPatronagePct, `${pct(t.patronage, t.total)} ${elPatronagePct.getAttribute('data-suffix') || ''}`.trim());
         }
 
-        function renderChart(data) {
+        function renderChart(series) {
             if (typeof Chart === 'undefined') return;
             const ctx = chartCanvas.getContext('2d');
             if (currentChart) currentChart.destroy();
 
+            const data = Array.isArray(series) ? series : [];
+
             currentChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: data.map(d => d.displayDate),
+                    labels: data.map(d => displayDate(d.date, currentLocale)),
                     datasets: [
-                        { label: 'Cursos', data: data.map(d => d.courses), backgroundColor: '#C79F32', borderWidth: 0, borderRadius: 0 },
-                        { label: 'Libros', data: data.map(d => d.books), backgroundColor: '#D1D1D1', borderWidth: 0, borderRadius: 0 },
-                        { label: 'Patrocinio', data: data.map(d => d.patronage), backgroundColor: '#B87333', borderWidth: 0, borderRadius: 0 },
+                        { label: 'Cursos', data: data.map(d => d.courses || 0), backgroundColor: '#C79F32', borderWidth: 0, borderRadius: 0 },
+                        { label: 'Libros', data: data.map(d => d.books || 0), backgroundColor: '#D1D1D1', borderWidth: 0, borderRadius: 0 },
+                        { label: 'Patrocinio', data: data.map(d => d.patronage || 0), backgroundColor: '#B87333', borderWidth: 0, borderRadius: 0 },
                     ],
                 },
                 options: {
@@ -147,7 +105,7 @@
                             cornerRadius: 6,
                             padding: 10,
                             displayColors: false,
-                            callbacks: { label: (c) => `${c.dataset.label.toUpperCase()}: ${money(c.raw)}` },
+                            callbacks: { label: (c) => `${c.dataset.label.toUpperCase()}: ${money(c.raw, currentLocale, currentCurrency)}` },
                         },
                     },
                     scales: {
@@ -158,11 +116,74 @@
             });
         }
 
-        function update() {
-            const data = filterData();
-            if (!data.length) return;
-            renderMetrics(data);
-            renderChart(data);
+        function setLoading(isLoading) {
+            btns.forEach(b => {
+                b.disabled = !!isLoading;
+                b.style.opacity = isLoading ? '0.7' : '';
+            });
+        }
+
+        function fetchData() {
+            if (typeof pcgSalesData === 'undefined' || !pcgSalesData.ajaxUrl) {
+                // If not configured, keep the UI stable (zeros).
+                renderMetrics({ total: 0, courses: 0, books: 0, patronage: 0 });
+                renderChart([]);
+                return;
+            }
+
+            const params = new URLSearchParams();
+            params.set('action', pcgSalesData.action);
+            params.set('nonce', pcgSalesData.nonce);
+            params.set('timeframe', currentTimeframe);
+
+            if (currentTimeframe === 'custom') {
+                const s = startInput && startInput.value;
+                const e = endInput && endInput.value;
+                if (!s || !e) {
+                    renderMetrics({ total: 0, courses: 0, books: 0, patronage: 0 });
+                    renderChart([]);
+                    return;
+                }
+                params.set('start_date', s);
+                params.set('end_date', e);
+            }
+
+            if (inFlight && typeof inFlight.abort === 'function') {
+                inFlight.abort();
+            }
+
+            const controller = new AbortController();
+            inFlight = controller;
+            setLoading(true);
+
+            fetch(pcgSalesData.ajaxUrl + '?' + params.toString(), {
+                method: 'GET',
+                credentials: 'same-origin',
+                signal: controller.signal,
+            })
+                .then(r => r.json())
+                .then(res => {
+                    if (!res || !res.success) {
+                        renderMetrics({ total: 0, courses: 0, books: 0, patronage: 0 });
+                        renderChart([]);
+                        return;
+                    }
+
+                    const data = res.data || {};
+                    currentLocale = data.locale || currentLocale;
+                    currentCurrency = data.currency || currentCurrency;
+
+                    renderMetrics(data.totals || {});
+                    renderChart(data.series || []);
+                })
+                .catch(err => {
+                    if (err && err.name === 'AbortError') return;
+                    renderMetrics({ total: 0, courses: 0, books: 0, patronage: 0 });
+                    renderChart([]);
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
         }
 
         btns.forEach(btn => {
@@ -170,23 +191,23 @@
                 currentTimeframe = btn.getAttribute('data-timeframe');
                 setActiveBtn(currentTimeframe);
                 if (custom) custom.style.display = currentTimeframe === 'custom' ? '' : 'none';
-                if (currentTimeframe !== 'custom') update();
+                if (currentTimeframe !== 'custom') fetchData();
             });
         });
 
-        if (startInput) startInput.addEventListener('change', update);
-        if (endInput) endInput.addEventListener('change', update);
+        if (startInput) startInput.addEventListener('change', fetchData);
+        if (endInput) endInput.addEventListener('change', fetchData);
 
         // Default state
         setActiveBtn(currentTimeframe);
         if (custom) custom.style.display = 'none';
-        update();
+        fetchData();
 
         // When switching tabs, re-render so Chart.js recalculates sizes.
         window.addEventListener('pcg:sales-tab-changed', (e) => {
             if (!e || !e.detail || !e.detail.tab) return;
             if (e.detail.tab === 'general') {
-                setTimeout(update, 0);
+                setTimeout(fetchData, 0);
             }
         });
     }
