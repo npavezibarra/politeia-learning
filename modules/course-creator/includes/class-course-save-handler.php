@@ -98,6 +98,7 @@ class PL_CC_Course_Save_Handler
         $thumbnail_id = intval($data['thumbnail_id'] ?? 0);
         $progression = sanitize_text_field($data['progression'] ?? '');
         $content_list = $data['content'] ?? [];
+        $teacher_ids = $data['teachers'] ?? [];
 
         // 1. Create or Update Course
         $post_data = [
@@ -134,6 +135,23 @@ class PL_CC_Course_Save_Handler
             update_post_meta($course_id, $cover_meta_key, $cover_photo_id);
         } else {
             delete_post_meta($course_id, $cover_meta_key);
+        }
+
+        // 2c. Set Additional Teachers (Legacy Meta + New Table)
+        global $wpdb;
+        $roles_table = $wpdb->prefix . 'politeia_course_roles';
+        $wpdb->delete($roles_table, ['course_id' => $course_id], ['%d']);
+
+        if (!empty($teacher_ids) && is_array($teacher_ids)) {
+            foreach ($teacher_ids as $teacher) {
+                $wpdb->insert($roles_table, [
+                    'course_id' => $course_id,
+                    'user_id' => intval($teacher['user_id']),
+                    'role_slug' => sanitize_text_field($teacher['role_slug']),
+                    'profit_percentage' => floatval($teacher['profit_percentage']),
+                    'role_description' => wp_kses_post($teacher['role_description']),
+                ], ['%d', '%d', '%s', '%f', '%s']);
+            }
         }
 
         // 3. Save Course Settings (Price etc)
@@ -429,6 +447,30 @@ class PL_CC_Course_Save_Handler
         $cover_photo_id = get_post_meta($course_id, $cover_meta_key, true);
         $cover_photo_url = wp_get_attachment_url($cover_photo_id);
 
+        global $wpdb;
+        $roles_table = $wpdb->prefix . 'politeia_course_roles';
+        $roles = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$roles_table} WHERE course_id = %d", $course_id));
+        $teachers_data = [];
+
+        foreach ($roles as $role) {
+            $user = get_userdata($role->user_id);
+            if ($user) {
+                $full_name = trim($user->first_name . ' ' . $user->last_name);
+                if (empty($full_name)) {
+                    $full_name = $user->display_name;
+                }
+
+                $teachers_data[] = [
+                    'id' => $user->ID,
+                    'name' => $full_name . ' (' . $user->user_email . ')',
+                    'avatar' => get_avatar_url($user->ID, ['size' => 64]),
+                    'role_slug' => $role->role_slug,
+                    'profit_percentage' => $role->profit_percentage,
+                    'role_description' => $role->role_description
+                ];
+            }
+        }
+
         // Get content structure (lessons/sections) from ld_course_steps
         $steps = get_post_meta($course_id, 'ld_course_steps', true);
         $content = [];
@@ -477,7 +519,11 @@ class PL_CC_Course_Save_Handler
             'cover_photo_url' => $cover_photo_url,
             'permalink' => get_permalink($course_id),
             'progression' => $price_settings['sfwd-courses_course_disable_lesson_progression'] ?? '',
-            'content' => $content
+            'content' => $content,
+            'teachers' => $teachers_data,
+            'author_id' => $post->post_author,
+            'author_name' => get_the_author_meta('display_name', $post->post_author),
+            'author_avatar' => get_avatar_url($post->post_author, ['size' => 64])
         ]);
     }
 }

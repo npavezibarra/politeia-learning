@@ -37,32 +37,27 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
             <span id="pcg-current-course-label" class="pcg-current-course-label"></span>
         </div>
         <div class="pcg-nav-right">
+            <div class="pcg-segmented-control">
+                <div class="pcg-segment <?php echo $pcg_active_segment === 'curso' ? 'active' : ''; ?>"
+                    data-value="curso">
+                    <?php _e('CURSO', 'politeia-learning'); ?>
+                </div>
+                <div class="pcg-segment <?php echo $pcg_active_segment === 'lecciones' ? 'active' : ''; ?>"
+                    data-value="lecciones"><?php _e('LECCIONES', 'politeia-learning'); ?></div>
+                <div class="pcg-segment <?php echo $pcg_active_segment === 'evaluacion' ? 'active' : ''; ?>"
+                    data-value="evaluacion"><?php _e('EVALUACIÓN', 'politeia-learning'); ?></div>
+            </div>
             <button type="button" id="pcg-btn-preview-course" class="pcg-btn-preview"
-                title="<?php _e('Vista Previa', 'politeia-learning'); ?>" style="display:none;">
+                title="<?php _e('Vista Previa', 'politeia-learning'); ?>">
                 <span class="dashicons dashicons-visibility"></span>
+            </button>
+            <button type="button" class="pcg-btn-save pcg-btn-save-compact"
+                title="<?php _e('Guardar', 'politeia-learning'); ?>">
+                <span class="dashicons dashicons-saved"></span>
             </button>
         </div>
     </div>
 
-    <div class="pcg-form-divider"></div>
-
-    <!-- Top Bar: Toggle and Save -->
-    <div class="pcg-toggle-wrapper">
-        <div class="pcg-segmented-control">
-            <div class="pcg-segment <?php echo $pcg_active_segment === 'curso' ? 'active' : ''; ?>" data-value="curso">
-                <?php _e('CURSO', 'politeia-learning'); ?>
-            </div>
-            <div class="pcg-segment <?php echo $pcg_active_segment === 'lecciones' ? 'active' : ''; ?>"
-                data-value="lecciones"><?php _e('LECCIONES', 'politeia-learning'); ?></div>
-            <div class="pcg-segment <?php echo $pcg_active_segment === 'evaluacion' ? 'active' : ''; ?>"
-                data-value="evaluacion"><?php _e('EVALUACIÓN', 'politeia-learning'); ?></div>
-        </div>
-        <div class="pcg-header-actions">
-            <button type="button" id="pcg-btn-cancel-edit"
-                class="pcg-btn-outline pcg-btn-small"><?php _e('CANCELAR', 'politeia-learning'); ?></button>
-            <button type="button" class="pcg-btn-save"><?php _e('GUARDAR', 'politeia-learning'); ?></button>
-        </div>
-    </div>
 
     <!-- START: CURSO MODE -->
     <div id="pcg-mode-curso" class="pcg-mode-content" <?php echo $pcg_active_segment !== 'curso' ? 'style="display:none;"' : ''; ?>>
@@ -134,6 +129,9 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
                 <button type="button" class="pcg-desc-tab" data-target="pcg-tab-excerpt">
                     <?php _e('EXTRACTO', 'politeia-learning'); ?>
                 </button>
+                <button type="button" class="pcg-desc-tab" data-target="pcg-tab-teachers">
+                    <?php _e('PROFESORES', 'politeia-learning'); ?>
+                </button>
             </div>
 
             <div id="pcg-tab-description" class="pcg-tab-content active">
@@ -150,6 +148,22 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
                     class="pcg-modern-textarea pcg-excerpt-textarea"></textarea>
                 <span class="pcg-word-count" id="pcg-excerpt-word-count">0 / 50
                     <?php _e('palabras', 'politeia-learning'); ?></span>
+            </div>
+
+            <div id="pcg-tab-teachers" class="pcg-tab-content">
+                <div class="pcg-teachers-header">
+                    <h3><?php _e('PROFESORES & COLABORADORES', 'politeia-learning'); ?></h3>
+                    <button type="button" class="pcg-btn-add-circle" id="pcg-btn-add-teacher">
+                        <span class="dashicons dashicons-plus-alt2"></span>
+                    </button>
+                </div>
+
+                <div id="pcg-teachers-list" class="pcg-items-list">
+                    <!-- Teacher items will be added here -->
+                    <div class="pcg-empty-teachers-state">
+                        <p><?php _e('No hay colaboradores asignados.', 'politeia-learning'); ?></p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

@@ -238,6 +238,7 @@
     justify-content: space-between;
     margin-bottom: 0px;
     padding: 0px 20px;
+    border-bottom: 1px solid #e5e5e5;
 }
 
 .pcg-nav-left {
@@ -270,6 +271,12 @@
     height: 16px;
 }
 
+.pcg-nav-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .pcg-current-course-label {
     font-size: 0.85rem;
     font-weight: 700;
@@ -285,8 +292,9 @@
     box-shadow: none !important;
     outline: none !important;
     color: var(--pcg-light-gray);
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
+    border-radius: 0px !important;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -324,32 +332,34 @@
 }
 
 div#pcg-mode-curso {
-    padding: 0px 20px;
+    padding: 20px;
 }
 
 .pcg-segmented-control {
     display: inline-flex;
-    background: #f5f5f5;
-    padding: 2px;
-    border-radius: 8px;
-    border: 1px solid #e5e5e5;
+    background: #ffffff;
+    padding: 0px;
+    border-radius: 0px;
+    /* border: 1px solid #e5e5e5; */
+    margin-right: 12px;
 }
 
 .pcg-segment {
-    padding: 2px 24px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #737373;
+    padding: 6px 24px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #a3a3a3;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: 0px;
     transition: all 0.2s ease;
     text-transform: uppercase;
+    background: #ffffff;
 }
 
 .pcg-segment.active {
-    background: #fff;
-    color: var(--pcg-pure-black);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    background: #f0f0f0;
+    color: #000000;
+    font-weight: 800;
 }
 
 /* Form Header Layout */
@@ -435,7 +445,7 @@ div#pcg-mode-curso {
     background: var(--pcg-gold-grad);
     color: #fff;
     padding: 10px 28px;
-    border-radius: 6px;
+    border-radius: 0px;
     border: none;
     font-weight: 700;
     font-size: 0.8rem;
@@ -444,6 +454,21 @@ div#pcg-mode-curso {
     letter-spacing: 0.1em;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     box-shadow: 0 4px 15px rgba(138, 107, 30, 0.2);
+}
+
+.pcg-btn-save-compact {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pcg-btn-save-compact .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
 }
 
 .pcg-btn-save:hover {
@@ -455,6 +480,20 @@ div#pcg-mode-curso {
     background: linear-gradient(135deg, #783F27, #B87333, #E5AA70) !important;
     color: #fff !important;
     box-shadow: 0 4px 15px rgba(120, 63, 39, 0.4);
+}
+
+.pcg-btn-save.loading .dashicons {
+    animation: pcg-spin 1s linear infinite;
+}
+
+@keyframes pcg-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Media Row — 70/30 layout */
@@ -1287,4 +1326,135 @@ input:checked+.pcg-slider:before {
 
 div#pcg-mode-lecciones {
     padding: 20px;
+}
+
+/* Teachers Tab Styling - Item Based */
+.pcg-teachers-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    margin-top: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f0f0;
+    padding-left: 20px;
+}
+
+.pcg-teachers-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #171717;
+    letter-spacing: 0.05em;
+}
+
+.pcg-teachers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pcg-item-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+.pcg-search-result-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+.pcg-result-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.pcg-result-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.pcg-result-name {
+    font-weight: 700;
+    font-size: 13px;
+    color: #171717;
+}
+
+.pcg-badge-main-author {
+    background: #ffffff;
+    color: #8b8b8b;
+    font-size: 10px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    margin-right: 15px;
+}
+
+.pcg-empty-teachers-state {
+    padding: 60px 40px;
+    text-align: center;
+    background: #fafafa;
+    border: 1px dashed #e5e5e5;
+    color: #888;
+}
+
+.pcg-teacher-item .pcg-search-results {
+    top: calc(100% + 5px);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.pcg-teacher-item .pcg-search-result-item {
+    padding: 12px 20px;
+    cursor: pointer;
+    background: #fff;
+    transition: all 0.2s;
+}
+
+.pcg-teacher-item .pcg-search-result-item:hover {
+    background: #f8f8f8;
+    color: #171717;
+}
+
+.pcg-teacher-name-input[readonly] {
+    background: #fbfbfb !important;
+    cursor: default;
+    color: #171717;
+    font-weight: 700;
+}
+
+.pcg-teacher-description {
+    width: 100%;
+    min-height: 80px;
+    padding: 15px;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    font-size: 14px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.pcg-teacher-description:focus {
+    border-color: #171717;
+}
+
+.pcg-teacher-item .pcg-detail-field input[type="number"] {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #e5e5e5;
+    outline: none;
+    border-radius: 6px;
+}
+
+.pcg-teacher-item .pcg-detail-field input[type="number"]:focus {
+    border-color: #171717;
 }

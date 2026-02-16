@@ -14,6 +14,14 @@ if (!defined('ABSPATH'))
 // Core Constants
 define('PL_PATH', plugin_dir_path(__FILE__));
 define('PL_URL', plugin_dir_url(__FILE__));
+define('PL_DB_VERSION', '1.1.0');
+
+// Load Global Includes
+require_once PL_PATH . 'includes/class-installer.php';
+require_once PL_PATH . 'includes/class-upgrader.php';
+
+// Automatic Database Upgrades
+add_action('plugins_loaded', ['PL_Upgrader', 'maybe_upgrade']);
 
 /**
  * Load Global Dependencies

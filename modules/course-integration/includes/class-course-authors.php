@@ -253,9 +253,16 @@ class PL_CI_Course_Authors
 
         if (!empty($users)) {
             foreach ($users as $user) {
+                $full_name = trim($user->first_name . ' ' . $user->last_name);
+                if (empty($full_name)) {
+                    $full_name = $user->display_name;
+                }
+
                 $results[] = [
                     'id' => $user->ID,
-                    'name' => $user->display_name . ' (' . $user->user_login . ')',
+                    'name' => $full_name . ' (' . $user->user_email . ')',
+                    'avatar' => get_avatar_url($user->ID, ['size' => 64]),
+                    'email' => $user->user_email
                 ];
             }
         }

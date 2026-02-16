@@ -150,9 +150,21 @@ class PL_CC_Creator_Dashboard
             wp_enqueue_script('pcg-cropper-js', PL_CC_URL . 'assets/js/pcg-course-cropper.js', ['jquery', 'cropperjs'], '1.0.0', true);
             wp_enqueue_script('pcg-creator-js', PL_CC_URL . 'assets/js/creator-dashboard.js', ['jquery', 'jquery-ui-sortable', 'pcg-cropper-js'], '1.0.0', true);
 
+            $current_user = wp_get_current_user();
+            $full_name = trim($current_user->first_name . ' ' . $current_user->last_name);
+            if (empty($full_name)) {
+                $full_name = $current_user->display_name;
+            }
+
             wp_localize_script('pcg-creator-js', 'pcgCreatorData', [
                 'ajaxUrl' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('pcg_creator_nonce'),
+                'teacherSearchAction' => 'pcg_search_teachers',
+                'teacherSearchNonce' => wp_create_nonce('pcg_search_teachers_nonce'),
+                'currentUserId' => $current_user->ID,
+                'currentUserName' => $full_name . ' (' . $current_user->user_email . ')',
+                'currentUserAvatar' => get_avatar_url($current_user->ID, ['size' => 64]),
+                'currentUserFullNameEmail' => $full_name . ' (' . $current_user->user_email . ')',
             ]);
         }
     }
