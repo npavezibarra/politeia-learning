@@ -136,10 +136,12 @@ class PL_Woo_User_Sales_Metrics
             'return' => 'ids',
             'type' => 'shop_order',
             'status' => self::paid_statuses(),
-            'date_created' => [
-                'after' => $start->format('Y-m-d H:i:s'),
-                'before' => $end->format('Y-m-d H:i:s'),
-                'inclusive' => true,
+            'date_query' => [
+                [
+                    'after' => $start->format('Y-m-d H:i:s'),
+                    'before' => $end->format('Y-m-d H:i:s'),
+                    'inclusive' => true,
+                ],
             ],
         ]);
 
@@ -159,6 +161,7 @@ class PL_Woo_User_Sales_Metrics
             }
 
             $created = $order->get_date_created();
+
             if (!$created) {
                 continue;
             }
@@ -174,19 +177,17 @@ class PL_Woo_User_Sales_Metrics
                 }
 
                 $product_id = (int) $item->get_product_id();
-                if ($product_id <= 0) {
-                    continue;
-                }
-
                 $parent_id = (int) wp_get_post_parent_id($product_id);
                 $base_product_id = $parent_id > 0 ? $parent_id : $product_id;
 
                 $owner_id = (int) get_post_meta($base_product_id, 'product_owner', true);
+
                 if ($owner_id !== (int) $user_id) {
                     continue;
                 }
 
                 $bucket = self::bucket_for_product($base_product_id);
+
                 if (!$bucket) {
                     continue;
                 }
