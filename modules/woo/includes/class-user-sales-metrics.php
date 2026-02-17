@@ -73,12 +73,24 @@ class PL_Woo_User_Sales_Metrics
     private static function paid_statuses(): array
     {
         if (function_exists('wc_get_is_paid_statuses')) {
-            return array_map(static function ($s) {
-                return strpos($s, 'wc-') === 0 ? $s : 'wc-' . $s;
-            }, wc_get_is_paid_statuses());
+            // wc_get_orders() commonly expects statuses without the "wc-" prefix.
+            // Normalize to unprefixed slugs (completed, processing, etc.).
+            $raw = (array) wc_get_is_paid_statuses();
+            $norm = [];
+            foreach ($raw as $s) {
+                $s = (string) $s;
+                $s = preg_replace('/^wc-/', '', $s);
+                if ($s !== '') {
+                    $norm[] = $s;
+                }
+            }
+            $norm = array_values(array_unique($norm));
+            if (!empty($norm)) {
+                return $norm;
+            }
         }
 
-        return ['wc-processing', 'wc-completed'];
+        return ['processing', 'completed'];
     }
 
     private static function bucket_for_product(int $product_id): ?string
@@ -122,6 +134,7 @@ class PL_Woo_User_Sales_Metrics
         $order_ids = wc_get_orders([
             'limit' => -1,
             'return' => 'ids',
+            'type' => 'shop_order',
             'status' => self::paid_statuses(),
             'date_created' => [
                 'after' => $start->format('Y-m-d H:i:s'),
@@ -225,4 +238,3 @@ class PL_Woo_User_Sales_Metrics
         ]);
     }
 }
-
