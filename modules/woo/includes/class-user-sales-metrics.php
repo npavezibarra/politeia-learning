@@ -198,11 +198,14 @@ class PL_Woo_User_Sales_Metrics
                 $line_total_tax = (float) $item->get_total_tax();
                 $gross_price = $line_total_net + $line_total_tax;
 
-                // 2. Exclude IVA (19%) manually to get the real Net Base
-                $manual_net_base = $gross_price / 1.19;
+                // 2. Exclude IVA manually to get the real Net Base
+                $iva_rate = (float) get_option('pl_financial_iva', 19);
+                $iva_divisor = 1 + ($iva_rate / 100);
+                $manual_net_base = $gross_price / $iva_divisor;
 
-                // 3. Transaction Fee (Flow: 3.0% of Gross)
-                $flow_fee = $gross_price * 0.03;
+                // 3. Transaction Fee (e.g. Flow)
+                $gateway_rate = (float) get_option('pl_financial_gateway_fee', 3);
+                $flow_fee = $gross_price * ($gateway_rate / 100);
 
                 // 4. Platform Commission (e.g. 25% of Net Base)
                 $politeia_rate = get_user_meta($owner_id, '_pl_commission_rate', true);
