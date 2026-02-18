@@ -10,6 +10,8 @@ if (!defined('ABSPATH')) {
 
 require_once __DIR__ . '/includes/class-product-owner-metabox.php';
 require_once __DIR__ . '/includes/class-user-sales-metrics.php';
+require_once __DIR__ . '/includes/class-user-profile-settings.php';
 
 PL_Woo_Product_Owner_Metabox::init();
 PL_Woo_User_Sales_Metrics::init();
+PL_Woo_User_Profile_Settings::init();

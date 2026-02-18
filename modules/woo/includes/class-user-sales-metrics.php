@@ -192,7 +192,30 @@ class PL_Woo_User_Sales_Metrics
                     continue;
                 }
 
-                $line_total = (float) $item->get_total(); // excludes tax by default
+                // --- Chile-specific Financial Breakdown ---
+                // 1. Get total amount paid by customer for this line (Gross)
+                $line_total_net = (float) $item->get_total();
+                $line_total_tax = (float) $item->get_total_tax();
+                $gross_price = $line_total_net + $line_total_tax;
+
+                // 2. Exclude IVA (19%) manually to get the real Net Base
+                $manual_net_base = $gross_price / 1.19;
+
+                // 3. Transaction Fee (Flow: 3.0% of Gross)
+                $flow_fee = $gross_price * 0.03;
+
+                // 4. Platform Commission (e.g. 25% of Net Base)
+                $politeia_rate = get_user_meta($owner_id, '_pl_commission_rate', true);
+                if ($politeia_rate === '') {
+                    $politeia_rate = 25.0;
+                }
+                $politeia_rate = (float) $politeia_rate;
+
+                // 5. Calculate Shares
+                $user_revenue_share = $manual_net_base * ((100 - $politeia_rate) / 100);
+
+                // 6. Final User Gain (Revenue Share - Transaction Fee)
+                $line_total = $user_revenue_share - $flow_fee;
 
                 $totals[$bucket] += $line_total;
                 $totals['total'] += $line_total;
