@@ -31,6 +31,38 @@
     border-color: transparent !important;
 }
 
+/* Hard reset: prevent theme "blue" focus/hover styles inside dashboard */
+.pcg-creator-dashboard-wrapper a,
+.pcg-creator-dashboard-wrapper a:visited {
+    color: inherit;
+}
+
+.pcg-creator-dashboard-wrapper a:hover,
+.pcg-creator-dashboard-wrapper a:focus,
+.pcg-creator-dashboard-wrapper a:focus-visible {
+    color: #000 !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.pcg-creator-dashboard-wrapper input,
+.pcg-creator-dashboard-wrapper textarea,
+.pcg-creator-dashboard-wrapper select,
+.pcg-creator-dashboard-wrapper button {
+    accent-color: #000;
+}
+
+.pcg-creator-dashboard-wrapper input:focus,
+.pcg-creator-dashboard-wrapper input:focus-visible,
+.pcg-creator-dashboard-wrapper textarea:focus,
+.pcg-creator-dashboard-wrapper textarea:focus-visible,
+.pcg-creator-dashboard-wrapper select:focus,
+.pcg-creator-dashboard-wrapper select:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: rgba(0, 0, 0, .12) !important;
+}
+
 .pcg-creator-container {
     display: flex;
     max-width: 1400px;
@@ -326,6 +358,10 @@
 
 .pcg-sales-tf-btn:hover {
     opacity: 0.92;
+    background: rgba(0, 0, 0, .04);
+    color: #333;
+    box-shadow: none;
+    outline: none;
 }
 
 .pcg-sales-tf-btn.active {
@@ -333,11 +369,366 @@
     background: var(--pcg-gold-grad);
 }
 
+.pcg-sales-tf-btn:focus,
+.pcg-sales-tf-btn:focus-visible,
+.pcg-sales-tf-btn:active {
+    background: rgba(0, 0, 0, .04);
+    color: #333;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.pcg-sales-tf-btn.active:hover,
+.pcg-sales-tf-btn.active:focus,
+.pcg-sales-tf-btn.active:focus-visible,
+.pcg-sales-tf-btn.active:active {
+    background: var(--pcg-gold-grad) !important;
+    color: #fff !important;
+}
+
 .pcg-sales-custom-range {
     display: flex;
     gap: 12px;
     align-items: flex-end;
     justify-content: flex-end;
+}
+
+.pcg-sales-list-topbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.pcg-sales-list-tabs {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, .12);
+    padding: 6px;
+    border-radius: 6px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .10);
+}
+
+.pcg-sales-list-tab {
+    border: 0;
+    background: transparent;
+    color: #333;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: .2px;
+}
+
+.pcg-sales-list-tab[aria-selected="true"] {
+    background: #000;
+    color: #fff;
+}
+
+/* Override any theme button styling (e.g. blue hovers/focus fills) */
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab:hover,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab:focus,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab:focus-visible,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab:active {
+    background: transparent !important;
+    color: #333 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border: 0 !important;
+}
+
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab[aria-selected="true"],
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab[aria-selected="true"]:hover,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab[aria-selected="true"]:focus,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab[aria-selected="true"]:focus-visible,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab[aria-selected="true"]:active {
+    background: #000 !important;
+    color: #fff !important;
+    box-shadow: none !important;
+}
+
+.pcg-sales-list-pagination {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border: 1px solid rgba(0, 0, 0, .12);
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .10);
+    white-space: nowrap;
+}
+
+.pcg-sales-list-page-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #000;
+}
+
+.pcg-sales-list-page-btn {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0, 0, 0, .12);
+    border-radius: 6px;
+    background: #fff;
+    color: #000;
+    cursor: pointer;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0;
+}
+
+.pcg-sales-list-page-btn:hover {
+    background: rgba(0, 0, 0, .03);
+}
+
+.pcg-sales-list-page-btn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.pcg-sales-list-panel {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, .12);
+    border-radius: 6px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .10);
+    overflow: hidden;
+}
+
+.pcg-sales-list-panel + .pcg-sales-list-panel {
+    margin-top: 16px;
+}
+
+.pcg-sales-list-panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 14px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, .12);
+    background: #fff;
+}
+
+.pcg-sales-list-panel-title {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pcg-sales-list-panel-title h3 {
+    margin: 0;
+    font-size: 15px;
+    letter-spacing: .2px;
+    font-weight: 600;
+}
+
+.pcg-sales-list-hint {
+    margin: 0;
+    font-size: 12px;
+    color: #333;
+}
+
+.pcg-sales-list-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.pcg-sales-list-search {
+    position: relative;
+    min-width: 280px;
+    flex: 1 1 280px;
+    max-width: 420px;
+}
+
+.pcg-sales-list-search input {
+    width: 100%;
+    padding: 10px 36px 10px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, .12);
+    outline: none;
+    background: #fff;
+    color: #000;
+    font-size: 13px;
+}
+
+.pcg-sales-list-search input::placeholder {
+    color: rgba(0, 0, 0, .55);
+}
+
+.pcg-sales-list-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    color: rgba(0, 0, 0, .60);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 6px;
+    border-radius: 6px;
+}
+
+.pcg-sales-list-clear:hover {
+    background: rgba(0, 0, 0, .05);
+}
+
+.pcg-sales-list-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, .12);
+    background: #fff;
+    color: #333;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.pcg-sales-list-pill strong {
+    color: #000;
+    font-weight: 600;
+}
+
+.pcg-sales-list-table-wrap {
+    overflow: auto;
+}
+
+.pcg-sales-list-panel strong {
+    font-weight: 600;
+}
+
+.pcg-sales-list-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 880px;
+}
+
+.pcg-sales-list-table thead th {
+    text-align: left;
+    font-size: 12px;
+    color: rgba(0, 0, 0, .70);
+    letter-spacing: .22px;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, .12);
+    background: #f7f7f7;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-weight: 600;
+}
+
+.pcg-sales-list-table tbody td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, .12);
+    vertical-align: middle;
+    font-size: 13px;
+}
+
+.pcg-sales-list-table tbody tr:hover {
+    background: rgba(0, 0, 0, .03);
+}
+
+.pcg-sales-list-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 260px;
+}
+
+.pcg-sales-list-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #000;
+    border: 1px solid rgba(0, 0, 0, .15);
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    font-weight: 600;
+    color: #fff;
+    font-size: 12px;
+    letter-spacing: .3px;
+}
+
+.pcg-sales-list-user-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pcg-sales-list-user-name {
+    font-weight: 600;
+    color: #000;
+    line-height: 1.15;
+}
+
+.pcg-sales-list-user-email {
+    font-size: 12px;
+    color: #333;
+}
+
+.pcg-sales-list-money {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+.pcg-sales-list-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, .18);
+    background: #fff;
+    font-size: 12px;
+    color: rgba(0, 0, 0, .85);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.pcg-sales-list-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, .35);
+}
+
+.pcg-sales-list-dot.good {
+    background: #0a7a3d;
+}
+
+.pcg-sales-list-dot.warn {
+    background: #8a6500;
+}
+
+.pcg-sales-list-dot.bad {
+    background: #b00020;
+}
+
+.pcg-sales-list-muted {
+    color: #333;
+}
+
+.pcg-sales-list-empty {
+    padding: 18px 14px;
+    color: #333;
+    font-size: 13px;
 }
 
 .pcg-sales-date {
@@ -371,18 +762,25 @@
     margin-bottom: 16px;
 }
 
+.pcg-sales-metrics.pcg-students-metrics {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 @media (max-width: 980px) {
     .pcg-sales-metrics {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
     .pcg-sales-dashboard-header {
         flex-direction: column;
         align-items: flex-start;
     }
+
     .pcg-sales-controls {
         align-items: flex-start;
         width: 100%;
     }
+
     .pcg-sales-custom-range {
         justify-content: flex-start;
         width: 100%;
@@ -439,11 +837,12 @@
 }
 
 .pcg-metric-label {
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     margin-top: 12px;
+    line-height: 18px;
 }
 
 .pcg-metric-value {
@@ -451,6 +850,31 @@
     font-weight: 600;
     letter-spacing: -0.02em;
     margin-top: 6px;
+}
+
+.pcg-students-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pcg-students-delta .dashicons {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+    margin-top: -1px;
+}
+
+.pcg-students-delta--positive {
+    color: #0a7a3b;
+}
+
+.pcg-students-delta--negative {
+    color: #b42318;
+}
+
+.pcg-students-delta--neutral {
+    color: #000;
 }
 
 .pcg-metric-foot {
@@ -487,6 +911,13 @@
     padding: 20px;
 }
 
+.pcg-sales-chart-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
 .pcg-sales-chart-head h3 {
     margin: 0;
     font-size: 14px;
@@ -505,12 +936,38 @@
     color: #a8a8a8;
 }
 
+.pcg-sales-chart-legend {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 18px;
+    padding-top: 2px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.pcg-sales-chart-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #000;
+}
+
+.pcg-sales-chart-legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: #000;
+}
+
 .pcg-sales-nav .pcg-current-course-label {
     font-weight: 600;
 }
 
 .pcg-sales-chart-wrap {
-    height: 420px;
+    height: 252px;
     margin-top: 16px;
 }
 
@@ -783,6 +1240,12 @@ div#pcg-quiz-creator-container {
 .pcg-btn-save:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(138, 107, 30, 0.3);
+}
+
+.pcg-btn-save-compact:hover,
+.pcg-btn-save-compact:focus,
+.pcg-btn-save-compact:active {
+    transform: none;
 }
 
 .pcg-btn-save.success {
@@ -1132,6 +1595,24 @@ input:checked+.pcg-slider:before {
     box-shadow: 0 4px 6px -1px rgba(138, 107, 30, 0.3);
 }
 
+#pcg-btn-add-content.pcg-btn-add-circle {
+    width: auto;
+    height: auto;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: #000;
+    box-shadow: none;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+#pcg-btn-add-content.pcg-btn-add-circle:hover {
+    transform: none;
+    background: #111;
+    box-shadow: none;
+}
+
 .pcg-btn-add-circle:hover {
     transform: scale(1.1);
     box-shadow: 0 6px 12px -1px rgba(138, 107, 30, 0.4);
@@ -1146,7 +1627,7 @@ input:checked+.pcg-slider:before {
 /* Add Dropdown */
 .pcg-add-dropdown {
     position: absolute;
-    top: 55px;
+    top: calc(100% + 8px);
     right: 0;
     background: #fff;
     border: 1px solid #e5e5e5;
@@ -1807,4 +2288,97 @@ div#pcg-mode-lecciones {
 
 .pcg-teacher-item .pcg-detail-field input[type="number"]:focus {
     border-color: #171717;
+}
+
+.pcg-ranking-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    padding: 0px 20px;
+    max-width: 1180px;
+}
+
+@media (max-width: 900px) {
+    .pcg-ranking-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.pcg-ranking-card {
+    background: #fff;
+    border: 1px solid #eaeaea;
+    border-radius: 14px;
+    padding: 18px 18px 12px;
+}
+
+.pcg-ranking-title {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #171717;
+}
+
+.pcg-ranking-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    border: none;
+}
+
+.pcg-ranking-table thead th {
+    text-align: left;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6b6b6b;
+    padding: 10px 0;
+    border-bottom: 1px solid #efefef;
+}
+
+.pcg-ranking-table tbody td {
+    padding: 10px 0;
+    border-bottom: 1px solid #f3f3f3;
+    color: #171717;
+    vertical-align: top;
+}
+
+.pcg-ranking-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.pcg-ranking-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.pcg-ranking-user-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pcg-ranking-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    object-fit: cover;
+    flex: 0 0 auto;
+}
+
+.pcg-ranking-avatar--empty {
+    display: inline-block;
+    background: #efefef;
+}
+
+.pcg-ranking-num {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.pcg-ranking-table thead th:last-child,
+.pcg-ranking-table tbody td:last-child {
+    text-align: right;
+    white-space: nowrap;
 }
