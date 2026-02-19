@@ -33,6 +33,8 @@
         const chartCanvas = qs(root, 'canvas[data-pcg-sales-chart]');
         if (!chartCanvas) return;
 
+        const legendContainer = qs(root, '[data-pcg-sales-legend]');
+
         const btns = qsa(root, '[data-timeframe]');
         const custom = qs(root, '[data-custom-range]');
         const startInput = qs(root, 'input[data-start-date]');
@@ -61,13 +63,27 @@
             el.textContent = text;
         }
 
-        function renderMetrics(totals) {
-            const t = totals || { total: 0, courses: 0, books: 0, patronage: 0 };
+        function renderMetrics(data) {
+            const t = data.totals || { total: 0, courses: 0, books: 0, patronage: 0 };
+            const c = data.counts || { total: 0, courses: 0, books: 0, patronage: 0 };
 
             setMetricText(elTotal, money(t.total, currentLocale, currentCurrency));
             setMetricText(elCourses, money(t.courses, currentLocale, currentCurrency));
             setMetricText(elBooks, money(t.books, currentLocale, currentCurrency));
             setMetricText(elPatronage, money(t.patronage, currentLocale, currentCurrency));
+
+            // Update labels with counts
+            const labels = {
+                total: `${c.total} PRODUCTOS VENDIDOS`,
+                courses: `${c.courses} CURSOS VENDIDOS`,
+                books: `${c.books} LIBROS VENDIDOS`,
+                patronage: `${c.patronage} APOYOS VENDIDOS`
+            };
+
+            Object.keys(labels).forEach(key => {
+                const el = qs(root, `.pcg-metric-label[data-label="${key}"]`);
+                if (el) el.textContent = labels[key];
+            });
 
             if (elCoursesPct) setMetricText(elCoursesPct, `${pct(t.courses, t.total)} ${elCoursesPct.getAttribute('data-suffix') || ''}`.trim());
             if (elBooksPct) setMetricText(elBooksPct, `${pct(t.books, t.total)} ${elBooksPct.getAttribute('data-suffix') || ''}`.trim());
@@ -80,6 +96,32 @@
             if (currentChart) currentChart.destroy();
 
             const data = Array.isArray(series) ? series : [];
+
+            function renderHtmlLegend(chart) {
+                if (!legendContainer) return;
+                legendContainer.innerHTML = '';
+
+                const items = chart?.options?.plugins?.legend?.labels?.generateLabels
+                    ? chart.options.plugins.legend.labels.generateLabels(chart)
+                    : [];
+
+                items.forEach((it) => {
+                    const el = document.createElement('div');
+                    el.className = 'pcg-sales-chart-legend-item';
+                    el.innerHTML = `
+                        <span class="pcg-sales-chart-legend-swatch" style="background:${it.fillStyle};"></span>
+                        <span>${it.text}</span>
+                    `;
+                    legendContainer.appendChild(el);
+                });
+            }
+
+            const htmlLegendPlugin = {
+                id: 'pcgHtmlLegend',
+                afterUpdate(chart) {
+                    renderHtmlLegend(chart);
+                }
+            };
 
             currentChart = new Chart(ctx, {
                 type: 'bar',
@@ -95,7 +137,10 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 10, weight: '600' }, padding: 16, color: '#000' } },
+                        legend: {
+                            display: false,
+                            labels: { boxWidth: 10, font: { size: 10, weight: '600' }, padding: 16, color: '#000' }
+                        },
                         tooltip: {
                             backgroundColor: '#fff',
                             titleColor: '#000',
@@ -113,6 +158,7 @@
                         y: { stacked: true, grid: { color: '#EEEEEE' }, ticks: { font: { size: 10, weight: '600' }, color: '#A8A8A8' } },
                     },
                 },
+                plugins: [htmlLegendPlugin],
             });
         }
 
@@ -126,7 +172,7 @@
         function fetchData() {
             if (typeof pcgSalesData === 'undefined' || !pcgSalesData.ajaxUrl) {
                 // If not configured, keep the UI stable (zeros).
-                renderMetrics({ total: 0, courses: 0, books: 0, patronage: 0 });
+                renderMetrics({ totals: null, counts: null });
                 renderChart([]);
                 return;
             }
@@ -164,7 +210,7 @@
                 .then(r => r.json())
                 .then(res => {
                     if (!res || !res.success) {
-                        renderMetrics({ total: 0, courses: 0, books: 0, patronage: 0 });
+                        renderMetrics({ totals: null, counts: null });
                         renderChart([]);
                         return;
                     }
@@ -173,12 +219,12 @@
                     currentLocale = data.locale || currentLocale;
                     currentCurrency = data.currency || currentCurrency;
 
-                    renderMetrics(data.totals || {});
+                    renderMetrics(data);
                     renderChart(data.series || []);
                 })
                 .catch(err => {
                     if (err && err.name === 'AbortError') return;
-                    renderMetrics({ total: 0, courses: 0, books: 0, patronage: 0 });
+                    renderMetrics({ totals: null, counts: null });
                     renderChart([]);
                 })
                 .finally(() => {
@@ -213,6 +259,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        qsa(document, '.pcg-sales-dashboard').forEach(initDashboard);
+        qsa(document, '.pcg-sales-dashboard[data-pcg-sales-dashboard]').forEach(initDashboard);
     });
 })();

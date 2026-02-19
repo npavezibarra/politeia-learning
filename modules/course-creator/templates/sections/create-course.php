@@ -174,8 +174,13 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
                 </label>
             </div>
             <div class="pcg-add-actions">
-                <button type="button" class="pcg-btn-add-circle" id="pcg-btn-add-content">
-                    <span class="dashicons dashicons-plus-alt2"></span>
+                <?php
+                $pcg_locale = function_exists('determine_locale') ? determine_locale() : get_locale();
+                $pcg_add_button_text = (strpos($pcg_locale, 'es') === 0) ? 'Añadir' : 'Add';
+                ?>
+                <button type="button" class="pcg-btn-add-circle" id="pcg-btn-add-content"
+                    aria-label="<?php echo esc_attr($pcg_add_button_text); ?>">
+                    <?php echo esc_html($pcg_add_button_text); ?>
                 </button>
                 <div class="pcg-add-dropdown" id="pcg-add-dropdown">
                     <button type="button" class="pcg-add-option" data-type="lesson">

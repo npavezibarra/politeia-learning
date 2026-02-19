@@ -40,11 +40,6 @@ class PQC_Ajax_Handler
             wp_send_json_error(__('Security check failed.', 'politeia-quiz-creator'));
         }
 
-        // Check permissions
-        if (!current_user_can('edit_posts')) {
-            wp_send_json_error(__('You do not have permission to edit quizzes.', 'politeia-quiz-creator'));
-        }
-
         $quiz_data = isset($_POST['quiz_data']) ? json_decode(stripslashes($_POST['quiz_data']), true) : [];
 
         if (empty($quiz_data) || empty($quiz_data['quiz_id'])) {
@@ -52,6 +47,11 @@ class PQC_Ajax_Handler
         }
 
         $quiz_id = intval($quiz_data['quiz_id']);
+
+        // Check permissions
+        if (!function_exists('pqc_can_access_quiz_creator') || !pqc_can_access_quiz_creator(0, $quiz_id)) {
+            wp_send_json_error(__('You do not have permission to edit quizzes.', 'politeia-quiz-creator'));
+        }
 
         // Update Quiz Title
         if (!empty($quiz_data['title'])) {
@@ -125,13 +125,6 @@ class PQC_Ajax_Handler
             ]);
         }
 
-        // Check permissions
-        if (!current_user_can('edit_posts')) {
-            wp_send_json_error([
-                'message' => __('You do not have permission to create quizzes.', 'politeia-quiz-creator')
-            ]);
-        }
-
         // Get quiz settings from form
         $quiz_settings = isset($_POST['quiz_settings']) ? json_decode(stripslashes($_POST['quiz_settings']), true) : [];
 
@@ -176,6 +169,15 @@ class PQC_Ajax_Handler
             ]);
         }
 
+        $course_id = intval($_POST['course_id'] ?? 0);
+
+        // Check permissions (allow course authors without broad WP caps)
+        if (!function_exists('pqc_can_access_quiz_creator') || !pqc_can_access_quiz_creator($course_id, 0)) {
+            wp_send_json_error([
+                'message' => __('You do not have permission to create quizzes.', 'politeia-quiz-creator')
+            ]);
+        }
+
         // Merge settings from form with questions from file
         $quiz_data = [
             'title' => sanitize_text_field($quiz_settings['title']),
@@ -187,7 +189,7 @@ class PQC_Ajax_Handler
                 'run_once' => intval($quiz_settings['run_once'] ?? 0),
                 'force_solve' => intval($quiz_settings['force_solve'] ?? 0),
                 'show_points' => intval($quiz_settings['show_points'] ?? 0),
-                'course_id' => intval($_POST['course_id'] ?? 0),
+                'course_id' => $course_id,
             ],
             'questions' => $parsed_questions
         ];
@@ -285,7 +287,7 @@ class PQC_Ajax_Handler
         }
 
         // Check permissions
-        if (!current_user_can('edit_posts')) {
+        if (!function_exists('pqc_can_access_quiz_creator') || !pqc_can_access_quiz_creator(0, $quiz_id)) {
             wp_send_json_error(__('You do not have permission to delete quizzes.', 'politeia-quiz-creator'));
         }
 

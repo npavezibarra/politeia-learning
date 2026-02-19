@@ -15,6 +15,9 @@ if (!$user) {
 }
 
 $current_section = isset($_GET['section']) ? sanitize_text_field($_GET['section']) : 'create-course';
+if ($current_section === 'stats') {
+    $current_section = 'students';
+}
 
 get_header();
 ?>
@@ -53,8 +56,8 @@ get_header();
                             <?php _e('VENTAS', 'politeia-learning'); ?>
                         </a>
                     </li>
-                    <li class="<?php echo $current_section === 'stats' ? 'active' : ''; ?>">
-                        <a href="?section=stats">
+                    <li class="<?php echo $current_section === 'students' ? 'active' : ''; ?>">
+                        <a href="?section=students">
                             <span class="dashicons dashicons-groups"></span>
                             <?php _e('ESTUDIANTES', 'politeia-learning'); ?>
                         </a>

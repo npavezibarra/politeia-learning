@@ -44,6 +44,7 @@ class PL_QC_Module
 
     private function load_dependencies()
     {
+        require_once PL_QC_PATH . 'includes/permissions.php';
         require_once PL_QC_PATH . 'includes/class-quiz-creator.php';
         require_once PL_QC_PATH . 'includes/class-file-parser.php';
         require_once PL_QC_PATH . 'includes/class-shortcode.php';

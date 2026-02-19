@@ -8,6 +8,8 @@ if (!defined('ABSPATH'))
 
 class PL_CC_Course_Save_Handler
 {
+    private const REQUIRED_PRODUCT_CATEGORY_NAME = 'Cursos';
+    private const REQUIRED_PRODUCT_CATEGORY_SLUG = 'cursos';
 
     public function __construct()
     {
@@ -244,6 +246,9 @@ class PL_CC_Course_Save_Handler
         // Set Product Type to 'course' (slug handles the selection in the UI)
         wp_set_object_terms($product_id, 'course', 'product_type');
 
+        // Always ensure the "Cursos" category is set for course products created from the frontend.
+        $this->ensure_required_product_category($product_id);
+
         // WooCommerce Meta
         update_post_meta($product_id, '_regular_price', $price);
         update_post_meta($product_id, '_price', $price);
@@ -260,6 +265,38 @@ class PL_CC_Course_Save_Handler
         update_post_meta($product_id, '_related_course', [$course_id]);
 
         return get_permalink($product_id);
+    }
+
+    private function ensure_required_product_category($product_id): void
+    {
+        if (!taxonomy_exists('product_cat')) {
+            return;
+        }
+
+        $term = get_term_by('slug', self::REQUIRED_PRODUCT_CATEGORY_SLUG, 'product_cat');
+        if (!$term || is_wp_error($term)) {
+            $term = get_term_by('name', self::REQUIRED_PRODUCT_CATEGORY_NAME, 'product_cat');
+        }
+
+        if (!$term || is_wp_error($term)) {
+            $inserted = wp_insert_term(self::REQUIRED_PRODUCT_CATEGORY_NAME, 'product_cat', [
+                'slug' => self::REQUIRED_PRODUCT_CATEGORY_SLUG,
+            ]);
+
+            if (is_wp_error($inserted)) {
+                error_log('[politeia-learning] Failed to ensure required product category "Cursos": ' . $inserted->get_error_message());
+                return;
+            }
+
+            $term_id = (int) ($inserted['term_id'] ?? 0);
+        } else {
+            $term_id = (int) $term->term_id;
+        }
+
+        if ($term_id > 0) {
+            // Append (do not overwrite) any existing categories.
+            wp_set_object_terms($product_id, [$term_id], 'product_cat', true);
+        }
     }
 
     private function process_course_content($course_id, $content_list)

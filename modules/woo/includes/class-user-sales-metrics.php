@@ -152,6 +152,13 @@ class PL_Woo_User_Sales_Metrics
             'patronage' => 0.0,
         ];
 
+        $counts = [
+            'total' => 0,
+            'courses' => 0,
+            'books' => 0,
+            'patronage' => 0,
+        ];
+
         $series = []; // date => buckets
 
         foreach ($order_ids as $oid) {
@@ -192,6 +199,8 @@ class PL_Woo_User_Sales_Metrics
                     continue;
                 }
 
+                $quantity = (int) $item->get_quantity();
+
                 // --- Chile-specific Financial Breakdown ---
                 // 1. Get total amount paid by customer for this line (Gross)
                 $line_total_net = (float) $item->get_total();
@@ -222,6 +231,9 @@ class PL_Woo_User_Sales_Metrics
 
                 $totals[$bucket] += $line_total;
                 $totals['total'] += $line_total;
+
+                $counts[$bucket] += $quantity;
+                $counts['total'] += $quantity;
 
                 if (!isset($series[$day_key])) {
                     $series[$day_key] = ['courses' => 0.0, 'books' => 0.0, 'patronage' => 0.0];
@@ -261,6 +273,7 @@ class PL_Woo_User_Sales_Metrics
                 'books' => (float) round($totals['books']),
                 'patronage' => (float) round($totals['patronage']),
             ],
+            'counts' => $counts,
             'series' => $filled,
         ]);
     }

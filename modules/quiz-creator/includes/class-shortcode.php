@@ -39,13 +39,6 @@ class PQC_Shortcode
             'title' => __('Quiz Creator', 'politeia-quiz-creator'),
         ], $atts);
 
-        // Check permissions
-        if (!current_user_can('edit_posts')) {
-            return '<p>' . __('You do not have permission to access the Quiz Creator.', 'politeia-quiz-creator') . '</p>';
-        }
-
-        $this->enqueue_shortcode_assets();
-
         $course_id = intval($atts['course_id']);
         if (!$course_id && isset($_GET['course_id'])) {
             $course_id = intval($_GET['course_id']);
@@ -55,6 +48,13 @@ class PQC_Shortcode
         if (!$quiz_id && isset($_GET['edit_quiz'])) {
             $quiz_id = intval($_GET['edit_quiz']);
         }
+
+        // Check permissions (allow course authors without broad WP caps)
+        if (!function_exists('pqc_can_access_quiz_creator') || !pqc_can_access_quiz_creator($course_id, $quiz_id)) {
+            return '<p>' . __('You do not have permission to access the Quiz Creator.', 'politeia-quiz-creator') . '</p>';
+        }
+
+        $this->enqueue_shortcode_assets();
 
         // If course_id is provided but no quiz_id, try to find linked quiz
         if ($course_id && !$quiz_id) {
