@@ -33,7 +33,8 @@ function pqc_user_has_course_role(int $course_id, int $user_id): bool
     // If the table doesn't exist, treat as no role.
     // (wpdb->get_var will return null/false if it errors.)
     $found = $wpdb->get_var($wpdb->prepare(
-        "SELECT 1 FROM {$table} WHERE course_id = %d AND user_id = %d LIMIT 1",
+        "SELECT 1 FROM {$table} WHERE object_type = %s AND object_id = %d AND user_id = %d LIMIT 1",
+        'course',
         $course_id,
         $user_id
     ));
@@ -74,4 +75,3 @@ function pqc_can_access_quiz_creator(int $course_id = 0, int $quiz_id = 0): bool
 
     return false;
 }
-

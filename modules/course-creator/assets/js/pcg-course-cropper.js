@@ -9,10 +9,19 @@ var PL_Cropper = (function ($) {
     let selectedFile = null;
     let currentOptions = {};
 
+    function t(key, fallback) {
+        try {
+            const val = pcgCropperData && pcgCropperData.i18n ? pcgCropperData.i18n[key] : null;
+            return val ? val : (fallback || key);
+        } catch (_) {
+            return fallback || key;
+        }
+    }
+
     const defaults = {
         width: 360,
         height: 238,
-        title: 'Upload Image',
+        title: '',
         onSave: function (dataUrl) { console.log('Cropped Image:', dataUrl); },
         onCancel: function () { }
     };
@@ -21,7 +30,10 @@ var PL_Cropper = (function ($) {
      * Open the cropper modal for a specific target
      */
     function open(options) {
-        currentOptions = $.extend({}, defaults, options);
+        const withI18nDefaults = $.extend({}, defaults, {
+            title: t('uploadImage', 'Upload Image'),
+        });
+        currentOptions = $.extend({}, withI18nDefaults, options);
         renderModal();
         bindEvents();
     }
@@ -45,8 +57,8 @@ var PL_Cropper = (function ($) {
                                     <polyline points="17 8 12 3 7 8"></polyline>
                                     <line x1="12" y1="3" x2="12" y2="15"></line>
                                 </svg>
-                                <p>Drag and drop your image here</p>
-                                <span>or click to browse files</span>
+                                <p>${t('dragDropHere', 'Drag and drop your image here')}</p>
+                                <span>${t('clickToBrowse', 'or click to browse files')}</span>
                             </div>
                             <div class="pcg-cropper-container" style="display:none;">
                                 <img id="pcg-cropper-image" src="">
@@ -55,10 +67,10 @@ var PL_Cropper = (function ($) {
                         <input type="file" id="pcg-cropper-file-input" class="pcg-hidden-input" accept="image/jpeg,image/png">
                     </div>
                     <div class="pcg-cropper-footer">
-                        <span class="pcg-cropper-status">Recommended size: ${currentOptions.width}x${currentOptions.height}px</span>
+                        <span class="pcg-cropper-status">${t('recommendedSize', 'Recommended size:')} ${currentOptions.width}x${currentOptions.height}px</span>
                         <div class="pcg-cropper-actions">
-                            <button type="button" class="pcg-btn-cropper pcg-btn-cropper-cancel">Cancel</button>
-                            <button type="button" class="pcg-btn-cropper pcg-btn-cropper-save" disabled>Save Image</button>
+                            <button type="button" class="pcg-btn-cropper pcg-btn-cropper-cancel">${t('cancel', 'Cancel')}</button>
+                            <button type="button" class="pcg-btn-cropper pcg-btn-cropper-save" disabled>${t('saveImage', 'Save Image')}</button>
                         </div>
                     </div>
                 </div>
@@ -107,7 +119,7 @@ var PL_Cropper = (function ($) {
             if (!cropper) return;
 
             const $btn = $(this);
-            $btn.prop('disabled', true).text('Saving...');
+            $btn.prop('disabled', true).text(t('saving', 'Saving...'));
 
             const canvas = cropper.getCroppedCanvas({
                 width: currentOptions.width,
@@ -131,7 +143,7 @@ var PL_Cropper = (function ($) {
         const file = files[0];
 
         if (!file.type.match('image.*')) {
-            alert('Please select an image file (JPG or PNG).');
+            alert(t('selectImageFile', 'Please select an image file (JPG or PNG).'));
             return;
         }
 

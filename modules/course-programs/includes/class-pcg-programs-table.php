@@ -6,10 +6,10 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
 class PL_Programs_Table extends WP_List_Table {
     public function get_columns() {
         return [
-            'title'            => __( 'Programa', 'pcg' ),
-            'nivel_programa'   => __( 'Nivel', 'pcg' ),
-            'precio_programa'  => __( 'Precio', 'pcg' ),
-            'related_groups'   => __( 'Grupos Relacionados', 'pcg' ),
+            'title'            => __( 'Programa', 'politeia-learning' ),
+            'nivel_programa'   => __( 'Nivel', 'politeia-learning' ),
+            'precio_programa'  => __( 'Precio', 'politeia-learning' ),
+            'related_groups'   => __( 'Grupos Relacionados', 'politeia-learning' ),
         ];
     }
 

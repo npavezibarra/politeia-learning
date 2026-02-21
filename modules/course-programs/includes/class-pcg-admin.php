@@ -9,8 +9,8 @@ class PL_Admin_Menu {
 
         add_submenu_page(
             $parent_slug,
-            'Programa Politeia',
-            'Programa Politeia',
+            __( 'Programa Politeia', 'politeia-learning' ),
+            __( 'Programa Politeia', 'politeia-learning' ),
             'manage_options',
             'pcg-programa',
             [ $this, 'render_page' ]
@@ -28,8 +28,8 @@ class PL_Admin_Menu {
         $new_program_url = admin_url( 'post-new.php?post_type=course_program' );
         ?>
         <div class="wrap">
-            <h1 class="wp-heading-inline">Programa Politeia</h1>
-            <a href="<?php echo esc_url( $new_program_url ); ?>" class="page-title-action">Agregar nuevo Programa</a>
+            <h1 class="wp-heading-inline"><?php esc_html_e( 'Programa Politeia', 'politeia-learning' ); ?></h1>
+            <a href="<?php echo esc_url( $new_program_url ); ?>" class="page-title-action"><?php esc_html_e( 'Agregar nuevo Programa', 'politeia-learning' ); ?></a>
             <hr class="wp-header-end">
             <?php $table->display(); ?>
         </div>

@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * AJAX endpoint for the creator "VENTAS" dashboard.
  *
  * Computes totals for orders that contain products whose meta `product_owner`
- * equals the current user. Buckets by product category names:
+ * include the current user in the split snapshot (or legacy product_owner). Buckets by product category names:
  * - Cursos
  * - Libros
  * - Patronage
@@ -116,6 +116,29 @@ class PL_Woo_User_Sales_Metrics
         return null;
     }
 
+    private static function percent_for_user_from_item(WC_Order_Item_Product $item, int $user_id): float
+    {
+        $raw = (string) $item->get_meta('_pl_split_payload', true);
+        if ($raw === '') {
+            return 0.0;
+        }
+
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return 0.0;
+        }
+
+        foreach ($decoded as $p) {
+            $uid = (int) ($p['user_id'] ?? 0);
+            if ($uid !== (int) $user_id) {
+                continue;
+            }
+            return (float) ($p['profit_percentage'] ?? 0);
+        }
+
+        return 0.0;
+    }
+
     public static function handle(): void
     {
         if (!is_user_logged_in()) {
@@ -188,9 +211,13 @@ class PL_Woo_User_Sales_Metrics
                 $base_product_id = $parent_id > 0 ? $parent_id : $product_id;
 
                 $owner_id = (int) get_post_meta($base_product_id, 'product_owner', true);
-
-                if ($owner_id !== (int) $user_id) {
-                    continue;
+                $pct = self::percent_for_user_from_item($item, $user_id);
+                if ($pct <= 0) {
+                    // Legacy fallback: user must be product owner.
+                    if ($owner_id !== (int) $user_id) {
+                        continue;
+                    }
+                    $pct = 100.0;
                 }
 
                 $bucket = self::bucket_for_product($base_product_id);
@@ -229,8 +256,9 @@ class PL_Woo_User_Sales_Metrics
                 // 6. Final User Gain (Revenue Share - Transaction Fee)
                 $line_total = $user_revenue_share - $flow_fee;
 
-                $totals[$bucket] += $line_total;
-                $totals['total'] += $line_total;
+                $user_line_total = $line_total * ($pct / 100);
+                $totals[$bucket] += $user_line_total;
+                $totals['total'] += $user_line_total;
 
                 $counts[$bucket] += $quantity;
                 $counts['total'] += $quantity;
@@ -238,7 +266,7 @@ class PL_Woo_User_Sales_Metrics
                 if (!isset($series[$day_key])) {
                     $series[$day_key] = ['courses' => 0.0, 'books' => 0.0, 'patronage' => 0.0];
                 }
-                $series[$day_key][$bucket] += $line_total;
+                $series[$day_key][$bucket] += $user_line_total;
             }
         }
 

@@ -1,14 +1,16 @@
 <div class="pcg-form-nav pcg-sales-nav">
-    <div class="pcg-nav-left">
-        <span class="pcg-current-course-label"><?php _e('VENTAS', 'politeia-learning'); ?></span>
-    </div>
-    <div class="pcg-nav-right">
-        <div class="pcg-segmented-control" id="pcg-sales-tabs">
-            <div class="pcg-segment active" data-sales-tab="general">
-                <?php _e('GENERAL', 'politeia-learning'); ?>
-            </div>
-            <div class="pcg-segment" data-sales-tab="list">
-                <?php _e('LIST', 'politeia-learning'); ?>
+    <div class="pcg-sales-nav-inner">
+        <div class="pcg-nav-left">
+            <span class="pcg-current-course-label"><?php _e('VENTAS', 'politeia-learning'); ?></span>
+        </div>
+        <div class="pcg-nav-right">
+            <div class="pcg-segmented-control" id="pcg-sales-tabs">
+                <div class="pcg-segment active" data-sales-tab="general">
+                    <?php _e('GENERAL', 'politeia-learning'); ?>
+                </div>
+                <div class="pcg-segment" data-sales-tab="list">
+                    <?php _e('LIST', 'politeia-learning'); ?>
+                </div>
             </div>
         </div>
     </div>

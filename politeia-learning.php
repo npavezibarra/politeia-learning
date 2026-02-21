@@ -3,7 +3,7 @@
  * Plugin Name: Politeia Learning
  * Description: Custom functionalities for Politeia website related to courses, grouping, selling, and creating courses.
  * Author: Nico / Politeia
- * Version: 1.2.0
+ * Version: 1.3.0
  * Text Domain: politeia-learning
  * Domain Path: /languages
  * Codex Enabled: true
@@ -15,7 +15,7 @@ if (!defined('ABSPATH'))
 // Core Constants
 define('PL_PATH', plugin_dir_path(__FILE__));
 define('PL_URL', plugin_dir_url(__FILE__));
-define('PL_DB_VERSION', '1.1.0');
+define('PL_DB_VERSION', '1.3.0');
 
 // Load Global Includes
 require_once PL_PATH . 'includes/class-installer.php';
@@ -90,6 +90,7 @@ class PL_Module_Loader
      */
     private static $modules = [
         'core' => true,
+        'menu-management' => true,
         'course-programs' => true,
         'course-integration' => true,
         'course-creator' => true,

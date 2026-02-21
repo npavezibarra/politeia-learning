@@ -53,6 +53,7 @@
         let currentLocale = 'es-CL';
         let currentCurrency = 'CLP';
         let inFlight = null;
+        const i18n = (typeof pcgSalesData !== 'undefined' && pcgSalesData && pcgSalesData.i18n) ? pcgSalesData.i18n : {};
 
         function setActiveBtn(tf) {
             btns.forEach(b => b.classList.toggle('active', b.getAttribute('data-timeframe') === tf));
@@ -74,10 +75,10 @@
 
             // Update labels with counts
             const labels = {
-                total: `${c.total} PRODUCTOS VENDIDOS`,
-                courses: `${c.courses} CURSOS VENDIDOS`,
-                books: `${c.books} LIBROS VENDIDOS`,
-                patronage: `${c.patronage} APOYOS VENDIDOS`
+                total: `${c.total} ${i18n.productsSold || 'PRODUCTOS VENDIDOS'}`,
+                courses: `${c.courses} ${i18n.coursesSold || 'CURSOS VENDIDOS'}`,
+                books: `${c.books} ${i18n.booksSold || 'LIBROS VENDIDOS'}`,
+                patronage: `${c.patronage} ${i18n.supportSold || 'APOYOS VENDIDOS'}`
             };
 
             Object.keys(labels).forEach(key => {

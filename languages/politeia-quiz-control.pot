@@ -1,0 +1,58 @@
+# Copyright (C) 2026 Nico / Politeia
+# This file is distributed under the same license as the Politeia Learning plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: Politeia Learning 1.2.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/politeia-learning\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-02-20T17:46:05+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: politeia-quiz-control\n"
+
+#. Plugin Name of the plugin
+#: politeia-learning.php
+msgid "Politeia Learning"
+msgstr ""
+
+#. Description of the plugin
+#: politeia-learning.php
+msgid "Custom functionalities for Politeia website related to courses, grouping, selling, and creating courses."
+msgstr ""
+
+#. Author of the plugin
+#: politeia-learning.php
+msgid "Nico / Politeia"
+msgstr ""
+
+#: modules/quiz-control/admin/class-metabox-evaluation.php:30
+msgid "Course Evaluation"
+msgstr ""
+
+#: modules/quiz-control/admin/class-metabox-evaluation.php:46
+msgid "Select the quiz that will serve as both the Initial Assessment and Final Exam."
+msgstr ""
+
+#: modules/quiz-control/admin/class-metabox-final-quiz.php:27
+msgid "Final Quiz"
+msgstr ""
+
+#: modules/quiz-control/admin/class-metabox-first-quiz.php:30
+msgid "First Quiz"
+msgstr ""
+
+#: modules/quiz-control/functions.php:278
+msgid "To access lessons finish the First Quiz"
+msgstr ""
+
+#: modules/quiz-control/init.php:98
+msgid "Buscando…"
+msgstr ""
+
+#: modules/quiz-control/init.php:99
+msgid "No se encontraron resultados"
+msgstr ""

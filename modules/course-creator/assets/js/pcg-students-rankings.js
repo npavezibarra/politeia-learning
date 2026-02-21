@@ -9,16 +9,25 @@
         return div.textContent;
     }
 
+    function t(key, fallback) {
+        try {
+            const i18n = pcgStudentsRankingsData && pcgStudentsRankingsData.i18n ? pcgStudentsRankingsData.i18n : null;
+            return i18n && i18n[key] ? i18n[key] : (fallback || key);
+        } catch (_) {
+            return fallback || key;
+        }
+    }
+
     function setLoading(tbody, colspan) {
-        tbody.innerHTML = `<tr><td colspan="${colspan}">${esc('Cargando...')}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${colspan}">${esc(t('loading', 'Cargando...'))}</td></tr>`;
     }
 
     function setEmpty(tbody, colspan) {
-        tbody.innerHTML = `<tr><td colspan="${colspan}">${esc('Sin datos')}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${colspan}">${esc(t('empty', 'Sin datos'))}</td></tr>`;
     }
 
     function setError(tbody, colspan) {
-        tbody.innerHTML = `<tr><td colspan="${colspan}">${esc('Error al cargar')}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${colspan}">${esc(t('errorLoading', 'Error al cargar'))}</td></tr>`;
     }
 
     function renderUserCell(row) {

@@ -32,4 +32,7 @@ add_action('plugins_loaded', function () {
     if (class_exists('PL_CC_Course_Save_Handler')) {
         new PL_CC_Course_Save_Handler();
     }
+    if (class_exists('PL_CC_Inclusion_Approvals')) {
+        PL_CC_Inclusion_Approvals::init();
+    }
 }, 20);

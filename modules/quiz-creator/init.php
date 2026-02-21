@@ -61,7 +61,7 @@ class PL_QC_Module
 
     public function load_textdomain()
     {
-        load_plugin_textdomain('politeia-quiz-creator', false, dirname(plugin_basename(__FILE__)) . '/languages');
+        load_plugin_textdomain('politeia-quiz-creator', false, dirname(plugin_basename(__FILE__), 3) . '/languages');
     }
 
     public function init_components()
@@ -103,6 +103,12 @@ class PL_QC_Module
                 'success' => __('Quiz created successfully!', 'politeia-quiz-creator'),
                 'error' => __('Error creating quiz. Please check the file format.', 'politeia-quiz-creator'),
                 'invalidFile' => __('Invalid file type. Please upload JSON, CSV, XML, or TXT file.', 'politeia-quiz-creator'),
+                'invalidFileJsonOnly' => __('Invalid file type. Please use JSON.', 'politeia-quiz-creator'),
+                'fileTooLarge' => __('File size exceeds 10MB limit.', 'politeia-quiz-creator'),
+                'enterTitleFirst' => __('Please enter a quiz title first', 'politeia-quiz-creator'),
+                'genericError' => __('Error', 'politeia-quiz-creator'),
+                'view' => __('View', 'politeia-quiz-creator'),
+                'editSlideEditor' => __('Edit Slide Editor', 'politeia-quiz-creator'),
             ]
         ]);
     }

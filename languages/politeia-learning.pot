@@ -1,0 +1,1363 @@
+# Copyright (C) 2026 Nico / Politeia
+# This file is distributed under the same license as the Politeia Learning plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: Politeia Learning 1.2.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/politeia-learning\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-02-20T17:46:05+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: politeia-learning\n"
+
+#. Plugin Name of the plugin
+#: politeia-learning.php
+#: modules/core/includes/class-admin.php:24
+#: modules/core/includes/class-admin.php:25
+msgid "Politeia Learning"
+msgstr ""
+
+#. Description of the plugin
+#: politeia-learning.php
+msgid "Custom functionalities for Politeia website related to courses, grouping, selling, and creating courses."
+msgstr ""
+
+#. Author of the plugin
+#: politeia-learning.php
+msgid "Nico / Politeia"
+msgstr ""
+
+#: modules/core/includes/class-admin.php:35
+#: modules/core/includes/class-admin.php:36
+msgid "Style Options"
+msgstr ""
+
+#: modules/core/includes/class-admin.php:76
+msgid "Settings saved."
+msgstr ""
+
+#: modules/core/templates/dashboard.php:12
+msgid "Politeia Learning - Dashboard"
+msgstr ""
+
+#: modules/core/templates/dashboard.php:15
+msgid "Bienvenido al centro de control de Politeia Learning. Aquí puedes verificar el estado de los módulos y las integraciones."
+msgstr ""
+
+#: modules/core/templates/dashboard.php:22
+msgid "Estado de Dependencias"
+msgstr ""
+
+#: modules/core/templates/dashboard.php:25
+msgid "Para que todos los módulos de Politeia funcionen correctamente, asegúrate de que los siguientes plugins estén activos:"
+msgstr ""
+
+#: modules/core/templates/dashboard.php:40
+msgid "Activo"
+msgstr ""
+
+#: modules/core/templates/dashboard.php:44
+msgid "Inactivo"
+msgstr ""
+
+#: modules/core/templates/dashboard.php:47
+msgid "Gestionar"
+msgstr ""
+
+#: modules/core/templates/dashboard.php:58
+msgid "Módulos de Politeia"
+msgstr ""
+
+#: modules/core/templates/dashboard.php:63
+msgid "Gestión de programas filosóficos y grupos de cursos."
+msgstr ""
+
+#: modules/core/templates/dashboard.php:66
+#: modules/core/templates/dashboard.php:76
+msgid "Módulo Cargado"
+msgstr ""
+
+#: modules/core/templates/dashboard.php:73
+msgid "Integración avanzada WooCommerce + LearnDash + Politeia."
+msgstr ""
+
+#: modules/core/templates/style-options.php:12
+msgid "Politeia Learning - Style Options"
+msgstr ""
+
+#: modules/core/templates/style-options.php:15
+msgid "Personaliza la apariencia del panel de creador y otros elementos de la interfaz."
+msgstr ""
+
+#: modules/core/templates/style-options.php:22
+msgid "Dimensiones del Panel de Creador"
+msgstr ""
+
+#: modules/core/templates/style-options.php:33
+msgid "Ancho Máximo del Panel"
+msgstr ""
+
+#: modules/core/templates/style-options.php:40
+msgid "Define el max-width para .pcg-creator-container. (Ej: 1400px, 100%, etc.)"
+msgstr ""
+
+#: modules/core/templates/style-options.php:47
+msgid "Ancho Máximo del Contenedor (.container)"
+msgstr ""
+
+#: modules/core/templates/style-options.php:54
+msgid "Define el max-width para .container dentro de la página center del miembro."
+msgstr ""
+
+#: modules/core/templates/style-options.php:62
+msgid "Guardar Cambios"
+msgstr ""
+
+#: modules/course-creator/includes/class-course-save-handler.php:467
+#: modules/course-creator/includes/class-course-save-handler.php:780
+#: modules/course-creator/templates/sections/create-course.php:110
+#: modules/course-creator/templates/sections/create-group.php:65
+#: modules/course-creator/templates/sections/especializacion.php:69
+msgid "Gratis"
+msgstr ""
+
+#: modules/course-creator/includes/class-course-save-handler.php:570
+#: modules/course-creator/includes/class-course-save-handler.php:605
+#: modules/course-creator/includes/class-course-save-handler.php:647
+#: modules/course-creator/includes/class-course-save-handler.php:688
+#: modules/course-creator/includes/class-course-save-handler.php:756
+#: modules/course-creator/includes/class-course-save-handler.php:792
+#: modules/course-creator/includes/class-course-save-handler.php:825
+#: modules/course-creator/includes/class-course-save-handler.php:868
+msgid "No autorizado."
+msgstr ""
+
+#: modules/course-creator/includes/class-course-save-handler.php:574
+msgid "LearnDash no está activo."
+msgstr ""
+
+#: modules/course-creator/includes/class-course-save-handler.php:579
+#: modules/course-creator/includes/class-course-save-handler.php:761
+msgid "No se han recibido datos."
+msgstr ""
+
+#: modules/course-creator/includes/class-course-save-handler.php:589
+msgid "Ingresa un nombre para la especialización."
+msgstr ""
+
+#: modules/course-creator/includes/class-course-save-handler.php:643
+#: modules/course-creator/includes/class-course-save-handler.php:683
+#: modules/course-creator/includes/class-course-save-handler.php:821
+#: modules/course-creator/includes/class-course-save-handler.php:863
+msgid "ID inválido."
+msgstr ""
+
+#: modules/course-creator/includes/class-course-save-handler.php:652
+#: modules/course-creator/includes/class-course-save-handler.php:830
+msgid "No encontrado."
+msgstr ""
+
+#: modules/course-creator/includes/class-course-save-handler.php:696
+msgid "Especialización eliminada."
+msgstr ""
+
+#: modules/course-creator/includes/class-course-save-handler.php:771
+msgid "Ingresa un nombre para el programa."
+msgstr ""
+
+#: modules/course-creator/includes/class-course-save-handler.php:872
+msgid "Programa eliminado."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:49
+#: modules/menu-management/includes/class-menu-manager.php:47
+msgid "Center"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:163
+msgid "PRODUCTOS VENDIDOS"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:164
+msgid "CURSOS VENDIDOS"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:165
+msgid "LIBROS VENDIDOS"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:166
+msgid "APOYOS VENDIDOS"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:187
+#: modules/course-creator/includes/class-creator-dashboard.php:210
+#: modules/course-creator/templates/sections/create-group.php:103
+#: modules/course-creator/templates/sections/create-group.php:124
+#: modules/course-creator/templates/sections/students.php:142
+#: modules/course-creator/templates/sections/students.php:160
+#: modules/course-creator/templates/sections/students.php:178
+#: modules/course-creator/templates/sections/students.php:196
+msgid "Cargando..."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:188
+msgid "Sin datos"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:189
+msgid "Error al cargar"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:209
+#: modules/course-creator/templates/sections/create-course.php:239
+#: modules/course-creator/templates/sections/especializacion.php:107
+#: modules/course-creator/templates/sections/especializacion.php:137
+msgid "Cargando tus cursos..."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:211
+msgid "Cargando curso..."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:212
+msgid "Cargando especialización..."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:213
+msgid "Cargando programa..."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:214
+msgid "No tienes cursos para asignar."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:215
+msgid "Aún no has agregado cursos."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:216
+msgid "No hay cursos."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:217
+msgid "No se pudieron cargar tus cursos."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:218
+msgid "Error al cargar la especialización."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:219
+msgid "Ocurrió un error al cargar la especialización."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:220
+msgid "Por favor, ingresa un nombre para la especialización."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:221
+msgid "Ocurrió un error al guardar la especialización."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:222
+msgid "¿Estás seguro de que deseas eliminar esta especialización? Esta acción no se puede deshacer."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:223
+msgid "Ocurrió un error al eliminar la especialización."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:224
+msgid "Aún no has agregado especializaciones."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:225
+msgid "No hay especializaciones."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:226
+msgid "No tienes especializaciones."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:227
+msgid "No se pudieron cargar tus especializaciones."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:228
+msgid "Error al cargar el programa."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:229
+msgid "Ocurrió un error al cargar el programa."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:230
+msgid "Por favor, ingresa un nombre para el programa."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:231
+msgid "Ocurrió un error al guardar el programa."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:232
+msgid "¿Estás seguro de que deseas eliminar este programa? Esta acción no se puede deshacer."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:233
+msgid "Ocurrió un error al eliminar el programa."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:234
+#: modules/woo/includes/class-product-owner-metabox.php:100
+msgid "Quitar"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:235
+msgid "Eliminar"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:236
+msgid "Remove"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:237
+msgid "Add Text"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:238
+msgid "Error desconocido"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:239
+msgid "No se pudo eliminar."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:240
+msgid "Error: "
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:241
+msgid "Error al obtener los datos del curso: "
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:242
+msgid "Por favor, ingresa un título para el curso."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:243
+msgid "Ocurrió un error al subir la imagen."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:244
+msgid "Ocurrió un error al guardar el curso."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:245
+msgid "Ocurrió un error al cargar el curso para editar."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:246
+msgid "¿Estás seguro de que deseas eliminar este curso? Esta acción no se puede deshacer."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:247
+#: modules/course-creator/templates/sections/create-course.php:135
+#: modules/course-creator/templates/sections/create-course.php:143
+msgid "palabras"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:248
+msgid "No has publicado cursos aún."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:249
+msgid "CREA TU ESPECIALIZACIÓN"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:250
+msgid "CREA TU PROGRAMA"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:251
+msgid "Ej: Editor de video, Diseñador..."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:252
+msgid "Participación (%)"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:253
+msgid "Descripción del rol"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:254
+msgid "Nueva Sección"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:255
+msgid "Nueva Lección"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:256
+msgid "Ver detalles"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:257
+msgid "Expand Details"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:258
+msgid "Buscar colaborador..."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:259
+msgid "Principal"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:260
+msgid "Autor principal"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:261
+msgid "Rol"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:262
+msgid "YouTube URL"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:263
+msgid "Disponible en"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:264
+msgid "Describe las responsabilidades..."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:265
+#: modules/course-creator/templates/sections/create-course.php:91
+msgid "Portada del curso"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:266
+#: modules/course-creator/templates/sections/create-course.php:94
+msgid "Foto de portada"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:267
+msgid "Editar"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:268
+msgid "Lecciones"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:269
+msgid "curso"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:270
+msgid "cursos"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:271
+msgid "grupo"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:272
+msgid "grupos"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:273
+msgid "Agregado"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:274
+msgid "Agregar"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:281
+msgid "Subir imagen"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:282
+msgid "Arrastra y suelta tu imagen aquí"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:283
+msgid "o haz clic para buscar archivos"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:284
+msgid "Tamaño recomendado:"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:285
+msgid "Cancelar"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:286
+msgid "Guardar imagen"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:287
+msgid "Guardando..."
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:288
+msgid "Por favor selecciona un archivo de imagen (JPG o PNG)."
+msgstr ""
+
+#: modules/course-creator/templates/main-dashboard.php:14
+msgid "Usuario no encontrado."
+msgstr ""
+
+#: modules/course-creator/templates/main-dashboard.php:35
+msgid "Creador de Cursos"
+msgstr ""
+
+#: modules/course-creator/templates/main-dashboard.php:44
+msgid "MIS CURSOS"
+msgstr ""
+
+#: modules/course-creator/templates/main-dashboard.php:50
+#: modules/course-creator/templates/sections/especializacion.php:26
+#: modules/course-programs/templates/template-parts/learndash/group-topbar.php:19
+msgid "ESPECIALIZACIÓN"
+msgstr ""
+
+#: modules/course-creator/templates/main-dashboard.php:56
+msgid "PROGRAMAS"
+msgstr ""
+
+#: modules/course-creator/templates/main-dashboard.php:62
+#: modules/course-creator/templates/sections/sales.php:4
+msgid "VENTAS"
+msgstr ""
+
+#: modules/course-creator/templates/main-dashboard.php:68
+#: modules/course-creator/templates/sections/students.php:4
+msgid "ESTUDIANTES"
+msgstr ""
+
+#: modules/course-creator/templates/main-dashboard.php:83
+msgid "Sección en construcción..."
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:24
+#: modules/course-creator/templates/sections/create-group.php:15
+#: modules/course-creator/templates/sections/especializacion.php:19
+msgid "Volver"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:32
+msgid "CURSO"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:35
+msgid "LECCIONES"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:37
+msgid "EVALUACIÓN"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:40
+msgid "Vista Previa"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:44
+#: modules/course-creator/templates/sections/create-group.php:29
+#: modules/course-creator/templates/sections/especializacion.php:33
+msgid "Guardar"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:57
+msgid "Título del curso"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:66
+msgid "Vista previa de la portada del curso:"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:71
+msgid "Quitar portada"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:78
+msgid "Vista previa de la foto de portada:"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:83
+msgid "Quitar foto"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:103
+#: modules/course-creator/templates/sections/create-group.php:58
+#: modules/course-creator/templates/sections/especializacion.php:62
+msgid "PRECIO"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:120
+#: modules/course-creator/templates/sections/create-group.php:74
+#: modules/course-creator/templates/sections/especializacion.php:78
+msgid "DESCRIPCIÓN"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:123
+msgid "EXTRACTO"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:126
+msgid "PROFESORES"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:132
+msgid "Escribe la descripción del curso aquí... (máx. 700 palabras)"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:140
+msgid "Escribe un resumen breve del curso... (máx. 50 palabras)"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:148
+msgid "PROFESORES & COLABORADORES"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:157
+msgid "No hay colaboradores asignados."
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:168
+msgid "Lecciones del curso"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:170
+msgid "FLUJO LIBRE"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:177
+msgid "Añadir"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:185
+msgid "Agregar lección"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:189
+msgid "Agregar sección"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:198
+msgid "No hay contenido aún. Haz clic en el botón + para añadir una lección o sección."
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:210
+msgid "Antes de crear una evaluación, primero debes crear un curso."
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:225
+msgid "MIS CURSOS PUBLICADOS"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-course.php:226
+msgid "Crear un curso"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-group.php:22
+msgid "PROGRAMA"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-group.php:25
+msgid "ESPECIALIZACIONES"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-group.php:40
+msgid "Nombre del programa"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-group.php:48
+#: modules/course-creator/templates/sections/especializacion.php:52
+#: modules/course-programs/templates/single-course_program.php:54
+msgid "Próximamente"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-group.php:50
+#: modules/course-creator/templates/sections/especializacion.php:54
+msgid "Portada"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-group.php:80
+msgid "Describe el programa..."
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-group.php:92
+msgid "Buscar especialización..."
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-group.php:98
+msgid "Todas mis especializaciones"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-group.php:108
+#: modules/course-creator/templates/sections/especializacion.php:112
+msgid "Anterior"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-group.php:112
+#: modules/course-creator/templates/sections/especializacion.php:116
+msgid "Siguiente"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-group.php:119
+msgid "Especializaciones agregadas"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-group.php:137
+msgid "MIS PROGRAMAS"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-group.php:139
+msgid "Crear programa"
+msgstr ""
+
+#: modules/course-creator/templates/sections/create-group.php:146
+msgid "Cargando tus programas..."
+msgstr ""
+
+#: modules/course-creator/templates/sections/especializacion.php:29
+msgid "CURSOS"
+msgstr ""
+
+#: modules/course-creator/templates/sections/especializacion.php:44
+msgid "Nombre de la especialización"
+msgstr ""
+
+#: modules/course-creator/templates/sections/especializacion.php:84
+msgid "Describe la especialización..."
+msgstr ""
+
+#: modules/course-creator/templates/sections/especializacion.php:96
+msgid "Buscar curso..."
+msgstr ""
+
+#: modules/course-creator/templates/sections/especializacion.php:102
+msgid "Todos mis cursos"
+msgstr ""
+
+#: modules/course-creator/templates/sections/especializacion.php:124
+msgid "Cursos agregados"
+msgstr ""
+
+#: modules/course-creator/templates/sections/especializacion.php:126
+msgid "Orden requerido"
+msgstr ""
+
+#: modules/course-creator/templates/sections/especializacion.php:151
+msgid "MIS ESPECIALIZACIONES"
+msgstr ""
+
+#: modules/course-creator/templates/sections/especializacion.php:153
+msgid "Crear especialización"
+msgstr ""
+
+#: modules/course-creator/templates/sections/especializacion.php:160
+msgid "Cargando tus especializaciones..."
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:9
+#: modules/course-creator/templates/sections/students.php:9
+msgid "GENERAL"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:12
+msgid "LIST"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:24
+#: modules/course-creator/templates/sections/sales.php:125
+msgid "Panel de ventas"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:25
+#: modules/course-creator/templates/sections/sales.php:126
+msgid "Resumen de desempeño por periodo"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:31
+#: modules/course-creator/templates/sections/students.php:34
+msgid "Periodo"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:33
+#: modules/course-creator/templates/sections/students.php:36
+msgid "Día"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:35
+#: modules/course-creator/templates/sections/students.php:38
+msgid "Semana"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:37
+#: modules/course-creator/templates/sections/students.php:40
+msgid "Mes"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:39
+#: modules/course-creator/templates/sections/students.php:42
+msgid "Año"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:41
+#: modules/course-creator/templates/sections/students.php:44
+msgid "Personalizado"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:46
+#: modules/course-creator/templates/sections/students.php:49
+msgid "Fecha inicio"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:50
+#: modules/course-creator/templates/sections/students.php:53
+msgid "Fecha fin"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:61
+#: modules/course-creator/templates/sections/students.php:64
+msgid "General"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:63
+msgid "Ventas totales"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:66
+msgid "Desempeño total"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:72
+#: modules/course-creator/templates/sections/sales.php:233
+#: modules/course-creator/templates/sections/students.php:75
+msgid "Cursos"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:75
+msgid "Ventas de cursos"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:78
+#: modules/course-creator/templates/sections/sales.php:90
+#: modules/course-creator/templates/sections/sales.php:102
+msgid "del total"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:84
+#: modules/course-creator/templates/sections/sales.php:234
+msgid "Libros"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:87
+msgid "Ventas de libros"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:96
+msgid "Apoyo"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:98
+#: modules/course-creator/templates/sections/sales.php:235
+msgid "Patrocinio"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:109
+msgid "Distribución de ingresos"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:110
+#: modules/course-creator/templates/sections/students.php:119
+msgid "Desglose por día"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:112
+msgid "Leyenda"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:134
+msgid "Tablas"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:138
+msgid "Operacional"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:143
+msgid "Resumen"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:147
+msgid "Paginación"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:149
+msgid "Página anterior"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:152
+msgid "Página siguiente"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:160
+#: modules/course-creator/templates/sections/sales.php:183
+msgid "Ventas operacionales"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:162
+msgid "Una fila por venta. Busca por estudiante, email o producto."
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:169
+#: modules/course-creator/templates/sections/sales.php:215
+msgid "Buscar nombre, email o producto…"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:171
+#: modules/course-creator/templates/sections/sales.php:217
+msgid "Limpiar"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:174
+#: modules/course-creator/templates/sections/sales.php:220
+msgid "Mostrando"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:176
+#: modules/course-creator/templates/sections/sales.php:222
+msgid "de"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:186
+#: modules/course-creator/templates/sections/sales.php:232
+msgid "Estudiante"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:187
+msgid "Producto"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:188
+msgid "Orden"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:189
+msgid "Estado"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:190
+msgid "Pagado"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:191
+msgid "Fecha"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:197
+msgid "No hay ventas que coincidan."
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:206
+#: modules/course-creator/templates/sections/sales.php:229
+msgid "Resumen por estudiante"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:208
+msgid "Una fila por estudiante. Totales solo consideran ventas pagadas."
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:236
+#: modules/course-creator/templates/sections/students.php:69
+msgid "Total"
+msgstr ""
+
+#: modules/course-creator/templates/sections/sales.php:242
+msgid "No hay estudiantes que coincidan."
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:12
+msgid "RANKING"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:15
+msgid "PROFILE"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:27
+msgid "Panel de Estudiantes"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:28
+msgid "Resumen características de estudiantes y hábitos de estudio"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:66
+msgid "Número de Estudiantes"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:77
+msgid "Promedio Cursos por Estudiante"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:79
+#: modules/course-creator/templates/sections/students.php:89
+#: modules/course-creator/templates/sections/students.php:99
+msgid "Promedio"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:85
+msgid "Tiempo"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:87
+msgid "Tiempo Promedio finalización de Curso (Days)"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:95
+msgid "Finalización"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:97
+msgid "Promedio Cursos Finalizados por Estudiante"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:105
+msgid "Evaluación"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:107
+msgid "Variación Evaluación Inicial/Final"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:111
+msgid "Cambio"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:118
+msgid "Distribución de hábitos de estudio"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:132
+#: modules/course-creator/templates/sections/students.php:133
+msgid "Top 10 - Cursos comprados"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:136
+#: modules/course-creator/templates/sections/students.php:153
+#: modules/course-creator/templates/sections/students.php:171
+#: modules/course-creator/templates/sections/students.php:189
+msgid "Nombre"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:137
+msgid "# Cursos"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:149
+#: modules/course-creator/templates/sections/students.php:150
+msgid "Top 10 - Mayor aumento en quiz"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:154
+#: modules/course-creator/templates/sections/students.php:172
+#: modules/course-creator/templates/sections/students.php:190
+msgid "Curso"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:155
+msgid "Aumento"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:167
+#: modules/course-creator/templates/sections/students.php:168
+msgid "Top 10 - Menos días para completar"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:173
+#: modules/course-creator/templates/sections/students.php:191
+msgid "Días"
+msgstr ""
+
+#: modules/course-creator/templates/sections/students.php:185
+#: modules/course-creator/templates/sections/students.php:186
+msgid "Top 10 - Más días para completar"
+msgstr ""
+
+#: modules/course-integration/includes/class-course-authors.php:32
+msgid "Profesores del Curso (Politeia)"
+msgstr ""
+
+#: modules/course-integration/includes/class-course-authors.php:81
+msgid "Eliminar profesor"
+msgstr ""
+
+#: modules/course-integration/includes/class-course-authors.php:88
+msgid "Buscar profesor..."
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-admin.php:12
+#: modules/course-programs/includes/class-pcg-admin.php:13
+#: modules/course-programs/includes/class-pcg-admin.php:31
+#: modules/course-programs/includes/class-pcg-cpt.php:17
+#: modules/course-programs/includes/class-pcg-cpt.php:18
+#: modules/course-programs/includes/class-pcg-cpt.php:19
+#: modules/course-programs/includes/class-pcg-cpt.php:41
+msgid "Programa Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-admin.php:32
+msgid "Agregar nuevo Programa"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:20
+msgid "Agregar nuevo"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:21
+msgid "Agregar nuevo Programa Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:22
+msgid "Editar Programa Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:23
+msgid "Nuevo Programa Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:24
+msgid "Ver Programa Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:25
+msgid "Ver Programas Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:26
+msgid "Buscar Programas Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:27
+msgid "No se encontraron Programas Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:28
+msgid "No hay Programas Politeia en la papelera"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:29
+msgid "Todos los Programas Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:30
+msgid "Archivo de Programas Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:31
+msgid "Atributos del Programa Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:32
+msgid "Insertar en Programa Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:33
+msgid "Subido a este Programa Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:34
+msgid "Imagen destacada"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:35
+msgid "Establecer imagen destacada"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:36
+msgid "Eliminar imagen destacada"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:37
+msgid "Usar como imagen destacada"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:38
+msgid "Filtrar lista de Programas Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:39
+msgid "Lista de Programas Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:40
+msgid "Navegación de lista de Programas Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:42
+msgid "Programa Politeia publicado."
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-cpt.php:43
+msgid "Programa Politeia actualizado."
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-metaboxes.php:26
+msgid "Detalles del Programa Politeia"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-metaboxes.php:44
+#: modules/course-programs/includes/class-pcg-programs-table.php:11
+msgid "Precio"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-metaboxes.php:51
+msgid "Grupos"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-metaboxes.php:59
+#: modules/course-programs/includes/class-pcg-metaboxes.php:141
+msgid "Eliminar grupo"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-metaboxes.php:64
+msgid "Busca y selecciona grupos..."
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-metaboxes.php:151
+msgid "No tienes permisos suficientes."
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-programs-table.php:9
+msgid "Programa"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-programs-table.php:10
+msgid "Nivel"
+msgstr ""
+
+#: modules/course-programs/includes/class-pcg-programs-table.php:12
+msgid "Grupos Relacionados"
+msgstr ""
+
+#: modules/course-programs/templates/learndash/ld30/modern/group/content.php:29
+msgid "Sobre la especialización"
+msgstr ""
+
+#: modules/course-programs/templates/single-course_program.php:55
+msgid "Profesor/a"
+msgstr ""
+
+#: modules/course-programs/templates/single-course_program.php:68
+#, php-format
+msgid "%s Grupo"
+msgid_plural "%s Grupos"
+msgstr[0] ""
+msgstr[1] ""
+
+#: modules/course-programs/templates/single-course_program.php:109
+#, php-format
+msgid "%s Ramo"
+msgid_plural "%s Ramos"
+msgstr[0] ""
+msgstr[1] ""
+
+#: modules/course-programs/templates/single-course_program.php:126
+msgid "Descripción Programa"
+msgstr ""
+
+#: modules/course-programs/templates/single-course_program.php:134
+msgid "Ramos"
+msgstr ""
+
+#: modules/course-programs/templates/single-course_program.php:180
+#: modules/course-programs/templates/single-course_program.php:185
+msgid "No hay grupos asociados a este programa."
+msgstr ""
+
+#: modules/course-programs/templates/single-course_program.php:194
+msgid "Profesores"
+msgstr ""
+
+#: modules/course-programs/templates/single-course_program.php:231
+msgid "Pronto anunciaremos a los profesores de este programa."
+msgstr ""
+
+#: modules/woo/includes/class-financial-settings.php:28
+#: modules/woo/includes/class-financial-settings.php:29
+#: modules/woo/includes/class-financial-settings.php:57
+msgid "Ajustes Financieros"
+msgstr ""
+
+#: modules/woo/includes/class-financial-settings.php:48
+msgid "Ajustes guardados correctamente."
+msgstr ""
+
+#: modules/woo/includes/class-financial-settings.php:60
+msgid "Configura los valores globales para el cálculo de ganancias en el dashboard."
+msgstr ""
+
+#: modules/woo/includes/class-financial-settings.php:70
+msgid "IVA Chile (%)"
+msgstr ""
+
+#: modules/woo/includes/class-financial-settings.php:76
+msgid "Porcentaje de IVA que se descontará del valor bruto (ej: 19)."
+msgstr ""
+
+#: modules/woo/includes/class-financial-settings.php:82
+msgid "Comisión Pasarela (ej. Flow) (%)"
+msgstr ""
+
+#: modules/woo/includes/class-financial-settings.php:88
+msgid "Porcentaje de comisión de la pasarela de pago aplicado sobre el total bruto (ej: 3)."
+msgstr ""
+
+#: modules/woo/includes/class-financial-settings.php:94
+msgid "Guardar Ajustes"
+msgstr ""
+
+#: modules/woo/includes/class-product-owner-metabox.php:39
+msgid "Propietario del producto"
+msgstr ""
+
+#: modules/woo/includes/class-product-owner-metabox.php:73
+msgid "Sin resultados"
+msgstr ""
+
+#: modules/woo/includes/class-product-owner-metabox.php:94
+msgid "Busca y selecciona un usuario (solo uno)."
+msgstr ""
+
+#: modules/woo/includes/class-product-owner-metabox.php:96
+msgid "Escribe un nombre o email..."
+msgstr ""
+
+#: modules/woo/includes/class-user-profile-settings.php:37
+msgid "Configuración de Politeia Learning"
+msgstr ""
+
+#: modules/woo/includes/class-user-profile-settings.php:42
+msgid "Comisión de la Plataforma (%)"
+msgstr ""
+
+#: modules/woo/includes/class-user-profile-settings.php:48
+msgid "Porcentaje que la plataforma (Politeia) retiene del valor neto de cada venta."
+msgstr ""
+
+#: modules/woo/includes/class-user-sales-table.php:138
+msgid "Cliente"
+msgstr ""

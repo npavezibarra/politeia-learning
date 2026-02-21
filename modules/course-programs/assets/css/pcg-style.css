@@ -221,6 +221,120 @@
     margin: 0;
 }
 
+/* LearnDash Group: full-width top bar */
+.pcg-ld-group-topbar {
+    height: auto;
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    margin-bottom: 30px;
+    background: #000;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.pcg-ld-group-topbar__inner {
+    height: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 0px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-start;
+}
+
+.pcg-ld-group-topbar .entry-title {
+    color: #fff;
+    margin: 0;
+    font-size: clamp(28px, 3vw, 44px);
+    font-weight: 800;
+    line-height: 1.15;
+}
+
+.pcg-ld-group-topbar__subtitle {
+    color: rgba(255, 255, 255, 0.85);
+    margin-top: 14px;
+    max-width: 900px;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.pcg-ld-group-topbar__subtitle p {
+    margin: 0;
+}
+
+/* Hide the default theme title on group pages to avoid duplicate headings */
+.single-groups header.entry-header {
+    display: none;
+}
+
+.single-groups .pcg-ld-group-topbar header.entry-header {
+    display: block;
+}
+
+/* Group template-only header tweaks */
+.single-groups .pcg-ld-group-topbar .entry-title {
+    font-size: 2rem;
+    line-height: 1.2;
+    margin-bottom: 0;
+    letter-spacing: -.03rem;
+}
+
+.single-groups .pcg-ld-group-topbar header.entry-header {
+    margin-bottom: 10px;
+}
+
+/* Group topbar kicker */
+#pcg-ld-group-topbar-kicker {
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 10px;
+}
+
+/* Remove BuddyBoss top padding so the topbar touches the main navbar */
+.single-groups .content-area {
+    padding-top: 0 !important;
+}
+
+.single-groups .entry-content-wrap {
+    padding-top: 0 !important;
+}
+
+/* Group description section (tab content when single tab) */
+.pcg-ld-group-description {
+    margin-bottom: 24px;
+}
+
+.pcg-ld-group-description__inner {
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
+/* Make the group courses grid use full available width */
+.single-groups.has-sidebar #primary {
+    max-width: none !important;
+}
+
+.single-groups .ld-group__courses,
+.single-groups .ld-course-grid__wrapper,
+.single-groups .learndash-course-grid {
+    width: 100%;
+    max-width: none;
+}
+
+@media (min-width: 1100px) {
+    .single-groups .learndash-course-grid--modern .items-wrapper.grid {
+        grid-template-columns: repeat(4, minmax(0px, 1fr)) !important;
+    }
+}
+
 .pcg-program-teachers {
     padding: 36px;
     display: flex;

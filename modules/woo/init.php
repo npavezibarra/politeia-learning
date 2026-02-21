@@ -15,6 +15,8 @@ require_once __DIR__ . '/includes/class-user-student-metrics.php';
 require_once __DIR__ . '/includes/class-user-student-rankings.php';
 require_once __DIR__ . '/includes/class-user-profile-settings.php';
 require_once __DIR__ . '/includes/class-financial-settings.php';
+require_once __DIR__ . '/includes/class-product-program-selector.php';
+require_once __DIR__ . '/includes/class-order-split-snapshot.php';
 
 PL_Woo_Product_Owner_Metabox::init();
 PL_Woo_User_Sales_Metrics::init();
@@ -23,3 +25,5 @@ PL_Woo_User_Student_Metrics::init();
 PL_Woo_User_Student_Rankings::init();
 PL_Woo_User_Profile_Settings::init();
 PL_Woo_Financial_Settings::init();
+PL_Woo_Product_Program_Selector::init();
+PL_Woo_Order_Split_Snapshot::init();

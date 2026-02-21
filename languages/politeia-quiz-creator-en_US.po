@@ -1,0 +1,370 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: politeia-quiz-creator\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-02-20 00:00+0000\n"
+"PO-Revision-Date: 2026-02-20 00:00+0000\n"
+"Language: en_US\n"
+"X-Generator: Codex\n"
+
+#: modules/quiz-creator/templates/upload-form.php:78
+msgid "AI Assisted"
+msgstr "AI Assisted"
+
+#: modules/quiz-creator/templates/upload-form.php:229
+msgid "Allow Only One Attempt"
+msgstr "Allow Only One Attempt"
+
+#: modules/quiz-creator/templates/quiz-editor.php:75
+msgid "Answers"
+msgstr "Answers"
+
+#: modules/quiz-creator/templates/upload-form.php:52
+msgid "Answers per Question"
+msgstr "Answers per Question"
+
+#: modules/quiz-creator/templates/upload-form.php:98
+#: modules/quiz-creator/templates/upload-form.php:207
+#: modules/quiz-creator/templates/upload-form.php:242
+msgid "Back"
+msgstr "Back"
+
+#: modules/quiz-creator/templates/upload-form.php:244
+msgid "CREATE QUIZ"
+msgstr "CREATE QUIZ"
+
+#: modules/quiz-creator/templates/quiz-editor.php:76
+msgid "Check the box for correct answers"
+msgstr "Check the box for correct answers"
+
+#: modules/quiz-creator/templates/upload-form.php:191
+msgid "Complete all slides with your questions and answers."
+msgstr "Complete all slides with your questions and answers."
+
+#: modules/quiz-creator/templates/upload-form.php:136
+msgid "Copied!"
+msgstr "Copied!"
+
+#: modules/quiz-creator/templates/upload-form.php:134
+msgid "Copy ChatGPT Prompt"
+msgstr "Copy ChatGPT Prompt"
+
+#: modules/quiz-creator/templates/quiz-editor.php:14
+msgid "Could not load quiz data. Please make sure the quiz ID is correct."
+msgstr "Could not load quiz data. Please make sure the quiz ID is correct."
+
+#: modules/quiz-creator/includes/class-file-parser.php:48
+#: modules/quiz-creator/includes/class-file-parser.php:87
+#: modules/quiz-creator/includes/class-file-parser.php:139
+#: modules/quiz-creator/includes/class-file-parser.php:194
+msgid "Could not read file."
+msgstr "Could not read file."
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:265
+msgid "Course ID is required."
+msgstr "Course ID is required."
+
+#: modules/quiz-creator/templates/upload-form.php:21
+msgid "Delete Existing Quiz"
+msgstr "Delete Existing Quiz"
+
+#: modules/quiz-creator/templates/quiz-editor.php:52
+msgid "Delete Quiz"
+msgstr "Delete Quiz"
+
+#: modules/quiz-creator/templates/upload-form.php:153
+msgid "Drop JSON file here"
+msgstr "Drop JSON file here"
+
+#: modules/quiz-creator/includes/class-shortcode.php:109
+#: modules/quiz-creator/init.php:104
+msgid "Error creating quiz. Please check the file format."
+msgstr "Error creating quiz. Please check the file format."
+
+#: modules/quiz-creator/includes/class-quiz-creator.php:282
+msgid "Failed to create question in database."
+msgstr "Failed to create question in database."
+
+#: modules/quiz-creator/includes/class-quiz-creator.php:126
+msgid "Failed to create quiz in database."
+msgstr "Failed to create quiz in database."
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:299
+msgid "Failed to delete quiz."
+msgstr "Failed to delete quiz."
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:152
+msgid "File upload error."
+msgstr "File upload error."
+
+#: modules/quiz-creator/templates/upload-form.php:233
+msgid "Force Answer Before Next"
+msgstr "Force Answer Before Next"
+
+#: modules/quiz-creator/templates/upload-form.php:65
+msgid "How do you want to create your questions?"
+msgstr "How do you want to create your questions?"
+
+#: modules/quiz-creator/templates/upload-form.php:121
+msgid "I will upload my own documents to the LLM (PDF, Text, etc.)"
+msgstr "I will upload my own documents to the LLM (PDF, Text, etc.)"
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:161
+msgid "Invalid JSON format in pasted text."
+msgstr "Invalid JSON format in pasted text."
+
+#: modules/quiz-creator/includes/class-file-parser.php:56
+msgid "Invalid JSON format: "
+msgstr "Invalid JSON format: "
+
+#: modules/quiz-creator/includes/class-file-parser.php:148
+msgid "Invalid XML format."
+msgstr "Invalid XML format."
+
+#: modules/quiz-creator/includes/class-shortcode.php:110
+#: modules/quiz-creator/init.php:105
+msgid "Invalid file type. Please upload JSON, CSV, XML, or TXT file."
+msgstr "Invalid file type. Please upload JSON, CSV, XML, or TXT file."
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:243
+msgid "Invalid format."
+msgstr "Invalid format."
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:46
+msgid "Invalid quiz data."
+msgstr "Invalid quiz data."
+
+#: modules/quiz-creator/templates/upload-form.php:116
+msgid "Keywords (e.g., economy, demography, science)"
+msgstr "Keywords (e.g., economy, demography, science)"
+
+#: modules/quiz-creator/templates/upload-form.php:91
+msgid "Manual Creation"
+msgstr "Manual Creation"
+
+#: modules/quiz-creator/templates/quiz-editor.php:84
+msgid "Mark as correct"
+msgstr "Mark as correct"
+
+#: modules/quiz-creator/templates/upload-form.php:209
+msgid "Next: Behavior"
+msgstr "Next: Behavior"
+
+#: modules/quiz-creator/templates/upload-form.php:57
+msgid "Next: Method"
+msgstr "Next: Method"
+
+#: modules/quiz-creator/templates/upload-form.php:100
+msgid "Next: Questions"
+msgstr "Next: Questions"
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:143
+msgid "No questions data provided (file or text)."
+msgstr "No questions data provided (file or text)."
+
+#: modules/quiz-creator/templates/upload-form.php:48
+msgid "Number of Questions"
+msgstr "Number of Questions"
+
+#: modules/quiz-creator/templates/upload-form.php:165
+msgid "Paste JSON result here..."
+msgstr "Paste JSON result here..."
+
+#: modules/quiz-creator/templates/upload-form.php:139
+msgid "Paste the prompt into ChatGPT and then return with the JSON result."
+msgstr "Paste the prompt into ChatGPT and then return with the JSON result."
+
+#: modules/quiz-creator/templates/quiz-editor.php:92
+msgid "Points"
+msgstr "Points"
+
+#: modules/quiz-creator/templates/upload-form.php:246
+msgid "Processing..."
+msgstr "Processing..."
+
+#: modules/quiz-creator/includes/class-quiz-creator.php:353
+#, php-format
+msgid "Question #%d is missing a title."
+msgstr "Question #%d is missing a title."
+
+#: modules/quiz-creator/includes/class-quiz-creator.php:357
+#, php-format
+msgid "Question #%d must have at least one answer."
+msgstr "Question #%d must have at least one answer."
+
+#: modules/quiz-creator/includes/class-quiz-creator.php:370
+#, php-format
+msgid "Question #%d must have at least one correct answer."
+msgstr "Question #%d must have at least one correct answer."
+
+#: modules/quiz-creator/templates/quiz-editor.php:31
+#, php-format
+msgid "Question %d/%d"
+msgstr "Question %d/%d"
+
+#: modules/quiz-creator/templates/quiz-editor.php:68
+msgid "Question Text"
+msgstr "Question Text"
+
+#: modules/quiz-creator/templates/quiz-editor.php:59
+msgid "Question Title"
+msgstr "Question Title"
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:215
+#, php-format
+msgid "Quiz \"%s\" created successfully with %d questions!"
+msgstr "Quiz \"%s\" created successfully with %d questions!"
+
+#: modules/quiz-creator/includes/class-shortcode.php:39
+#: modules/quiz-creator/templates/upload-form.php:16
+msgid "Quiz Creator"
+msgstr "Quiz Creator"
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:286
+msgid "Quiz ID is required."
+msgstr "Quiz ID is required."
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:112
+msgid "Quiz changes saved successfully!"
+msgstr "Quiz changes saved successfully!"
+
+#: modules/quiz-creator/includes/class-shortcode.php:108
+#: modules/quiz-creator/init.php:103
+msgid "Quiz created successfully!"
+msgstr "Quiz created successfully!"
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:297
+msgid "Quiz deleted successfully."
+msgstr "Quiz deleted successfully."
+
+#: modules/quiz-creator/includes/class-quiz-creator.php:348
+msgid "Quiz must have at least one question."
+msgstr "Quiz must have at least one question."
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:133
+msgid "Quiz settings are required."
+msgstr "Quiz settings are required."
+
+#: modules/quiz-creator/includes/class-quiz-creator.php:344
+msgid "Quiz title is required."
+msgstr "Quiz title is required."
+
+#: modules/quiz-creator/templates/upload-form.php:225
+msgid "Randomize Answer Order"
+msgstr "Randomize Answer Order"
+
+#: modules/quiz-creator/templates/upload-form.php:221
+msgid "Randomize Question Order"
+msgstr "Randomize Question Order"
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:40
+#: modules/quiz-creator/includes/class-ajax-handler.php:124
+#: modules/quiz-creator/includes/class-ajax-handler.php:236
+#: modules/quiz-creator/includes/class-ajax-handler.php:280
+msgid "Security check failed."
+msgstr "Security check failed."
+
+#: modules/quiz-creator/templates/upload-form.php:26
+msgid "Set up your quiz parameters and upload your content to generate the evaluation."
+msgstr "Set up your quiz parameters and upload your content to generate the evaluation."
+
+#: modules/quiz-creator/templates/upload-form.php:237
+msgid "Show Points to Students"
+msgstr "Show Points to Students"
+
+#: modules/quiz-creator/templates/upload-form.php:39
+msgid "Step 1: Quiz Goals"
+msgstr "Step 1: Quiz Goals"
+
+#: modules/quiz-creator/templates/upload-form.php:64
+msgid "Step 2: Creation Method"
+msgstr "Step 2: Creation Method"
+
+#: modules/quiz-creator/templates/upload-form.php:110
+msgid "Step 3: Generate with AI"
+msgstr "Step 3: Generate with AI"
+
+#: modules/quiz-creator/templates/upload-form.php:174
+msgid "Step 3: Write Questions"
+msgstr "Step 3: Write Questions"
+
+#: modules/quiz-creator/templates/upload-form.php:216
+msgid "Step 4: Behavior"
+msgstr "Step 4: Behavior"
+
+#: modules/quiz-creator/includes/class-file-parser.php:34
+msgid "Unsupported file type."
+msgstr "Unsupported file type."
+
+#: modules/quiz-creator/includes/class-shortcode.php:107
+#: modules/quiz-creator/init.php:102
+msgid "Uploading and processing..."
+msgstr "Uploading and processing..."
+
+#: modules/quiz-creator/templates/upload-form.php:79
+msgid "Use ChatGPT/LLM to generate questions from keywords or documents."
+msgstr "Use ChatGPT/LLM to generate questions from keywords or documents."
+
+#: modules/quiz-creator/templates/upload-form.php:92
+msgid "Write your own questions and answers one by one."
+msgstr "Write your own questions and answers one by one."
+
+#: modules/quiz-creator/includes/class-shortcode.php:54
+msgid "You do not have permission to access the Quiz Creator."
+msgstr "You do not have permission to access the Quiz Creator."
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:177
+msgid "You do not have permission to create quizzes."
+msgstr "You do not have permission to create quizzes."
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:291
+msgid "You do not have permission to delete quizzes."
+msgstr "You do not have permission to delete quizzes."
+
+#: modules/quiz-creator/includes/class-ajax-handler.php:53
+msgid "You do not have permission to edit quizzes."
+msgstr "You do not have permission to edit quizzes."
+
+#. Plugin Name of the plugin
+#: politeia-learning.php
+msgid "Politeia Learning"
+msgstr "Politeia Learning"
+
+#. Description of the plugin
+#: politeia-learning.php
+msgid "Custom functionalities for Politeia website related to courses, grouping, selling, and creating courses."
+msgstr ""
+
+#. Author of the plugin
+#: politeia-learning.php
+msgid "Nico / Politeia"
+msgstr "Nico / Politeia"
+
+#: modules/quiz-creator/init.php:106
+msgid "Invalid file type. Please use JSON."
+msgstr "Invalid file type. Please use JSON."
+
+#: modules/quiz-creator/init.php:107
+msgid "File size exceeds 10MB limit."
+msgstr "File size exceeds 10MB limit."
+
+#: modules/quiz-creator/init.php:108
+msgid "Please enter a quiz title first"
+msgstr "Please enter a quiz title first"
+
+#: modules/quiz-creator/init.php:109
+msgid "Error"
+msgstr "Error"
+
+#: modules/quiz-creator/init.php:110
+msgid "View"
+msgstr "View"
+
+#: modules/quiz-creator/init.php:111
+msgid "Edit Slide Editor"
+msgstr "Edit Slide Editor"

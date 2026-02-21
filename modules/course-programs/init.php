@@ -15,7 +15,9 @@ define( 'PL_CP_URL', plugin_dir_url( __FILE__ ) );
  */
 spl_autoload_register( function ( $class ) {
     if ( strpos( $class, 'PL_' ) === 0 ) {
-        $file = PL_CP_PATH . 'includes/class-' . strtolower( str_replace( '_', '-', $class ) ) . '.php';
+        $class_slug = preg_replace( '/^PL_/', '', $class );
+        $class_slug = strtolower( str_replace( '_', '-', $class_slug ) );
+        $file       = PL_CP_PATH . 'includes/class-pcg-' . $class_slug . '.php';
         if ( file_exists( $file ) ) {
             require_once $file;
         }

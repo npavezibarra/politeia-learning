@@ -44,6 +44,12 @@ get_header();
                             <?php _e('MIS CURSOS', 'politeia-learning'); ?>
                         </a>
                     </li>
+                    <li class="<?php echo $current_section === 'especializacion' ? 'active' : ''; ?>">
+                        <a href="?section=especializacion">
+                            <span class="dashicons dashicons-welcome-learn-more"></span>
+                            <?php _e('ESPECIALIZACIÓN', 'politeia-learning'); ?>
+                        </a>
+                    </li>
                     <li class="<?php echo $current_section === 'create-group' ? 'active' : ''; ?>">
                         <a href="?section=create-group">
                             <span class="dashicons dashicons-category"></span>

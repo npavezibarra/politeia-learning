@@ -460,8 +460,8 @@
     function handleFileSelect(file) {
         const allowedExtensions = ['json'];
         const fileExtension = file.name.split('.').pop().toLowerCase();
-        if (!allowedExtensions.includes(fileExtension)) { showError('Invalid file type. Please use JSON.'); return; }
-        if (file.size > 10 * 1024 * 1024) { showError('File size exceeds 10MB limit.'); return; }
+        if (!allowedExtensions.includes(fileExtension)) { showError((pqcData && pqcData.strings && pqcData.strings.invalidFileJsonOnly) ? pqcData.strings.invalidFileJsonOnly : 'Invalid file type. Please use JSON.'); return; }
+        if (file.size > 10 * 1024 * 1024) { showError((pqcData && pqcData.strings && pqcData.strings.fileTooLarge) ? pqcData.strings.fileTooLarge : 'File size exceeds 10MB limit.'); return; }
         selectedFile = file;
         $('.pqc-file-name').text(file.name);
         $('.pqc-file-info').show();
@@ -488,7 +488,7 @@
             const uploadDocs = $('#pqc-upload-docs-llm').is(':checked');
 
             if (!title) {
-                alert('Please enter a quiz title first');
+                alert((pqcData && pqcData.strings && pqcData.strings.enterTitleFirst) ? pqcData.strings.enterTitleFirst : 'Please enter a quiz title first');
                 $('.pqc-wizard-prev[data-prev="1"]').click();
                 $('#pqc-quiz-title').focus();
                 return;
@@ -599,7 +599,7 @@
                 if (response.success) {
                     showSuccess(response.data);
                 } else {
-                    showError(response.data.message || 'Error');
+                    showError(response.data.message || ((pqcData && pqcData.strings && pqcData.strings.genericError) ? pqcData.strings.genericError : 'Error'));
                 }
             },
             complete: function () {
@@ -624,8 +624,8 @@
         const editUrl = currentUrl + '?edit_quiz=' + data.quiz_id;
         let html = `<div class="pqc-result-message"><div class="pqc-success-icon">✓</div><h3>${data.message}</h3>`;
         html += `<div class="pqc-result-links">
-            <a href="${data.quiz_url}" class="pqc-result-link" target="_blank">View</a>
-            <a href="${editUrl}" class="pqc-result-link pqc-link-edit">Edit Slide Editor</a>
+            <a href="${data.quiz_url}" class="pqc-result-link" target="_blank">${(pqcData && pqcData.strings && pqcData.strings.view) ? pqcData.strings.view : 'View'}</a>
+            <a href="${editUrl}" class="pqc-result-link pqc-link-edit">${(pqcData && pqcData.strings && pqcData.strings.editSlideEditor) ? pqcData.strings.editSlideEditor : 'Edit Slide Editor'}</a>
         </div>`;
         $result.removeClass('error').addClass('success').html(html).show();
     }

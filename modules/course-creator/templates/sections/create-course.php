@@ -40,7 +40,7 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
                 title="<?php _e('Vista Previa', 'politeia-learning'); ?>">
                 <span class="dashicons dashicons-visibility"></span>
             </button>
-            <button type="button" class="pcg-btn-save pcg-btn-save-compact"
+            <button type="button" class="pcg-btn-save pcg-btn-save-compact pcg-btn-save-course"
                 title="<?php _e('Guardar', 'politeia-learning'); ?>">
                 <span class="dashicons dashicons-saved"></span>
             </button>
@@ -146,7 +146,7 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
             <div id="pcg-tab-teachers" class="pcg-tab-content">
                 <div class="pcg-teachers-header">
                     <h3><?php _e('PROFESORES & COLABORADORES', 'politeia-learning'); ?></h3>
-                    <button type="button" class="pcg-btn-add-circle" id="pcg-btn-add-teacher">
+                    <button type="button" class="pcg-btn-add-circle pcg-btn-add-teacher" id="pcg-btn-add-teacher" data-target="#pcg-teachers-list">
                         <span class="dashicons dashicons-plus-alt2"></span>
                     </button>
                 </div>
@@ -174,10 +174,7 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
                 </label>
             </div>
             <div class="pcg-add-actions">
-                <?php
-                $pcg_locale = function_exists('determine_locale') ? determine_locale() : get_locale();
-                $pcg_add_button_text = (strpos($pcg_locale, 'es') === 0) ? 'Añadir' : 'Add';
-                ?>
+                <?php $pcg_add_button_text = __( 'Añadir', 'politeia-learning' ); ?>
                 <button type="button" class="pcg-btn-add-circle" id="pcg-btn-add-content"
                     aria-label="<?php echo esc_attr($pcg_add_button_text); ?>">
                     <?php echo esc_html($pcg_add_button_text); ?>
@@ -224,13 +221,18 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
 <!-- MY COURSES LIST (Visible underneath) -->
 <div id="pcg-my-courses-section" class="pcg-my-courses-container" <?php echo $pcg_is_editing_quiz ? 'style="display:none;"' : ''; ?>>
     <div class="pcg-section-header">
-        <h3><?php _e('MIS CURSOS PUBLICADOS', 'politeia-learning'); ?></h3>
+        <?php
+        $pcg_my_courses_title = $pcg_my_courses_title ?? __('MIS CURSOS PUBLICADOS', 'politeia-learning');
+        $pcg_create_course_button_label = $pcg_create_course_button_label ?? __('Crear un curso', 'politeia-learning');
+        $pcg_list_grid_id = $pcg_list_grid_id ?? 'pcg-my-courses-grid';
+        ?>
+        <h3><?php echo esc_html($pcg_my_courses_title); ?></h3>
         <button type="button" id="pcg-show-creator-form" class="pcg-btn-intro-create">
-            <?php _e('Crear un curso', 'politeia-learning'); ?>
+            <?php echo esc_html($pcg_create_course_button_label); ?>
         </button>
     </div>
 
-    <div id="pcg-my-courses-grid" class="pcg-my-courses-grid">
+    <div id="<?php echo esc_attr($pcg_list_grid_id); ?>" class="pcg-my-courses-grid">
         <!-- Will be populated via AJAX/PHP -->
         <div class="pcg-loading-placeholder">
             <span class="dashicons dashicons-update spin"></span>

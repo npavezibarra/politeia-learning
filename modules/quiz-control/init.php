@@ -50,7 +50,7 @@ class PQCTL_Bootstrap
      */
     public function load_textdomain(): void
     {
-        load_plugin_textdomain('politeia-quiz-control', false, dirname(plugin_basename(__FILE__)) . '/languages');
+        load_plugin_textdomain('politeia-quiz-control', false, dirname(plugin_basename(__FILE__), 3) . '/languages');
     }
 
     /**
@@ -195,4 +195,3 @@ add_action('woocommerce_order_status_pending_to_on-hold', function ($order_id) {
         }
     }
 }, 10, 1);
-

@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  * AJAX endpoint for the creator "VENTAS > LIST" tables.
  *
  * Returns transaction-level rows (order line items) for products whose meta
- * `product_owner` equals the current user.
+ * contain a profit split snapshot that includes the current user (or legacy product_owner).
  */
 class PL_Woo_User_Sales_Table
 {
@@ -138,15 +138,27 @@ class PL_Woo_User_Sales_Table
         return __('Cliente', 'politeia-learning');
     }
 
-    private static function line_creator_revenue(WC_Order_Item_Product $item, int $owner_id): float
+    /**
+     * Compute the user's revenue for a line item.
+     *
+     * Uses per-order-item split payload when present, otherwise falls back to legacy
+     * product_owner attribution (100% to owner).
+     */
+    private static function line_user_revenue(WC_Order_Item_Product $item, int $user_id): float
     {
         $product_id = (int) $item->get_product_id();
         $parent_id = (int) wp_get_post_parent_id($product_id);
         $base_product_id = $parent_id > 0 ? $parent_id : $product_id;
 
-        $owner_meta = (int) get_post_meta($base_product_id, 'product_owner', true);
-        if ($owner_meta !== (int) $owner_id) {
-            return 0.0;
+        // Determine % for this user.
+        $pct = self::percent_for_user_from_item($item, $user_id);
+        if ($pct <= 0) {
+            // Legacy fallback: 100% if user is product owner and no split exists.
+            $owner_meta = (int) get_post_meta($base_product_id, 'product_owner', true);
+            if ($owner_meta !== (int) $user_id) {
+                return 0.0;
+            }
+            $pct = 100.0;
         }
 
         $line_total_net = (float) $item->get_total();
@@ -160,6 +172,8 @@ class PL_Woo_User_Sales_Table
         $gateway_rate = (float) get_option('pl_financial_gateway_fee', 3);
         $flow_fee = $gross_price * ($gateway_rate / 100);
 
+        // Commission is attributed to the product owner (seller) for the whole item, then split among participants.
+        $owner_id = (int) get_post_meta($base_product_id, 'product_owner', true);
         $politeia_rate = get_user_meta($owner_id, '_pl_commission_rate', true);
         if ($politeia_rate === '') {
             $politeia_rate = 25.0;
@@ -169,7 +183,30 @@ class PL_Woo_User_Sales_Table
         $user_revenue_share = $manual_net_base * ((100 - $politeia_rate) / 100);
         $line_total = $user_revenue_share - $flow_fee;
 
-        return (float) $line_total;
+        return (float) ($line_total * ($pct / 100));
+    }
+
+    private static function percent_for_user_from_item(WC_Order_Item_Product $item, int $user_id): float
+    {
+        $raw = (string) $item->get_meta('_pl_split_payload', true);
+        if ($raw === '') {
+            return 0.0;
+        }
+
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return 0.0;
+        }
+
+        foreach ($decoded as $p) {
+            $uid = (int) ($p['user_id'] ?? 0);
+            if ($uid !== (int) $user_id) {
+                continue;
+            }
+            return (float) ($p['profit_percentage'] ?? 0);
+        }
+
+        return 0.0;
     }
 
     public static function handle(): void
@@ -234,13 +271,14 @@ class PL_Woo_User_Sales_Table
                 $product_id = (int) $item->get_product_id();
                 $parent_id = (int) wp_get_post_parent_id($product_id);
                 $base_product_id = $parent_id > 0 ? $parent_id : $product_id;
-                $owner_meta = (int) get_post_meta($base_product_id, 'product_owner', true);
-                if ($owner_meta !== (int) $owner_id) {
-                    continue;
-                }
 
                 $bucket = self::bucket_for_product($base_product_id);
                 if (!$bucket) {
+                    continue;
+                }
+
+                $paid_amount = (float) round(self::line_user_revenue($item, $owner_id));
+                if ($paid_amount <= 0) {
                     continue;
                 }
 
@@ -253,7 +291,7 @@ class PL_Woo_User_Sales_Table
                     'productType' => $bucket,
                     'orderId' => (string) $order->get_order_number(),
                     'status' => $status,
-                    'paid' => (float) round(self::line_creator_revenue($item, $owner_id)),
+                    'paid' => $paid_amount,
                     'currency' => function_exists('get_woocommerce_currency') ? (string) get_woocommerce_currency() : 'USD',
                     'date' => $created_str,
                 ];

@@ -1,0 +1,56 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: politeia-quiz-control\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-02-20 00:00+0000\n"
+"PO-Revision-Date: 2026-02-20 00:00+0000\n"
+"Language: es_ES\n"
+"X-Generator: Codex\n"
+
+#: modules/quiz-control/init.php:98
+msgid "Buscando…"
+msgstr "Buscando…"
+
+#: modules/quiz-control/admin/class-metabox-evaluation.php:30
+msgid "Course Evaluation"
+msgstr "Evaluación del curso"
+
+#: modules/quiz-control/admin/class-metabox-final-quiz.php:27
+msgid "Final Quiz"
+msgstr "Quiz final"
+
+#: modules/quiz-control/admin/class-metabox-first-quiz.php:30
+msgid "First Quiz"
+msgstr "Primer quiz"
+
+#: modules/quiz-control/init.php:99
+msgid "No se encontraron resultados"
+msgstr "No se encontraron resultados"
+
+#: modules/quiz-control/admin/class-metabox-evaluation.php:46
+msgid "Select the quiz that will serve as both the Initial Assessment and Final Exam."
+msgstr "Selecciona el quiz que servirá como evaluación inicial y examen final."
+
+#: modules/quiz-control/functions.php:278
+msgid "To access lessons finish the First Quiz"
+msgstr "Para acceder a las lecciones, completa el primer quiz"
+
+#. Plugin Name of the plugin
+#: politeia-learning.php
+msgid "Politeia Learning"
+msgstr "Politeia Learning"
+
+#. Description of the plugin
+#: politeia-learning.php
+msgid "Custom functionalities for Politeia website related to courses, grouping, selling, and creating courses."
+msgstr ""
+
+#. Author of the plugin
+#: politeia-learning.php
+msgid "Nico / Politeia"
+msgstr "Nico / Politeia"
