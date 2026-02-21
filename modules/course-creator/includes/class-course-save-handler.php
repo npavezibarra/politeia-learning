@@ -808,6 +808,20 @@ class PL_CC_Course_Save_Handler
         );
         $pending_group_ids = array_values(array_unique(array_filter(array_map('absint', (array) $pending_group_ids))));
 
+        // Include groups where the current user is an approved participant (active roles table).
+        $participant_group_ids = [];
+        $roles_table = $wpdb->prefix . 'politeia_course_roles';
+        $participant_group_ids = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT DISTINCT object_id
+                 FROM {$roles_table}
+                 WHERE object_type = %s AND user_id = %d",
+                'group',
+                $user_id
+            )
+        );
+        $participant_group_ids = array_values(array_unique(array_filter(array_map('absint', (array) $participant_group_ids))));
+
         $author_group_ids = get_posts([
             'post_type' => 'groups',
             'post_status' => ['publish', 'draft'],
@@ -821,7 +835,7 @@ class PL_CC_Course_Save_Handler
             $leader_group_ids = learndash_get_administrators_group_ids($user_id);
         }
 
-        $group_ids = array_values(array_unique(array_filter(array_map('absint', array_merge((array) $author_group_ids, (array) $leader_group_ids, (array) $pending_group_ids)))));
+        $group_ids = array_values(array_unique(array_filter(array_map('absint', array_merge((array) $author_group_ids, (array) $leader_group_ids, (array) $pending_group_ids, (array) $participant_group_ids)))));
 
         if (empty($group_ids)) {
             wp_send_json_success([]);
@@ -1411,7 +1425,21 @@ class PL_CC_Course_Save_Handler
         );
         $pending_program_ids = array_values(array_unique(array_filter(array_map('absint', (array) $pending_program_ids))));
 
-        $program_ids = array_values(array_unique(array_filter(array_map('absint', array_merge((array) $own_program_ids, (array) $pending_program_ids)))));
+        // Include programs where the current user is an approved participant (active roles table).
+        $participant_program_ids = [];
+        $roles_table = $wpdb->prefix . 'politeia_course_roles';
+        $participant_program_ids = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT DISTINCT object_id
+                 FROM {$roles_table}
+                 WHERE object_type = %s AND user_id = %d",
+                'program',
+                $user_id
+            )
+        );
+        $participant_program_ids = array_values(array_unique(array_filter(array_map('absint', (array) $participant_program_ids))));
+
+        $program_ids = array_values(array_unique(array_filter(array_map('absint', array_merge((array) $own_program_ids, (array) $pending_program_ids, (array) $participant_program_ids)))));
         if (empty($program_ids)) {
             wp_send_json_success([]);
         }
