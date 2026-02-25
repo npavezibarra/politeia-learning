@@ -72,17 +72,17 @@ jQuery(document).ready(function ($) {
                     <p>${t('loadingCourses')}</p>
                 </div>
             `);
-	            $('#pcg-spec-order-required').prop('checked', false);
-	            orderRequired = false;
+            $('#pcg-spec-order-required').prop('checked', false);
+            orderRequired = false;
 
-	            // Teachers tab
-	            const seed = getCurrentUserTeacherSeed();
-	            const $list = $('#pcg-group-teachers-list');
-	            if ($list.length) {
-	                populateTeachersList($list, [], seed);
-	            }
+            // Teachers tab
+            const seed = getCurrentUserTeacherSeed();
+            const $list = $('#pcg-group-teachers-list');
+            if ($list.length) {
+                populateTeachersList($list, [], seed);
+            }
 
-	        }
+        }
 
         function renderAddedCourses() {
             const $wrap = $('#pcg-spec-added-courses');
@@ -164,28 +164,28 @@ jQuery(document).ready(function ($) {
             });
         }
 
-	        function addCourseToSpecialization(courseId) {
-	            const id = Number(courseId) || 0;
-	            if (!id) return;
-	            if (!selectedCourseIds.includes(id)) {
-	                selectedCourseIds.push(id);
-	            }
+        function addCourseToSpecialization(courseId) {
+            const id = Number(courseId) || 0;
+            if (!id) return;
+            if (!selectedCourseIds.includes(id)) {
+                selectedCourseIds.push(id);
+            }
 
-	            const course = (cachedCourses || []).find(c => Number(c.id) === id);
-	            if (course && course.author_id) {
-	                ensureTeacherForUser($('#pcg-group-teachers-list'), {
-	                    id: Number(course.author_id),
-	                    name: course.author_name || '',
-	                    email: course.author_email || '',
-	                    avatar: course.author_avatar || ''
-	                });
-	            }
+            const course = (cachedCourses || []).find(c => Number(c.id) === id);
+            if (course && course.author_id) {
+                ensureTeacherForUser($('#pcg-group-teachers-list'), {
+                    id: Number(course.author_id),
+                    name: course.author_name || '',
+                    email: course.author_email || '',
+                    avatar: course.author_avatar || ''
+                });
+            }
 
-	            $('#pcg-spec-course-search').val('');
-	            renderAddedCourses();
-	            renderAllCourses();
-	            syncQuizCoursePicker(cachedCourses);
-	        }
+            $('#pcg-spec-course-search').val('');
+            renderAddedCourses();
+            renderAllCourses();
+            syncQuizCoursePicker(cachedCourses);
+        }
 
         function removeCourseFromSpecialization(courseId) {
             const id = Number(courseId) || 0;
@@ -250,15 +250,15 @@ jQuery(document).ready(function ($) {
             }
         }
 
-	        function loadCoursesForSpecialization() {
-	            return $.ajax({
-	                url: pcgCreatorData.ajaxUrl,
-	                type: 'POST',
-	                data: {
-	                    action: 'pcg_get_published_courses',
-	                    nonce: pcgCreatorData.nonce
-	                }
-	            }).done(function (response) {
+        function loadCoursesForSpecialization() {
+            return $.ajax({
+                url: pcgCreatorData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'pcg_get_published_courses',
+                    nonce: pcgCreatorData.nonce
+                }
+            }).done(function (response) {
                 if (!response || !response.success) {
                     $('#pcg-spec-all-courses').html(`<p class="pcg-empty-msg">${t('failedToLoadCourses')}</p>`);
                     $('#pcg-spec-added-courses').html(`<p class="pcg-empty-msg">${t('failedToLoadCourses')}</p>`);
@@ -274,7 +274,7 @@ jQuery(document).ready(function ($) {
             });
         }
 
-	        function openSpecializationFormForEdit(groupId) {
+        function openSpecializationFormForEdit(groupId) {
             const id = Number(groupId) || 0;
             if (!id) return;
 
@@ -296,19 +296,19 @@ jQuery(document).ready(function ($) {
                         nonce: pcgCreatorData.nonce,
                         group_id: id
                     }
-	                }).done(function (response) {
-	                    $('#pcg-spec-edit-loading').remove();
-	                    if (!response || !response.success) {
-	                        alert(t('errorLoadingSpecialization'));
-	                        $('#pcg-specialization-form-section').hide();
-	                        $('#pcg-my-specializations-section').show();
-	                        return;
-	                    }
+                }).done(function (response) {
+                    $('#pcg-spec-edit-loading').remove();
+                    if (!response || !response.success) {
+                        alert(t('errorLoadingSpecialization'));
+                        $('#pcg-specialization-form-section').hide();
+                        $('#pcg-my-specializations-section').show();
+                        return;
+                    }
 
-		                    const data = response.data;
-		                    currentGroupId = Number(data.id) || 0;
-		                    selectedCourseIds = (data.course_ids || []).map(x => Number(x));
-		                    orderRequired = Boolean(data.order_required);
+                    const data = response.data;
+                    currentGroupId = Number(data.id) || 0;
+                    selectedCourseIds = (data.course_ids || []).map(x => Number(x));
+                    orderRequired = Boolean(data.order_required);
 
                     $('#pcg-current-group-id').val(currentGroupId);
                     $('#pcg-group-title').val(data.title || '');
@@ -325,43 +325,43 @@ jQuery(document).ready(function ($) {
                         $('#pcg-group-price-free-indicator').show();
                     }
 
-	                    // Default to ESPECIALIZACIÓN tab after load.
-	                    $('.pcg-spec-segment').removeClass('active');
-	                    $('.pcg-spec-segment[data-value="especializacion"]').addClass('active');
-	                    $('#pcg-spec-mode-especializacion').show();
-	                    $('#pcg-spec-mode-cursos').hide();
+                    // Default to ESPECIALIZACIÓN tab after load.
+                    $('.pcg-spec-segment').removeClass('active');
+                    $('.pcg-spec-segment[data-value="especializacion"]').addClass('active');
+                    $('#pcg-spec-mode-especializacion').show();
+                    $('#pcg-spec-mode-cursos').hide();
 
-		                    // Teachers
-		                    populateTeachersList($('#pcg-group-teachers-list'), data.teachers || [], {
-		                        id: Number(data.author_id || 0),
-		                        name: data.author_name || '',
-		                        avatar: data.author_avatar || ''
-		                    });
-		                    // Ensure all included course authors are present as participants.
-		                    (data.included_authors || []).forEach(a => {
-		                        ensureTeacherForUser($('#pcg-group-teachers-list'), {
-		                            id: Number(a.id),
-		                            name: a.name || '',
-		                            email: a.email || '',
-		                            avatar: a.avatar || ''
-		                        });
-		                    });
+                    // Teachers
+                    populateTeachersList($('#pcg-group-teachers-list'), data.teachers || [], {
+                        id: Number(data.author_id || 0),
+                        name: data.author_name || '',
+                        avatar: data.author_avatar || ''
+                    });
+                    // Ensure all included course authors are present as participants.
+                    (data.included_authors || []).forEach(a => {
+                        ensureTeacherForUser($('#pcg-group-teachers-list'), {
+                            id: Number(a.id),
+                            name: a.name || '',
+                            email: a.email || '',
+                            avatar: a.avatar || ''
+                        });
+                    });
 
-		                    loadCoursesForSpecialization().done(function () {
-		                        // Ensure all selected course authors are included as participants.
-		                        (selectedCourseIds || []).forEach(cid => {
-		                            const course = (cachedCourses || []).find(c => Number(c.id) === Number(cid));
-		                            if (course && course.author_id) {
-		                                ensureTeacherForUser($('#pcg-group-teachers-list'), {
-		                                    id: Number(course.author_id),
-		                                    name: course.author_name || '',
-		                                    email: course.author_email || '',
-		                                    avatar: course.author_avatar || ''
-		                                });
-		                            }
-		                        });
-		                    });
-		                }).fail(function () {
+                    loadCoursesForSpecialization().done(function () {
+                        // Ensure all selected course authors are included as participants.
+                        (selectedCourseIds || []).forEach(cid => {
+                            const course = (cachedCourses || []).find(c => Number(c.id) === Number(cid));
+                            if (course && course.author_id) {
+                                ensureTeacherForUser($('#pcg-group-teachers-list'), {
+                                    id: Number(course.author_id),
+                                    name: course.author_name || '',
+                                    email: course.author_email || '',
+                                    avatar: course.author_avatar || ''
+                                });
+                            }
+                        });
+                    });
+                }).fail(function () {
                     $('#pcg-spec-edit-loading').remove();
                     alert(t('errorLoadingSpecializationGeneric'));
                     $('#pcg-specialization-form-section').hide();
@@ -370,20 +370,20 @@ jQuery(document).ready(function ($) {
             });
         }
 
-        function syncQuizCoursePicker() {}
+        function syncQuizCoursePicker() { }
 
-	        function getSpecializationPayload() {
-	            return {
-	                id: currentGroupId,
-	                title: $('#pcg-group-title').val(),
-	                description: $('#pcg-group-description').val(),
-	                price: $('#pcg-group-price').val(),
-	                course_ids: selectedCourseIds,
-	                order_required: orderRequired ? 1 : 0,
-	                teachers: collectTeachers($('#pcg-group-teachers-list')),
-	                split_locked: Boolean($('#pcg-group-teachers-list').data('splitLocked')),
-	            };
-	        }
+        function getSpecializationPayload() {
+            return {
+                id: currentGroupId,
+                title: $('#pcg-group-title').val(),
+                description: $('#pcg-group-description').val(),
+                price: $('#pcg-group-price').val(),
+                course_ids: selectedCourseIds,
+                order_required: orderRequired ? 1 : 0,
+                teachers: collectTeachers($('#pcg-group-teachers-list')),
+                split_locked: Boolean($('#pcg-group-teachers-list').data('splitLocked')),
+            };
+        }
 
         // Open form
         $('#pcg-show-specialization-form').on('click', function () {
@@ -483,7 +483,7 @@ jQuery(document).ready(function ($) {
             const $btn = $(this);
             const payload = getSpecializationPayload();
 
-                if (!payload.title) {
+            if (!payload.title) {
                 alert(t('pleaseEnterSpecializationName'));
                 return;
             }
@@ -498,19 +498,19 @@ jQuery(document).ready(function ($) {
                     nonce: pcgCreatorData.nonce,
                     group_data: payload
                 },
-	                success: function (response) {
-	                    $btn.removeClass('loading');
-	                    if (response && response.success) {
-	                        currentGroupId = response.data.group_id;
-	                        $('#pcg-current-group-id').val(currentGroupId);
-	                        if (response.data && response.data.snapshot_status === 'pending') {
-	                            alert(t('approvalRequestSent'));
-	                        }
-	                        $btn.addClass('success');
-	                        refreshActiveList();
-	                        setTimeout(() => {
-	                            $btn.prop('disabled', false).removeClass('success');
-	                        }, 2000);
+                success: function (response) {
+                    $btn.removeClass('loading');
+                    if (response && response.success) {
+                        currentGroupId = response.data.group_id;
+                        $('#pcg-current-group-id').val(currentGroupId);
+                        if (response.data && response.data.snapshot_status === 'pending') {
+                            alert(t('approvalRequestSent'));
+                        }
+                        $btn.addClass('success');
+                        refreshActiveList();
+                        setTimeout(() => {
+                            $btn.prop('disabled', false).removeClass('success');
+                        }, 2000);
                     } else {
                         alert(t('errorPrefix') + (response && response.data && response.data.message ? response.data.message : t('unknownError')));
                         $btn.prop('disabled', false);
@@ -600,21 +600,21 @@ jQuery(document).ready(function ($) {
                     <p>${t('loading')}</p>
                 </div>
             `);
-	            $('#pcg-prog-added-specs').html(`
+            $('#pcg-prog-added-specs').html(`
 	                <div class="pcg-loading-placeholder">
 	                    <span class="dashicons dashicons-update spin"></span>
 	                    <p>${t('loading')}</p>
 	                </div>
 	            `);
-	            $('#pcg-prog-pagination').hide();
+            $('#pcg-prog-pagination').hide();
 
-	            // Teachers tab
-	            const seed = getCurrentUserTeacherSeed();
-	            const $list = $('#pcg-program-teachers-list');
-	            if ($list.length) {
-	                populateTeachersList($list, [], seed);
-	            }
-	        }
+            // Teachers tab
+            const seed = getCurrentUserTeacherSeed();
+            const $list = $('#pcg-program-teachers-list');
+            if ($list.length) {
+                populateTeachersList($list, [], seed);
+            }
+        }
 
         function renderAddedSpecs() {
             const $wrap = $('#pcg-prog-added-specs');
@@ -698,24 +698,24 @@ jQuery(document).ready(function ($) {
             }
         }
 
-	        function addSpecToPrograma(groupId) {
-	            const id = Number(groupId) || 0;
-	            if (!id) return;
-	            if (!selectedGroupIds.includes(id)) selectedGroupIds.push(id);
+        function addSpecToPrograma(groupId) {
+            const id = Number(groupId) || 0;
+            if (!id) return;
+            if (!selectedGroupIds.includes(id)) selectedGroupIds.push(id);
 
-	            const spec = (cachedSpecializations || []).find(g => Number(g.id) === id);
-	            if (spec && spec.author_id) {
-	                ensureTeacherForUser($('#pcg-program-teachers-list'), {
-	                    id: Number(spec.author_id),
-	                    name: spec.author_name || '',
-	                    email: spec.author_email || '',
-	                    avatar: spec.author_avatar || ''
-	                });
-	            }
+            const spec = (cachedSpecializations || []).find(g => Number(g.id) === id);
+            if (spec && spec.author_id) {
+                ensureTeacherForUser($('#pcg-program-teachers-list'), {
+                    id: Number(spec.author_id),
+                    name: spec.author_name || '',
+                    email: spec.author_email || '',
+                    avatar: spec.author_avatar || ''
+                });
+            }
 
-	            renderAddedSpecs();
-	            renderAllSpecs();
-	        }
+            renderAddedSpecs();
+            renderAllSpecs();
+        }
 
         function removeSpecFromPrograma(groupId) {
             const id = Number(groupId) || 0;
@@ -725,15 +725,15 @@ jQuery(document).ready(function ($) {
             renderAllSpecs();
         }
 
-	        function loadSpecializationsForPrograma() {
-	            return $.ajax({
-	                url: pcgCreatorData.ajaxUrl,
-	                type: 'POST',
-	                data: {
-	                    action: 'pcg_get_published_specializations',
-	                    nonce: pcgCreatorData.nonce
-	                }
-	            }).done(function (response) {
+        function loadSpecializationsForPrograma() {
+            return $.ajax({
+                url: pcgCreatorData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'pcg_get_published_specializations',
+                    nonce: pcgCreatorData.nonce
+                }
+            }).done(function (response) {
                 if (!response || !response.success) {
                     $('#pcg-prog-all-specs').html(`<p class="pcg-empty-msg">${t('failedToLoadSpecializations')}</p>`);
                     $('#pcg-prog-added-specs').html(`<p class="pcg-empty-msg">${t('failedToLoadSpecializations')}</p>`);
@@ -747,7 +747,7 @@ jQuery(document).ready(function ($) {
             });
         }
 
-	        function openProgramaFormForEdit(programaId) {
+        function openProgramaFormForEdit(programaId) {
             const id = Number(programaId) || 0;
             if (!id) return;
 
@@ -769,18 +769,18 @@ jQuery(document).ready(function ($) {
                         nonce: pcgCreatorData.nonce,
                         programa_id: id
                     }
-	                }).done(function (response) {
-	                    $('#pcg-prog-edit-loading').remove();
-	                    if (!response || !response.success) {
-	                        alert(t('errorLoadingProgram'));
-	                        $('#pcg-programa-form-section').hide();
-	                        $('#pcg-my-programas-section').show();
-	                        return;
-	                    }
+                }).done(function (response) {
+                    $('#pcg-prog-edit-loading').remove();
+                    if (!response || !response.success) {
+                        alert(t('errorLoadingProgram'));
+                        $('#pcg-programa-form-section').hide();
+                        $('#pcg-my-programas-section').show();
+                        return;
+                    }
 
-		                    const data = response.data;
-		                    currentProgramaId = Number(data.id) || 0;
-		                    selectedGroupIds = (data.group_ids || []).map(x => Number(x));
+                    const data = response.data;
+                    currentProgramaId = Number(data.id) || 0;
+                    selectedGroupIds = (data.group_ids || []).map(x => Number(x));
 
                     $('#pcg-current-programa-id').val(currentProgramaId);
                     $('#pcg-programa-title').val(data.title || '');
@@ -796,40 +796,40 @@ jQuery(document).ready(function ($) {
                         $('#pcg-programa-price-free-indicator').show();
                     }
 
-	                    $('.pcg-prog-segment').removeClass('active');
-	                    $('.pcg-prog-segment[data-value="programa"]').addClass('active');
-	                    $('#pcg-prog-mode-programa').show();
-	                    $('#pcg-prog-mode-especializaciones').hide();
+                    $('.pcg-prog-segment').removeClass('active');
+                    $('.pcg-prog-segment[data-value="programa"]').addClass('active');
+                    $('#pcg-prog-mode-programa').show();
+                    $('#pcg-prog-mode-especializaciones').hide();
 
-		                    // Teachers
-		                    populateTeachersList($('#pcg-program-teachers-list'), data.teachers || [], {
-		                        id: Number(data.author_id || 0),
-		                        name: data.author_name || '',
-		                        avatar: data.author_avatar || ''
-		                    });
-		                    (data.included_authors || []).forEach(a => {
-		                        ensureTeacherForUser($('#pcg-program-teachers-list'), {
-		                            id: Number(a.id),
-		                            name: a.name || '',
-		                            email: a.email || '',
-		                            avatar: a.avatar || ''
-		                        });
-		                    });
+                    // Teachers
+                    populateTeachersList($('#pcg-program-teachers-list'), data.teachers || [], {
+                        id: Number(data.author_id || 0),
+                        name: data.author_name || '',
+                        avatar: data.author_avatar || ''
+                    });
+                    (data.included_authors || []).forEach(a => {
+                        ensureTeacherForUser($('#pcg-program-teachers-list'), {
+                            id: Number(a.id),
+                            name: a.name || '',
+                            email: a.email || '',
+                            avatar: a.avatar || ''
+                        });
+                    });
 
-		                    loadSpecializationsForPrograma().done(function () {
-		                        (selectedGroupIds || []).forEach(gid => {
-		                            const spec = (cachedSpecializations || []).find(g => Number(g.id) === Number(gid));
-		                            if (spec && spec.author_id) {
-		                                ensureTeacherForUser($('#pcg-program-teachers-list'), {
-		                                    id: Number(spec.author_id),
-		                                    name: spec.author_name || '',
-		                                    email: spec.author_email || '',
-		                                    avatar: spec.author_avatar || ''
-		                                });
-		                            }
-		                        });
-		                    });
-		                }).fail(function () {
+                    loadSpecializationsForPrograma().done(function () {
+                        (selectedGroupIds || []).forEach(gid => {
+                            const spec = (cachedSpecializations || []).find(g => Number(g.id) === Number(gid));
+                            if (spec && spec.author_id) {
+                                ensureTeacherForUser($('#pcg-program-teachers-list'), {
+                                    id: Number(spec.author_id),
+                                    name: spec.author_name || '',
+                                    email: spec.author_email || '',
+                                    avatar: spec.author_avatar || ''
+                                });
+                            }
+                        });
+                    });
+                }).fail(function () {
                     $('#pcg-prog-edit-loading').remove();
                     alert(t('errorLoadingProgramGeneric'));
                     $('#pcg-programa-form-section').hide();
@@ -838,17 +838,17 @@ jQuery(document).ready(function ($) {
             });
         }
 
-	        function getProgramaPayload() {
-	            return {
-	                id: currentProgramaId,
-	                title: $('#pcg-programa-title').val(),
-	                description: $('#pcg-programa-description').val(),
-	                price: $('#pcg-programa-price').val(),
-	                group_ids: selectedGroupIds,
-	                teachers: collectTeachers($('#pcg-program-teachers-list')),
-	                split_locked: Boolean($('#pcg-program-teachers-list').data('splitLocked')),
-	            };
-	        }
+        function getProgramaPayload() {
+            return {
+                id: currentProgramaId,
+                title: $('#pcg-programa-title').val(),
+                description: $('#pcg-programa-description').val(),
+                price: $('#pcg-programa-price').val(),
+                group_ids: selectedGroupIds,
+                teachers: collectTeachers($('#pcg-program-teachers-list')),
+                split_locked: Boolean($('#pcg-program-teachers-list').data('splitLocked')),
+            };
+        }
 
         // Open form
         $('#pcg-show-programa-form').on('click', function () {
@@ -959,19 +959,19 @@ jQuery(document).ready(function ($) {
                     nonce: pcgCreatorData.nonce,
                     programa_data: payload
                 },
-	                success: function (response) {
-	                    $btn.removeClass('loading');
-	                    if (response && response.success) {
-	                        currentProgramaId = response.data.programa_id;
-	                        $('#pcg-current-programa-id').val(currentProgramaId);
-	                        if (response.data && response.data.snapshot_status === 'pending') {
-	                            alert(t('approvalRequestSent'));
-	                        }
-	                        $btn.addClass('success');
-	                        refreshActiveList();
-	                        setTimeout(() => {
-	                            $btn.prop('disabled', false).removeClass('success');
-	                        }, 2000);
+                success: function (response) {
+                    $btn.removeClass('loading');
+                    if (response && response.success) {
+                        currentProgramaId = response.data.programa_id;
+                        $('#pcg-current-programa-id').val(currentProgramaId);
+                        if (response.data && response.data.snapshot_status === 'pending') {
+                            alert(t('approvalRequestSent'));
+                        }
+                        $btn.addClass('success');
+                        refreshActiveList();
+                        setTimeout(() => {
+                            $btn.prop('disabled', false).removeClass('success');
+                        }, 2000);
                     } else {
                         alert(t('errorPrefix') + (response && response.data && response.data.message ? response.data.message : t('unknownError')));
                         $btn.prop('disabled', false);
@@ -1021,6 +1021,292 @@ jQuery(document).ready(function ($) {
             });
         });
     })();
+
+    // ───────────────────────────────────────────────────────────
+    // Escritos (Posts) Creator UI
+    // ───────────────────────────────────────────────────────────
+    (function initEscritosCreator() {
+        if (!$('#pcg-show-escritos-form').length) {
+            return;
+        }
+
+        // Helper to ensure editor focus
+        function focusEditor() {
+            const editor = document.getElementById('pcg-escrito-content-editor');
+            if (editor && document.activeElement !== editor) {
+                editor.focus();
+            }
+        }
+
+        $(document).on('click', '.pcg-toolbar-btn', function () {
+            if ($(this).attr('onclick')) {
+                focusEditor();
+            }
+        });
+
+        let currentEscritoId = 0;
+        let escritoThumbnailId = 0;
+
+        function resetEscritoForm() {
+            currentEscritoId = 0;
+            escritoThumbnailId = 0;
+            $('#pcg-current-escrito-id').val(0);
+            $('#pcg-escrito-title').val('').css('height', 'auto');
+            $('#pcg-escrito-content-editor').html('');
+            $('#pcg-escrito-content').val('');
+            $('#pcg-escrito-excerpt').val('');
+            $('#pcg-escrito-thumbnail-preview').hide().find('img').attr('src', '');
+            $('#pcg-escrito-upload-ui').show();
+            $('#pcg-current-escrito-label').text('').hide();
+            $('#pcg-btn-preview-escrito').hide();
+        }
+
+        $('#pcg-show-escritos-form').on('click', function () {
+            $('#pcg-my-escritos-section').fadeOut(300, function () {
+                resetEscritoForm();
+                $('#pcg-escritos-form-section').fadeIn(300);
+            });
+        });
+
+        $('#pcg-btn-back-to-escritos').on('click', function () {
+            $('#pcg-escritos-form-section').fadeOut(300, function () {
+                $('#pcg-my-escritos-section').fadeIn();
+                resetEscritoForm();
+            });
+        });
+
+        $(document).on('click', '.pcg-btn-save-escrito', function () {
+            const $btn = $(this);
+            const content = $('#pcg-escrito-content-editor').html();
+            const payload = {
+                id: currentEscritoId,
+                title: $('#pcg-escrito-title').val(),
+                content: content,
+                excerpt: $('#pcg-escrito-excerpt').val(),
+                thumbnail_id: escritoThumbnailId
+            };
+
+            if (!payload.title) {
+                alert(t('pleaseEnterEscritoTitle'));
+                return;
+            }
+
+            $btn.addClass('loading').prop('disabled', true);
+
+            $.ajax({
+                url: pcgCreatorData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'pcg_save_escrito',
+                    nonce: pcgCreatorData.nonce,
+                    escrito_data: payload
+                },
+                success: function (response) {
+                    $btn.removeClass('loading');
+                    if (response.success) {
+                        currentEscritoId = response.data.escrito_id;
+                        $('#pcg-current-escrito-id').val(currentEscritoId);
+                        $btn.addClass('success');
+                        refreshActiveList();
+                        if (response.data.permalink) {
+                            $('#pcg-btn-preview-escrito').attr('href', response.data.permalink).show();
+                        }
+                        setTimeout(() => {
+                            $btn.prop('disabled', false).removeClass('success');
+                        }, 2000);
+                    } else {
+                        alert(t('errorSavingEscrito') + ': ' + (response.data ? response.data.message : t('unknownError')));
+                        $btn.prop('disabled', false);
+                    }
+                },
+                error: function () {
+                    $btn.removeClass('loading').prop('disabled', false);
+                    alert(t('errorSavingEscrito'));
+                }
+            });
+        });
+
+        // Edit
+        $(document).on('click', '.pcg-btn-edit-escrito', function () {
+            const escritoId = $(this).closest('.pcg-course-card').data('id');
+            if (!escritoId) return;
+
+            resetEscritoForm();
+            $('#pcg-my-escritos-section').hide();
+            $('#pcg-escritos-form-section').show();
+
+            $.ajax({
+                url: pcgCreatorData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'pcg_get_escrito_for_edit',
+                    nonce: pcgCreatorData.nonce,
+                    escrito_id: escritoId
+                },
+                success: function (response) {
+                    if (response.success) {
+                        const data = response.data;
+                        currentEscritoId = data.id;
+                        $('#pcg-current-escrito-id').val(data.id);
+                        $('#pcg-escrito-title').val(data.title);
+                        $('#pcg-escrito-content-editor').html(data.content);
+                        $('#pcg-escrito-content').val(data.content);
+                        $('#pcg-escrito-excerpt').val(data.excerpt);
+                        $('#pcg-current-escrito-label').text(data.title).show();
+
+                        escritoThumbnailId = data.thumbnail_id;
+                        if (data.thumbnail_url) {
+                            $('#pcg-escrito-thumbnail-preview img').attr('src', data.thumbnail_url);
+                            $('#pcg-escrito-thumbnail-preview').show();
+                            $('#pcg-escrito-upload-ui').hide();
+                        }
+
+                        if (data.permalink) {
+                            $('#pcg-btn-preview-escrito').attr('href', data.permalink).show();
+                        }
+
+                        // Auto-resize title after loading
+                        setTimeout(() => {
+                            const $title = $('#pcg-escrito-title');
+                            $title.css('height', 'auto').css('height', $title[0].scrollHeight + 'px');
+                        }, 50);
+                    } else {
+                        alert(response.data.message);
+                        $('#pcg-btn-back-to-escritos').trigger('click');
+                    }
+                }
+            });
+        });
+
+        // Delete
+        $(document).on('click', '.pcg-btn-delete-escrito', function () {
+            const escritoId = $(this).closest('.pcg-course-card').data('id');
+            if (!confirm(t('confirmDeleteCourse'))) return;
+
+            $.ajax({
+                url: pcgCreatorData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'pcg_delete_escrito',
+                    nonce: pcgCreatorData.nonce,
+                    escrito_id: escritoId
+                },
+                success: function (response) {
+                    if (response.success) {
+                        refreshActiveList();
+                    }
+                }
+            });
+        });
+
+        // Image upload
+        $(document).on('click', '[data-upload="escrito-thumbnail"]', function () {
+            PL_Cropper.open({
+                width: 1024,
+                height: 576,
+                title: t('uploadImage'),
+                onSave: function (dataUrl) {
+                    $.ajax({
+                        url: pcgCreatorData.ajaxUrl,
+                        type: 'POST',
+                        data: {
+                            action: 'pcg_upload_cropped_image',
+                            nonce: pcgCreatorData.nonce,
+                            image_data: dataUrl,
+                            type: 'escrito'
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                escritoThumbnailId = response.data.id;
+                                $('#pcg-escrito-thumbnail-preview img').attr('src', response.data.url);
+                                $('#pcg-escrito-thumbnail-preview').show();
+                                $('#pcg-escrito-upload-ui').hide();
+                            } else {
+                                alert(t('errorUploadingImage'));
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        $(document).on('click', '#pcg-remove-escrito-thumbnail', function () {
+            escritoThumbnailId = 0;
+            $('#pcg-escrito-thumbnail-preview').hide().find('img').attr('src', '');
+            $('#pcg-escrito-upload-ui').show();
+        });
+
+        // Auto-resize title
+        $(document).on('input', '#pcg-escrito-title', function () {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        // Improved clean paste that preserves structure (p, h1-h4) but strips all garbage
+        $(document).on('paste', '#pcg-escrito-content-editor', function (e) {
+            e.preventDefault();
+            let html = (e.originalEvent || e).clipboardData.getData('text/html');
+            const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+
+            if (html) {
+                // Pre-clean: Replace common block wrappers with P to avoid collapsing
+                html = html.replace(/<div[^>]*>/gi, '<p>').replace(/<\/div>/gi, '</p>');
+
+                const $temp = $('<div>').html(html);
+                const allowedTags = ['P', 'H1', 'H2', 'H3', 'H4', 'A', 'BR', 'UL', 'OL', 'LI', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'STRONG', 'EM', 'B', 'I'];
+
+                // Recursive cleanup
+                function cleanNode(node) {
+                    $(node).children().each(function () {
+                        cleanNode(this);
+                    });
+
+                    const tag = node.tagName;
+                    if (tag === 'DIV') { // Secondary check for nested divs
+                        $(node).contents().unwrap();
+                        return;
+                    }
+
+                    if (!allowedTags.includes(tag) && tag !== 'BODY' && tag !== 'HTML') {
+                        $(node).contents().unwrap();
+                    } else if (allowedTags.includes(tag)) {
+                        // Strip all attributes except href for links
+                        const attributes = node.attributes;
+                        const isLink = tag === 'A';
+                        const allowedAttrs = isLink ? ['href', 'target'] : [];
+
+                        for (let i = attributes.length - 1; i >= 0; i--) {
+                            if (!allowedAttrs.includes(attributes[i].name)) {
+                                node.removeAttribute(attributes[i].name);
+                            }
+                        }
+                        $(node).removeAttr('style');
+                    }
+                }
+
+                $temp.contents().each(function () {
+                    if (this.nodeType === 1) cleanNode(this);
+                });
+
+                // Final pass: Remove empty paragraphs or weird artifacts
+                $temp.find('p').each(function () {
+                    if (!$(this).text().trim() && !$(this).find('br, img, iframe').length) {
+                        $(this).remove();
+                    }
+                });
+
+                document.execCommand('insertHTML', false, $temp.html());
+            } else {
+                // If only text, split by double newlines and wrap in P
+                const paragraphs = text.trim().split(/\n\s*\n/);
+                const cleanHTML = paragraphs.map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+                document.execCommand('insertHTML', false, cleanHTML);
+            }
+        });
+
+
+    })();
+
 
     let currentCourseId = 0;
     let thumbnailId = 0;
@@ -1080,10 +1366,10 @@ jQuery(document).ready(function ($) {
         updateWordCount('#pcg-course-description', '#pcg-desc-word-count', 700);
         updateWordCount('#pcg-course-excerpt', '#pcg-excerpt-word-count', 50);
         $('#pcg-course-price').val('');
+        $('#pcg-course-price-eval').val('');
+        $('#pcg-course-price-lessons').val('');
         $('#pcg-thumbnail-preview').hide().find('img').attr('src', '');
         $('#pcg-cover-preview').hide().find('img').attr('src', ''); // Reset cover preview
-        $('#pcg-upload-thumbnail').show();
-        $('#pcg-select-background').show();
 
         $list.empty();
         $('#pcg-course-progression').prop('checked', false);
@@ -1092,14 +1378,17 @@ jQuery(document).ready(function ($) {
         currentCoursePermalink = '';
         $previewBtn.hide();
         $('#pcg-price-free-indicator').hide();
+        $('#pcg-price-free-indicator-eval').hide();
+        $('#pcg-price-free-indicator-lessons').hide();
 
-	        resetTeachersList($teachersList);
+        resetTeachersList($teachersList);
 
         // Reset Tabs to "CURSO"
         $('.pcg-segment').removeClass('active');
         $('.pcg-segment[data-value="curso"]').addClass('active');
         $('.pcg-mode-content').hide();
         $('#pcg-mode-curso').show();
+        placeCourseSidebar('curso');
 
         // Reset Desc Tabs
         $('.pcg-desc-tab').removeClass('active');
@@ -1109,21 +1398,21 @@ jQuery(document).ready(function ($) {
     }
 
     // Show form when "CREATE COURSE" button is clicked
-	    $('#pcg-show-creator-form').on('click', function () {
-	        $('#pcg-my-courses-section').fadeOut(300, function () {
-	            resetForm();
-	            // Automatically add current user as main author
-	            addTeacherItem({
-	                user_id: pcgCreatorData.currentUserId,
-	                user_name: pcgCreatorData.currentUserName,
-	                avatar: pcgCreatorData.currentUserAvatar,
-	                is_main_author: true,
-	                role_slug: t('mainAuthorRoleSlug'),
-	                profit_percentage: 100
-	            }, $('#pcg-teachers-list'));
-	            $('#pcg-course-form-section').fadeIn(400);
-	        });
-	    });
+    $('#pcg-show-creator-form').on('click', function () {
+        $('#pcg-my-courses-section').fadeOut(300, function () {
+            resetForm();
+            // Automatically add current user as main author
+            addTeacherItem({
+                user_id: pcgCreatorData.currentUserId,
+                user_name: pcgCreatorData.currentUserName,
+                avatar: pcgCreatorData.currentUserAvatar,
+                is_main_author: true,
+                role_slug: t('mainAuthorRoleSlug'),
+                profit_percentage: 100
+            }, $('#pcg-teachers-list'));
+            $('#pcg-course-form-section').fadeIn(400);
+        });
+    });
 
     // Back to list / Cancel Edit
     $('#pcg-btn-back-to-list, #pcg-btn-cancel-edit').on('click', function () {
@@ -1147,13 +1436,211 @@ jQuery(document).ready(function ($) {
     $('#pcg-course-price').on('input change', function () {
         const price = parseFloat($(this).val()) || 0;
         const $freeIndicator = $('#pcg-price-free-indicator');
+        const $evalPrice = $('#pcg-course-price-eval');
+        const $evalIndicator = $('#pcg-price-free-indicator-eval');
+        const $lessonsPrice = $('#pcg-course-price-lessons');
+        const $lessonsIndicator = $('#pcg-price-free-indicator-lessons');
+
+        if ($evalPrice.length && $evalPrice.val() !== $(this).val()) {
+            $evalPrice.val($(this).val());
+        }
+        if ($lessonsPrice.length && $lessonsPrice.val() !== $(this).val()) {
+            $lessonsPrice.val($(this).val());
+        }
 
         if (price === 0) {
             $freeIndicator.fadeIn(200);
+            if ($evalIndicator.length) {
+                $evalIndicator.fadeIn(200);
+            }
+            if ($lessonsIndicator.length) {
+                $lessonsIndicator.fadeIn(200);
+            }
         } else {
             $freeIndicator.fadeOut(200);
+            if ($evalIndicator.length) {
+                $evalIndicator.fadeOut(200);
+            }
+            if ($lessonsIndicator.length) {
+                $lessonsIndicator.fadeOut(200);
+            }
         }
     });
+
+    // Mirror price input inside Evaluación aside to the main course price field
+    $(document).on('input change', '#pcg-course-price-eval', function () {
+        const val = $(this).val();
+        const $main = $('#pcg-course-price');
+        if ($main.length && $main.val() !== val) {
+            $main.val(val).trigger('input');
+        }
+    });
+
+    // Mirror price input inside Lecciones aside to the main course price field
+    $(document).on('input change', '#pcg-course-price-lessons', function () {
+        const val = $(this).val();
+        const $main = $('#pcg-course-price');
+        if ($main.length && $main.val() !== val) {
+            $main.val(val).trigger('input');
+        }
+    });
+
+    function syncEvalPriceFromMain() {
+        const $eval = $('#pcg-course-price-eval');
+        const $main = $('#pcg-course-price');
+        if (!$eval.length || !$main.length) return;
+        $eval.val($main.val());
+    }
+
+    function syncLessonsPriceFromMain() {
+        const $lessons = $('#pcg-course-price-lessons');
+        const $main = $('#pcg-course-price');
+        if (!$lessons.length || !$main.length) return;
+        $lessons.val($main.val());
+    }
+
+    function placeCourseActions(mode) {
+        const $actions = $('#pcg-course-actions');
+        if (!$actions.length) return;
+
+        const $courseSidecardSection = $('#pcg-mode-curso .pcg-sidecard__section');
+        const $evalSlot = $('#pcg-mode-evaluacion .pcg-sidecard__actions-slot');
+        const $lessonsSlot = $('#pcg-mode-lecciones .pcg-sidecard__actions-slot');
+
+        if (mode === 'evaluacion' && $evalSlot.length) {
+            $evalSlot.append($actions);
+            return;
+        }
+
+        if (mode === 'lecciones' && $lessonsSlot.length) {
+            $lessonsSlot.append($actions);
+            return;
+        }
+
+        if ($courseSidecardSection.length) {
+            $courseSidecardSection.append($actions);
+        }
+    }
+
+    function placeCourseChecklist(mode) {
+        const $checklist = $('#pcg-course-checklist');
+        if (!$checklist.length) return;
+
+        const $courseAside = $('#pcg-mode-curso .pcg-course-editor__right');
+        const $evalSlot = $('#pcg-mode-evaluacion .pcg-checklist-slot');
+        const $lessonsSlot = $('#pcg-mode-lecciones .pcg-checklist-slot');
+
+        if (mode === 'evaluacion' && $evalSlot.length) {
+            $evalSlot.append($checklist);
+            return;
+        }
+
+        if (mode === 'lecciones' && $lessonsSlot.length) {
+            $lessonsSlot.append($checklist);
+            return;
+        }
+
+        if ($courseAside.length) {
+            $courseAside.append($checklist);
+        }
+    }
+
+    function placeCourseSidebar(mode) {
+        placeCourseActions(mode);
+        placeCourseChecklist(mode);
+    }
+
+    function updateCourseChecklist() {
+        const $root = $('#pcg-course-checklist');
+        if (!$root.length) return;
+
+        const setDone = (key, done) => {
+            const $item = $root.find(`.pcg-checklist-item[data-check="${key}"]`);
+            if (!$item.length) return;
+            $item.toggleClass('is-done', Boolean(done));
+        };
+
+        const hasValue = (selector) => {
+            const $el = $(selector);
+            if (!$el.length) return false;
+            return String($el.val() || '').trim().length > 0;
+        };
+
+        const hasImage = (wrapSel) => {
+            const $wrap = $(wrapSel);
+            if (!$wrap.length || !$wrap.is(':visible')) return false;
+            const src = String($wrap.find('img').attr('src') || '').trim();
+            return src.length > 0;
+        };
+
+        const hasTeachers = () => {
+            const $list = $('#pcg-teachers-list');
+            if (!$list.length) return false;
+            return $list.find('.pcg-teacher-item').filter(function () {
+                const uid = String($(this).attr('data-user-id') || '').trim();
+                return uid.length > 0;
+            }).length > 0;
+        };
+
+        const getQuizInfo = () => {
+            const $editor = $('#pcg-quiz-creator-container .pqc-editor-container').first();
+            const quizId = Number($editor.data('quiz-id') || 0) || 0;
+            if (!$editor.length || !quizId) return { exists: false, count: 0 };
+            const count = $editor.find('.pqc-slide').length;
+            return { exists: true, count };
+        };
+
+        const getLessonsInfo = () => {
+            const $list = $('#pcg-lessons-list');
+            if (!$list.length) return { exists: false, count: 0 };
+            const count = $list.find('.pcg-content-item').length;
+            return { exists: count > 0, count };
+        };
+
+        setDone('title', hasValue('#pcg-course-title'));
+        setDone('price', hasValue('#pcg-course-price'));
+        setDone('description', hasValue('#pcg-course-description'));
+        setDone('excerpt', hasValue('#pcg-course-excerpt'));
+        setDone('thumbnail', hasImage('#pcg-thumbnail-preview'));
+        setDone('cover', hasImage('#pcg-cover-preview'));
+        setDone('teachers', hasTeachers());
+
+        const lessons = getLessonsInfo();
+        setDone('lessons', lessons.exists);
+        const $lessonsCount = $('#pcg-check-lessons-count');
+        if ($lessonsCount.length) {
+            $lessonsCount.text(lessons.exists ? String(lessons.count) : '');
+        }
+
+        const quiz = getQuizInfo();
+        setDone('evaluation', quiz.exists);
+        const $evalCount = $('#pcg-check-eval-count');
+        if ($evalCount.length) {
+            $evalCount.text(quiz.exists ? String(quiz.count) : '');
+        }
+    }
+
+    function initChecklistObservers() {
+        if (!window.MutationObserver) return;
+
+        let timer = null;
+        const schedule = () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(updateCourseChecklist, 50);
+        };
+
+        const observe = (el) => {
+            if (!el) return;
+            const obs = new MutationObserver(schedule);
+            obs.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'src', 'class', 'data-user-id'] });
+        };
+
+        observe(document.getElementById('pcg-teachers-list'));
+        observe(document.getElementById('pcg-quiz-creator-container'));
+        observe(document.getElementById('pcg-thumbnail-preview'));
+        observe(document.getElementById('pcg-cover-preview'));
+        observe(document.getElementById('pcg-lessons-list'));
+    }
 
     // Preview Button click
     $previewBtn.on('click', function () {
@@ -1174,23 +1661,51 @@ jQuery(document).ready(function ($) {
 
         if (mode === 'curso') {
             $('#pcg-mode-curso').fadeIn(300);
+            placeCourseSidebar('curso');
         } else if (mode === 'lecciones') {
             $('#pcg-mode-lecciones').fadeIn(300);
             initSortable();
+            placeCourseSidebar('lecciones');
+            syncLessonsPriceFromMain();
+            $('#pcg-course-price').trigger('input');
         } else if (mode === 'evaluacion') {
             const courseId = typeof currentCourseId !== 'undefined' ? currentCourseId : 0;
+            const $evalAside = $('#pcg-mode-evaluacion .pcg-eval-editor__right');
             if (courseId === 0) {
                 $('#pcg-quiz-not-created-msg').show();
                 $('#pcg-quiz-creator-container').hide();
+                if ($evalAside.length) {
+                    $evalAside.hide();
+                }
             } else {
                 $('#pcg-quiz-not-created-msg').hide();
                 $('#pcg-quiz-creator-container').show();
+                if ($evalAside.length) {
+                    $evalAside.show();
+                }
+                syncEvalPriceFromMain();
+                $('#pcg-course-price').trigger('input');
                 // Dynamically refresh quiz module for current course
                 $(document).trigger('pqc_refresh', { courseId: courseId });
             }
+            placeCourseSidebar('evaluacion');
             $('#pcg-mode-evaluacion').fadeIn(300);
         }
     });
+
+    // Ensure actions start in the correct aside on initial render
+    const initialMode = $('#pcg-course-form-section .pcg-segment.active').data('value') || 'curso';
+    placeCourseSidebar(initialMode);
+    if (initialMode === 'lecciones') {
+        syncLessonsPriceFromMain();
+        $('#pcg-course-price').trigger('input');
+    } else if (initialMode === 'evaluacion') {
+        syncEvalPriceFromMain();
+        $('#pcg-course-price').trigger('input');
+    }
+    initChecklistObservers();
+    $(document).on('input change', '#pcg-course-title, #pcg-course-price, #pcg-course-description, #pcg-course-excerpt, #pcg-course-price-eval, #pcg-course-price-lessons', updateCourseChecklist);
+    updateCourseChecklist();
 
     // ── Teacher Management Logic ──
     let teacherSearchTimeout = null;
@@ -1201,7 +1716,7 @@ jQuery(document).ready(function ($) {
         return Math.min(100, Math.max(0, n));
     }
 
-	    function normalizeTeacherIdentity(rawName = '', rawEmail = '') {
+    function normalizeTeacherIdentity(rawName = '', rawEmail = '') {
         let name = (rawName || '').trim();
         let email = (rawEmail || '').trim();
 
@@ -1213,207 +1728,207 @@ jQuery(document).ready(function ($) {
             }
         }
 
-	        return { name, email };
-	    }
+        return { name, email };
+    }
 
-	    function getCurrentUserTeacherSeed() {
-	        const id = Number(pcgCreatorData && pcgCreatorData.currentUserId ? pcgCreatorData.currentUserId : 0) || 0;
-	        const name = (pcgCreatorData && pcgCreatorData.currentUserFullNameEmail) ? String(pcgCreatorData.currentUserFullNameEmail) : '';
-	        const avatar = (pcgCreatorData && pcgCreatorData.currentUserAvatar) ? String(pcgCreatorData.currentUserAvatar) : '';
-	        return { id, name, avatar };
-	    }
+    function getCurrentUserTeacherSeed() {
+        const id = Number(pcgCreatorData && pcgCreatorData.currentUserId ? pcgCreatorData.currentUserId : 0) || 0;
+        const name = (pcgCreatorData && pcgCreatorData.currentUserFullNameEmail) ? String(pcgCreatorData.currentUserFullNameEmail) : '';
+        const avatar = (pcgCreatorData && pcgCreatorData.currentUserAvatar) ? String(pcgCreatorData.currentUserAvatar) : '';
+        return { id, name, avatar };
+    }
 
-	    function ensureTeachersEmptyState($list) {
-	        if (!$list || !$list.length) return;
-	        if ($list.find('.pcg-empty-teachers-state').length) return;
-	        $list.append(`
+    function ensureTeachersEmptyState($list) {
+        if (!$list || !$list.length) return;
+        if ($list.find('.pcg-empty-teachers-state').length) return;
+        $list.append(`
 	            <div class="pcg-empty-teachers-state">
 	                <p>${t('noCollaboratorsAssigned')}</p>
 	            </div>
 	        `);
-	    }
+    }
 
-	    function resetTeachersList($list) {
-	        if (!$list || !$list.length) return;
-	        $list.empty();
-	        $list.data('splitLocked', false);
-	        ensureTeachersEmptyState($list);
-	        $list.find('.pcg-empty-teachers-state').show();
-	    }
+    function resetTeachersList($list) {
+        if (!$list || !$list.length) return;
+        $list.empty();
+        $list.data('splitLocked', false);
+        ensureTeachersEmptyState($list);
+        $list.find('.pcg-empty-teachers-state').show();
+    }
 
-	    function isEqualSplit(teachers) {
-	        const items = Array.isArray(teachers) ? teachers : [];
-	        const n = items.length;
-	        if (n <= 0) return true;
+    function isEqualSplit(teachers) {
+        const items = Array.isArray(teachers) ? teachers : [];
+        const n = items.length;
+        if (n <= 0) return true;
 
-	        const base = Math.floor(10000 / n);
-	        const remainder = 10000 - (base * n);
-	        const expected = items.map((_, i) => (base + (i === 0 ? remainder : 0)) / 100);
+        const base = Math.floor(10000 / n);
+        const remainder = 10000 - (base * n);
+        const expected = items.map((_, i) => (base + (i === 0 ? remainder : 0)) / 100);
 
-	        const actual = items.map(t => Number(normalizePercentInt(t.profit_percentage ?? 0)));
-	        expected.sort((a, b) => a - b);
-	        actual.sort((a, b) => a - b);
-	        for (let i = 0; i < n; i++) {
-	            if (Math.abs(Number(expected[i]) - Number(actual[i])) > 0.01) return false;
-	        }
-	        return true;
-	    }
+        const actual = items.map(t => Number(normalizePercentInt(t.profit_percentage ?? 0)));
+        expected.sort((a, b) => a - b);
+        actual.sort((a, b) => a - b);
+        for (let i = 0; i < n; i++) {
+            if (Math.abs(Number(expected[i]) - Number(actual[i])) > 0.01) return false;
+        }
+        return true;
+    }
 
-	    function rebalanceTeachersEqual($list) {
-	        if (!$list || !$list.length) return;
-	        const $items = $list.find('.pcg-teacher-item');
-	        const n = $items.length;
-	        if (n <= 0) return;
+    function rebalanceTeachersEqual($list) {
+        if (!$list || !$list.length) return;
+        const $items = $list.find('.pcg-teacher-item');
+        const n = $items.length;
+        if (n <= 0) return;
 
-	        const base = Math.floor(10000 / n);
-	        const remainder = 10000 - (base * n);
+        const base = Math.floor(10000 / n);
+        const remainder = 10000 - (base * n);
 
-	        $items.each(function (idx) {
-	            const val = (base + (idx === 0 ? remainder : 0)) / 100;
-	            const intValue = normalizePercentInt(val);
-	            $(this).find('.pcg-teacher-profit').val(intValue);
-	            $(this).find('.pcg-teacher-share-badge').text(`${intValue}%`);
-	        });
-	    }
+        $items.each(function (idx) {
+            const val = (base + (idx === 0 ? remainder : 0)) / 100;
+            const intValue = normalizePercentInt(val);
+            $(this).find('.pcg-teacher-profit').val(intValue);
+            $(this).find('.pcg-teacher-share-badge').text(`${intValue}%`);
+        });
+    }
 
-	    function rebalanceMainAuthorRemainder($list, $changedItem = null) {
-	        if (!$list || !$list.length) return;
-	        const $items = $list.find('.pcg-teacher-item');
-	        if (!$items.length) return;
+    function rebalanceMainAuthorRemainder($list, $changedItem = null) {
+        if (!$list || !$list.length) return;
+        const $items = $list.find('.pcg-teacher-item');
+        if (!$items.length) return;
 
-	        let $main = $list.find('.pcg-teacher-item[data-main="true"]').first();
-	        if (!$main.length) {
-	            $main = $items.first();
-	        }
+        let $main = $list.find('.pcg-teacher-item[data-main="true"]').first();
+        if (!$main.length) {
+            $main = $items.first();
+        }
 
-	        const isChangedMain = $changedItem && $changedItem.length && $changedItem.is($main);
+        const isChangedMain = $changedItem && $changedItem.length && $changedItem.is($main);
 
-	        const getVal = ($item) => normalizePercentInt($item.find('.pcg-teacher-profit').val());
+        const getVal = ($item) => normalizePercentInt($item.find('.pcg-teacher-profit').val());
 
-	        const $nonMain = $items.not($main);
-	        if (!$nonMain.length) {
-	            $main.find('.pcg-teacher-profit').val(100);
-	            $main.find('.pcg-teacher-share-badge').text('100%');
-	            return;
-	        }
+        const $nonMain = $items.not($main);
+        if (!$nonMain.length) {
+            $main.find('.pcg-teacher-profit').val(100);
+            $main.find('.pcg-teacher-share-badge').text('100%');
+            return;
+        }
 
-	        if (isChangedMain) {
-	            // Main author is always the remainder, so recompute it.
-	            let sumOthers = 0;
-	            $nonMain.each(function () {
-	                sumOthers += getVal($(this));
-	            });
-	            const mainVal = Math.max(0, 100 - sumOthers);
-	            $main.find('.pcg-teacher-profit').val(mainVal);
-	            $main.find('.pcg-teacher-share-badge').text(`${mainVal}%`);
-	            return;
-	        }
+        if (isChangedMain) {
+            // Main author is always the remainder, so recompute it.
+            let sumOthers = 0;
+            $nonMain.each(function () {
+                sumOthers += getVal($(this));
+            });
+            const mainVal = Math.max(0, 100 - sumOthers);
+            $main.find('.pcg-teacher-profit').val(mainVal);
+            $main.find('.pcg-teacher-share-badge').text(`${mainVal}%`);
+            return;
+        }
 
-	        // Clamp changed item so total never exceeds 100.
-	        if ($changedItem && $changedItem.length) {
-	            let otherOthersSum = 0;
-	            $nonMain.not($changedItem).each(function () {
-	                otherOthersSum += getVal($(this));
-	            });
-	            const maxForChanged = Math.max(0, 100 - otherOthersSum);
-	            let changedVal = getVal($changedItem);
-	            if (changedVal > maxForChanged) {
-	                changedVal = maxForChanged;
-	                $changedItem.find('.pcg-teacher-profit').val(changedVal);
-	                $changedItem.find('.pcg-teacher-share-badge').text(`${changedVal}%`);
-	            }
-	        }
+        // Clamp changed item so total never exceeds 100.
+        if ($changedItem && $changedItem.length) {
+            let otherOthersSum = 0;
+            $nonMain.not($changedItem).each(function () {
+                otherOthersSum += getVal($(this));
+            });
+            const maxForChanged = Math.max(0, 100 - otherOthersSum);
+            let changedVal = getVal($changedItem);
+            if (changedVal > maxForChanged) {
+                changedVal = maxForChanged;
+                $changedItem.find('.pcg-teacher-profit').val(changedVal);
+                $changedItem.find('.pcg-teacher-share-badge').text(`${changedVal}%`);
+            }
+        }
 
-	        let sumNonMain = 0;
-	        $nonMain.each(function () {
-	            sumNonMain += getVal($(this));
-	        });
+        let sumNonMain = 0;
+        $nonMain.each(function () {
+            sumNonMain += getVal($(this));
+        });
 
-	        const mainVal = Math.max(0, 100 - sumNonMain);
-	        $main.find('.pcg-teacher-profit').val(mainVal);
-	        $main.find('.pcg-teacher-share-badge').text(`${mainVal}%`);
-	    }
+        const mainVal = Math.max(0, 100 - sumNonMain);
+        $main.find('.pcg-teacher-profit').val(mainVal);
+        $main.find('.pcg-teacher-share-badge').text(`${mainVal}%`);
+    }
 
-	    function ensureTeacherForUser($list, user) {
-	        if (!$list || !$list.length) return;
-	        const userId = Number(user && user.id ? user.id : 0) || 0;
-	        if (!userId) return;
+    function ensureTeacherForUser($list, user) {
+        if (!$list || !$list.length) return;
+        const userId = Number(user && user.id ? user.id : 0) || 0;
+        if (!userId) return;
 
-	        const exists = $list.find(`.pcg-teacher-item[data-user-id="${userId}"]`).length > 0;
-	        if (exists) return;
+        const exists = $list.find(`.pcg-teacher-item[data-user-id="${userId}"]`).length > 0;
+        if (exists) return;
 
-	        const defaultPct = $list.data('splitLocked') ? 1 : 0;
-	        addTeacherItem({
-	            user_id: userId,
-	            user_name: String(user.name || ''),
-	            user_email: String(user.email || ''),
-	            avatar: String(user.avatar || ''),
-	            role_slug: t('mainAuthorRoleSlug'),
-	            profit_percentage: defaultPct,
-	            role_description: ''
-	        }, $list);
+        const defaultPct = $list.data('splitLocked') ? 1 : 0;
+        addTeacherItem({
+            user_id: userId,
+            user_name: String(user.name || ''),
+            user_email: String(user.email || ''),
+            avatar: String(user.avatar || ''),
+            role_slug: t('mainAuthorRoleSlug'),
+            profit_percentage: defaultPct,
+            role_description: ''
+        }, $list);
 
-	        if (!$list.data('splitLocked')) {
-	            rebalanceTeachersEqual($list);
-	        } else {
-	            rebalanceMainAuthorRemainder($list);
-	        }
-	    }
+        if (!$list.data('splitLocked')) {
+            rebalanceTeachersEqual($list);
+        } else {
+            rebalanceMainAuthorRemainder($list);
+        }
+    }
 
-	    function populateTeachersList($list, teachers, authorFallback) {
-	        resetTeachersList($list);
+    function populateTeachersList($list, teachers, authorFallback) {
+        resetTeachersList($list);
 
-	        const items = Array.isArray(teachers) ? teachers : [];
-	        if (items.length > 0) {
-	            $list.data('splitLocked', !isEqualSplit(items));
-	            items.forEach((teacher) => {
-	                addTeacherItem({
-	                    user_id: teacher.id,
-	                    user_name: teacher.name,
-	                    avatar: teacher.avatar || '',
-	                    role_slug: teacher.role_slug || '',
-	                    profit_percentage: teacher.profit_percentage || '0',
-	                    role_description: teacher.role_description || '',
-	                    is_main_author: teacher.is_main_author || false,
-	                    approval_status: teacher.approval_status || '',
-	                }, $list);
-	            });
-	            return;
-	        }
+        const items = Array.isArray(teachers) ? teachers : [];
+        if (items.length > 0) {
+            $list.data('splitLocked', !isEqualSplit(items));
+            items.forEach((teacher) => {
+                addTeacherItem({
+                    user_id: teacher.id,
+                    user_name: teacher.name,
+                    avatar: teacher.avatar || '',
+                    role_slug: teacher.role_slug || '',
+                    profit_percentage: teacher.profit_percentage || '0',
+                    role_description: teacher.role_description || '',
+                    is_main_author: teacher.is_main_author || false,
+                    approval_status: teacher.approval_status || '',
+                }, $list);
+            });
+            return;
+        }
 
-	        if (authorFallback && authorFallback.id) {
-	            addTeacherItem({
-	                user_id: authorFallback.id,
-	                user_name: authorFallback.name,
-	                avatar: authorFallback.avatar || '',
-	                is_main_author: true,
-	                role_slug: t('mainAuthorRoleSlug'),
-	                profit_percentage: 100
-	            }, $list);
-	        }
-	    }
+        if (authorFallback && authorFallback.id) {
+            addTeacherItem({
+                user_id: authorFallback.id,
+                user_name: authorFallback.name,
+                avatar: authorFallback.avatar || '',
+                is_main_author: true,
+                role_slug: t('mainAuthorRoleSlug'),
+                profit_percentage: 100
+            }, $list);
+        }
+    }
 
-	    function collectTeachers($list) {
-	        const teachers = [];
-	        if (!$list || !$list.length) return teachers;
+    function collectTeachers($list) {
+        const teachers = [];
+        if (!$list || !$list.length) return teachers;
 
-	        $list.find('.pcg-teacher-item').each(function () {
-	            const userId = $(this).attr('data-user-id');
-	            if (!userId) return;
-	            teachers.push({
-	                user_id: userId,
-	                role_slug: $(this).find('.pcg-teacher-role-slug').val(),
-	                profit_percentage: normalizePercentInt($(this).find('.pcg-teacher-profit').val()),
-	                role_description: $(this).find('.pcg-teacher-description').val()
-	            });
-	        });
+        $list.find('.pcg-teacher-item').each(function () {
+            const userId = $(this).attr('data-user-id');
+            if (!userId) return;
+            teachers.push({
+                user_id: userId,
+                role_slug: $(this).find('.pcg-teacher-role-slug').val(),
+                profit_percentage: normalizePercentInt($(this).find('.pcg-teacher-profit').val()),
+                role_description: $(this).find('.pcg-teacher-description').val()
+            });
+        });
 
-	        return teachers;
-	    }
+        return teachers;
+    }
 
-	    function addTeacherItem(data = {}, $targetList = null) {
-	        const $list = ($targetList && $targetList.length) ? $targetList : $('#pcg-teachers-list');
-	        $list.find('.pcg-empty-teachers-state').hide();
+    function addTeacherItem(data = {}, $targetList = null) {
+        const $list = ($targetList && $targetList.length) ? $targetList : $('#pcg-teachers-list');
+        $list.find('.pcg-empty-teachers-state').hide();
 
         const userId = data.user_id || '';
         const identity = normalizeTeacherIdentity(data.user_name || '', data.user_email || data.email || '');
@@ -1422,20 +1937,20 @@ jQuery(document).ready(function ($) {
         const avatarUrl = data.avatar || '';
         const roleSlug = data.role_slug || '';
         const roleDescription = data.role_description || '';
-	        const profitPercentage = String(normalizePercentInt(data.profit_percentage ?? 0));
-	        const isMainAuthor = data.is_main_author || false;
-	        const approvalStatus = String(data.approval_status || '');
+        const profitPercentage = String(normalizePercentInt(data.profit_percentage ?? 0));
+        const isMainAuthor = data.is_main_author || false;
+        const approvalStatus = String(data.approval_status || '');
         const hasSelectedUser = Boolean(userId && userName);
 
         const iconHtml = avatarUrl ? `<img src="${avatarUrl}" class="pcg-item-avatar">` : '<span class="dashicons dashicons-admin-users"></span>';
 
-	        const removeBtnHtml = isMainAuthor ? '' : `
+        const removeBtnHtml = isMainAuthor ? '' : `
 	            <button type="button" class="pcg-item-btn-remove pcg-teacher-remove" title="${t('delete')}">
 	                <span class="dashicons dashicons-trash"></span>
 	            </button>
 	        `;
 
-	        const itemHtml = `
+        const itemHtml = `
 		            <div class="pcg-content-item pcg-teacher-item" data-user-id="${userId}" ${isMainAuthor ? 'data-main="true"' : ''}>
 	                <div class="pcg-item-header">
 	                    <div class="pcg-item-expand" title="${t('viewDetails')}">
@@ -1485,32 +2000,32 @@ jQuery(document).ready(function ($) {
 	            </div>
 	        `;
 
-	        const $newItem = $(itemHtml);
-	        $list.append($newItem);
-	        if (!userName) $newItem.find('.pcg-teacher-name-input').focus();
-	    }
+        const $newItem = $(itemHtml);
+        $list.append($newItem);
+        if (!userName) $newItem.find('.pcg-teacher-name-input').focus();
+    }
 
-	    // Add Teacher PLUS button
-	    $(document).on('click', '.pcg-btn-add-teacher, #pcg-btn-add-teacher', function () {
-	        const targetSel = $(this).attr('data-target') || '#pcg-teachers-list';
-	        addTeacherItem({}, $(targetSel));
-	    });
+    // Add Teacher PLUS button
+    $(document).on('click', '.pcg-btn-add-teacher, #pcg-btn-add-teacher', function () {
+        const targetSel = $(this).attr('data-target') || '#pcg-teachers-list';
+        addTeacherItem({}, $(targetSel));
+    });
 
     // Remove Teacher
-	    $(document).on('click', '.pcg-teacher-remove', function () {
-	        const $item = $(this).closest('.pcg-teacher-item');
-	        const $list = $item.closest('.pcg-items-list');
-	        $item.fadeOut(300, function () {
-	            $(this).remove();
-	            if ($list.children('.pcg-teacher-item').length === 0) {
-	                $list.find('.pcg-empty-teachers-state').fadeIn(300);
-	            } else if (!$list.data('splitLocked')) {
-	                rebalanceTeachersEqual($list);
-	            } else {
-	                rebalanceMainAuthorRemainder($list);
-	            }
-	        });
-	    });
+    $(document).on('click', '.pcg-teacher-remove', function () {
+        const $item = $(this).closest('.pcg-teacher-item');
+        const $list = $item.closest('.pcg-items-list');
+        $item.fadeOut(300, function () {
+            $(this).remove();
+            if ($list.children('.pcg-teacher-item').length === 0) {
+                $list.find('.pcg-empty-teachers-state').fadeIn(300);
+            } else if (!$list.data('splitLocked')) {
+                rebalanceTeachersEqual($list);
+            } else {
+                rebalanceMainAuthorRemainder($list);
+            }
+        });
+    });
 
     // Teacher input search logic
     $(document).on('input', '.pcg-teacher-name-input', function () {
@@ -1546,25 +2061,25 @@ jQuery(document).ready(function ($) {
                                     </div>
                                 </div>
                             `);
-	                            $resItem.on('click', function () {
-	                                const selectedIdentity = normalizeTeacherIdentity(user.name || '', user.email || '');
-	                                $input.val('');
-	                                const $item = $input.closest('.pcg-teacher-item');
-	                                const $list = $item.closest('.pcg-items-list');
-	                                $item.attr('data-user-id', user.id);
-	                                $item.find('.pcg-item-icon').html(`<img src="${user.avatar}" class="pcg-item-avatar">`);
-	                                $item.find('.pcg-teacher-full-name').text(selectedIdentity.name);
-	                                $item.find('.pcg-teacher-email').text(selectedIdentity.email);
-	                                $item.find('.pcg-teacher-identity').removeClass('pcg-teacher-identity-hidden');
-	                                $input.hide();
-	                                $results.hide().empty();
+                            $resItem.on('click', function () {
+                                const selectedIdentity = normalizeTeacherIdentity(user.name || '', user.email || '');
+                                $input.val('');
+                                const $item = $input.closest('.pcg-teacher-item');
+                                const $list = $item.closest('.pcg-items-list');
+                                $item.attr('data-user-id', user.id);
+                                $item.find('.pcg-item-icon').html(`<img src="${user.avatar}" class="pcg-item-avatar">`);
+                                $item.find('.pcg-teacher-full-name').text(selectedIdentity.name);
+                                $item.find('.pcg-teacher-email').text(selectedIdentity.email);
+                                $item.find('.pcg-teacher-identity').removeClass('pcg-teacher-identity-hidden');
+                                $input.hide();
+                                $results.hide().empty();
 
-	                                if (!$list.data('splitLocked')) {
-	                                    rebalanceTeachersEqual($list);
-	                                } else {
-	                                    rebalanceMainAuthorRemainder($list, $item);
-	                                }
-	                            });
+                                if (!$list.data('splitLocked')) {
+                                    rebalanceTeachersEqual($list);
+                                } else {
+                                    rebalanceMainAuthorRemainder($list, $item);
+                                }
+                            });
                             $results.append($resItem);
                         });
                     } else {
@@ -1582,14 +2097,14 @@ jQuery(document).ready(function ($) {
         }
     });
 
-	    $(document).on('input change', '.pcg-teacher-profit', function () {
-	        const intValue = normalizePercentInt($(this).val());
-	        $(this).val(intValue);
-	        const $list = $(this).closest('.pcg-items-list');
-	        $list.data('splitLocked', true);
-	        $(this).closest('.pcg-teacher-item').find('.pcg-teacher-share-badge').text(`${intValue}%`);
-	        rebalanceMainAuthorRemainder($list, $(this).closest('.pcg-teacher-item'));
-	    });
+    $(document).on('input change', '.pcg-teacher-profit', function () {
+        const intValue = normalizePercentInt($(this).val());
+        $(this).val(intValue);
+        const $list = $(this).closest('.pcg-items-list');
+        $list.data('splitLocked', true);
+        $(this).closest('.pcg-teacher-item').find('.pcg-teacher-share-badge').text(`${intValue}%`);
+        rebalanceMainAuthorRemainder($list, $(this).closest('.pcg-teacher-item'));
+    });
 
     function initSortable() {
         if ($.fn.sortable) {
@@ -1626,12 +2141,12 @@ jQuery(document).ready(function ($) {
         $('#pcg-add-dropdown').fadeOut(200);
     });
 
-	    function addContentItem(type, data = {}) {
-	        $('.pcg-empty-lessons-state').hide();
+    function addContentItem(type, data = {}) {
+        $('.pcg-empty-lessons-state').hide();
 
-	        const iconClass = type === 'section' ? 'dashicons-menu' : 'dashicons-media-text';
-	        const typeLabel = type === 'section' ? t('newSection') : t('newLesson');
-	        const itemClass = type === 'section' ? 'item-section' : 'item-lesson';
+        const iconClass = type === 'section' ? 'dashicons-menu' : 'dashicons-media-text';
+        const typeLabel = type === 'section' ? t('newSection') : t('newLesson');
+        const itemClass = type === 'section' ? 'item-section' : 'item-lesson';
 
         const title = typeof data === 'string' ? data : (data.title || '');
         const videoUrl = data.video_url || '';
@@ -1640,13 +2155,13 @@ jQuery(document).ready(function ($) {
         let expandHtml = '';
         let detailsHtml = '';
 
-	        if (type === 'lesson') {
-	            expandHtml = `
+        if (type === 'lesson') {
+            expandHtml = `
 	                <div class="pcg-item-expand" title="${t('expandDetails')}">
 	                    <span class="dashicons dashicons-arrow-right-alt2"></span>
 	                </div>
 	            `;
-	            detailsHtml = `
+            detailsHtml = `
 	                <div class="pcg-item-details" style="display:none;">
 	                    <div class="pcg-detail-row">
 	                        <div class="pcg-detail-field">
@@ -1663,7 +2178,7 @@ jQuery(document).ready(function ($) {
 	                    </div>
 	                </div>
 	            `;
-	        }
+        }
 
         const itemHtml = `
             <div class="pcg-content-item ${itemClass}" data-type="${type}">
@@ -1715,9 +2230,7 @@ jQuery(document).ready(function ($) {
         });
     });
 
-    // Media Uploader: Thumbnail (Course Cover)
-    $('#pcg-upload-thumbnail').on('click', function (e) {
-        e.preventDefault();
+    function openThumbnailUploader() {
         PL_Cropper.open({
             title: t('courseCover'),
             width: 360,
@@ -1726,11 +2239,9 @@ jQuery(document).ready(function ($) {
                 saveCroppedImage(dataUrl, 'thumbnail');
             }
         });
-    });
+    }
 
-    // Media Uploader: Cover Photo (Background)
-    $('#pcg-select-background').on('click', function (e) {
-        e.preventDefault();
+    function openCoverUploader() {
         PL_Cropper.open({
             title: t('coverPhoto'),
             width: 1024,
@@ -1739,6 +2250,22 @@ jQuery(document).ready(function ($) {
                 saveCroppedImage(dataUrl, 'cover');
             }
         });
+    }
+
+    // Media Uploader: click empty placeholders
+    $(document).on('click', '#pcg-mode-curso .pcg-media-card__empty', function (e) {
+        e.preventDefault();
+        const type = $(this).attr('data-upload') || '';
+        if (type === 'thumbnail') openThumbnailUploader();
+        if (type === 'cover') openCoverUploader();
+    });
+
+    // Keyboard support for empty placeholders (Enter / Space)
+    $(document).on('keydown', '#pcg-mode-curso .pcg-media-card__empty[role="button"]', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            $(this).trigger('click');
+        }
     });
 
     function saveCroppedImage(dataUrl, type) {
@@ -1758,12 +2285,10 @@ jQuery(document).ready(function ($) {
                         thumbnailId = attachment.id;
                         $('#pcg-thumbnail-preview img').attr('src', attachment.url);
                         $('#pcg-thumbnail-preview').fadeIn();
-                        $('#pcg-upload-thumbnail').hide();
                     } else {
                         coverPhotoId = attachment.id;
                         $('#pcg-cover-preview img').attr('src', attachment.url);
                         $('#pcg-cover-preview').fadeIn();
-                        $('#pcg-select-background').hide();
                     }
                 } else {
                     alert(t('errorPrefix') + response.data.message);
@@ -1778,13 +2303,11 @@ jQuery(document).ready(function ($) {
     $('#pcg-remove-thumbnail').on('click', function () {
         thumbnailId = 0;
         $('#pcg-thumbnail-preview').fadeOut();
-        $('#pcg-upload-thumbnail').fadeIn();
     });
 
     $('#pcg-remove-cover').on('click', function () {
         coverPhotoId = 0;
         $('#pcg-cover-preview').fadeOut();
-        $('#pcg-select-background').fadeIn();
     });
 
     // Handle Enter key on inputs to "save" (blur)
@@ -1801,20 +2324,20 @@ jQuery(document).ready(function ($) {
 
         const $btn = $(this);
 
-	        const courseData = {
-	            id: currentCourseId,
-	            title: $('#pcg-course-title').val(),
-	            description: $('#pcg-course-description').val(),
-	            excerpt: $('#pcg-course-excerpt').val(),
-	            price: $('#pcg-course-price').val(),
-	            thumbnail_id: thumbnailId,
-	            cover_photo_id: coverPhotoId,
-	            progression: $('#pcg-course-progression').is(':checked') ? 'on' : '',
-	            teachers: [],
-	            content: []
-	        };
+        const courseData = {
+            id: currentCourseId,
+            title: $('#pcg-course-title').val(),
+            description: $('#pcg-course-description').val(),
+            excerpt: $('#pcg-course-excerpt').val(),
+            price: $('#pcg-course-price').val(),
+            thumbnail_id: thumbnailId,
+            cover_photo_id: coverPhotoId,
+            progression: $('#pcg-course-progression').is(':checked') ? 'on' : '',
+            teachers: [],
+            content: []
+        };
 
-	        courseData.teachers = collectTeachers($('#pcg-teachers-list'));
+        courseData.teachers = collectTeachers($('#pcg-teachers-list'));
 
         $('#pcg-lessons-list .pcg-content-item').each(function () {
             courseData.content.push({
@@ -1890,6 +2413,7 @@ jQuery(document).ready(function ($) {
     function getListContext() {
         if ($('#specialization-grid').length > 0) return 'specializations';
         if ($('#programas-grid').length > 0) return 'programas';
+        if ($('#pcg-my-escritos-grid').length > 0) return 'escritos';
         return 'courses';
     }
 
@@ -1897,6 +2421,7 @@ jQuery(document).ready(function ($) {
         const context = getListContext();
         if (context === 'specializations') return $('#specialization-grid');
         if (context === 'programas') return $('#programas-grid');
+        if (context === 'escritos') return $('#pcg-my-escritos-grid');
         return $('#pcg-my-courses-grid');
     }
 
@@ -1904,6 +2429,7 @@ jQuery(document).ready(function ($) {
         const context = getListContext();
         if (context === 'specializations') return loadMySpecializations();
         if (context === 'programas') return loadMyProgramas();
+        if (context === 'escritos') return loadMyEscritos();
         return loadMyCourses();
     }
 
@@ -1937,6 +2463,60 @@ jQuery(document).ready(function ($) {
                     renderProgramas(response.data);
                 }
             }
+        });
+    }
+
+    function loadMyEscritos() {
+        $.ajax({
+            url: pcgCreatorData.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'pcg_get_my_escritos',
+                nonce: pcgCreatorData.nonce
+            },
+            success: function (response) {
+                if (response.success) {
+                    renderEscritos(response.data);
+                }
+            }
+        });
+    }
+
+    function renderEscritos(escritos) {
+        const $grid = getActiveGrid();
+        $grid.empty();
+
+        if (escritos.length === 0) {
+            $grid.append(`<p class="pcg-empty-msg">${t('noEscritosYet')}</p>`);
+            return;
+        }
+
+        escritos.forEach(escrito => {
+            const thumb = escrito.thumbnail_url || '';
+            const thumbClass = thumb ? '' : ' pcg-course-thumb--no-image';
+            const permalinkHtml = escrito.permalink ? `onclick="window.open('${escrito.permalink}', '_blank');"` : '';
+            const cardHtml = `
+                <div class="pcg-course-card" data-id="${escrito.id}">
+                    <div class="pcg-course-thumb${thumbClass}" ${permalinkHtml} style="cursor: pointer;">
+                        ${thumb ? `<img src="${thumb}" alt="${escrito.title}">` : ''}
+                    </div>
+                    <div class="pcg-course-content">
+                        <h4 class="pcg-course-title" ${permalinkHtml} style="cursor: pointer;">${escrito.title}</h4>
+                        <div class="pcg-course-meta">
+                            <span class="pcg-escrito-date">${escrito.date}</span>
+                            <div class="pcg-course-actions">
+                                <button class="pcg-btn-icon pcg-btn-edit-escrito" title="${t('edit')}">
+                                    <span class="dashicons dashicons-edit"></span>
+                                </button>
+                                <button class="pcg-btn-icon pcg-btn-delete-escrito" title="${t('delete')}">
+                                    <span class="dashicons dashicons-trash"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            $grid.append(cardHtml);
         });
     }
 
@@ -1980,7 +2560,7 @@ jQuery(document).ready(function ($) {
         });
     }
 
-	    function renderSpecializations(groups) {
+    function renderSpecializations(groups) {
         const $grid = getActiveGrid();
         $grid.empty();
 
@@ -2007,14 +2587,14 @@ jQuery(document).ready(function ($) {
             return;
         }
 
-	        groups.forEach(group => {
-	            const isPending = Boolean(group.is_pending_approval);
-                const approval = (pendingApprovalsIndex.group && pendingApprovalsIndex.group[Number(group.id)]) ? pendingApprovalsIndex.group[Number(group.id)] : null;
-	            const canEdit = group.can_edit !== undefined ? Boolean(group.can_edit) : true;
-	            const countLabel = (group.course_count === 1) ? `1 ${t('courseSingular')}` : `${group.course_count} ${t('coursesPlural')}`;
-	            const thumb = group.thumbnail_url || '';
-	            const thumbClass = thumb ? '' : ' pcg-course-thumb--no-image';
-	            const permalink = group.permalink || '';
+        groups.forEach(group => {
+            const isPending = Boolean(group.is_pending_approval);
+            const approval = (pendingApprovalsIndex.group && pendingApprovalsIndex.group[Number(group.id)]) ? pendingApprovalsIndex.group[Number(group.id)] : null;
+            const canEdit = group.can_edit !== undefined ? Boolean(group.can_edit) : true;
+            const countLabel = (group.course_count === 1) ? `1 ${t('courseSingular')}` : `${group.course_count} ${t('coursesPlural')}`;
+            const thumb = group.thumbnail_url || '';
+            const thumbClass = thumb ? '' : ' pcg-course-thumb--no-image';
+            const permalink = group.permalink || '';
             const canDelete = Boolean(group.can_delete);
             const deleteBtnHtml = canDelete ? `
                 <button class="pcg-btn-icon pcg-btn-delete-specialization" title="${t('delete')}" type="button">
@@ -2036,13 +2616,13 @@ jQuery(document).ready(function ($) {
                 </div>
             ` : '';
 
-	            const editBtnHtml = canEdit ? `
+            const editBtnHtml = canEdit ? `
 	                    <button class="pcg-btn-icon pcg-btn-edit-specialization" title="${t('edit')}" type="button">
 	                        <span class="dashicons dashicons-edit"></span>
 	                    </button>
 	            ` : '';
 
-	            const cardHtml = `
+            const cardHtml = `
 	                <div class="pcg-specialization-card${isPending ? ' pcg-card--pending' : ''}" data-id="${group.id}" data-permalink="${permalink}" data-pending="${isPending ? 1 : 0}">
 	                    <div class="pcg-specialization-thumb pcg-course-thumb${thumbClass}">
 	                        ${thumb ? `<img src="${thumb}" alt="${escapeHtml(group.title)}">` : ''}
@@ -2070,12 +2650,12 @@ jQuery(document).ready(function ($) {
         });
     }
 
-	    function renderProgramas(programas) {
+    function renderProgramas(programas) {
         const $grid = getActiveGrid();
         $grid.empty();
 
-	        if (!programas || programas.length === 0) {
-	            $grid.append(`
+        if (!programas || programas.length === 0) {
+            $grid.append(`
 	                <div class="pcg-course-card pcg-course-card--empty">
 	                    <div class="pcg-course-thumb">
 	                        <div class="pcg-empty-specialization-message">${t('createYourProgram')}</div>
@@ -2088,28 +2668,28 @@ jQuery(document).ready(function ($) {
             return;
         }
 
-	        programas.forEach(programa => {
-	            const isPending = Boolean(programa.is_pending_approval);
-                const approval = (pendingApprovalsIndex.program && pendingApprovalsIndex.program[Number(programa.id)]) ? pendingApprovalsIndex.program[Number(programa.id)] : null;
-	            const canEdit = programa.can_edit !== undefined ? Boolean(programa.can_edit) : true;
-	            const countLabel = (programa.group_count === 1) ? `1 ${t('groupSingular')}` : `${programa.group_count} ${t('groupsPlural')}`;
-	            const thumb = programa.thumbnail_url || '';
-	            const thumbClass = thumb ? '' : ' pcg-course-thumb--no-image';
-	            const permalink = programa.permalink || '';
-	            const price = programa.price ? programa.price : '';
-	            const canDelete = Boolean(programa.can_delete);
-	            const deleteBtnHtml = canDelete ? `
+        programas.forEach(programa => {
+            const isPending = Boolean(programa.is_pending_approval);
+            const approval = (pendingApprovalsIndex.program && pendingApprovalsIndex.program[Number(programa.id)]) ? pendingApprovalsIndex.program[Number(programa.id)] : null;
+            const canEdit = programa.can_edit !== undefined ? Boolean(programa.can_edit) : true;
+            const countLabel = (programa.group_count === 1) ? `1 ${t('groupSingular')}` : `${programa.group_count} ${t('groupsPlural')}`;
+            const thumb = programa.thumbnail_url || '';
+            const thumbClass = thumb ? '' : ' pcg-course-thumb--no-image';
+            const permalink = programa.permalink || '';
+            const price = programa.price ? programa.price : '';
+            const canDelete = Boolean(programa.can_delete);
+            const deleteBtnHtml = canDelete ? `
 	                <button class="pcg-btn-icon pcg-btn-delete-programa" title="${t('delete')}" type="button">
 	                    <span class="dashicons dashicons-trash"></span>
 	                </button>
 	            ` : '';
-	            const editBtnHtml = canEdit ? `
+            const editBtnHtml = canEdit ? `
 		                                <button class="pcg-btn-icon pcg-btn-edit-programa" title="${t('edit')}" type="button">
 		                                    <span class="dashicons dashicons-edit"></span>
 		                                </button>
 	            ` : '';
 
-                const approvalActionsHtml = approval ? `
+            const approvalActionsHtml = approval ? `
                     <div class="pcg-card-approval-actions" data-snapshot-id="${approval.snapshot_id}">
                         <span class="pcg-card-approval-pct">${formatPercent(approval.profit_percentage)}%</span>
                         <button type="button" class="pcg-btn-outline pcg-btn-outline--small pcg-card-approval-approve">${t('approve')}</button>
@@ -2117,7 +2697,7 @@ jQuery(document).ready(function ($) {
                     </div>
                 ` : '';
 
-	            const cardHtml = `
+            const cardHtml = `
 	                <div class="pcg-programa-card pcg-course-card${isPending ? ' pcg-card--pending' : ''}" data-id="${programa.id}" data-permalink="${permalink}" data-pending="${isPending ? 1 : 0}">
 	                    <div class="pcg-course-thumb${thumbClass}">
 	                        ${thumb ? `<img src="${thumb}" alt="${programa.title}">` : ''}
@@ -2144,36 +2724,36 @@ jQuery(document).ready(function ($) {
     }
 
     // Programa card navigation (open permalink when clicking the card)
-	    $(document).on('click', '.pcg-programa-card', function (e) {
+    $(document).on('click', '.pcg-programa-card', function (e) {
         if ($(e.target).closest('button, a, input, select, textarea').length) {
             return;
         }
 
-	        const isPending = Number($(this).attr('data-pending') || 0) === 1;
-	        if (isPending) {
-	            alert(t('pendingApprovalNotice'));
-	            return;
-	        }
+        const isPending = Number($(this).attr('data-pending') || 0) === 1;
+        if (isPending) {
+            alert(t('pendingApprovalNotice'));
+            return;
+        }
 
-	        const permalink = $(this).attr('data-permalink') || '';
-	        if (permalink) window.location.href = permalink;
-	    });
+        const permalink = $(this).attr('data-permalink') || '';
+        if (permalink) window.location.href = permalink;
+    });
 
     // Specialization card navigation (open permalink when clicking the card)
-	    $(document).on('click', '.pcg-specialization-card', function (e) {
+    $(document).on('click', '.pcg-specialization-card', function (e) {
         if ($(e.target).closest('button, a, input, select, textarea').length) {
             return;
         }
 
-	        const isPending = Number($(this).attr('data-pending') || 0) === 1;
-	        if (isPending) {
-	            alert(t('pendingApprovalNotice'));
-	            return;
-	        }
+        const isPending = Number($(this).attr('data-pending') || 0) === 1;
+        if (isPending) {
+            alert(t('pendingApprovalNotice'));
+            return;
+        }
 
-	        const permalink = $(this).attr('data-permalink') || '';
-	        if (permalink) window.location.href = permalink;
-	    });
+        const permalink = $(this).attr('data-permalink') || '';
+        if (permalink) window.location.href = permalink;
+    });
 
     function showEditLoadingState() {
         resetForm();
@@ -2181,14 +2761,14 @@ jQuery(document).ready(function ($) {
         $('#pcg-course-form-section').show();
         $('.pcg-mode-content').hide();
 
-	        if (!$('#pcg-edit-loading').length) {
-	            $('#pcg-course-form-section').append(`
+        if (!$('#pcg-edit-loading').length) {
+            $('#pcg-course-form-section').append(`
 	                <div id="pcg-edit-loading" class="pcg-loading-placeholder">
 	                    <span class="dashicons dashicons-update spin"></span>
 	                    <p>${t('loadingCourse')}</p>
 	                </div>
 	            `);
-	        }
+        }
 
         $('#pcg-edit-loading').show();
     }
@@ -2230,24 +2810,23 @@ jQuery(document).ready(function ($) {
                     updateWordCount('#pcg-course-description', '#pcg-desc-word-count', 700);
                     updateWordCount('#pcg-course-excerpt', '#pcg-excerpt-word-count', 50);
                     $('#pcg-course-price').val(data.price);
+                    $('#pcg-course-price').trigger('input');
+                    syncLessonsPriceFromMain();
+                    syncEvalPriceFromMain();
                     thumbnailId = data.thumbnail_id;
                     if (data.thumbnail_url) {
                         $('#pcg-thumbnail-preview img').attr('src', data.thumbnail_url);
                         $('#pcg-thumbnail-preview').show();
-                        $('#pcg-upload-thumbnail').hide();
                     } else {
                         $('#pcg-thumbnail-preview').hide();
-                        $('#pcg-upload-thumbnail').show();
                     }
 
                     coverPhotoId = data.cover_photo_id;
                     if (data.cover_photo_url) {
                         $('#pcg-cover-preview img').attr('src', data.cover_photo_url);
                         $('#pcg-cover-preview').show();
-                        $('#pcg-select-background').hide();
                     } else {
                         $('#pcg-cover-preview').hide();
-                        $('#pcg-select-background').show();
                     }
 
                     if (data.permalink) {
@@ -2271,12 +2850,12 @@ jQuery(document).ready(function ($) {
                         $('.pcg-empty-lessons-state').show();
                     }
 
-	                    // Populate Teachers
-	                    populateTeachersList($('#pcg-teachers-list'), data.teachers || [], {
-	                        id: Number(data.author_id || 0),
-	                        name: data.author_name || '',
-	                        avatar: data.author_avatar || ''
-	                    });
+                    // Populate Teachers
+                    populateTeachersList($('#pcg-teachers-list'), data.teachers || [], {
+                        id: Number(data.author_id || 0),
+                        name: data.author_name || '',
+                        avatar: data.author_avatar || ''
+                    });
 
                     // Reset Tabs to "CURSO"
                     $('.pcg-segment').removeClass('active');
@@ -2286,19 +2865,19 @@ jQuery(document).ready(function ($) {
 
                     hideEditLoadingState();
                 } else {
-	                    $('#pcg-course-form-section').hide();
-	                    $('#pcg-my-courses-section').show();
-	                    alert(t('errorGettingCourseData') + (response.data ? response.data.message : t('unknownError')));
-	                }
-	            },
+                    $('#pcg-course-form-section').hide();
+                    $('#pcg-my-courses-section').show();
+                    alert(t('errorGettingCourseData') + (response.data ? response.data.message : t('unknownError')));
+                }
+            },
             error: function (jqXHR, textStatus) {
                 if (textStatus === 'abort') {
                     return;
-	                }
-	                $('#pcg-course-form-section').hide();
-	                $('#pcg-my-courses-section').show();
-	                alert(t('errorLoadingCourseGeneric'));
-	            },
+                }
+                $('#pcg-course-form-section').hide();
+                $('#pcg-my-courses-section').show();
+                alert(t('errorLoadingCourseGeneric'));
+            },
             complete: function () {
                 $editBtn.prop('disabled', false);
             }
@@ -2307,10 +2886,10 @@ jQuery(document).ready(function ($) {
 
     // Delete Course
     $(document).on('click', '.pcg-btn-delete-course', function () {
-	        const $card = $(this).closest('.pcg-course-card');
-	        const courseId = $card.data('id');
-	        if (!confirm(t('confirmDeleteCourse'))) return;
-	        $.ajax({
+        const $card = $(this).closest('.pcg-course-card');
+        const courseId = $card.data('id');
+        if (!confirm(t('confirmDeleteCourse'))) return;
+        $.ajax({
             url: pcgCreatorData.ajaxUrl,
             type: 'POST',
             data: {

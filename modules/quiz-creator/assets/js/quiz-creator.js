@@ -97,6 +97,23 @@
 
             // Set first path-specific step validation if needed
             validateStep3();
+
+            // UX: treat cards like buttons (advance to questions step when on slide 2)
+            const activeSlide = Number($('.pqc-wizard-slide.active').data('slide') || 0);
+            if (activeSlide === 2) {
+                const $next = $('.pqc-wizard-next[data-next="3"]').first();
+                if ($next.length) {
+                    $next.trigger('click');
+                }
+            }
+        });
+
+        // Keyboard support
+        $(document).on('keydown', '.pqc-method-card', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                $(this).trigger('click');
+            }
         });
     }
 
@@ -150,6 +167,8 @@
     }
 
     function initManualModeControls() {
+        ensureManualAddButton();
+
         $(document).on('click', '.pqc-manual-next-btn', function () {
             moveManualSlide(1);
         });
@@ -158,11 +177,117 @@
             moveManualSlide(-1);
         });
 
+        $(document).on('click', '.pqc-manual-add-btn', function () {
+            const $slidesWrap = $('#pqc-manual-slides-wrap');
+            if (!$slidesWrap.length) return;
+            const currentIndex = Number($('.pqc-manual-slide.active').data('manual-index') || 0);
+            addManualSlideAfter(currentIndex);
+        });
+
         $(document).on('change', '.pqc-manual-correct-radio', function () {
             $(this).closest('.pqc-manual-answers-list').find('.pqc-manual-answer-row').removeClass('correct');
             if ($(this).is(':checked')) {
                 $(this).closest('.pqc-manual-answer-row').addClass('correct');
             }
+        });
+    }
+
+    function ensureManualAddButton() {
+        if ($('.pqc-manual-add-btn').length) return;
+
+        const $nav = $('.pqc-manual-nav').first();
+        if (!$nav.length) return;
+
+        const btnHtml = `
+            <button type="button" class="pqc-manual-add-btn" title="Add question">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 5v14"></path>
+                    <path d="M5 12h14"></path>
+                </svg>
+                <span>Add question</span>
+            </button>
+        `;
+
+        // Ensure layout wrapper exists (older cached templates)
+        if (!$nav.closest('.pqc-manual-actions').length) {
+            $nav.wrap('<div class="pqc-manual-actions"></div>');
+        }
+        $nav.closest('.pqc-manual-actions').prepend(btnHtml);
+    }
+
+    function addManualSlideAfter(afterIndex) {
+        const $slidesWrap = $('#pqc-manual-slides-wrap');
+        if (!$slidesWrap.length) return;
+
+        const answersPerQuestion = parseInt($('#pqc-answers-per-question').val(), 10) || 4;
+        const $slides = $slidesWrap.find('.pqc-manual-slide');
+        const total = $slides.length;
+
+        let insertPos = Number(afterIndex) + 1;
+        if (isNaN(insertPos) || insertPos < 0) insertPos = 0;
+        if (insertPos > total) insertPos = total;
+
+        const newIndex = insertPos;
+        const html = buildManualSlideHtml(newIndex, answersPerQuestion);
+
+        if (insertPos >= total) {
+            $slidesWrap.append(html);
+        } else {
+            $slides.eq(insertPos).before(html);
+        }
+
+        renumberManualSlides();
+
+        $slidesWrap.find('.pqc-manual-slide').removeClass('active');
+        $slidesWrap.find('.pqc-manual-slide').eq(newIndex).addClass('active');
+        updateManualCounter(newIndex, $slidesWrap.find('.pqc-manual-slide').length);
+        validateStep3();
+    }
+
+    function buildManualSlideHtml(index, answersPerQuestion) {
+        const i = Number(index) || 0;
+        const n = Number(answersPerQuestion) || 4;
+
+        let html = `<div class="pqc-slide pqc-manual-slide" data-manual-index="${i}">`;
+        html += `<div class="pqc-manual-field">
+                    <label>Question ${i + 1} Title</label>
+                    <input type="text" class="pqc-manual-q-title" placeholder="Internal name (e.g. Question 1)" value="" required />
+                </div>
+                <div class="pqc-manual-field">
+                    <label>Question Text</label>
+                    <input type="text" class="pqc-manual-q-text" placeholder="Write the actual question here..." required />
+                </div>`;
+
+        html += `<div class="pqc-manual-field">
+                    <label>Answers (Check the correct one)</label>
+                    <div class="pqc-manual-answers-list">`;
+
+        for (let j = 0; j < n; j++) {
+            html += `<div class="pqc-manual-answer-row ${j === 0 ? 'correct' : ''}">
+                        <input type="radio" name="manual_correct_${i}" class="pqc-manual-correct-radio" ${j === 0 ? 'checked' : ''} />
+                        <input type="text" class="pqc-manual-answer-text" placeholder="Answer ${j + 1}" required />
+                    </div>`;
+        }
+
+        html += `</div></div></div>`;
+        return html;
+    }
+
+    function renumberManualSlides() {
+        const $slides = $('.pqc-manual-slide');
+        $slides.each(function (idx) {
+            const $slide = $(this);
+            $slide.attr('data-manual-index', idx);
+
+            const $fields = $slide.find('.pqc-manual-field');
+            const $titleLabel = $fields.eq(0).find('label').first();
+            if ($titleLabel.length) {
+                $titleLabel.text(`Question ${idx + 1} Title`);
+            }
+
+            // Keep radio group unique per question by index
+            $slide.find('.pqc-manual-correct-radio').attr('name', `manual_correct_${idx}`);
         });
     }
 
@@ -196,6 +321,24 @@
             $('.pqc-editor-container').data('current-slide', 0);
             updateNavState(0, $('.pqc-slide').length);
         }
+    }
+
+    function goToEditorSlide(index) {
+        const $container = $('.pqc-editor-container');
+        const $viewport = $('.pqc-slides-container');
+        const $slides = $('.pqc-slide');
+        const totalSlides = $slides.length;
+        if (!$container.length || !$viewport.length || !totalSlides) return;
+
+        let targetIndex = parseInt(index, 10);
+        if (isNaN(targetIndex)) targetIndex = 0;
+        if (targetIndex < 0) targetIndex = 0;
+        if (targetIndex > totalSlides - 1) targetIndex = totalSlides - 1;
+
+        $container.data('current-slide', targetIndex);
+        const offset = -(targetIndex * 100);
+        $viewport.css('transform', `translateX(${offset}%)`);
+        updateNavState(targetIndex, totalSlides);
     }
 
     // Global Slider Navigation
@@ -242,6 +385,42 @@
 
     $(document).on('click', '.pqc-save-quiz-btn', function () {
         saveQuizChanges();
+    });
+
+    $(document).on('click', '.pqc-add-question-btn', function () {
+        const $container = $('.pqc-editor-container');
+        const quizId = $container.data('quiz-id');
+        if (!quizId) return;
+
+        const currentSlide = $container.data('current-slide') || 0;
+        const goToIndexAfterAdd = currentSlide + 1; // inserted right after current
+
+        const $btn = $(this);
+        if ($btn.prop('disabled')) return;
+        $btn.prop('disabled', true).addClass('is-loading');
+
+        $.ajax({
+            url: pqcData.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'pqc_add_question',
+                nonce: pqcData.nonce,
+                quiz_id: quizId,
+                insert_after: currentSlide
+            },
+            success: function (response) {
+                if (response && response.success) {
+                    refreshQuizEditor(quizId, goToIndexAfterAdd);
+                } else {
+                    alert((response && response.data) ? response.data : 'Could not add question.');
+                    $btn.prop('disabled', false).removeClass('is-loading');
+                }
+            },
+            error: function () {
+                alert('Network error occurred.');
+                $btn.prop('disabled', false).removeClass('is-loading');
+            }
+        });
     });
 
     $(document).on('click', '.pqc-delete-quiz-btn', function () {
@@ -317,6 +496,38 @@
             },
             complete: function () {
                 $container.css('opacity', '1');
+            }
+        });
+    }
+
+    function refreshQuizEditor(quizId, goToIndex = 0) {
+        const $moduleContainer = $('#pcg-quiz-creator-container');
+        const $editorContainer = $('.pqc-editor-container');
+        const $target = $moduleContainer.length ? $moduleContainer : $editorContainer;
+        if (!$target.length) return;
+
+        $target.css('opacity', '0.5');
+
+        $.ajax({
+            url: pqcData.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'pqc_get_quiz_editor',
+                quiz_id: quizId
+            },
+            success: function (response) {
+                if (response && response.success) {
+                    if ($moduleContainer.length) {
+                        $target.html(response.data.html);
+                    } else {
+                        $target.replaceWith(response.data.html);
+                    }
+                    initQuizEditor();
+                    goToEditorSlide(goToIndex);
+                }
+            },
+            complete: function () {
+                $target.css('opacity', '1');
             }
         });
     }

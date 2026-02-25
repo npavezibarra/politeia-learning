@@ -66,7 +66,7 @@ if (!defined('ABSPATH')) {
                 </div>
 
                 <div class="pqc-method-choice-grid">
-                    <div class="pqc-method-card active" data-method="llm">
+                    <div class="pqc-method-card active" data-method="llm" role="button" tabindex="0">
                         <div class="pqc-method-icon">
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
@@ -80,7 +80,7 @@ if (!defined('ABSPATH')) {
                         </p>
                     </div>
 
-                    <div class="pqc-method-card" data-method="manual">
+                    <div class="pqc-method-card" data-method="manual" role="button" tabindex="0">
                         <div class="pqc-method-icon">
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
@@ -169,28 +169,38 @@ if (!defined('ABSPATH')) {
 
                 <!-- MANUAL PATH VIEW -->
                 <div id="pqc-path-manual" class="pqc-method-path" style="display: none;">
-                    <div class="pqc-section-header pqc-manual-header-row">
-                        <div class="pqc-header-title-nav">
-                            <h3><?php _e('Step 3: Write Questions', 'politeia-quiz-creator'); ?></h3>
-                            <div class="pqc-manual-nav">
-                                <button type="button" class="pqc-manual-prev-btn pqc-nav-btn" disabled>
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2.5">
-                                        <path d="M15 18l-6-6 6-6" />
-                                    </svg>
-                                </button>
-                                <span class="pqc-manual-counter">1 / 10</span>
-                                <button type="button" class="pqc-manual-next-btn pqc-nav-btn">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2.5">
-                                        <path d="M9 18l6-6-6-6" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                        <p><?php _e('Complete all slides with your questions and answers.', 'politeia-quiz-creator'); ?>
-                        </p>
-                    </div>
+	                    <div class="pqc-section-header pqc-manual-header-row">
+	                        <div class="pqc-header-title-nav">
+	                            <h3><?php _e('Step 3: Write Questions', 'politeia-quiz-creator'); ?></h3>
+	                            <div class="pqc-manual-actions">
+	                                <button type="button" class="pqc-manual-add-btn" title="<?php echo esc_attr__('Add question', 'politeia-quiz-creator'); ?>">
+	                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+	                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+	                                        <path d="M12 5v14" />
+	                                        <path d="M5 12h14" />
+	                                    </svg>
+	                                    <span><?php _e('Add question', 'politeia-quiz-creator'); ?></span>
+	                                </button>
+	                                <div class="pqc-manual-nav">
+	                                    <button type="button" class="pqc-manual-prev-btn pqc-nav-btn" disabled>
+	                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+	                                            stroke-width="2.5">
+	                                            <path d="M15 18l-6-6 6-6" />
+	                                        </svg>
+	                                    </button>
+	                                    <span class="pqc-manual-counter">1 / 10</span>
+	                                    <button type="button" class="pqc-manual-next-btn pqc-nav-btn">
+	                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+	                                            stroke-width="2.5">
+	                                            <path d="M9 18l6-6-6-6" />
+	                                        </svg>
+	                                    </button>
+	                                </div>
+	                            </div>
+	                        </div>
+	                        <p><?php _e('Complete all slides with your questions and answers.', 'politeia-quiz-creator'); ?>
+	                        </p>
+	                    </div>
 
                     <div class="pqc-manual-questions-container">
                         <!-- Questions will be dynamically injected here in manual mode -->

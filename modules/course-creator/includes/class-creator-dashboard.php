@@ -132,8 +132,9 @@ class PL_CC_Creator_Dashboard
             wp_enqueue_style('cropperjs', plugins_url('buddyboss-platform/bp-core/css/vendor/cropper.min.css'), [], '1.5.12');
             wp_enqueue_script('cropperjs', plugins_url('buddyboss-platform/bp-core/js/vendor/cropper.min.js'), ['jquery'], '1.5.12', true);
 
-            wp_enqueue_style('pcg-creator-css', PL_CC_URL . 'assets/css/creator-dashboard.css', [], '1.0.0');
+            wp_enqueue_style('pcg-creator-css', PL_CC_URL . 'assets/css/creator-dashboard.css', [], '1.0.6');
             wp_enqueue_style('pcg-cropper-css', PL_CC_URL . 'assets/css/pcg-cropper.css', ['cropperjs'], '1.0.0');
+
 
             // Inject Custom Styles from Admin Options
             $creator_max_width = get_option('pcg_creator_max_width', '1400px');
@@ -282,6 +283,10 @@ class PL_CC_Creator_Dashboard
                     'groupsPlural' => __('grupos', 'politeia-learning'),
                     'added' => __('Agregado', 'politeia-learning'),
                     'add' => __('Agregar', 'politeia-learning'),
+                    'loadingEscritos' => __('Cargando escritos...', 'politeia-learning'),
+                    'noEscritosYet' => __('No has publicado escritos aún.', 'politeia-learning'),
+                    'pleaseEnterEscritoTitle' => __('Por favor, ingresa un título para el escrito.', 'politeia-learning'),
+                    'errorSavingEscrito' => __('Ocurrió un error al guardar el escrito.', 'politeia-learning'),
                 ],
             ]);
 
@@ -299,7 +304,13 @@ class PL_CC_Creator_Dashboard
                 ],
             ]);
         }
+
+        // Frontend style for Escritos (Posts)
+        if (is_single() && get_post_type() === 'post') {
+            wp_enqueue_style('pcg-escrito-frontend-css', PL_CC_URL . 'assets/css/escrito-frontend.css', [], '1.0.6');
+        }
     }
+
 
     /**
      * Shortcode renderer (as alternative)

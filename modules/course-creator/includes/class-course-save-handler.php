@@ -69,6 +69,11 @@ class PL_CC_Course_Save_Handler
         add_action('wp_ajax_pcg_get_course_for_edit', [$this, 'handle_get_course_for_edit']);
         add_action('wp_ajax_pcg_upload_cropped_image', [$this, 'handle_upload_cropped_image']);
 
+        add_action('wp_ajax_pcg_save_escrito', [$this, 'handle_save_escrito']);
+        add_action('wp_ajax_pcg_get_my_escritos', [$this, 'handle_get_my_escritos']);
+        add_action('wp_ajax_pcg_get_escrito_for_edit', [$this, 'handle_get_escrito_for_edit']);
+        add_action('wp_ajax_pcg_delete_escrito', [$this, 'handle_delete_escrito']);
+
         add_action('pcg_inclusion_snapshot_approved', [$this, 'handle_inclusion_snapshot_approved'], 10, 3);
     }
 
@@ -2074,5 +2079,135 @@ class PL_CC_Course_Save_Handler
             'author_name' => get_the_author_meta('display_name', $post->post_author),
             'author_avatar' => get_avatar_url($post->post_author, ['size' => 64])
         ]);
+    }
+
+    /**
+     * Handles saving an "Escrito" (post).
+     */
+    public function handle_save_escrito()
+    {
+        check_ajax_referer('pcg_creator_nonce', 'nonce');
+
+        $data = $_POST['escrito_data'] ?? [];
+        if (empty($data)) {
+            wp_send_json_error(['message' => 'No se han recibido datos.']);
+        }
+
+        $post_id = intval($data['id'] ?? 0);
+        $title = sanitize_text_field($data['title']);
+        $content = wp_kses_post($data['content']);
+        $excerpt = wp_kses_post($data['excerpt'] ?? '');
+        $thumbnail_id = intval($data['thumbnail_id'] ?? 0);
+
+        $post_data = [
+            'post_title' => $title,
+            'post_content' => $content,
+            'post_excerpt' => $excerpt,
+            'post_status' => 'publish',
+            'post_type' => 'post',
+            'post_author' => get_current_user_id()
+        ];
+
+        if ($post_id > 0) {
+            $post_data['ID'] = $post_id;
+            $post_id = wp_update_post($post_data);
+        } else {
+            $post_id = wp_insert_post($post_data);
+        }
+
+        if (is_wp_error($post_id)) {
+            wp_send_json_error(['message' => 'Error al guardar: ' . $post_id->get_error_message()]);
+        }
+
+        if ($thumbnail_id > 0) {
+            set_post_thumbnail($post_id, $thumbnail_id);
+        } else {
+            delete_post_thumbnail($post_id);
+        }
+
+        wp_send_json_success([
+            'escrito_id' => $post_id,
+            'permalink' => get_permalink($post_id),
+            'message' => 'Escrito publicado exitosamente.'
+        ]);
+    }
+
+    /**
+     * Get user's Escritos.
+     */
+    public function handle_get_my_escritos()
+    {
+        check_ajax_referer('pcg_creator_nonce', 'nonce');
+
+        $args = [
+            'post_type' => 'post',
+            'post_status' => 'publish',
+            'author' => get_current_user_id(),
+            'posts_per_page' => -1,
+            'orderby' => 'date',
+            'order' => 'DESC'
+        ];
+
+        $posts = get_posts($args);
+        $data = [];
+
+        foreach ($posts as $post) {
+            $thumbnail_url = get_the_post_thumbnail_url($post->ID, 'medium');
+            $data[] = [
+                'id' => $post->ID,
+                'title' => $post->post_title,
+                'thumbnail_url' => $thumbnail_url ? $thumbnail_url : '',
+                'date' => get_the_date('', $post->ID),
+                'permalink' => get_permalink($post->ID)
+            ];
+        }
+
+        wp_send_json_success($data);
+    }
+
+    /**
+     * Get a single Escrito for editing.
+     */
+    public function handle_get_escrito_for_edit()
+    {
+        check_ajax_referer('pcg_creator_nonce', 'nonce');
+
+        $post_id = intval($_POST['escrito_id'] ?? 0);
+        $post = get_post($post_id);
+
+        if (!$post || $post->post_author != get_current_user_id()) {
+            wp_send_json_error(['message' => 'Escrito no encontrado o no tienes permiso.']);
+        }
+
+        $thumbnail_id = get_post_thumbnail_id($post->ID);
+        $thumbnail_url = get_the_post_thumbnail_url($post->ID, 'large');
+
+        wp_send_json_success([
+            'id' => $post->ID,
+            'title' => $post->post_title,
+            'content' => $post->post_content,
+            'excerpt' => $post->post_excerpt,
+            'thumbnail_id' => $thumbnail_id,
+            'thumbnail_url' => $thumbnail_url,
+            'permalink' => get_permalink($post->ID)
+        ]);
+    }
+
+    /**
+     * Delete an Escrito.
+     */
+    public function handle_delete_escrito()
+    {
+        check_ajax_referer('pcg_creator_nonce', 'nonce');
+
+        $post_id = intval($_POST['escrito_id'] ?? 0);
+        $post = get_post($post_id);
+
+        if (!$post || $post->post_author != get_current_user_id()) {
+            wp_send_json_error(['message' => 'No tienes permiso para eliminar esto.']);
+        }
+
+        wp_trash_post($post_id);
+        wp_send_json_success();
     }
 }

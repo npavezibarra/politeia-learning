@@ -832,7 +832,7 @@ msgstr ""
 #: modules/course-creator/templates/sections/students.php:149
 #: modules/course-creator/templates/sections/students.php:150
 msgid "Top 10 - Mayor aumento en quiz"
-msgstr ""
+msgstr "Top 10 - Mayor aumento en evaluación"
 
 #: modules/course-creator/templates/sections/students.php:154
 #: modules/course-creator/templates/sections/students.php:172

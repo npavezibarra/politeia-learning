@@ -22,11 +22,11 @@ msgstr "Evaluación del curso"
 
 #: modules/quiz-control/admin/class-metabox-final-quiz.php:27
 msgid "Final Quiz"
-msgstr "Quiz final"
+msgstr "Evaluación final"
 
 #: modules/quiz-control/admin/class-metabox-first-quiz.php:30
 msgid "First Quiz"
-msgstr "Primer quiz"
+msgstr "Primera evaluación"
 
 #: modules/quiz-control/init.php:99
 msgid "No se encontraron resultados"
@@ -34,11 +34,11 @@ msgstr "No se encontraron resultados"
 
 #: modules/quiz-control/admin/class-metabox-evaluation.php:46
 msgid "Select the quiz that will serve as both the Initial Assessment and Final Exam."
-msgstr "Selecciona el quiz que servirá como evaluación inicial y examen final."
+msgstr "Selecciona la evaluación que servirá como evaluación inicial y examen final."
 
 #: modules/quiz-control/functions.php:278
 msgid "To access lessons finish the First Quiz"
-msgstr "Para acceder a las lecciones, completa el primer quiz"
+msgstr "Para acceder a las lecciones, completa la primera evaluación"
 
 #. Plugin Name of the plugin
 #: politeia-learning.php

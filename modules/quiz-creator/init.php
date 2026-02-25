@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define module constants
-define('PL_QC_VERSION', '1.0.0');
+define('PL_QC_VERSION', '1.0.1');
 define('PL_QC_PATH', plugin_dir_path(__FILE__));
 define('PL_QC_URL', plugin_dir_url(__FILE__));
 

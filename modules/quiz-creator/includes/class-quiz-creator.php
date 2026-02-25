@@ -10,6 +10,136 @@ if (!defined('ABSPATH')) {
 
 class PQC_Quiz_Creator
 {
+    /**
+     * Append a default question at the end of an existing quiz.
+     *
+     * @param int $quiz_post_id
+     * @param array $opts
+     * @return array|WP_Error
+     */
+    public static function insert_default_question($quiz_post_id, $insert_after_index = -1, $opts = [])
+    {
+        global $wpdb;
+
+        $quiz_post_id = intval($quiz_post_id);
+        if (!$quiz_post_id || get_post_type($quiz_post_id) !== 'sfwd-quiz') {
+            return new WP_Error('invalid_quiz', __('Invalid quiz.', 'politeia-quiz-creator'));
+        }
+
+        // Ensure ProQuiz classes exist (LearnDash)
+        if (!class_exists('WpProQuiz_Model_AnswerTypes') && defined('WPPROQUIZ_PATH')) {
+            require_once WPPROQUIZ_PATH . '/lib/model/WpProQuiz_Model_AnswerTypes.php';
+        }
+        if (!class_exists('WpProQuiz_Model_AnswerTypes')) {
+            return new WP_Error('missing_ld', __('LearnDash ProQuiz classes not available.', 'politeia-quiz-creator'));
+        }
+
+        $answers_per_question = intval($opts['answers_per_question'] ?? 4);
+        if ($answers_per_question < 2) $answers_per_question = 2;
+        if ($answers_per_question > 8) $answers_per_question = 8;
+
+        $quiz_pro_id = intval(get_post_meta($quiz_post_id, 'quiz_pro_id', true));
+        if (!$quiz_pro_id) {
+            $sfwd = get_post_meta($quiz_post_id, '_sfwd-quiz', true);
+            if (is_array($sfwd) && !empty($sfwd['sfwd-quiz_quiz_pro'])) {
+                $quiz_pro_id = intval($sfwd['sfwd-quiz_quiz_pro']);
+            }
+        }
+        if (!$quiz_pro_id) {
+            return new WP_Error('missing_quiz_pro_id', __('Quiz Pro ID not found.', 'politeia-quiz-creator'));
+        }
+
+        $quiz_questions = get_post_meta($quiz_post_id, 'ld_quiz_questions', true);
+        if (!is_array($quiz_questions)) {
+            $quiz_questions = [];
+        }
+        $current_count = count($quiz_questions);
+        $insert_after_index = intval($insert_after_index);
+        $insert_pos = $insert_after_index + 1; // insert right after current (0-based)
+        if ($insert_pos < 0) $insert_pos = 0;
+        if ($insert_pos > $current_count) $insert_pos = $current_count;
+        $sort_order = $insert_pos + 1; // ProQuiz sort is 1-based
+
+        // Shift existing ProQuiz question sort orders to make room
+        $wpdb->query(
+            $wpdb->prepare(
+                "UPDATE {$wpdb->prefix}learndash_pro_quiz_question SET sort = sort + 1 WHERE quiz_id = %d AND sort >= %d",
+                $quiz_pro_id,
+                $sort_order
+            )
+        );
+
+        $answers = [];
+        for ($i = 0; $i < $answers_per_question; $i++) {
+            $letter = chr(ord('A') + $i);
+            $answers[] = [
+                'text' => sprintf('Opción %s', $letter),
+                'correct' => $i === 0,
+                'points' => $i === 0 ? 1 : 0,
+            ];
+        }
+
+        $question_data = [
+            'title' => sprintf('Pregunta %d', $sort_order),
+            'question_text' => '',
+            'answer_type' => 'single',
+            'points' => 1,
+            'answers' => $answers,
+        ];
+
+        $result = self::add_question_to_quiz(
+            ['quiz_post_id' => $quiz_post_id, 'quiz_pro_id' => $quiz_pro_id],
+            $question_data,
+            $sort_order
+        );
+
+        if (is_wp_error($result)) {
+            return $result;
+        }
+
+        // Reorder ld_quiz_questions meta to place the new question at the desired position
+        $quiz_questions = get_post_meta($quiz_post_id, 'ld_quiz_questions', true);
+        if (!is_array($quiz_questions)) {
+            $quiz_questions = [];
+        }
+
+        $new_q_post_id = $result['question_post_id'];
+        $new_q_pro_id = $result['question_pro_id'];
+
+        $existing = $quiz_questions;
+        unset($existing[$new_q_post_id]);
+
+        $reordered = [];
+        $idx = 0;
+        foreach ($existing as $q_post_id => $q_pro_id) {
+            if ($idx === $insert_pos) {
+                $reordered[$new_q_post_id] = $new_q_pro_id;
+            }
+            $reordered[$q_post_id] = $q_pro_id;
+            $idx++;
+        }
+        if ($insert_pos >= count($existing)) {
+            $reordered[$new_q_post_id] = $new_q_pro_id;
+        }
+        update_post_meta($quiz_post_id, 'ld_quiz_questions', $reordered);
+
+        // Keep LD builder/steps in sync
+        $count = count($reordered);
+        update_post_meta($quiz_post_id, '_ld_course_steps_count', $count);
+        update_post_meta($quiz_post_id, 'ld_quiz_questions_dirty', $quiz_post_id);
+
+        $ld_steps = get_post_meta($quiz_post_id, 'ld_course_steps', true);
+        if (is_array($ld_steps)) {
+            $ld_steps['steps_count'] = $count;
+            update_post_meta($quiz_post_id, 'ld_course_steps', $ld_steps);
+        }
+
+        return [
+            'question_post_id' => $result['question_post_id'],
+            'question_pro_id' => $result['question_pro_id'],
+            'total_questions' => $count,
+        ];
+    }
 
     /**
      * Create a LearnDash quiz from structured data

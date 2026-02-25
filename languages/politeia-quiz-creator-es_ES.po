@@ -36,7 +36,7 @@ msgstr "Volver"
 
 #: modules/quiz-creator/templates/upload-form.php:244
 msgid "CREATE QUIZ"
-msgstr "CREAR QUIZ"
+msgstr "CREAR EVALUACIÓN"
 
 #: modules/quiz-creator/templates/quiz-editor.php:76
 msgid "Check the box for correct answers"
@@ -56,7 +56,7 @@ msgstr "Copiar prompt de ChatGPT"
 
 #: modules/quiz-creator/templates/quiz-editor.php:14
 msgid "Could not load quiz data. Please make sure the quiz ID is correct."
-msgstr "No se pudieron cargar los datos del quiz. Asegúrate de que el ID del quiz sea correcto."
+msgstr "No se pudieron cargar los datos de la evaluación. Asegúrate de que el ID de la evaluación sea correcto."
 
 #: modules/quiz-creator/includes/class-file-parser.php:48
 #: modules/quiz-creator/includes/class-file-parser.php:87
@@ -71,11 +71,11 @@ msgstr "Se requiere el ID del curso."
 
 #: modules/quiz-creator/templates/upload-form.php:21
 msgid "Delete Existing Quiz"
-msgstr "Eliminar quiz existente"
+msgstr "Eliminar evaluación existente"
 
 #: modules/quiz-creator/templates/quiz-editor.php:52
 msgid "Delete Quiz"
-msgstr "Eliminar quiz"
+msgstr "Eliminar evaluación"
 
 #: modules/quiz-creator/templates/upload-form.php:153
 msgid "Drop JSON file here"
@@ -84,7 +84,7 @@ msgstr "Suelta el archivo JSON aquí"
 #: modules/quiz-creator/includes/class-shortcode.php:109
 #: modules/quiz-creator/init.php:104
 msgid "Error creating quiz. Please check the file format."
-msgstr "Error al crear el quiz. Por favor, verifica el formato del archivo."
+msgstr "Error al crear la evaluación. Por favor, verifica el formato del archivo."
 
 #: modules/quiz-creator/includes/class-quiz-creator.php:282
 msgid "Failed to create question in database."
@@ -92,11 +92,11 @@ msgstr "No se pudo crear la pregunta en la base de datos."
 
 #: modules/quiz-creator/includes/class-quiz-creator.php:126
 msgid "Failed to create quiz in database."
-msgstr "No se pudo crear el quiz en la base de datos."
+msgstr "No se pudo crear la evaluación en la base de datos."
 
 #: modules/quiz-creator/includes/class-ajax-handler.php:299
 msgid "Failed to delete quiz."
-msgstr "No se pudo eliminar el quiz."
+msgstr "No se pudo eliminar la evaluación."
 
 #: modules/quiz-creator/includes/class-ajax-handler.php:152
 msgid "File upload error."
@@ -137,7 +137,7 @@ msgstr "Formato inválido."
 
 #: modules/quiz-creator/includes/class-ajax-handler.php:46
 msgid "Invalid quiz data."
-msgstr "Datos de quiz inválidos."
+msgstr "Datos de evaluación inválidos."
 
 #: modules/quiz-creator/templates/upload-form.php:116
 msgid "Keywords (e.g., economy, demography, science)"
@@ -218,41 +218,41 @@ msgstr "Título de la pregunta"
 #: modules/quiz-creator/includes/class-ajax-handler.php:215
 #, php-format
 msgid "Quiz \"%s\" created successfully with %d questions!"
-msgstr "¡Quiz \"%s\" creado con éxito con %d preguntas!"
+msgstr "¡Evaluación \"%s\" creada con éxito con %d preguntas!"
 
 #: modules/quiz-creator/includes/class-shortcode.php:39
 #: modules/quiz-creator/templates/upload-form.php:16
 msgid "Quiz Creator"
-msgstr "Creador de quizzes"
+msgstr "Creador de Evaluaciones"
 
 #: modules/quiz-creator/includes/class-ajax-handler.php:286
 msgid "Quiz ID is required."
-msgstr "Se requiere el ID del quiz."
+msgstr "Se requiere el ID de la evaluación."
 
 #: modules/quiz-creator/includes/class-ajax-handler.php:112
 msgid "Quiz changes saved successfully!"
-msgstr "¡Cambios del quiz guardados con éxito!"
+msgstr "¡Cambios de la evaluación guardados con éxito!"
 
 #: modules/quiz-creator/includes/class-shortcode.php:108
 #: modules/quiz-creator/init.php:103
 msgid "Quiz created successfully!"
-msgstr "¡Quiz creado con éxito!"
+msgstr "¡Evaluación creada con éxito!"
 
 #: modules/quiz-creator/includes/class-ajax-handler.php:297
 msgid "Quiz deleted successfully."
-msgstr "Quiz eliminado con éxito."
+msgstr "Evaluación eliminada con éxito."
 
 #: modules/quiz-creator/includes/class-quiz-creator.php:348
 msgid "Quiz must have at least one question."
-msgstr "El quiz debe tener al menos una pregunta."
+msgstr "La evaluación debe tener al menos una pregunta."
 
 #: modules/quiz-creator/includes/class-ajax-handler.php:133
 msgid "Quiz settings are required."
-msgstr "Se requieren los ajustes del quiz."
+msgstr "Se requieren los ajustes de la evaluación."
 
 #: modules/quiz-creator/includes/class-quiz-creator.php:344
 msgid "Quiz title is required."
-msgstr "Se requiere el título del quiz."
+msgstr "Se requiere el título de la evaluación."
 
 #: modules/quiz-creator/templates/upload-form.php:225
 msgid "Randomize Answer Order"
@@ -271,7 +271,7 @@ msgstr "Falló la verificación de seguridad."
 
 #: modules/quiz-creator/templates/upload-form.php:26
 msgid "Set up your quiz parameters and upload your content to generate the evaluation."
-msgstr "Configura los parámetros del quiz y sube tu contenido para generar la evaluación."
+msgstr "Configura los parámetros de la evaluación y sube tu contenido para generarla."
 
 #: modules/quiz-creator/templates/upload-form.php:237
 msgid "Show Points to Students"
@@ -279,7 +279,7 @@ msgstr "Mostrar puntos a los estudiantes"
 
 #: modules/quiz-creator/templates/upload-form.php:39
 msgid "Step 1: Quiz Goals"
-msgstr "Paso 1: Objetivos del quiz"
+msgstr "Paso 1: Objetivos de la evaluación"
 
 #: modules/quiz-creator/templates/upload-form.php:64
 msgid "Step 2: Creation Method"
@@ -316,19 +316,19 @@ msgstr "Escribe tus propias preguntas y respuestas una por una."
 
 #: modules/quiz-creator/includes/class-shortcode.php:54
 msgid "You do not have permission to access the Quiz Creator."
-msgstr "No tienes permiso para acceder al Creador de quizzes."
+msgstr "No tienes permiso para acceder al Creador de Evaluaciones."
 
 #: modules/quiz-creator/includes/class-ajax-handler.php:177
 msgid "You do not have permission to create quizzes."
-msgstr "No tienes permiso para crear quizzes."
+msgstr "No tienes permiso para crear evaluaciones."
 
 #: modules/quiz-creator/includes/class-ajax-handler.php:291
 msgid "You do not have permission to delete quizzes."
-msgstr "No tienes permiso para eliminar quizzes."
+msgstr "No tienes permiso para eliminar evaluaciones."
 
 #: modules/quiz-creator/includes/class-ajax-handler.php:53
 msgid "You do not have permission to edit quizzes."
-msgstr "No tienes permiso para editar quizzes."
+msgstr "No tienes permiso para editar evaluaciones."
 
 #. Plugin Name of the plugin
 #: politeia-learning.php
@@ -355,7 +355,7 @@ msgstr "El archivo supera el límite de 10MB."
 
 #: modules/quiz-creator/init.php:108
 msgid "Please enter a quiz title first"
-msgstr "Por favor ingresa primero un título para el quiz."
+msgstr "Por favor ingresa primero un título para la evaluación."
 
 #: modules/quiz-creator/init.php:109
 msgid "Error"
