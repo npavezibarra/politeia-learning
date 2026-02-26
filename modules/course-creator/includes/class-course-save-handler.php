@@ -10,6 +10,8 @@ class PL_CC_Course_Save_Handler
 {
     private const REQUIRED_PRODUCT_CATEGORY_NAME = 'Cursos';
     private const REQUIRED_PRODUCT_CATEGORY_SLUG = 'cursos';
+    private const AJAX_META_TERMS = 'pcg_get_learning_meta_terms';
+    private const AJAX_CREATE_TAG = 'pcg_create_learning_tag';
 
     private function user_can_manage_group(int $group_id, int $user_id): bool
     {
@@ -74,7 +76,180 @@ class PL_CC_Course_Save_Handler
         add_action('wp_ajax_pcg_get_escrito_for_edit', [$this, 'handle_get_escrito_for_edit']);
         add_action('wp_ajax_pcg_delete_escrito', [$this, 'handle_delete_escrito']);
 
+        add_action('wp_ajax_' . self::AJAX_META_TERMS, [$this, 'handle_get_learning_meta_terms']);
+        add_action('wp_ajax_' . self::AJAX_CREATE_TAG, [$this, 'handle_create_learning_tag']);
+
         add_action('pcg_inclusion_snapshot_approved', [$this, 'handle_inclusion_snapshot_approved'], 10, 3);
+    }
+
+    private function normalize_term_id_list($raw): array
+    {
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(array_map('absint', $raw))));
+    }
+
+    private function assign_learning_terms(int $object_id, $category_ids, $tag_ids): void
+    {
+        if ($object_id <= 0 || !class_exists('PL_Taxonomy')) {
+            return;
+        }
+
+        $categories = $this->normalize_term_id_list($category_ids);
+        $tags = $this->normalize_term_id_list($tag_ids);
+
+        if (taxonomy_exists(PL_Taxonomy::CATEGORY_TAXONOMY)) {
+            wp_set_object_terms($object_id, $categories, PL_Taxonomy::CATEGORY_TAXONOMY, false);
+        }
+
+        if (taxonomy_exists(PL_Taxonomy::TAG_TAXONOMY)) {
+            wp_set_object_terms($object_id, $tags, PL_Taxonomy::TAG_TAXONOMY, false);
+        }
+    }
+
+    private function get_learning_terms_for_object(int $object_id): array
+    {
+        $out = [
+            'category_ids' => [],
+            'tag_ids' => [],
+            'tags' => [],
+        ];
+
+        if ($object_id <= 0 || !class_exists('PL_Taxonomy')) {
+            return $out;
+        }
+
+        if (taxonomy_exists(PL_Taxonomy::CATEGORY_TAXONOMY)) {
+            $cats = wp_get_object_terms($object_id, PL_Taxonomy::CATEGORY_TAXONOMY, ['fields' => 'ids']);
+            if (!is_wp_error($cats) && is_array($cats)) {
+                $out['category_ids'] = array_values(array_unique(array_map('absint', $cats)));
+            }
+        }
+
+        if (taxonomy_exists(PL_Taxonomy::TAG_TAXONOMY)) {
+            $tags = wp_get_object_terms($object_id, PL_Taxonomy::TAG_TAXONOMY, ['fields' => 'all']);
+            if (!is_wp_error($tags) && is_array($tags)) {
+                $out['tag_ids'] = array_values(array_unique(array_map(static function ($t) {
+                    return absint($t->term_id);
+                }, $tags)));
+                $out['tags'] = array_values(array_map(static function ($t) {
+                    return [
+                        'id' => (int) $t->term_id,
+                        'name' => (string) $t->name,
+                        'slug' => (string) $t->slug,
+                    ];
+                }, $tags));
+            }
+        }
+
+        return $out;
+    }
+
+    public function handle_get_learning_meta_terms(): void
+    {
+        check_ajax_referer('pcg_creator_nonce', 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error(['message' => __('No autorizado.', 'politeia-learning')], 401);
+        }
+
+        if (!class_exists('PL_Taxonomy')) {
+            wp_send_json_error(['message' => __('Taxonomías no disponibles.', 'politeia-learning')], 400);
+        }
+
+        $categories = [];
+        if (taxonomy_exists(PL_Taxonomy::CATEGORY_TAXONOMY)) {
+            $terms = get_terms([
+                'taxonomy' => PL_Taxonomy::CATEGORY_TAXONOMY,
+                'hide_empty' => false,
+                'orderby' => 'name',
+                'order' => 'ASC',
+            ]);
+            if (!is_wp_error($terms) && is_array($terms)) {
+                foreach ($terms as $t) {
+                    $categories[] = [
+                        'id' => (int) $t->term_id,
+                        'name' => (string) $t->name,
+                        'slug' => (string) $t->slug,
+                        'parent' => (int) $t->parent,
+                    ];
+                }
+            }
+        }
+
+        $tags = [];
+        if (taxonomy_exists(PL_Taxonomy::TAG_TAXONOMY)) {
+            $terms = get_terms([
+                'taxonomy' => PL_Taxonomy::TAG_TAXONOMY,
+                'hide_empty' => false,
+                'orderby' => 'name',
+                'order' => 'ASC',
+                'number' => 500,
+            ]);
+            if (!is_wp_error($terms) && is_array($terms)) {
+                foreach ($terms as $t) {
+                    $tags[] = [
+                        'id' => (int) $t->term_id,
+                        'name' => (string) $t->name,
+                        'slug' => (string) $t->slug,
+                    ];
+                }
+            }
+        }
+
+        wp_send_json_success([
+            'categories' => $categories,
+            'tags' => $tags,
+        ]);
+    }
+
+    public function handle_create_learning_tag(): void
+    {
+        check_ajax_referer('pcg_creator_nonce', 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error(['message' => __('No autorizado.', 'politeia-learning')], 401);
+        }
+
+        if (!class_exists('PL_Taxonomy') || !taxonomy_exists(PL_Taxonomy::TAG_TAXONOMY)) {
+            wp_send_json_error(['message' => __('Taxonomías no disponibles.', 'politeia-learning')], 400);
+        }
+
+        $name = isset($_POST['name']) ? sanitize_text_field(wp_unslash($_POST['name'])) : '';
+        $name = trim($name);
+        if ($name === '') {
+            wp_send_json_error(['message' => __('Nombre inválido.', 'politeia-learning')], 400);
+        }
+
+        $existing = term_exists($name, PL_Taxonomy::TAG_TAXONOMY);
+        if (is_array($existing) && !empty($existing['term_id'])) {
+            $term = get_term((int) $existing['term_id'], PL_Taxonomy::TAG_TAXONOMY);
+            if ($term && !is_wp_error($term)) {
+                wp_send_json_success([
+                    'id' => (int) $term->term_id,
+                    'name' => (string) $term->name,
+                    'slug' => (string) $term->slug,
+                ]);
+            }
+        }
+
+        $inserted = wp_insert_term($name, PL_Taxonomy::TAG_TAXONOMY);
+        if (is_wp_error($inserted) || empty($inserted['term_id'])) {
+            wp_send_json_error(['message' => __('No se pudo crear la etiqueta.', 'politeia-learning')], 500);
+        }
+
+        $term = get_term((int) $inserted['term_id'], PL_Taxonomy::TAG_TAXONOMY);
+        if (!$term || is_wp_error($term)) {
+            wp_send_json_error(['message' => __('No se pudo crear la etiqueta.', 'politeia-learning')], 500);
+        }
+
+        wp_send_json_success([
+            'id' => (int) $term->term_id,
+            'name' => (string) $term->name,
+            'slug' => (string) $term->slug,
+        ]);
     }
 
     /**
@@ -85,7 +260,7 @@ class PL_CC_Course_Save_Handler
         check_ajax_referer('pcg_creator_nonce', 'nonce');
 
         if (!is_user_logged_in()) {
-            wp_send_json_error(['message' => 'No autorizado.']);
+            wp_send_json_error(['message' => __('No autorizado.', 'politeia-learning')]);
         }
 
         $image_data = $_POST['image_data'] ?? '';
@@ -158,6 +333,8 @@ class PL_CC_Course_Save_Handler
         $progression = sanitize_text_field($data['progression'] ?? '');
         $content_list = $data['content'] ?? [];
         $teacher_ids = $data['teachers'] ?? [];
+        $category_ids = $data['category_ids'] ?? [];
+        $tag_ids = $data['tag_ids'] ?? [];
 
         // 1. Create or Update Course
         $post_data = [
@@ -246,11 +423,14 @@ class PL_CC_Course_Save_Handler
             update_post_meta($course_id, '_sfwd-courses', $course_settings);
         }
 
+        // 6. Save learning categories/tags.
+        $this->assign_learning_terms((int) $course_id, $category_ids, $tag_ids);
+
         wp_send_json_success([
             'course_id' => $course_id,
             'product_url' => $product_url,
             'permalink' => get_permalink($course_id),
-            'message' => 'Curso guardado y sincronizado con la tienda exitosamente.'
+            'message' => __('Curso guardado y sincronizado con la tienda exitosamente.', 'politeia-learning')
         ]);
     }
 
@@ -968,6 +1148,8 @@ class PL_CC_Course_Save_Handler
         $price_raw = sanitize_text_field($data['price'] ?? '');
         $course_ids = $data['course_ids'] ?? [];
         $teacher_ids = $data['teachers'] ?? [];
+        $category_ids = $data['category_ids'] ?? [];
+        $tag_ids = $data['tag_ids'] ?? [];
 
         if ($title === '') {
             wp_send_json_error(['message' => __('Ingresa un nombre para la especialización.', 'politeia-learning')], 400);
@@ -1012,6 +1194,9 @@ class PL_CC_Course_Save_Handler
         }
         $course_ids = array_values(array_unique(array_filter(array_map('absint', $course_ids))));
         learndash_set_group_enrolled_courses($group_id, $course_ids);
+
+        // Save learning categories/tags.
+        $this->assign_learning_terms((int) $group_id, $category_ids, $tag_ids);
 
         // Build and submit snapshot for participant approvals.
         $participants = [];
@@ -1332,12 +1517,17 @@ class PL_CC_Course_Save_Handler
             $product_url = (string) learndash_get_setting($group_id, 'custom_button_url');
         }
 
+        $meta_terms = $this->get_learning_terms_for_object((int) $group_id);
+
         wp_send_json_success([
             'id' => $post->ID,
             'title' => $post->post_title,
             'description' => $post->post_content,
             'price' => $price,
             'course_ids' => $course_ids,
+            'category_ids' => $meta_terms['category_ids'],
+            'tag_ids' => $meta_terms['tag_ids'],
+            'tags' => $meta_terms['tags'],
             'included_authors' => array_values($included_authors),
             'teachers' => $teachers_data,
             'author_id' => $post->post_author,
@@ -1532,6 +1722,8 @@ class PL_CC_Course_Save_Handler
         $price_raw = sanitize_text_field($data['price'] ?? '');
         $group_ids = $data['group_ids'] ?? [];
         $teacher_ids = $data['teachers'] ?? [];
+        $category_ids = $data['category_ids'] ?? [];
+        $tag_ids = $data['tag_ids'] ?? [];
 
         if ($title === '') {
             wp_send_json_error(['message' => __('Ingresa un nombre para el programa.', 'politeia-learning')], 400);
@@ -1575,6 +1767,9 @@ class PL_CC_Course_Save_Handler
         update_post_meta($programa_id, '_pcg_program_access_mode', $price_type === 'closed' ? 'closed' : 'open');
         update_post_meta($programa_id, '_pcg_program_price_type', $price_type);
         update_post_meta($programa_id, '_pcg_program_price', $numeric_price);
+
+        // Save learning categories/tags.
+        $this->assign_learning_terms((int) $programa_id, $category_ids, $tag_ids);
 
         $participants = [];
         if (!empty($teacher_ids) && is_array($teacher_ids)) {
@@ -1889,12 +2084,17 @@ class PL_CC_Course_Save_Handler
 
         $product_url = (string) get_post_meta($programa_id, '_pcg_program_custom_button_url', true);
 
+        $meta_terms = $this->get_learning_terms_for_object((int) $programa_id);
+
         wp_send_json_success([
             'id' => $post->ID,
             'title' => $post->post_title,
             'description' => $post->post_content,
             'price' => $price_numeric,
             'group_ids' => $group_ids,
+            'category_ids' => $meta_terms['category_ids'],
+            'tag_ids' => $meta_terms['tag_ids'],
+            'tags' => $meta_terms['tags'],
             'included_authors' => array_values($included_authors),
             'teachers' => $teachers_data,
             'author_id' => $post->post_author,
@@ -1952,7 +2152,7 @@ class PL_CC_Course_Save_Handler
         $course_id = intval($_POST['course_id'] ?? 0);
 
         if ($course_id <= 0 || get_post_field('post_author', $course_id) != get_current_user_id()) {
-            wp_send_json_error(['message' => 'No autorizado.']);
+            wp_send_json_error(['message' => __('No autorizado.', 'politeia-learning')]);
         }
 
         // 1. Delete associated lessons
@@ -1980,7 +2180,7 @@ class PL_CC_Course_Save_Handler
 
         wp_delete_post($course_id, true);
 
-        wp_send_json_success(['message' => 'Curso y producto asociado eliminados.']);
+        wp_send_json_success(['message' => __('Curso y producto asociado eliminados.', 'politeia-learning')]);
     }
 
     public function handle_get_course_for_edit()
@@ -1989,7 +2189,7 @@ class PL_CC_Course_Save_Handler
         $course_id = intval($_POST['course_id'] ?? 0);
 
         if ($course_id <= 0 || get_post_field('post_author', $course_id) != get_current_user_id()) {
-            wp_send_json_error(['message' => 'No autorizado.']);
+            wp_send_json_error(['message' => __('No autorizado.', 'politeia-learning')]);
         }
 
         $post = get_post($course_id);
@@ -2061,12 +2261,17 @@ class PL_CC_Course_Save_Handler
             }
         }
 
+        $meta_terms = $this->get_learning_terms_for_object((int) $course_id);
+
         wp_send_json_success([
             'id' => $post->ID,
             'title' => $post->post_title,
             'description' => $post->post_content,
             'excerpt' => $post->post_excerpt,
             'price' => preg_replace('/[^0-9]/', '', $price_settings['sfwd-courses_course_price'] ?? '0'),
+            'category_ids' => $meta_terms['category_ids'],
+            'tag_ids' => $meta_terms['tag_ids'],
+            'tags' => $meta_terms['tags'],
             'thumbnail_id' => $thumbnail_id,
             'thumbnail_url' => $thumbnail_url,
             'cover_photo_id' => $cover_photo_id,

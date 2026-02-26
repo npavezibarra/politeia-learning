@@ -109,6 +109,16 @@ class PL_QC_Module
                 'genericError' => __('Error', 'politeia-quiz-creator'),
                 'view' => __('View', 'politeia-quiz-creator'),
                 'editSlideEditor' => __('Edit Slide Editor', 'politeia-quiz-creator'),
+                'addQuestion' => __('Add question', 'politeia-quiz-creator'),
+                'questionTitle' => __('Question Title', 'politeia-quiz-creator'),
+                'questionText' => __('Question Text', 'politeia-quiz-creator'),
+                'answers' => __('Answers', 'politeia-quiz-creator'),
+                'checkCorrect' => __('Check the box for correct answers', 'politeia-quiz-creator'),
+                'internalNamePlaceholder' => __('Internal name (e.g. Question 1)', 'politeia-quiz-creator'),
+                'questionPlaceholder' => __('Write the actual question here...', 'politeia-quiz-creator'),
+                'answerLabel' => __('Answer', 'politeia-quiz-creator'),
+                'addAnswer' => __('Add Answer', 'politeia-quiz-creator'),
+                'removeAnswer' => __('Remove answer', 'politeia-quiz-creator'),
             ]
         ]);
     }

@@ -27,6 +27,518 @@ jQuery(document).ready(function ($) {
     let pendingApprovalsIndex = { group: {}, program: {} };
 
     // ───────────────────────────────────────────────────────────
+    // Unified Learning Meta (Categories + Tags)
+    // ───────────────────────────────────────────────────────────
+    const plLearningMeta = (function () {
+        const cache = {
+            loaded: false,
+            loading: null,
+            categories: [],
+            categoryList: [],
+            tags: [],
+            tagsById: new Map(),
+        };
+
+        const state = {
+            course: { categoryIds: [], tags: [] },
+            group: { categoryIds: [], tags: [] },
+            programa: { categoryIds: [], tags: [] },
+        };
+
+        const dom = {
+            course: {
+                catL1: '#pcg-course-meta-cat-l1',
+                catL2: '#pcg-course-meta-cat-l2',
+                catL3: '#pcg-course-meta-cat-l3',
+                tagChips: '#pcg-course-meta-tag-chips',
+                tagInput: '#pcg-course-meta-tag-input',
+                tagSuggestions: '#pcg-course-meta-tag-suggestions',
+            },
+            group: {
+                catL1: '#pcg-group-meta-cat-l1',
+                catL2: '#pcg-group-meta-cat-l2',
+                catL3: '#pcg-group-meta-cat-l3',
+                tagChips: '#pcg-group-meta-tag-chips',
+                tagInput: '#pcg-group-meta-tag-input',
+                tagSuggestions: '#pcg-group-meta-tag-suggestions',
+            },
+            programa: {
+                catL1: '#pcg-programa-meta-cat-l1',
+                catL2: '#pcg-programa-meta-cat-l2',
+                catL3: '#pcg-programa-meta-cat-l3',
+                tagChips: '#pcg-programa-meta-tag-chips',
+                tagInput: '#pcg-programa-meta-tag-input',
+                tagSuggestions: '#pcg-programa-meta-tag-suggestions',
+            },
+        };
+
+        function ensureLoaded() {
+            if (cache.loaded) {
+                return $.Deferred().resolve().promise();
+            }
+            if (cache.loading) {
+                return cache.loading;
+            }
+
+            cache.loading = $.ajax({
+                url: pcgCreatorData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'pcg_get_learning_meta_terms',
+                    nonce: pcgCreatorData.nonce
+                }
+            }).done(function (response) {
+                if (!response || !response.success) {
+                    return;
+                }
+
+                cache.categories = Array.isArray(response.data && response.data.categories) ? response.data.categories : [];
+                cache.tags = Array.isArray(response.data && response.data.tags) ? response.data.tags : [];
+                cache.tagsById = new Map();
+                cache.tags.forEach(t => {
+                    const id = Number(t.id) || 0;
+                    if (!id) return;
+                    cache.tagsById.set(id, { id, name: String(t.name || ''), slug: String(t.slug || '') });
+                });
+
+                cache.categoryList = buildCategoryList(cache.categories);
+                cache.loaded = true;
+            }).always(function () {
+                cache.loading = null;
+            });
+
+            return cache.loading;
+        }
+
+        function buildCategoryList(categories) {
+            const nodes = new Map();
+            const children = new Map();
+            (Array.isArray(categories) ? categories : []).forEach(c => {
+                const id = Number(c.id) || 0;
+                const parent = Number(c.parent) || 0;
+                const name = String(c.name || '');
+                if (!id || !name) return;
+                nodes.set(id, { id, parent, name });
+                if (!children.has(parent)) children.set(parent, []);
+                children.get(parent).push(id);
+            });
+
+            // Sort children by name.
+            children.forEach((ids) => {
+                ids.sort((a, b) => {
+                    const na = nodes.get(a)?.name || '';
+                    const nb = nodes.get(b)?.name || '';
+                    return na.localeCompare(nb);
+                });
+            });
+
+            const out = [];
+            const walk = (parentId, depth) => {
+                const ids = children.get(parentId) || [];
+                ids.forEach(id => {
+                    const node = nodes.get(id);
+                    if (!node) return;
+                    out.push({ ...node, depth });
+                    walk(id, depth + 1);
+                });
+            };
+
+            walk(0, 0);
+            // Also include any orphan terms (bad data) at root.
+            nodes.forEach((node) => {
+                if (node.parent !== 0 && !nodes.has(node.parent)) {
+                    out.push({ ...node, depth: 0 });
+                }
+            });
+
+            return out;
+        }
+
+        function categoriesIndex() {
+            const byId = new Map();
+            const byParent = new Map();
+            (Array.isArray(cache.categories) ? cache.categories : []).forEach(c => {
+                const id = Number(c.id) || 0;
+                const parent = Number(c.parent) || 0;
+                const name = String(c.name || '');
+                const slug = String(c.slug || '');
+                if (!id || !name) return;
+                const node = { id, parent, name, slug };
+                byId.set(id, node);
+                if (!byParent.has(parent)) byParent.set(parent, []);
+                byParent.get(parent).push(node);
+            });
+            byParent.forEach(list => list.sort((a, b) => a.name.localeCompare(b.name)));
+            return { byId, byParent };
+        }
+
+        function computePath(leafId, byId) {
+            const leaf = byId.get(Number(leafId) || 0);
+            if (!leaf) return { l1: 0, l2: 0, l3: 0 };
+
+            const p2 = leaf.parent ? byId.get(leaf.parent) : null;
+            const p1 = p2 && p2.parent ? byId.get(p2.parent) : (leaf.parent ? byId.get(leaf.parent) : null);
+
+            // If leaf is level1.
+            if (!leaf.parent) {
+                return { l1: leaf.id, l2: 0, l3: 0 };
+            }
+
+            // If leaf is level2 (parent is root).
+            if (p2 && !p2.parent) {
+                return { l1: p2.id, l2: leaf.id, l3: 0 };
+            }
+
+            // Leaf is level3+.
+            if (p2 && p1) {
+                return { l1: p1.id, l2: p2.id, l3: leaf.id };
+            }
+
+            return { l1: 0, l2: 0, l3: leaf.id };
+        }
+
+        function setSingleCategory(entity, termId) {
+            const id = Number(termId) || 0;
+            state[entity].categoryIds = id ? [id] : [];
+        }
+
+        function renderCategoryLevel($wrap, nodes, name, selectedId) {
+            if (!$wrap || !$wrap.length) return;
+            if (!Array.isArray(nodes) || nodes.length === 0) {
+                $wrap.empty();
+                return;
+            }
+            const html = nodes.map(n => {
+                const checked = Number(selectedId) === Number(n.id) ? 'checked' : '';
+                return `
+                    <label class="pcg-meta-cat-option">
+                        <input type="radio" name="${name}" value="${n.id}" ${checked} />
+                        <span class="pcg-meta-cat-option__label">${n.name}</span>
+                    </label>
+                `;
+            }).join('');
+            $wrap.html(html);
+        }
+
+        function renderCategories(entity) {
+            const cfg = dom[entity];
+            if (!cfg) return;
+            const $l1 = $(cfg.catL1);
+            if (!$l1.length) return;
+
+            const $l2 = $(cfg.catL2);
+            const $l3 = $(cfg.catL3);
+
+            const { byId, byParent } = categoriesIndex();
+
+            const allowedRoots = new Set(['humanidades', 'ciencias-y-pensamiento-formal', 'saberes-practicos']);
+            const roots = (byParent.get(0) || []).filter(n => allowedRoots.has(String(n.slug || '')));
+
+            const leafId = Number((state[entity]?.categoryIds || [])[0] || 0) || 0;
+            const path = leafId ? computePath(leafId, byId) : { l1: 0, l2: 0, l3: 0 };
+
+            const l2Nodes = path.l1 ? (byParent.get(path.l1) || []) : [];
+            const l3Nodes = path.l2 ? (byParent.get(path.l2) || []) : [];
+
+            renderCategoryLevel($l1, roots, `pcg_meta_${entity}_l1`, path.l1);
+            renderCategoryLevel($l2, l2Nodes, `pcg_meta_${entity}_l2`, path.l2);
+            renderCategoryLevel($l3, l3Nodes, `pcg_meta_${entity}_l3`, path.l3);
+        }
+
+        function renderTags(entity) {
+            const cfg = dom[entity];
+            if (!cfg) return;
+            const $chips = $(cfg.tagChips);
+            if (!$chips.length) return;
+
+            const tags = state[entity]?.tags || [];
+            const html = tags.map(tag => `
+                <span class="pcg-meta-chip" data-tag-id="${tag.id}">
+                    <span class="pcg-meta-chip__label">${tag.name}</span>
+                    <button type="button" class="pcg-meta-chip__remove" aria-label="${t('remove')}" title="${t('remove')}">&times;</button>
+                </span>
+            `).join('');
+            $chips.html(html);
+        }
+
+        function hideSuggestions($wrap) {
+            $wrap.hide().empty();
+        }
+
+        function showTagSuggestions(entity, query) {
+            const cfg = dom[entity];
+            if (!cfg) return;
+
+            const $wrap = $(cfg.tagSuggestions);
+            if (!$wrap.length) return;
+
+            const q = String(query || '').trim().toLowerCase();
+            if (!q) {
+                hideSuggestions($wrap);
+                return;
+            }
+
+            const selected = new Set((state[entity]?.tags || []).map(tg => Number(tg.id)));
+            const matches = (cache.tags || [])
+                .filter(tg => {
+                    const name = String(tg.name || '').toLowerCase();
+                    return name.includes(q);
+                })
+                .slice(0, 12)
+                .map(tg => ({
+                    id: Number(tg.id) || 0,
+                    name: String(tg.name || ''),
+                    slug: String(tg.slug || '')
+                }))
+                .filter(tg => tg.id && !selected.has(tg.id));
+
+            const exact = (cache.tags || []).some(tg => String(tg.name || '').trim().toLowerCase() === q);
+            const createRow = !exact ? `
+                <div class="pcg-meta-suggestion pcg-meta-suggestion--create" data-create-name="${encodeURIComponent(query)}">
+                    ${t('createTag') || 'Crear etiqueta'}
+                    <span class="pcg-meta-suggestion__hint">"${query}"</span>
+                </div>
+            ` : '';
+
+            const rows = matches.map(tg => `
+                <div class="pcg-meta-suggestion" data-tag-id="${tg.id}">
+                    ${tg.name}
+                </div>
+            `).join('');
+
+            const html = (rows || createRow) ? `${createRow}${rows}` : '';
+            if (!html) {
+                hideSuggestions($wrap);
+                return;
+            }
+
+            $wrap.html(html).show();
+        }
+
+        function parseTokens(raw) {
+            const str = String(raw || '');
+            return str
+                .split(',')
+                .map(s => s.trim())
+                .filter(Boolean);
+        }
+
+        function addTokens(entity, raw) {
+            const tokens = parseTokens(raw);
+            if (!tokens.length) {
+                return $.Deferred().resolve().promise();
+            }
+
+            // Create tags sequentially to keep UI stable and avoid request bursts.
+            return tokens.reduce((p, token) => {
+                return p.then(() => createTagAndAdd(entity, token));
+            }, Promise.resolve());
+        }
+
+        function addTag(entity, tag) {
+            const id = Number(tag && tag.id) || 0;
+            const name = String(tag && tag.name || '').trim();
+            if (!id || !name) return;
+
+            const current = state[entity]?.tags || [];
+            if (current.some(tg => Number(tg.id) === id)) return;
+            state[entity].tags = [...current, { id, name, slug: String(tag.slug || '') }];
+            renderTags(entity);
+        }
+
+        function removeTag(entity, tagId) {
+            const id = Number(tagId) || 0;
+            if (!id) return;
+            state[entity].tags = (state[entity]?.tags || []).filter(tg => Number(tg.id) !== id);
+            renderTags(entity);
+        }
+
+        function setSelection(entity, categoryIds = [], tags = []) {
+            const ids = (Array.isArray(categoryIds) ? categoryIds : []).map(x => Number(x)).filter(Boolean);
+            state[entity].categoryIds = ids.length ? [ids[0]] : [];
+
+            const normalizedTags = (Array.isArray(tags) ? tags : [])
+                .map(tg => ({
+                    id: Number(tg.id || tg) || 0,
+                    name: String(tg.name || ''),
+                    slug: String(tg.slug || ''),
+                }))
+                .filter(tg => tg.id && tg.name);
+
+            state[entity].tags = normalizedTags;
+            if (cache.loaded) {
+                renderCategories(entity);
+                renderTags(entity);
+            }
+        }
+
+        function reset(entity) {
+            setSelection(entity, [], []);
+            const cfg = dom[entity];
+            if (cfg) {
+                $(cfg.tagInput).val('');
+                hideSuggestions($(cfg.tagSuggestions));
+            }
+        }
+
+        function getPayload(entity) {
+            return {
+                category_ids: (state[entity]?.categoryIds || []).map(x => Number(x)).filter(Boolean),
+                tag_ids: (state[entity]?.tags || []).map(tg => Number(tg.id)).filter(Boolean),
+            };
+        }
+
+        function bindEntity(entity) {
+            const cfg = dom[entity];
+            if (!cfg) return;
+
+            // Categories (cascading radios).
+            $(document).on('change', `${cfg.catL1} input[type="radio"]`, function () {
+                const id = Number($(this).val()) || 0;
+                if (!id) return;
+                setSingleCategory(entity, id);
+                renderCategories(entity);
+            });
+
+            $(document).on('change', `${cfg.catL2} input[type="radio"]`, function () {
+                const id = Number($(this).val()) || 0;
+                if (!id) return;
+                setSingleCategory(entity, id);
+                renderCategories(entity);
+            });
+
+            $(document).on('change', `${cfg.catL3} input[type="radio"]`, function () {
+                const id = Number($(this).val()) || 0;
+                if (!id) return;
+                setSingleCategory(entity, id);
+                renderCategories(entity);
+            });
+
+            // Tags.
+            $(document).on('input focus', cfg.tagInput, function () {
+                const val = $(this).val();
+                showTagSuggestions(entity, val);
+            });
+            $(document).on('keydown', cfg.tagInput, function (e) {
+                if (e.key === 'Escape') {
+                    $(this).val('');
+                    hideSuggestions($(cfg.tagSuggestions));
+                }
+                if (e.key === 'Enter' || e.key === ',') {
+                    const val = String($(this).val() || '');
+                    const hasComma = e.key === ',' || val.includes(',');
+                    const tokens = parseTokens(val);
+                    if (!tokens.length) {
+                        if (e.key === ',') {
+                            e.preventDefault();
+                        }
+                        return;
+                    }
+
+                    e.preventDefault();
+                    // If user hit Enter, treat whole input as token list; if comma, consume tokens up to commas.
+                    addTokens(entity, val).then(() => {
+                        $(this).val('');
+                        hideSuggestions($(cfg.tagSuggestions));
+                    });
+                    return;
+                }
+            });
+
+            // Also support pasting/typing multiple comma-separated tags.
+            $(document).on('input', cfg.tagInput, function () {
+                const val = String($(this).val() || '');
+                if (!val.includes(',')) {
+                    return;
+                }
+                // Consume immediately.
+                addTokens(entity, val).then(() => {
+                    $(this).val('');
+                    hideSuggestions($(cfg.tagSuggestions));
+                });
+            });
+
+            $(document).on('click', `${cfg.tagSuggestions} .pcg-meta-suggestion[data-tag-id]`, function () {
+                const id = Number($(this).attr('data-tag-id')) || 0;
+                if (!id) return;
+                const tag = cache.tagsById.get(id);
+                if (tag) {
+                    addTag(entity, tag);
+                }
+                $(cfg.tagInput).val('').trigger('input');
+                hideSuggestions($(cfg.tagSuggestions));
+            });
+
+            $(document).on('click', `${cfg.tagSuggestions} .pcg-meta-suggestion--create`, function () {
+                const raw = $(this).attr('data-create-name') || '';
+                const name = decodeURIComponent(raw);
+                if (!name) return;
+                createTagAndAdd(entity, name).always(() => {
+                    $(cfg.tagInput).val('');
+                    hideSuggestions($(cfg.tagSuggestions));
+                });
+            });
+
+            $(document).on('click', `${cfg.tagChips} .pcg-meta-chip__remove`, function () {
+                const id = Number($(this).closest('.pcg-meta-chip').attr('data-tag-id')) || 0;
+                removeTag(entity, id);
+            });
+        }
+
+        function createTagAndAdd(entity, name) {
+            return $.ajax({
+                url: pcgCreatorData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'pcg_create_learning_tag',
+                    nonce: pcgCreatorData.nonce,
+                    name: name
+                }
+            }).done(function (response) {
+                if (!response || !response.success) return;
+                const tag = response.data;
+                const id = Number(tag.id) || 0;
+                if (!id) return;
+
+                const normalized = { id, name: String(tag.name || name), slug: String(tag.slug || '') };
+                if (!cache.tagsById.has(id)) {
+                    cache.tagsById.set(id, normalized);
+                    cache.tags.push(normalized);
+                }
+                addTag(entity, normalized);
+            });
+        }
+
+        // Global click: close any open suggestion boxes.
+        $(document).on('click', function (e) {
+            const $t = $(e.target);
+            const inside = $t.closest('.pcg-meta-tags').length > 0;
+            if (inside) return;
+            Object.keys(dom).forEach(k => {
+                hideSuggestions($(dom[k].tagSuggestions));
+            });
+        });
+
+        // Bind all entities once (if present).
+        ['course', 'group', 'programa'].forEach(bindEntity);
+
+        function render(entity) {
+            return ensureLoaded().done(function () {
+                renderCategories(entity);
+                renderTags(entity);
+            });
+        }
+
+        return {
+            ensureLoaded,
+            render,
+            setSelection,
+            reset,
+            getPayload,
+        };
+    })();
+
+    // ───────────────────────────────────────────────────────────
     // Specialization (LearnDash Group) Creator UI
     // ───────────────────────────────────────────────────────────
     (function initSpecializationCreator() {
@@ -57,6 +569,7 @@ jQuery(document).ready(function ($) {
             $('.pcg-spec-segment[data-value="especializacion"]').addClass('active');
             $('#pcg-spec-mode-especializacion').show();
             $('#pcg-spec-mode-cursos').hide();
+            $('#pcg-spec-mode-meta').hide();
 
             $('#pcg-spec-all-courses').html(`
                 <div class="pcg-loading-placeholder">
@@ -82,6 +595,7 @@ jQuery(document).ready(function ($) {
                 populateTeachersList($list, [], seed);
             }
 
+            plLearningMeta.reset('group');
         }
 
         function renderAddedCourses() {
@@ -316,6 +830,8 @@ jQuery(document).ready(function ($) {
                     $('#pcg-group-price').val(data.price || '');
                     $('#pcg-spec-order-required').prop('checked', orderRequired);
 
+                    plLearningMeta.setSelection('group', data.category_ids || [], data.tags || []);
+
                     if (data.title) {
                         $('#pcg-current-specialization-label').text(data.title).show();
                     }
@@ -330,6 +846,7 @@ jQuery(document).ready(function ($) {
                     $('.pcg-spec-segment[data-value="especializacion"]').addClass('active');
                     $('#pcg-spec-mode-especializacion').show();
                     $('#pcg-spec-mode-cursos').hide();
+                    $('#pcg-spec-mode-meta').hide();
 
                     // Teachers
                     populateTeachersList($('#pcg-group-teachers-list'), data.teachers || [], {
@@ -373,6 +890,7 @@ jQuery(document).ready(function ($) {
         function syncQuizCoursePicker() { }
 
         function getSpecializationPayload() {
+            const meta = plLearningMeta.getPayload('group');
             return {
                 id: currentGroupId,
                 title: $('#pcg-group-title').val(),
@@ -382,6 +900,8 @@ jQuery(document).ready(function ($) {
                 order_required: orderRequired ? 1 : 0,
                 teachers: collectTeachers($('#pcg-group-teachers-list')),
                 split_locked: Boolean($('#pcg-group-teachers-list').data('splitLocked')),
+                category_ids: meta.category_ids,
+                tag_ids: meta.tag_ids,
             };
         }
 
@@ -410,12 +930,16 @@ jQuery(document).ready(function ($) {
             const mode = $(this).data('value');
             $('#pcg-spec-mode-especializacion').hide();
             $('#pcg-spec-mode-cursos').hide();
+            $('#pcg-spec-mode-meta').hide();
 
             if (mode === 'especializacion') {
                 $('#pcg-spec-mode-especializacion').fadeIn(200);
             } else if (mode === 'cursos') {
                 $('#pcg-spec-mode-cursos').fadeIn(200);
                 loadCoursesForSpecialization();
+            } else if (mode === 'meta') {
+                $('#pcg-spec-mode-meta').fadeIn(200);
+                plLearningMeta.render('group');
             }
         });
 
@@ -593,6 +1117,7 @@ jQuery(document).ready(function ($) {
             $('.pcg-prog-segment[data-value="programa"]').addClass('active');
             $('#pcg-prog-mode-programa').show();
             $('#pcg-prog-mode-especializaciones').hide();
+            $('#pcg-prog-mode-meta').hide();
 
             $('#pcg-prog-all-specs').html(`
                 <div class="pcg-loading-placeholder">
@@ -614,6 +1139,8 @@ jQuery(document).ready(function ($) {
             if ($list.length) {
                 populateTeachersList($list, [], seed);
             }
+
+            plLearningMeta.reset('programa');
         }
 
         function renderAddedSpecs() {
@@ -787,6 +1314,8 @@ jQuery(document).ready(function ($) {
                     $('#pcg-programa-description').val(data.description || '');
                     $('#pcg-programa-price').val(data.price || '');
 
+                    plLearningMeta.setSelection('programa', data.category_ids || [], data.tags || []);
+
                     if (data.title) {
                         $('#pcg-current-programa-label').text(data.title).show();
                     }
@@ -800,6 +1329,7 @@ jQuery(document).ready(function ($) {
                     $('.pcg-prog-segment[data-value="programa"]').addClass('active');
                     $('#pcg-prog-mode-programa').show();
                     $('#pcg-prog-mode-especializaciones').hide();
+                    $('#pcg-prog-mode-meta').hide();
 
                     // Teachers
                     populateTeachersList($('#pcg-program-teachers-list'), data.teachers || [], {
@@ -839,6 +1369,7 @@ jQuery(document).ready(function ($) {
         }
 
         function getProgramaPayload() {
+            const meta = plLearningMeta.getPayload('programa');
             return {
                 id: currentProgramaId,
                 title: $('#pcg-programa-title').val(),
@@ -847,6 +1378,8 @@ jQuery(document).ready(function ($) {
                 group_ids: selectedGroupIds,
                 teachers: collectTeachers($('#pcg-program-teachers-list')),
                 split_locked: Boolean($('#pcg-program-teachers-list').data('splitLocked')),
+                category_ids: meta.category_ids,
+                tag_ids: meta.tag_ids,
             };
         }
 
@@ -876,12 +1409,16 @@ jQuery(document).ready(function ($) {
             const mode = $(this).data('value');
             $('#pcg-prog-mode-programa').hide();
             $('#pcg-prog-mode-especializaciones').hide();
+            $('#pcg-prog-mode-meta').hide();
 
             if (mode === 'programa') {
                 $('#pcg-prog-mode-programa').fadeIn(200);
             } else if (mode === 'especializaciones') {
                 $('#pcg-prog-mode-especializaciones').fadeIn(200);
                 loadSpecializationsForPrograma();
+            } else if (mode === 'meta') {
+                $('#pcg-prog-mode-meta').fadeIn(200);
+                plLearningMeta.render('programa');
             }
         });
 
@@ -1383,6 +1920,8 @@ jQuery(document).ready(function ($) {
 
         resetTeachersList($teachersList);
 
+        plLearningMeta.reset('course');
+
         // Reset Tabs to "CURSO"
         $('.pcg-segment').removeClass('active');
         $('.pcg-segment[data-value="curso"]').addClass('active');
@@ -1506,6 +2045,7 @@ jQuery(document).ready(function ($) {
         const $courseSidecardSection = $('#pcg-mode-curso .pcg-sidecard__section');
         const $evalSlot = $('#pcg-mode-evaluacion .pcg-sidecard__actions-slot');
         const $lessonsSlot = $('#pcg-mode-lecciones .pcg-sidecard__actions-slot');
+        const $metaSlot = $('#pcg-mode-meta .pcg-sidecard__actions-slot');
 
         if (mode === 'evaluacion' && $evalSlot.length) {
             $evalSlot.append($actions);
@@ -1514,6 +2054,11 @@ jQuery(document).ready(function ($) {
 
         if (mode === 'lecciones' && $lessonsSlot.length) {
             $lessonsSlot.append($actions);
+            return;
+        }
+
+        if (mode === 'meta' && $metaSlot.length) {
+            $metaSlot.append($actions);
             return;
         }
 
@@ -1529,6 +2074,7 @@ jQuery(document).ready(function ($) {
         const $courseAside = $('#pcg-mode-curso .pcg-course-editor__right');
         const $evalSlot = $('#pcg-mode-evaluacion .pcg-checklist-slot');
         const $lessonsSlot = $('#pcg-mode-lecciones .pcg-checklist-slot');
+        const $metaSlot = $('#pcg-mode-meta .pcg-checklist-slot');
 
         if (mode === 'evaluacion' && $evalSlot.length) {
             $evalSlot.append($checklist);
@@ -1537,6 +2083,11 @@ jQuery(document).ready(function ($) {
 
         if (mode === 'lecciones' && $lessonsSlot.length) {
             $lessonsSlot.append($checklist);
+            return;
+        }
+
+        if (mode === 'meta' && $metaSlot.length) {
+            $metaSlot.append($checklist);
             return;
         }
 
@@ -1690,6 +2241,10 @@ jQuery(document).ready(function ($) {
             }
             placeCourseSidebar('evaluacion');
             $('#pcg-mode-evaluacion').fadeIn(300);
+        } else if (mode === 'meta') {
+            $('#pcg-mode-meta').fadeIn(300);
+            placeCourseSidebar('meta');
+            plLearningMeta.render('course');
         }
     });
 
@@ -1702,6 +2257,8 @@ jQuery(document).ready(function ($) {
     } else if (initialMode === 'evaluacion') {
         syncEvalPriceFromMain();
         $('#pcg-course-price').trigger('input');
+    } else if (initialMode === 'meta') {
+        plLearningMeta.render('course');
     }
     initChecklistObservers();
     $(document).on('input change', '#pcg-course-title, #pcg-course-price, #pcg-course-description, #pcg-course-excerpt, #pcg-course-price-eval, #pcg-course-price-lessons', updateCourseChecklist);
@@ -2324,6 +2881,7 @@ jQuery(document).ready(function ($) {
 
         const $btn = $(this);
 
+        const meta = plLearningMeta.getPayload('course');
         const courseData = {
             id: currentCourseId,
             title: $('#pcg-course-title').val(),
@@ -2334,7 +2892,9 @@ jQuery(document).ready(function ($) {
             cover_photo_id: coverPhotoId,
             progression: $('#pcg-course-progression').is(':checked') ? 'on' : '',
             teachers: [],
-            content: []
+            content: [],
+            category_ids: meta.category_ids,
+            tag_ids: meta.tag_ids,
         };
 
         courseData.teachers = collectTeachers($('#pcg-teachers-list'));
@@ -2856,6 +3416,8 @@ jQuery(document).ready(function ($) {
                         name: data.author_name || '',
                         avatar: data.author_avatar || ''
                     });
+
+                    plLearningMeta.setSelection('course', data.category_ids || [], data.tags || []);
 
                     // Reset Tabs to "CURSO"
                     $('.pcg-segment').removeClass('active');

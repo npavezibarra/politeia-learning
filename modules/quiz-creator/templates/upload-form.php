@@ -22,46 +22,21 @@ if (!defined('ABSPATH')) {
                 </button>
             <?php endif; ?>
         </div>
-        <p class="pqc-description">
-            <?php _e('Set up your quiz parameters and upload your content to generate the evaluation.', 'politeia-quiz-creator'); ?>
-        </p>
-
     </div>
 
     <form id="pqc-quiz-form" class="pqc-quiz-form">
         <!-- Hidden method tracker -->
         <input type="hidden" id="pqc-creation-method" name="creation_method" value="llm">
+        <input type="hidden" id="pqc-course-id" name="course_id" value="<?php echo esc_attr($course_id); ?>">
+        <input type="hidden" id="pqc-quiz-title" name="quiz_title" value="<?php echo esc_attr($default_quiz_title); ?>" />
+        <input type="hidden" id="pqc-num-questions" name="num_questions" value="10" />
+        <input type="hidden" id="pqc-answers-per-question" name="answers_per_question" value="4" />
 
         <div class="pqc-wizard-viewport">
-            <!-- SLIDE 1: BASIC CONFIG -->
+            <!-- SLIDE 1: METHOD CHOICE -->
             <div class="pqc-wizard-slide active" data-slide="1">
                 <div class="pqc-section-header">
-                    <h3><?php _e('Step 1: Quiz Goals', 'politeia-quiz-creator'); ?></h3>
-                </div>
-                <div class="pqc-settings-grid">
-                    <input type="hidden" id="pqc-course-id" name="course_id"
-                        value="<?php echo esc_attr($course_id); ?>">
-                    <input type="hidden" id="pqc-quiz-title" name="quiz_title"
-                        value="<?php echo esc_attr($default_quiz_title); ?>" />
-                    <div class="pqc-field">
-                        <input type="number" id="pqc-num-questions" name="num_questions" min="1" max="100"
-                            placeholder="<?php _e('Number of Questions', 'politeia-quiz-creator'); ?>" required />
-                    </div>
-                    <div class="pqc-field">
-                        <input type="number" id="pqc-answers-per-question" name="answers_per_question" min="2" max="6"
-                            placeholder="<?php _e('Answers per Question', 'politeia-quiz-creator'); ?>" />
-                    </div>
-                </div>
-                <div class="pqc-wizard-footer">
-                    <button type="button" class="pqc-wizard-next pqc-btn-primary"
-                        data-next="2"><?php _e('Next: Method', 'politeia-quiz-creator'); ?></button>
-                </div>
-            </div>
-
-            <!-- SLIDE 2: METHOD CHOICE -->
-            <div class="pqc-wizard-slide" data-slide="2">
-                <div class="pqc-section-header">
-                    <h3><?php _e('Step 2: Creation Method', 'politeia-quiz-creator'); ?></h3>
+                    <h3><?php _e('Step 1: Creation Method', 'politeia-quiz-creator'); ?></h3>
                     <p><?php _e('How do you want to create your questions?', 'politeia-quiz-creator'); ?></p>
                 </div>
 
@@ -93,24 +68,24 @@ if (!defined('ABSPATH')) {
                     </div>
                 </div>
 
-                <div class="pqc-wizard-footer">
-                    <button type="button" class="pqc-wizard-prev"
-                        data-prev="1"><?php _e('Back', 'politeia-quiz-creator'); ?></button>
-                    <button type="button" class="pqc-wizard-next pqc-btn-primary"
-                        data-next="3"><?php _e('Next: Questions', 'politeia-quiz-creator'); ?></button>
-                </div>
             </div>
 
-            <!-- SLIDE 3: QUESTIONS (PATH DEPENDENT) -->
-            <div class="pqc-wizard-slide" data-slide="3">
-
-                <!-- LLM PATH VIEW -->
+            <!-- SLIDE 2: AI PATH (COPY PROMPT) -->
+            <div class="pqc-wizard-slide" data-slide="2">
                 <div id="pqc-path-llm" class="pqc-method-path">
                     <div class="pqc-section-header">
-                        <h3><?php _e('Step 3: Generate with AI', 'politeia-quiz-creator'); ?></h3>
+                        <h3><?php _e('Step 2: Generate with AI', 'politeia-quiz-creator'); ?></h3>
                     </div>
 
                     <div class="pqc-settings-grid" style="margin-bottom: 20px;">
+                        <div class="pqc-field">
+                            <input type="number" id="pqc-num-questions-ui" min="1" max="100"
+                                placeholder="<?php _e('Number of Questions', 'politeia-quiz-creator'); ?>" />
+                        </div>
+                        <div class="pqc-field">
+                            <input type="number" id="pqc-answers-per-question-ui" min="2" max="6"
+                                placeholder="<?php _e('Answers per Question', 'politeia-quiz-creator'); ?>" />
+                        </div>
                         <div class="pqc-field pqc-field-full">
                             <input type="text" id="pqc-keywords" name="keywords"
                                 placeholder="<?php _e('Keywords (e.g., economy, demography, science)', 'politeia-quiz-creator'); ?>" />
@@ -167,11 +142,20 @@ if (!defined('ABSPATH')) {
                     </div>
                 </div>
 
-                <!-- MANUAL PATH VIEW -->
-                <div id="pqc-path-manual" class="pqc-method-path" style="display: none;">
+                <div class="pqc-wizard-footer">
+                    <button type="button" class="pqc-wizard-prev"
+                        data-prev="1"><?php _e('Back', 'politeia-quiz-creator'); ?></button>
+                    <button type="button" class="pqc-wizard-next pqc-btn-primary"
+                        data-next="4"><?php _e('Next: Behavior', 'politeia-quiz-creator'); ?></button>
+                </div>
+            </div>
+
+            <!-- SLIDE 3: MANUAL PATH (ADD QUESTIONS) -->
+            <div class="pqc-wizard-slide" data-slide="3">
+                <div id="pqc-path-manual" class="pqc-method-path">
 	                    <div class="pqc-section-header pqc-manual-header-row">
 	                        <div class="pqc-header-title-nav">
-	                            <h3><?php _e('Step 3: Write Questions', 'politeia-quiz-creator'); ?></h3>
+	                            <h3><?php _e('Step 2: Write Questions', 'politeia-quiz-creator'); ?></h3>
 	                            <div class="pqc-manual-actions">
 	                                <button type="button" class="pqc-manual-add-btn" title="<?php echo esc_attr__('Add question', 'politeia-quiz-creator'); ?>">
 	                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -188,7 +172,7 @@ if (!defined('ABSPATH')) {
 	                                            <path d="M15 18l-6-6 6-6" />
 	                                        </svg>
 	                                    </button>
-	                                    <span class="pqc-manual-counter">1 / 10</span>
+	                                    <span class="pqc-manual-counter">1 / 1</span>
 	                                    <button type="button" class="pqc-manual-next-btn pqc-nav-btn">
 	                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
 	                                            stroke-width="2.5">
@@ -214,7 +198,7 @@ if (!defined('ABSPATH')) {
 
                 <div class="pqc-wizard-footer">
                     <button type="button" class="pqc-wizard-prev"
-                        data-prev="2"><?php _e('Back', 'politeia-quiz-creator'); ?></button>
+                        data-prev="1"><?php _e('Back', 'politeia-quiz-creator'); ?></button>
                     <button type="button" class="pqc-wizard-next pqc-btn-primary"
                         data-next="4"><?php _e('Next: Behavior', 'politeia-quiz-creator'); ?></button>
                 </div>
@@ -223,7 +207,7 @@ if (!defined('ABSPATH')) {
             <!-- SLIDE 4: BEHAVIOR/SETTINGS -->
             <div class="pqc-wizard-slide" data-slide="4">
                 <div class="pqc-section-header">
-                    <h3><?php _e('Step 4: Behavior', 'politeia-quiz-creator'); ?></h3>
+                    <h3><?php _e('Step 3: Behavior', 'politeia-quiz-creator'); ?></h3>
                 </div>
                 <div class="pqc-settings-grid">
                     <div class="pqc-field pqc-field-checkbox">
@@ -249,7 +233,7 @@ if (!defined('ABSPATH')) {
                 </div>
                 <div class="pqc-wizard-footer">
                     <button type="button" class="pqc-wizard-prev"
-                        data-prev="3"><?php _e('Back', 'politeia-quiz-creator'); ?></button>
+                        data-prev="2"><?php _e('Back', 'politeia-quiz-creator'); ?></button>
                     <button type="submit" class="pqc-submit-btn pqc-btn-primary">
                         <span class="pqc-btn-text"><?php _e('CREATE QUIZ', 'politeia-quiz-creator'); ?></span>
                         <span class="pqc-btn-loading" style="display: none;"><span class="pqc-spinner"></span>

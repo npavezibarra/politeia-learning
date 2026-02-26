@@ -93,6 +93,7 @@
         const tabSummary = qs(root, '[data-pcg-sales-list-tab="summary"]');
         const panelOperational = qs(root, '[data-pcg-sales-list-panel="operational"]');
         const panelSummary = qs(root, '[data-pcg-sales-list-panel="summary"]');
+        const enableStudentProfileLinks = root.hasAttribute('data-pcg-students-profile-links');
 
         const pagePrev = qs(root, 'button[data-pcg-sales-page-prev]');
         const pageNext = qs(root, 'button[data-pcg-sales-page-next]');
@@ -117,12 +118,17 @@
         let summary = [];
         let locale = 'es-CL';
         let currency = 'CLP';
-        let activeTable = 'operational';
+        const hasOp = !!(opBody || panelOperational || qOperational);
+        const hasSum = !!(sumBody || panelSummary || qSummary);
+        let activeTable = hasOp ? 'operational' : 'summary';
         const pageSize = 12;
         let opPage = 1;
         let sumPage = 1;
 
         function setTab(which) {
+            if (which === 'operational' && !hasOp) which = 'summary';
+            if (which === 'summary' && !hasSum) which = 'operational';
+
             const isOp = which === 'operational';
             activeTable = which;
             if (tabOperational) tabOperational.setAttribute('aria-selected', String(isOp));
@@ -211,13 +217,18 @@
 
             for (const u of rows) {
                 const tr = document.createElement('tr');
+                const name = u.name || '';
+                const email = u.email || '';
+                const nameHtml = enableStudentProfileLinks
+                    ? `<button type="button" class="pcg-sales-list-user-name pcg-sales-list-user-name--link" data-pcg-student-open data-student-name="${escapeHtml(name)}" data-student-email="${escapeHtml(email)}">${escapeHtml(name)}</button>`
+                    : `<div class="pcg-sales-list-user-name">${escapeHtml(name)}</div>`;
                 tr.innerHTML = `
                     <td>
                         <div class="pcg-sales-list-user">
                             <div class="pcg-sales-list-avatar" aria-hidden="true">${escapeHtml(initials(u.name))}</div>
                             <div class="pcg-sales-list-user-meta">
-                                <div class="pcg-sales-list-user-name">${escapeHtml(u.name || '')}</div>
-                                <div class="pcg-sales-list-user-email">${escapeHtml(u.email || '')}</div>
+                                ${nameHtml}
+                                <div class="pcg-sales-list-user-email">${escapeHtml(email)}</div>
                             </div>
                         </div>
                     </td>
@@ -370,8 +381,14 @@
             fetchTransactions().then(hydrate);
         }
 
+        // If this is a summary-only embed (e.g., Students > Profile list), fetch immediately.
+        if (hasSum && !hasOp) {
+            ensureFetched();
+        }
+
         window.addEventListener('pcg:sales-tab-changed', (e) => {
-            if (!e || !e.detail || e.detail.tab !== 'list') return;
+            if (!e || !e.detail) return;
+            if (e.detail.tab !== 'list' && e.detail.tab !== 'profile') return;
             ensureFetched();
         });
 
@@ -379,7 +396,7 @@
             ensureFetched();
         }
 
-        setTab('operational');
+        setTab(activeTable);
     }
 
     document.addEventListener('DOMContentLoaded', () => {

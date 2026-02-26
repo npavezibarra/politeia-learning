@@ -110,6 +110,46 @@ msgstr "Obligar a responder antes de continuar"
 msgid "How do you want to create your questions?"
 msgstr "¿Cómo quieres crear tus preguntas?"
 
+#: modules/quiz-creator/templates/upload-form.php:45
+msgid "Step 1: Creation Method"
+msgstr "Paso 1: Método de creación"
+
+#: modules/quiz-creator/templates/upload-form.php:81
+msgid "Step 2: Generate with AI"
+msgstr "Paso 2: Generar con IA"
+
+#: modules/quiz-creator/templates/upload-form.php:162
+msgid "Step 2: Write Questions"
+msgstr "Paso 2: Escribir preguntas"
+
+#: modules/quiz-creator/templates/upload-form.php:223
+msgid "Step 3: Behavior"
+msgstr "Paso 3: Comportamiento"
+
+#: modules/quiz-creator/templates/upload-form.php:170
+msgid "Add question"
+msgstr "Añadir pregunta"
+
+#: modules/quiz-creator/init.php:117
+msgid "Internal name (e.g. Question 1)"
+msgstr "Nombre interno (p. ej., Pregunta 1)"
+
+#: modules/quiz-creator/init.php:118
+msgid "Write the actual question here..."
+msgstr "Escribe aquí la pregunta..."
+
+#: modules/quiz-creator/init.php:119
+msgid "Answer"
+msgstr "Respuesta"
+
+#: modules/quiz-creator/init.php:120
+msgid "Add Answer"
+msgstr "Añadir respuesta"
+
+#: modules/quiz-creator/init.php:121
+msgid "Remove answer"
+msgstr "Eliminar respuesta"
+
 #: modules/quiz-creator/templates/upload-form.php:121
 msgid "I will upload my own documents to the LLM (PDF, Text, etc.)"
 msgstr "Subiré mis propios documentos al LLM (PDF, texto, etc.)"

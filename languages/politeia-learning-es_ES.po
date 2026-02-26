@@ -632,7 +632,7 @@ msgstr ""
 
 #: modules/course-creator/templates/sections/sales.php:12
 msgid "LIST"
-msgstr ""
+msgstr "LISTA"
 
 #: modules/course-creator/templates/sections/sales.php:75
 msgid "Ventas de cursos"
@@ -753,11 +753,11 @@ msgstr ""
 
 #: modules/course-creator/templates/sections/students.php:12
 msgid "RANKING"
-msgstr ""
+msgstr "CLASIFICACIÓN"
 
 #: modules/course-creator/templates/sections/students.php:15
 msgid "PROFILE"
-msgstr ""
+msgstr "PERFIL"
 
 #: modules/course-creator/templates/sections/students.php:27
 msgid "Panel de Estudiantes"
@@ -1359,3 +1359,166 @@ msgstr "Añadir"
 #: modules/course-programs/includes/class-pcg-admin.php:32
 msgid "Agregar nuevo Programa"
 msgstr "Agregar nuevo Programa"
+
+# --- Unified Learning Meta (Categories/Tags) ---
+msgid "META"
+msgstr "META"
+
+msgid "META DEL CURSO"
+msgstr "META DEL CURSO"
+
+msgid "META DE LA ESPECIALIZACIÓN"
+msgstr "META DE LA ESPECIALIZACIÓN"
+
+msgid "META DEL PROGRAMA"
+msgstr "META DEL PROGRAMA"
+
+msgid "CATEGORÍAS"
+msgstr "CATEGORÍAS"
+
+msgid "Buscar categorías..."
+msgstr "Buscar categorías..."
+
+msgid "ETIQUETAS"
+msgstr "ETIQUETAS"
+
+msgid "Escribe para buscar o crear..."
+msgstr "Escribe para buscar o crear..."
+
+msgid "Crear etiqueta"
+msgstr "Crear etiqueta"
+
+msgid "No hay categorías."
+msgstr "No hay categorías."
+
+msgid "Categorías de aprendizaje"
+msgstr "Categorías de aprendizaje"
+
+msgid "Categoría de aprendizaje"
+msgstr "Categoría de aprendizaje"
+
+msgid "Buscar categorías"
+msgstr "Buscar categorías"
+
+msgid "Todas las categorías"
+msgstr "Todas las categorías"
+
+msgid "Categoría padre"
+msgstr "Categoría padre"
+
+msgid "Categoría padre:"
+msgstr "Categoría padre:"
+
+msgid "Editar categoría"
+msgstr "Editar categoría"
+
+msgid "Actualizar categoría"
+msgstr "Actualizar categoría"
+
+msgid "Agregar nueva categoría"
+msgstr "Agregar nueva categoría"
+
+msgid "Nombre de la nueva categoría"
+msgstr "Nombre de la nueva categoría"
+
+msgid "Etiquetas de aprendizaje"
+msgstr "Etiquetas de aprendizaje"
+
+msgid "Etiqueta de aprendizaje"
+msgstr "Etiqueta de aprendizaje"
+
+msgid "Buscar etiquetas"
+msgstr "Buscar etiquetas"
+
+msgid "Etiquetas populares"
+msgstr "Etiquetas populares"
+
+msgid "Todas las etiquetas"
+msgstr "Todas las etiquetas"
+
+msgid "Editar etiqueta"
+msgstr "Editar etiqueta"
+
+msgid "Actualizar etiqueta"
+msgstr "Actualizar etiqueta"
+
+msgid "Agregar nueva etiqueta"
+msgstr "Agregar nueva etiqueta"
+
+msgid "Nombre de la nueva etiqueta"
+msgstr "Nombre de la nueva etiqueta"
+
+msgid "Separa las etiquetas con comas"
+msgstr "Separa las etiquetas con comas"
+
+msgid "Agregar o quitar etiquetas"
+msgstr "Agregar o quitar etiquetas"
+
+msgid "Elige entre las más usadas"
+msgstr "Elige entre las más usadas"
+
+msgid "Taxonomías no disponibles."
+msgstr "Taxonomías no disponibles."
+
+msgid "Nombre inválido."
+msgstr "Nombre inválido."
+
+msgid "No se pudo crear la etiqueta."
+msgstr "No se pudo crear la etiqueta."
+
+#: modules/course-creator/templates/sections/students.php:206
+msgid "Perfil Estudiantes"
+msgstr "Perfil Estudiantes"
+
+# --- Mis Escritos (Articles) ---
+#: modules/course-creator/templates/sections/mis-escritos.php:93
+msgid "Save"
+msgstr "Guardar"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:100
+msgid "Publish"
+msgstr "Publicar"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:109
+msgid "The title..."
+msgstr "El título..."
+
+#: modules/course-creator/templates/sections/mis-escritos.php:125
+msgid "Upload Article Cover"
+msgstr "Subir portada del artículo"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:18
+msgid "Bold"
+msgstr "Negrita"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:22
+msgid "Italic"
+msgstr "Cursiva"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:29
+msgid "Align Left"
+msgstr "Alinear a la izquierda"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:33
+msgid "Align Center"
+msgstr "Alinear al centro"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:37
+msgid "Align Right"
+msgstr "Alinear a la derecha"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:41
+msgid "Justify"
+msgstr "Justificar"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:48
+msgid "Heading 1"
+msgstr "Encabezado 1"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:57
+msgid "Headings"
+msgstr "Encabezados"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:77
+msgid "Paragraph"
+msgstr "Párrafo"

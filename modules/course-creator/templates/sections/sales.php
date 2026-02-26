@@ -130,19 +130,14 @@
         </div>
 
         <div class="pcg-sales-dashboard" data-pcg-sales-list>
-            <div class="pcg-sales-list-topbar">
-                <div class="pcg-sales-list-tabs" role="tablist" aria-label="<?php _e('Tablas', 'politeia-learning'); ?>">
-                    <button type="button" class="pcg-sales-list-tab" id="pcg-sales-list-operational-tab"
-                        data-pcg-sales-list-tab="operational" role="tab" aria-selected="true"
-                        aria-controls="pcg-sales-list-operational">
-                        <?php _e('Operacional', 'politeia-learning'); ?>
-                    </button>
-                    <button type="button" class="pcg-sales-list-tab" id="pcg-sales-list-summary-tab"
-                        data-pcg-sales-list-tab="summary" role="tab" aria-selected="false"
-                        aria-controls="pcg-sales-list-summary">
-                        <?php _e('Resumen', 'politeia-learning'); ?>
-                    </button>
-                </div>
+	            <div class="pcg-sales-list-topbar">
+	                <div class="pcg-sales-list-tabs" role="tablist" aria-label="<?php _e('Tablas', 'politeia-learning'); ?>">
+	                    <button type="button" class="pcg-sales-list-tab" id="pcg-sales-list-operational-tab"
+	                        data-pcg-sales-list-tab="operational" role="tab" aria-selected="true"
+	                        aria-controls="pcg-sales-list-operational">
+	                        <?php _e('Operacional', 'politeia-learning'); ?>
+	                    </button>
+	                </div>
 
                 <div class="pcg-sales-list-pagination" aria-label="<?php esc_attr_e('Paginación', 'politeia-learning'); ?>">
                     <button type="button" class="pcg-sales-list-page-btn" data-pcg-sales-page-prev
@@ -199,53 +194,9 @@
                 </div>
             </section>
 
-            <section class="pcg-sales-list-panel" id="pcg-sales-list-summary" role="tabpanel"
-                data-pcg-sales-list-panel="summary" aria-labelledby="pcg-sales-list-summary-tab" hidden>
-                <div class="pcg-sales-list-panel-head">
-                    <div class="pcg-sales-list-panel-title">
-                        <h3><?php _e('Resumen por estudiante', 'politeia-learning'); ?></h3>
-                        <p class="pcg-sales-list-hint">
-                            <?php _e('Una fila por estudiante. Totales solo consideran ventas pagadas.', 'politeia-learning'); ?>
-                        </p>
-                    </div>
-
-                    <div class="pcg-sales-list-controls">
-                        <div class="pcg-sales-list-search">
-                            <input type="search" autocomplete="off" data-pcg-sales-sum-search
-                                placeholder="<?php esc_attr_e('Buscar nombre, email o producto…', 'politeia-learning'); ?>">
-                            <button type="button" class="pcg-sales-list-clear" data-pcg-sales-sum-clear
-                                title="<?php esc_attr_e('Limpiar', 'politeia-learning'); ?>">×</button>
-                        </div>
-                        <div class="pcg-sales-list-pill" aria-live="polite">
-                            <?php _e('Mostrando', 'politeia-learning'); ?>
-                            <strong data-pcg-sales-sum-count>0</strong>
-                            <?php _e('de', 'politeia-learning'); ?>
-                            <strong data-pcg-sales-sum-total>0</strong>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="pcg-sales-list-table-wrap">
-                    <table class="pcg-sales-list-table" aria-label="<?php esc_attr_e('Resumen por estudiante', 'politeia-learning'); ?>">
-                        <thead>
-                            <tr>
-                                <th style="width:320px;"><?php _e('Estudiante', 'politeia-learning'); ?></th>
-                                <th style="width:110px;"><?php _e('Cursos', 'politeia-learning'); ?></th>
-                                <th style="width:110px;"><?php _e('Libros', 'politeia-learning'); ?></th>
-                                <th style="width:140px;"><?php _e('Patrocinio', 'politeia-learning'); ?></th>
-                                <th style="width:180px; text-align:right;"><?php _e('Total', 'politeia-learning'); ?></th>
-                            </tr>
-                        </thead>
-                        <tbody data-pcg-sales-sum-body></tbody>
-                    </table>
-                    <div class="pcg-sales-list-empty" data-pcg-sales-sum-empty hidden>
-                        <?php _e('No hay estudiantes que coincidan.', 'politeia-learning'); ?>
-                    </div>
-                </div>
-            </section>
-        </div>
-    </div>
-</div>
+	        </div>
+	    </div>
+	</div>
 
 <script>
     (function () {

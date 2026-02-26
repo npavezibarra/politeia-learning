@@ -9,6 +9,7 @@
     let selectedFile = null;
 
     $(document).ready(function () {
+        syncWizardUiInputs();
         initWizardNavigation();
         initMethodSwitch();
         initUploadArea();
@@ -38,6 +39,16 @@
         });
     });
 
+    function pqcGoToSlide(slideNum) {
+        const n = Number(slideNum) || 0;
+        if (!n) return;
+        $('.pqc-wizard-slide').removeClass('active');
+        $(`.pqc-wizard-slide[data-slide="${n}"]`).addClass('active');
+
+        $('.pqc-progress-step').removeClass('active');
+        $(`.pqc-progress-step[data-step="${n}"]`).addClass('active');
+    }
+
     /**
      * Wizard Navigation logic
      */
@@ -45,40 +56,23 @@
         // NEXT button
         $(document).on('click', '.pqc-wizard-next', function () {
             const nextSlide = $(this).data('next');
-            const currentSlide = nextSlide - 1;
-
-            // Simple validation before going to next slide
-            if (currentSlide === 1) {
-                const title = $('#pqc-quiz-title').val() ? $('#pqc-quiz-title').val().trim() : '';
-                const num = $('#pqc-num-questions').val();
-                if (!title) { alert('Please enter a Quiz Title.'); return; }
-                if (!num || num < 1) { alert('Please enter number of questions.'); return; }
-            }
-
-            if (nextSlide === 3) {
-                const method = $('#pqc-creation-method').val();
-                if (method === 'manual') {
-                    renderManualQuestions();
-                }
-            }
-
-            goToSlide(nextSlide);
+            pqcGoToSlide(nextSlide);
         });
 
         // PREV button
         $(document).on('click', '.pqc-wizard-prev', function () {
-            const prevSlide = $(this).data('prev');
-            goToSlide(prevSlide);
+            const current = Number($('.pqc-wizard-slide.active').data('slide') || 0);
+            const method = $('#pqc-creation-method').val();
+            const prevSlide = Number($(this).data('prev') || 0);
+
+            if (current === 4) {
+                // Route back to the correct question step.
+                pqcGoToSlide(method === 'manual' ? 3 : 2);
+                return;
+            }
+
+            pqcGoToSlide(prevSlide);
         });
-
-        function goToSlide(slideNum) {
-            $('.pqc-wizard-slide').removeClass('active');
-            $(`.pqc-wizard-slide[data-slide="${slideNum}"]`).addClass('active');
-
-            // Update Progress dots
-            $('.pqc-progress-step').removeClass('active');
-            $(`.pqc-progress-step[data-step="${slideNum}"]`).addClass('active');
-        }
     }
 
     /**
@@ -91,19 +85,17 @@
             $(this).addClass('active');
             $('#pqc-creation-method').val(method);
 
-            // Toggle path display
-            $('.pqc-method-path').hide();
-            $(`#pqc-path-${method}`).show();
-
-            // Set first path-specific step validation if needed
+            // Set path-specific step validation if needed
             validateStep3();
 
-            // UX: treat cards like buttons (advance to questions step when on slide 2)
+            // UX: treat cards like buttons (advance from method step)
             const activeSlide = Number($('.pqc-wizard-slide.active').data('slide') || 0);
-            if (activeSlide === 2) {
-                const $next = $('.pqc-wizard-next[data-next="3"]').first();
-                if ($next.length) {
-                    $next.trigger('click');
+            if (activeSlide === 1) {
+                if (method === 'manual') {
+                    renderManualQuestions();
+                    pqcGoToSlide(3);
+                } else {
+                    pqcGoToSlide(2);
                 }
             }
         });
@@ -121,51 +113,45 @@
      * Manual Mode UI Generation
      */
     function renderManualQuestions() {
-        const numQuestions = parseInt($('#pqc-num-questions').val(), 10);
-        if (!numQuestions || numQuestions < 1) {
-            alert('Please enter number of questions.');
+        const $slidesWrap = $('#pqc-manual-slides-wrap');
+        if (!$slidesWrap.length) {
             return;
         }
 
-        // Keep the input empty if the user wants, but default behavior still assumes 4 answers.
-        const answersPerQuestion = parseInt($('#pqc-answers-per-question').val(), 10) || 4;
-        const $slidesWrap = $('#pqc-manual-slides-wrap');
+        // If already rendered, do nothing.
+        if ($slidesWrap.find('.pqc-manual-slide').length) {
+            validateStep3();
+            return;
+        }
+
+        const answersPerQuestion = 4;
 
         $slidesWrap.empty();
 
-        for (let i = 0; i < numQuestions; i++) {
-            let html = `<div class="pqc-slide pqc-manual-slide ${i === 0 ? 'active' : ''}" data-manual-index="${i}">`;
-
-            // Question fields
-            html += `<div class="pqc-manual-field">
-                        <label>Question ${i + 1} Title</label>
-                        <input type="text" class="pqc-manual-q-title" placeholder="Internal name (e.g. Question 1)" value="Question ${i + 1}" required />
-                    </div>
-                    <div class="pqc-manual-field">
-                        <label>Question Text</label>
-                        <input type="text" class="pqc-manual-q-text" placeholder="Write the actual question here..." required />
-                    </div>`;
-
-            // Answers list
-            html += `<div class="pqc-manual-field">
-                        <label>Answers (Check the correct one)</label>
-                        <div class="pqc-manual-answers-list">`;
-
-            for (let j = 0; j < answersPerQuestion; j++) {
-                html += `<div class="pqc-manual-answer-row">
-                            <input type="radio" name="manual_correct_${i}" class="pqc-manual-correct-radio" ${j === 0 ? 'checked' : ''} />
-                            <input type="text" class="pqc-manual-answer-text" placeholder="Answer ${j + 1}" required />
-                        </div>`;
-            }
-
-            html += `</div></div></div>`;
-            $slidesWrap.append(html);
-        }
-
-        updateManualCounter(0, numQuestions);
+        $slidesWrap.append(buildManualSlideHtml(0, answersPerQuestion));
+        $slidesWrap.find('.pqc-manual-slide').first().addClass('active');
+        updateManualCounter(0, 1);
+        updateManualRemoveAnswerState($slidesWrap.find('.pqc-manual-slide').first());
         validateStep3();
     }
 
+    function syncWizardUiInputs() {
+        // Sync UI inputs to hidden fields (if present).
+        const syncToHidden = (uiSel, hiddenSel) => {
+            const $ui = $(uiSel);
+            const $hidden = $(hiddenSel);
+            if (!$ui.length || !$hidden.length) return;
+            if ($ui.val() === '' || $ui.val() == null) {
+                $ui.val($hidden.val());
+            }
+            $(document).on('input change', uiSel, function () {
+                $hidden.val($(this).val());
+            });
+        };
+
+        syncToHidden('#pqc-num-questions-ui', '#pqc-num-questions');
+        syncToHidden('#pqc-answers-per-question-ui', '#pqc-answers-per-question');
+    }
     function initManualModeControls() {
         ensureManualAddButton();
 
@@ -184,6 +170,39 @@
             addManualSlideAfter(currentIndex);
         });
 
+        $(document).on('click', '.pqc-manual-add-answer-btn', function () {
+            const $slide = $(this).closest('.pqc-manual-slide');
+            if (!$slide.length) return;
+            appendManualAnswerRow($slide);
+            updateManualRemoveAnswerState($slide);
+            validateStep3();
+        });
+
+        $(document).on('click', '.pqc-manual-remove-answer-btn', function () {
+            const $slide = $(this).closest('.pqc-manual-slide');
+            const $row = $(this).closest('.pqc-manual-answer-row');
+            if (!$slide.length || !$row.length) return;
+
+            const $rows = $slide.find('.pqc-manual-answer-row');
+            if ($rows.length <= 2) return;
+
+            const wasChecked = $row.find('.pqc-manual-correct-radio').is(':checked');
+            $row.remove();
+
+            // Ensure one correct answer remains checked.
+            if (wasChecked) {
+                const $first = $slide.find('.pqc-manual-answer-row').first();
+                if ($first.length) {
+                    $first.find('.pqc-manual-correct-radio').prop('checked', true);
+                    $first.addClass('correct');
+                }
+            }
+
+            renumberManualAnswers($slide);
+            updateManualRemoveAnswerState($slide);
+            validateStep3();
+        });
+
         $(document).on('change', '.pqc-manual-correct-radio', function () {
             $(this).closest('.pqc-manual-answers-list').find('.pqc-manual-answer-row').removeClass('correct');
             if ($(this).is(':checked')) {
@@ -198,14 +217,17 @@
         const $nav = $('.pqc-manual-nav').first();
         if (!$nav.length) return;
 
+        const s = (window.pqcData && window.pqcData.strings) ? window.pqcData.strings : {};
+        const addQuestionText = s.addQuestion || 'Add question';
+
         const btnHtml = `
-            <button type="button" class="pqc-manual-add-btn" title="Add question">
+            <button type="button" class="pqc-manual-add-btn" title="${addQuestionText}">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M12 5v14"></path>
                     <path d="M5 12h14"></path>
                 </svg>
-                <span>Add question</span>
+                <span>${addQuestionText}</span>
             </button>
         `;
 
@@ -220,7 +242,7 @@
         const $slidesWrap = $('#pqc-manual-slides-wrap');
         if (!$slidesWrap.length) return;
 
-        const answersPerQuestion = parseInt($('#pqc-answers-per-question').val(), 10) || 4;
+        const answersPerQuestion = 4;
         const $slides = $slidesWrap.find('.pqc-manual-slide');
         const total = $slides.length;
 
@@ -242,6 +264,7 @@
         $slidesWrap.find('.pqc-manual-slide').removeClass('active');
         $slidesWrap.find('.pqc-manual-slide').eq(newIndex).addClass('active');
         updateManualCounter(newIndex, $slidesWrap.find('.pqc-manual-slide').length);
+        updateManualRemoveAnswerState($slidesWrap.find('.pqc-manual-slide').eq(newIndex));
         validateStep3();
     }
 
@@ -249,24 +272,47 @@
         const i = Number(index) || 0;
         const n = Number(answersPerQuestion) || 4;
 
+        const s = (window.pqcData && window.pqcData.strings) ? window.pqcData.strings : {};
+        const labelQuestionTitle = s.questionTitle || 'Question Title';
+        const labelQuestionText = s.questionText || 'Question Text';
+        const labelAnswers = s.answers || 'Answers';
+        const labelCorrectHint = s.checkCorrect || 'Check the box for correct answers';
+        const placeholderInternalName = s.internalNamePlaceholder || 'Internal name (e.g. Question 1)';
+        const placeholderQuestion = s.questionPlaceholder || 'Write the actual question here...';
+        const labelAnswer = s.answerLabel || 'Answer';
+        const addAnswerText = s.addAnswer || 'Add Answer';
+
         let html = `<div class="pqc-slide pqc-manual-slide" data-manual-index="${i}">`;
         html += `<div class="pqc-manual-field">
-                    <label>Question ${i + 1} Title</label>
-                    <input type="text" class="pqc-manual-q-title" placeholder="Internal name (e.g. Question 1)" value="" required />
+                    <label>${labelQuestionTitle}</label>
+                    <input type="text" class="pqc-manual-q-title" placeholder="${placeholderInternalName}" value="" />
                 </div>
                 <div class="pqc-manual-field">
-                    <label>Question Text</label>
-                    <input type="text" class="pqc-manual-q-text" placeholder="Write the actual question here..." required />
+                    <label>${labelQuestionText}</label>
+                    <input type="text" class="pqc-manual-q-text" placeholder="${placeholderQuestion}" required />
                 </div>`;
 
         html += `<div class="pqc-manual-field">
-                    <label>Answers (Check the correct one)</label>
+                    <div class="pqc-manual-answers-header">
+                        <label>${labelAnswers} (${labelCorrectHint})</label>
+                        <button type="button" class="pqc-manual-add-answer-btn">+ ${addAnswerText}</button>
+                    </div>
                     <div class="pqc-manual-answers-list">`;
 
         for (let j = 0; j < n; j++) {
             html += `<div class="pqc-manual-answer-row ${j === 0 ? 'correct' : ''}">
                         <input type="radio" name="manual_correct_${i}" class="pqc-manual-correct-radio" ${j === 0 ? 'checked' : ''} />
-                        <input type="text" class="pqc-manual-answer-text" placeholder="Answer ${j + 1}" required />
+                        <input type="text" class="pqc-manual-answer-text" placeholder="${labelAnswer} ${j + 1}" required />
+                        <button type="button" class="pqc-manual-remove-answer-btn" aria-label="${(s.removeAnswer || 'Remove answer')}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                                <path d="M10 11v6"></path>
+                                <path d="M14 11v6"></path>
+                                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                            </svg>
+                        </button>
                     </div>`;
         }
 
@@ -274,8 +320,61 @@
         return html;
     }
 
+    function appendManualAnswerRow($slide) {
+        const $list = $slide.find('.pqc-manual-answers-list').first();
+        if (!$list.length) return;
+
+        const s = (window.pqcData && window.pqcData.strings) ? window.pqcData.strings : {};
+        const labelAnswer = s.answerLabel || 'Answer';
+        const removeAnswerText = s.removeAnswer || 'Remove answer';
+
+        const answerNumber = $list.find('.pqc-manual-answer-row').length + 1;
+        const questionIndex = Number($slide.data('manual-index') || 0);
+
+        const rowHtml = `
+            <div class="pqc-manual-answer-row">
+                <input type="radio" name="manual_correct_${questionIndex}" class="pqc-manual-correct-radio" />
+                <input type="text" class="pqc-manual-answer-text" placeholder="${labelAnswer} ${answerNumber}" required />
+                <button type="button" class="pqc-manual-remove-answer-btn" aria-label="${removeAnswerText}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                        <path d="M10 11v6"></path>
+                        <path d="M14 11v6"></path>
+                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+        $list.append(rowHtml);
+    }
+
+    function renumberManualAnswers($slide) {
+        const $rows = $slide.find('.pqc-manual-answer-row');
+        const s = (window.pqcData && window.pqcData.strings) ? window.pqcData.strings : {};
+        const labelAnswer = s.answerLabel || 'Answer';
+
+        $rows.each(function (idx) {
+            const $row = $(this);
+            const $input = $row.find('.pqc-manual-answer-text').first();
+            if ($input.length) {
+                $input.attr('placeholder', `${labelAnswer} ${idx + 1}`);
+            }
+        });
+    }
+
+    function updateManualRemoveAnswerState($slide) {
+        const $rows = $slide.find('.pqc-manual-answer-row');
+        const disable = $rows.length <= 2;
+        $rows.find('.pqc-manual-remove-answer-btn').prop('disabled', disable);
+    }
+
     function renumberManualSlides() {
         const $slides = $('.pqc-manual-slide');
+        const s = (window.pqcData && window.pqcData.strings) ? window.pqcData.strings : {};
+        const labelQuestionTitle = s.questionTitle || 'Question Title';
+
         $slides.each(function (idx) {
             const $slide = $(this);
             $slide.attr('data-manual-index', idx);
@@ -283,11 +382,15 @@
             const $fields = $slide.find('.pqc-manual-field');
             const $titleLabel = $fields.eq(0).find('label').first();
             if ($titleLabel.length) {
-                $titleLabel.text(`Question ${idx + 1} Title`);
+                $titleLabel.text(labelQuestionTitle);
             }
 
             // Keep radio group unique per question by index
             $slide.find('.pqc-manual-correct-radio').attr('name', `manual_correct_${idx}`);
+
+            // Renumber answer placeholders per slide.
+            renumberManualAnswers($slide);
+            updateManualRemoveAnswerState($slide);
         });
     }
 
@@ -607,19 +710,33 @@
         if (method === 'llm') {
             hasContent = selectedFile !== null || ($('#pqc-json-paste').val() ? $('#pqc-json-paste').val().trim().length > 0 : false);
         } else {
+            const $manualSlides = $('.pqc-manual-slide');
+            if (!$manualSlides.length) {
+                hasContent = false;
+                const canProceed = hasTitle && hasContent;
+                $('.pqc-submit-btn').prop('disabled', !canProceed);
+                $('.pqc-wizard-next[data-next="4"]').prop('disabled', !canProceed);
+                return;
+            }
+
             // Check if ALL manual questions have title and text
             let allFilled = true;
-            $('.pqc-manual-slide').each(function () {
-                const qTitle = $(this).find('.pqc-manual-q-title').val() ? $(this).find('.pqc-manual-q-title').val().trim() : '';
+            $manualSlides.each(function () {
                 const qText = $(this).find('.pqc-manual-q-text').val() ? $(this).find('.pqc-manual-q-text').val().trim() : '';
 
-                if (!qTitle || !qText) {
+                if (!qText) {
                     allFilled = false;
                     return false; // break
                 }
 
+                const $answers = $(this).find('.pqc-manual-answer-text');
+                if ($answers.length < 2) {
+                    allFilled = false;
+                    return false;
+                }
+
                 // Also check if answer texts are filled
-                $(this).find('.pqc-manual-answer-text').each(function () {
+                $answers.each(function () {
                     if (!$(this).val() || $(this).val().trim().length === 0) {
                         allFilled = false;
                         return false;
@@ -692,18 +809,11 @@
 
     function initCopyPrompt() {
         $(document).on('click', '.pqc-copy-prompt-btn', function () {
-            const title = $('#pqc-quiz-title').val() ? $('#pqc-quiz-title').val().trim() : '';
+            const title = ($('#pqc-quiz-title').val() ? $('#pqc-quiz-title').val().trim() : '') || 'Quiz';
             const numQuestions = $('#pqc-num-questions').val();
             const keywords = $('#pqc-keywords').val() ? $('#pqc-keywords').val().trim() : '';
             const answersPerQuestion = parseInt($('#pqc-answers-per-question').val(), 10) || 4;
             const uploadDocs = $('#pqc-upload-docs-llm').is(':checked');
-
-            if (!title) {
-                alert((pqcData && pqcData.strings && pqcData.strings.enterTitleFirst) ? pqcData.strings.enterTitleFirst : 'Please enter a quiz title first');
-                $('.pqc-wizard-prev[data-prev="1"]').click();
-                $('#pqc-quiz-title').focus();
-                return;
-            }
 
             const promptText = buildChatGPTPrompt(title, numQuestions, keywords, answersPerQuestion, uploadDocs);
             copyToClipboard(promptText);

@@ -30,6 +30,23 @@ class PL_Core_Admin
             30
         );
 
+        // Unified Learning Taxonomy (Categories/Tags).
+        add_submenu_page(
+            'politeia-learning',
+            __('Categorías', 'politeia-learning'),
+            __('Categorías', 'politeia-learning'),
+            'manage_options',
+            'edit-tags.php?taxonomy=pl_learning_category'
+        );
+
+        add_submenu_page(
+            'politeia-learning',
+            __('Etiquetas', 'politeia-learning'),
+            __('Etiquetas', 'politeia-learning'),
+            'manage_options',
+            'edit-tags.php?taxonomy=pl_learning_tag'
+        );
+
         add_submenu_page(
             'politeia-learning',
             __('Style Options', 'politeia-learning'),

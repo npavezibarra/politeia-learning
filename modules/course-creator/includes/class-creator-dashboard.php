@@ -236,6 +236,8 @@ class PL_CC_Creator_Dashboard
                     'delete' => __('Eliminar', 'politeia-learning'),
                     'removeItem' => __('Remove', 'politeia-learning'),
                     'addText' => __('Add Text', 'politeia-learning'),
+                    'createTag' => __('Crear etiqueta', 'politeia-learning'),
+                    'noCategories' => __('No hay categorías.', 'politeia-learning'),
                     'unknownError' => __('Error desconocido', 'politeia-learning'),
                     'couldNotDelete' => __('No se pudo eliminar.', 'politeia-learning'),
                     'errorPrefix' => __('Error: ', 'politeia-learning'),

@@ -110,6 +110,46 @@ msgstr "Force Answer Before Next"
 msgid "How do you want to create your questions?"
 msgstr "How do you want to create your questions?"
 
+#: modules/quiz-creator/templates/upload-form.php:45
+msgid "Step 1: Creation Method"
+msgstr "Step 1: Creation Method"
+
+#: modules/quiz-creator/templates/upload-form.php:81
+msgid "Step 2: Generate with AI"
+msgstr "Step 2: Generate with AI"
+
+#: modules/quiz-creator/templates/upload-form.php:162
+msgid "Step 2: Write Questions"
+msgstr "Step 2: Write Questions"
+
+#: modules/quiz-creator/templates/upload-form.php:223
+msgid "Step 3: Behavior"
+msgstr "Step 3: Behavior"
+
+#: modules/quiz-creator/templates/upload-form.php:170
+msgid "Add question"
+msgstr "Add question"
+
+#: modules/quiz-creator/init.php:117
+msgid "Internal name (e.g. Question 1)"
+msgstr "Internal name (e.g. Question 1)"
+
+#: modules/quiz-creator/init.php:118
+msgid "Write the actual question here..."
+msgstr "Write the actual question here..."
+
+#: modules/quiz-creator/init.php:119
+msgid "Answer"
+msgstr "Answer"
+
+#: modules/quiz-creator/init.php:120
+msgid "Add Answer"
+msgstr "Add Answer"
+
+#: modules/quiz-creator/init.php:121
+msgid "Remove answer"
+msgstr "Remove answer"
+
 #: modules/quiz-creator/templates/upload-form.php:121
 msgid "I will upload my own documents to the LLM (PDF, Text, etc.)"
 msgstr "I will upload my own documents to the LLM (PDF, Text, etc.)"

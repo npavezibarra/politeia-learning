@@ -24,6 +24,10 @@ msgstr "Course Creator"
 msgid "MIS CURSOS"
 msgstr "MY COURSES"
 
+#: modules/course-creator/templates/main-dashboard.php:50
+msgid "MIS ESCRITOS"
+msgstr "MY ARTICLES"
+
 #: modules/course-creator/templates/main-dashboard.php:56
 msgid "PROGRAMAS"
 msgstr "PROGRAMS"
@@ -446,44 +450,44 @@ msgstr ""
 #: modules/course-creator/includes/class-course-save-handler.php:825
 #: modules/course-creator/includes/class-course-save-handler.php:868
 msgid "No autorizado."
-msgstr ""
+msgstr "Unauthorized."
 
 #: modules/course-creator/includes/class-course-save-handler.php:574
 msgid "LearnDash no está activo."
-msgstr ""
+msgstr "LearnDash is not active."
 
 #: modules/course-creator/includes/class-course-save-handler.php:579
 #: modules/course-creator/includes/class-course-save-handler.php:761
 msgid "No se han recibido datos."
-msgstr ""
+msgstr "No data received."
 
 #: modules/course-creator/includes/class-course-save-handler.php:589
 msgid "Ingresa un nombre para la especialización."
-msgstr ""
+msgstr "Enter a name for the specialization."
 
 #: modules/course-creator/includes/class-course-save-handler.php:643
 #: modules/course-creator/includes/class-course-save-handler.php:683
 #: modules/course-creator/includes/class-course-save-handler.php:821
 #: modules/course-creator/includes/class-course-save-handler.php:863
 msgid "ID inválido."
-msgstr ""
+msgstr "Invalid ID."
 
 #: modules/course-creator/includes/class-course-save-handler.php:652
 #: modules/course-creator/includes/class-course-save-handler.php:830
 msgid "No encontrado."
-msgstr ""
+msgstr "Not found."
 
 #: modules/course-creator/includes/class-course-save-handler.php:696
 msgid "Especialización eliminada."
-msgstr ""
+msgstr "Specialization deleted."
 
 #: modules/course-creator/includes/class-course-save-handler.php:771
 msgid "Ingresa un nombre para el programa."
-msgstr ""
+msgstr "Enter a name for the program."
 
 #: modules/course-creator/includes/class-course-save-handler.php:872
 msgid "Programa eliminado."
-msgstr ""
+msgstr "Program deleted."
 
 #: modules/course-creator/includes/class-creator-dashboard.php:187
 #: modules/course-creator/includes/class-creator-dashboard.php:210
@@ -494,370 +498,370 @@ msgstr ""
 #: modules/course-creator/templates/sections/students.php:178
 #: modules/course-creator/templates/sections/students.php:196
 msgid "Cargando..."
-msgstr ""
+msgstr "Loading..."
 
 #: modules/course-creator/includes/class-creator-dashboard.php:214
 msgid "No tienes cursos para asignar."
-msgstr ""
+msgstr "You have no courses to assign."
 
 #: modules/course-creator/includes/class-creator-dashboard.php:215
 msgid "Aún no has agregado cursos."
-msgstr ""
+msgstr "You haven't added any courses yet."
 
 #: modules/course-creator/includes/class-creator-dashboard.php:217
 msgid "No se pudieron cargar tus cursos."
-msgstr ""
+msgstr "Could not load your courses."
 
 #: modules/course-creator/includes/class-creator-dashboard.php:218
 msgid "Error al cargar la especialización."
-msgstr ""
+msgstr "Error loading the specialization."
 
 #: modules/course-creator/includes/class-creator-dashboard.php:224
 msgid "Aún no has agregado especializaciones."
-msgstr ""
+msgstr "You haven't added any specializations yet."
 
 #: modules/course-creator/includes/class-creator-dashboard.php:227
 msgid "No se pudieron cargar tus especializaciones."
-msgstr ""
+msgstr "Could not load your specializations."
 
 #: modules/course-creator/includes/class-creator-dashboard.php:228
 msgid "Error al cargar el programa."
-msgstr ""
+msgstr "Error loading the program."
 
 #: modules/course-creator/includes/class-creator-dashboard.php:273
 msgid "Agregado"
-msgstr ""
+msgstr "Added"
 
 #: modules/course-creator/includes/class-creator-dashboard.php:274
 msgid "Agregar"
-msgstr ""
+msgstr "Add"
 
 #: modules/course-creator/templates/main-dashboard.php:50
 #: modules/course-creator/templates/sections/especializacion.php:26
 #: modules/course-programs/templates/template-parts/learndash/group-topbar.php:19
 msgid "ESPECIALIZACIÓN"
-msgstr ""
+msgstr "SPECIALIZATION"
 
 #: modules/course-creator/templates/sections/create-group.php:22
 msgid "PROGRAMA"
-msgstr ""
+msgstr "PROGRAM"
 
 #: modules/course-creator/templates/sections/create-group.php:25
 msgid "ESPECIALIZACIONES"
-msgstr ""
+msgstr "SPECIALIZATIONS"
 
 #: modules/course-creator/templates/sections/create-group.php:40
 msgid "Nombre del programa"
-msgstr ""
+msgstr "Program name"
 
 #: modules/course-creator/templates/sections/create-group.php:48
 #: modules/course-creator/templates/sections/especializacion.php:52
 #: modules/course-programs/templates/single-course_program.php:54
 msgid "Próximamente"
-msgstr ""
+msgstr "Coming soon"
 
 #: modules/course-creator/templates/sections/create-group.php:50
 #: modules/course-creator/templates/sections/especializacion.php:54
 msgid "Portada"
-msgstr ""
+msgstr "Cover"
 
 #: modules/course-creator/templates/sections/create-group.php:80
 msgid "Describe el programa..."
-msgstr ""
+msgstr "Describe the program..."
 
 #: modules/course-creator/templates/sections/create-group.php:92
 msgid "Buscar especialización..."
-msgstr ""
+msgstr "Search specialization..."
 
 #: modules/course-creator/templates/sections/create-group.php:98
 msgid "Todas mis especializaciones"
-msgstr ""
+msgstr "All my specializations"
 
 #: modules/course-creator/templates/sections/create-group.php:108
 #: modules/course-creator/templates/sections/especializacion.php:112
 msgid "Anterior"
-msgstr ""
+msgstr "Previous"
 
 #: modules/course-creator/templates/sections/create-group.php:112
 #: modules/course-creator/templates/sections/especializacion.php:116
 msgid "Siguiente"
-msgstr ""
+msgstr "Next"
 
 #: modules/course-creator/templates/sections/create-group.php:119
 msgid "Especializaciones agregadas"
-msgstr ""
+msgstr "Added specializations"
 
 #: modules/course-creator/templates/sections/create-group.php:137
 msgid "MIS PROGRAMAS"
-msgstr ""
+msgstr "MY PROGRAMS"
 
 #: modules/course-creator/templates/sections/create-group.php:139
 msgid "Crear programa"
-msgstr ""
+msgstr "Create program"
 
 #: modules/course-creator/templates/sections/create-group.php:146
 msgid "Cargando tus programas..."
-msgstr ""
+msgstr "Loading your programs..."
 
 #: modules/course-creator/templates/sections/especializacion.php:44
 msgid "Nombre de la especialización"
-msgstr ""
+msgstr "Specialization name"
 
 #: modules/course-creator/templates/sections/especializacion.php:84
 msgid "Describe la especialización..."
-msgstr ""
+msgstr "Describe the specialization..."
 
 #: modules/course-creator/templates/sections/especializacion.php:96
 msgid "Buscar curso..."
-msgstr ""
+msgstr "Search course..."
 
 #: modules/course-creator/templates/sections/especializacion.php:102
 msgid "Todos mis cursos"
-msgstr ""
+msgstr "All my courses"
 
 #: modules/course-creator/templates/sections/especializacion.php:124
 msgid "Cursos agregados"
-msgstr ""
+msgstr "Added courses"
 
 #: modules/course-creator/templates/sections/especializacion.php:126
 msgid "Orden requerido"
-msgstr ""
+msgstr "Required order"
 
 #: modules/course-creator/templates/sections/especializacion.php:151
 msgid "MIS ESPECIALIZACIONES"
-msgstr ""
+msgstr "MY SPECIALIZATIONS"
 
 #: modules/course-creator/templates/sections/especializacion.php:153
 msgid "Crear especialización"
-msgstr ""
+msgstr "Create specialization"
 
 #: modules/course-creator/templates/sections/especializacion.php:160
 msgid "Cargando tus especializaciones..."
-msgstr ""
+msgstr "Loading your specializations..."
 
 #: modules/course-creator/templates/sections/sales.php:12
 msgid "LIST"
-msgstr ""
+msgstr "LIST"
 
 #: modules/course-creator/templates/sections/sales.php:75
 msgid "Ventas de cursos"
-msgstr ""
+msgstr "Course sales"
 
 #: modules/course-creator/templates/sections/sales.php:87
 msgid "Ventas de libros"
-msgstr ""
+msgstr "Book sales"
 
 #: modules/course-creator/templates/sections/sales.php:112
 msgid "Leyenda"
-msgstr ""
+msgstr "Legend"
 
 #: modules/course-creator/templates/sections/sales.php:134
 msgid "Tablas"
-msgstr ""
+msgstr "Tables"
 
 #: modules/course-creator/templates/sections/sales.php:138
 msgid "Operacional"
-msgstr ""
+msgstr "Operational"
 
 #: modules/course-creator/templates/sections/sales.php:143
 msgid "Resumen"
-msgstr ""
+msgstr "Summary"
 
 #: modules/course-creator/templates/sections/sales.php:147
 msgid "Paginación"
-msgstr ""
+msgstr "Pagination"
 
 #: modules/course-creator/templates/sections/sales.php:149
 msgid "Página anterior"
-msgstr ""
+msgstr "Previous page"
 
 #: modules/course-creator/templates/sections/sales.php:152
 msgid "Página siguiente"
-msgstr ""
+msgstr "Next page"
 
 #: modules/course-creator/templates/sections/sales.php:160
 #: modules/course-creator/templates/sections/sales.php:183
 msgid "Ventas operacionales"
-msgstr ""
+msgstr "Operational sales"
 
 #: modules/course-creator/templates/sections/sales.php:162
 msgid "Una fila por venta. Busca por estudiante, email o producto."
-msgstr ""
+msgstr "One row per sale. Search by student, email, or product."
 
 #: modules/course-creator/templates/sections/sales.php:169
 #: modules/course-creator/templates/sections/sales.php:215
 msgid "Buscar nombre, email o producto…"
-msgstr ""
+msgstr "Search name, email, or product…"
 
 #: modules/course-creator/templates/sections/sales.php:171
 #: modules/course-creator/templates/sections/sales.php:217
 msgid "Limpiar"
-msgstr ""
+msgstr "Clear"
 
 #: modules/course-creator/templates/sections/sales.php:174
 #: modules/course-creator/templates/sections/sales.php:220
 msgid "Mostrando"
-msgstr ""
+msgstr "Showing"
 
 #: modules/course-creator/templates/sections/sales.php:176
 #: modules/course-creator/templates/sections/sales.php:222
 msgid "de"
-msgstr ""
+msgstr "of"
 
 #: modules/course-creator/templates/sections/sales.php:186
 #: modules/course-creator/templates/sections/sales.php:232
 msgid "Estudiante"
-msgstr ""
+msgstr "Student"
 
 #: modules/course-creator/templates/sections/sales.php:187
 msgid "Producto"
-msgstr ""
+msgstr "Product"
 
 #: modules/course-creator/templates/sections/sales.php:188
 msgid "Orden"
-msgstr ""
+msgstr "Order"
 
 #: modules/course-creator/templates/sections/sales.php:189
 msgid "Estado"
-msgstr ""
+msgstr "Status"
 
 #: modules/course-creator/templates/sections/sales.php:190
 msgid "Pagado"
-msgstr ""
+msgstr "Paid"
 
 #: modules/course-creator/templates/sections/sales.php:191
 msgid "Fecha"
-msgstr ""
+msgstr "Date"
 
 #: modules/course-creator/templates/sections/sales.php:197
 msgid "No hay ventas que coincidan."
-msgstr ""
+msgstr "No matching sales."
 
 #: modules/course-creator/templates/sections/sales.php:206
 #: modules/course-creator/templates/sections/sales.php:229
 msgid "Resumen por estudiante"
-msgstr ""
+msgstr "Summary by student"
 
 #: modules/course-creator/templates/sections/sales.php:208
 msgid "Una fila por estudiante. Totales solo consideran ventas pagadas."
-msgstr ""
+msgstr "One row per student. Totals only include paid sales."
 
 #: modules/course-creator/templates/sections/sales.php:236
 #: modules/course-creator/templates/sections/students.php:69
 msgid "Total"
-msgstr ""
+msgstr "Total"
 
 #: modules/course-creator/templates/sections/sales.php:242
 msgid "No hay estudiantes que coincidan."
-msgstr ""
+msgstr "No matching students."
 
 #: modules/course-creator/templates/sections/students.php:12
 msgid "RANKING"
-msgstr ""
+msgstr "RANKING"
 
 #: modules/course-creator/templates/sections/students.php:15
 msgid "PROFILE"
-msgstr ""
+msgstr "PROFILE"
 
 #: modules/course-creator/templates/sections/students.php:27
 msgid "Panel de Estudiantes"
-msgstr ""
+msgstr "Students dashboard"
 
 #: modules/course-creator/templates/sections/students.php:28
 msgid "Resumen características de estudiantes y hábitos de estudio"
-msgstr ""
+msgstr "Overview of student characteristics and study habits"
 
 #: modules/course-creator/templates/sections/students.php:66
 msgid "Número de Estudiantes"
-msgstr ""
+msgstr "Number of Students"
 
 #: modules/course-creator/templates/sections/students.php:77
 msgid "Promedio Cursos por Estudiante"
-msgstr ""
+msgstr "Average Courses per Student"
 
 #: modules/course-creator/templates/sections/students.php:79
 #: modules/course-creator/templates/sections/students.php:89
 #: modules/course-creator/templates/sections/students.php:99
 msgid "Promedio"
-msgstr ""
+msgstr "Average"
 
 #: modules/course-creator/templates/sections/students.php:85
 msgid "Tiempo"
-msgstr ""
+msgstr "Time"
 
 #: modules/course-creator/templates/sections/students.php:87
 msgid "Tiempo Promedio finalización de Curso (Days)"
-msgstr ""
+msgstr "Average time to finish course (days)"
 
 #: modules/course-creator/templates/sections/students.php:95
 msgid "Finalización"
-msgstr ""
+msgstr "Completion"
 
 #: modules/course-creator/templates/sections/students.php:97
 msgid "Promedio Cursos Finalizados por Estudiante"
-msgstr ""
+msgstr "Average Courses Completed per Student"
 
 #: modules/course-creator/templates/sections/students.php:105
 msgid "Evaluación"
-msgstr ""
+msgstr "Evaluation"
 
 #: modules/course-creator/templates/sections/students.php:107
 msgid "Variación Evaluación Inicial/Final"
-msgstr ""
+msgstr "Initial/Final Evaluation Change"
 
 #: modules/course-creator/templates/sections/students.php:111
 msgid "Cambio"
-msgstr ""
+msgstr "Change"
 
 #: modules/course-creator/templates/sections/students.php:118
 msgid "Distribución de hábitos de estudio"
-msgstr ""
+msgstr "Study habits distribution"
 
 #: modules/course-creator/templates/sections/students.php:132
 #: modules/course-creator/templates/sections/students.php:133
 msgid "Top 10 - Cursos comprados"
-msgstr ""
+msgstr "Top 10 - Courses purchased"
 
 #: modules/course-creator/templates/sections/students.php:136
 #: modules/course-creator/templates/sections/students.php:153
 #: modules/course-creator/templates/sections/students.php:171
 #: modules/course-creator/templates/sections/students.php:189
 msgid "Nombre"
-msgstr ""
+msgstr "Name"
 
 #: modules/course-creator/templates/sections/students.php:137
 msgid "# Cursos"
-msgstr ""
+msgstr "# Courses"
 
 #: modules/course-creator/templates/sections/students.php:149
 #: modules/course-creator/templates/sections/students.php:150
 msgid "Top 10 - Mayor aumento en quiz"
-msgstr ""
+msgstr "Top 10 - Biggest quiz improvement"
 
 #: modules/course-creator/templates/sections/students.php:154
 #: modules/course-creator/templates/sections/students.php:172
 #: modules/course-creator/templates/sections/students.php:190
 msgid "Curso"
-msgstr ""
+msgstr "Course"
 
 #: modules/course-creator/templates/sections/students.php:155
 msgid "Aumento"
-msgstr ""
+msgstr "Increase"
 
 #: modules/course-creator/templates/sections/students.php:167
 #: modules/course-creator/templates/sections/students.php:168
 msgid "Top 10 - Menos días para completar"
-msgstr ""
+msgstr "Top 10 - Fewest days to complete"
 
 #: modules/course-creator/templates/sections/students.php:173
 #: modules/course-creator/templates/sections/students.php:191
 msgid "Días"
-msgstr ""
+msgstr "Days"
 
 #: modules/course-creator/templates/sections/students.php:185
 #: modules/course-creator/templates/sections/students.php:186
 msgid "Top 10 - Más días para completar"
-msgstr ""
+msgstr "Top 10 - Most days to complete"
 
 #: modules/course-integration/includes/class-course-authors.php:32
 msgid "Profesores del Curso (Politeia)"
@@ -1359,3 +1363,220 @@ msgstr "Add"
 #: modules/course-programs/includes/class-pcg-admin.php:32
 msgid "Agregar nuevo Programa"
 msgstr "Add new Program"
+
+# --- Unified Learning Meta (Categories/Tags) ---
+msgid "META"
+msgstr "META"
+
+msgid "META DEL CURSO"
+msgstr "COURSE META"
+
+msgid "META DE LA ESPECIALIZACIÓN"
+msgstr "SPECIALIZATION META"
+
+msgid "META DEL PROGRAMA"
+msgstr "PROGRAM META"
+
+msgid "CATEGORÍAS"
+msgstr "CATEGORIES"
+
+msgid "Buscar categorías..."
+msgstr "Search categories..."
+
+msgid "ETIQUETAS"
+msgstr "TAGS"
+
+msgid "Escribe para buscar o crear..."
+msgstr "Type to search or create..."
+
+msgid "Crear etiqueta"
+msgstr "Create tag"
+
+msgid "No hay categorías."
+msgstr "No categories."
+
+msgid "Categorías de aprendizaje"
+msgstr "Learning categories"
+
+msgid "Categoría de aprendizaje"
+msgstr "Learning category"
+
+msgid "Buscar categorías"
+msgstr "Search categories"
+
+msgid "Todas las categorías"
+msgstr "All categories"
+
+msgid "Categoría padre"
+msgstr "Parent category"
+
+msgid "Categoría padre:"
+msgstr "Parent category:"
+
+msgid "Editar categoría"
+msgstr "Edit category"
+
+msgid "Actualizar categoría"
+msgstr "Update category"
+
+msgid "Agregar nueva categoría"
+msgstr "Add new category"
+
+msgid "Nombre de la nueva categoría"
+msgstr "New category name"
+
+msgid "Etiquetas de aprendizaje"
+msgstr "Learning tags"
+
+msgid "Etiqueta de aprendizaje"
+msgstr "Learning tag"
+
+msgid "Buscar etiquetas"
+msgstr "Search tags"
+
+msgid "Etiquetas populares"
+msgstr "Popular tags"
+
+msgid "Todas las etiquetas"
+msgstr "All tags"
+
+msgid "Editar etiqueta"
+msgstr "Edit tag"
+
+msgid "Actualizar etiqueta"
+msgstr "Update tag"
+
+msgid "Agregar nueva etiqueta"
+msgstr "Add new tag"
+
+msgid "Nombre de la nueva etiqueta"
+msgstr "New tag name"
+
+msgid "Separa las etiquetas con comas"
+msgstr "Separate tags with commas"
+
+msgid "Agregar o quitar etiquetas"
+msgstr "Add or remove tags"
+
+msgid "Elige entre las más usadas"
+msgstr "Choose from the most used"
+
+msgid "Taxonomías no disponibles."
+msgstr "Taxonomies not available."
+
+msgid "Nombre inválido."
+msgstr "Invalid name."
+
+msgid "No se pudo crear la etiqueta."
+msgstr "Could not create the tag."
+
+# --- Students > Profile (Dummy UI) ---
+#: modules/course-creator/templates/sections/students.php:212
+msgid "Buscar cursos, libros o registros..."
+msgstr "Search courses, books or records..."
+
+#: modules/course-creator/templates/sections/students.php:206
+msgid "Perfil Estudiantes"
+msgstr "Student Profiles"
+
+#: modules/course-creator/templates/sections/students.php:246
+msgid "Secciones del perfil"
+msgstr "Profile sections"
+
+#: modules/course-creator/templates/sections/students.php:277
+msgid "Detalle del curso"
+msgstr "Course details"
+
+#: modules/course-creator/templates/sections/students.php:278
+msgid "Progreso"
+msgstr "Progress"
+
+#: modules/course-creator/templates/sections/students.php:279
+msgid "Quiz inicial"
+msgstr "First quiz"
+
+#: modules/course-creator/templates/sections/students.php:280
+msgid "Quiz final"
+msgstr "Final quiz"
+
+#: modules/course-creator/templates/sections/students.php:305
+msgid "Completado"
+msgstr "Completed"
+
+#: modules/course-creator/templates/sections/students.php:334
+msgid "95% completo"
+msgstr "95% complete"
+
+#: modules/course-creator/templates/sections/students.php:356
+msgid "Título del libro"
+msgstr "Book title"
+
+#: modules/course-creator/templates/sections/students.php:357
+msgid "Quiz de estudio"
+msgstr "Study quiz"
+
+#: modules/course-creator/templates/sections/students.php:358
+msgid "Puntaje de dominio"
+msgstr "Mastery score"
+
+#: modules/course-creator/templates/sections/students.php:387
+msgid "Fecha y hora de pago"
+msgstr "Payment date & time"
+
+#: modules/course-creator/templates/sections/students.php:389
+msgid "Monto aportado"
+msgstr "Amount contributed"
+
+#: modules/course-creator/templates/sections/students.php:421
+msgid "Gasto en cursos"
+msgstr "Courses spent"
+
+#: modules/course-creator/templates/sections/students.php:425
+msgid "Gasto en libros"
+msgstr "Books spent"
+
+#: modules/course-creator/templates/sections/students.php:267
+msgid "VALOR"
+msgstr "VALUE"
+
+# --- Mis Escritos (Articles) ---
+#: modules/course-creator/templates/sections/mis-escritos.php:147
+msgid "MIS ESCRITOS PUBLICADOS"
+msgstr "MY PUBLISHED ARTICLES"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:149
+msgid "Crear un escrito"
+msgstr "Create an article"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:156
+msgid "Cargando tus escritos..."
+msgstr "Loading your articles..."
+
+#: modules/course-creator/templates/sections/mis-escritos.php:63
+msgid "H1 - Título"
+msgstr "H1 - Title"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:65
+msgid "H2 - Sección"
+msgstr "H2 - Section"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:67
+msgid "H3 - Subsección"
+msgstr "H3 - Subsection"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:69
+msgid "H4 - Detalle"
+msgstr "H4 - Detail"
+
+#: modules/course-creator/templates/sections/mis-escritos.php:71
+msgid "P - Texto Regular"
+msgstr "P - Regular text"
+
+# --- AJAX Messages ---
+#: modules/course-creator/includes/class-course-save-handler.php:433
+msgid "Curso guardado y sincronizado con la tienda exitosamente."
+msgstr "Course saved and synced with the store successfully."
+
+#: modules/course-creator/includes/class-course-save-handler.php:2183
+msgid "Curso y producto asociado eliminados."
+msgstr "Course and associated product deleted."

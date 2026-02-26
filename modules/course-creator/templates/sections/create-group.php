@@ -24,6 +24,9 @@ if (!defined('ABSPATH')) {
                 <div class="pcg-segment pcg-prog-segment" data-value="especializaciones">
                     <?php _e('ESPECIALIZACIONES', 'politeia-learning'); ?>
                 </div>
+                <div class="pcg-segment pcg-prog-segment" data-value="meta">
+                    <?php _e('META', 'politeia-learning'); ?>
+                </div>
             </div>
             <button type="button" class="pcg-btn-save pcg-btn-save-compact pcg-btn-save-programa"
                 title="<?php _e('Guardar', 'politeia-learning'); ?>">
@@ -147,6 +150,33 @@ if (!defined('ABSPATH')) {
         </div>
     </div>
     <!-- END: ESPECIALIZACIONES MODE -->
+
+    <!-- START: META MODE -->
+    <div id="pcg-prog-mode-meta" class="pcg-mode-content" style="display:none;">
+        <div class="pcg-meta-card">
+            <h3 class="pcg-meta-title"><?php _e('META DEL PROGRAMA', 'politeia-learning'); ?></h3>
+
+            <div class="pcg-meta-section">
+                <label><?php _e('CATEGORÍAS', 'politeia-learning'); ?></label>
+                <div class="pcg-meta-cat-picker" data-entity="programa">
+                    <div class="pcg-meta-cat-level pcg-meta-cat-level--l1" id="pcg-programa-meta-cat-l1" aria-live="polite"></div>
+                    <div class="pcg-meta-cat-level pcg-meta-cat-level--l2" id="pcg-programa-meta-cat-l2" aria-live="polite"></div>
+                    <div class="pcg-meta-cat-level pcg-meta-cat-level--l3" id="pcg-programa-meta-cat-l3" aria-live="polite"></div>
+                </div>
+            </div>
+
+            <div class="pcg-meta-section">
+                <label for="pcg-programa-meta-tag-input"><?php _e('ETIQUETAS', 'politeia-learning'); ?></label>
+                <div class="pcg-meta-tags">
+                    <div id="pcg-programa-meta-tag-chips" class="pcg-meta-chips" aria-live="polite"></div>
+                    <input type="text" id="pcg-programa-meta-tag-input" class="pcg-modern-input pcg-meta-tag-input"
+                        placeholder="<?php esc_attr_e('Escribe para buscar o crear...', 'politeia-learning'); ?>" autocomplete="off" />
+                    <div id="pcg-programa-meta-tag-suggestions" class="pcg-meta-suggestions"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- END: META MODE -->
 </div>
 
 <!-- MY PROGRAMAS LIST -->

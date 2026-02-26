@@ -12,71 +12,77 @@ if (!defined('ABSPATH'))
         <!-- Minimalist Toolbar -->
         <header class="pcg-escrito-toolbar">
             <div class="pcg-escrito-toolbar-inner">
-                <!-- Formatting Tools -->
-                <div class="pcg-escrito-tools-group">
-                    <button type="button" onclick="document.execCommand('bold', false, null)" class="pcg-toolbar-btn"
-                        title="Bold">
-                        <span class="dashicons dashicons-editor-bold"></span>
-                    </button>
-                    <button type="button" onclick="document.execCommand('italic', false, null)" class="pcg-toolbar-btn"
-                        title="Italic">
-                        <span class="dashicons dashicons-editor-italic"></span>
-                    </button>
+	                <!-- Formatting Tools -->
+	                <div class="pcg-escrito-tools-group">
+	                    <button type="button" onclick="document.execCommand('bold', false, null)" class="pcg-toolbar-btn"
+	                        title="<?php esc_attr_e('Bold', 'politeia-learning'); ?>">
+	                        <span class="dashicons dashicons-editor-bold"></span>
+	                    </button>
+	                    <button type="button" onclick="document.execCommand('italic', false, null)" class="pcg-toolbar-btn"
+	                        title="<?php esc_attr_e('Italic', 'politeia-learning'); ?>">
+	                        <span class="dashicons dashicons-editor-italic"></span>
+	                    </button>
 
                     <div class="pcg-escrito-divider"></div>
 
-                    <button type="button" onclick="document.execCommand('justifyLeft', false, null)"
-                        class="pcg-toolbar-btn" title="Align Left">
-                        <span class="dashicons dashicons-editor-alignleft"></span>
-                    </button>
-                    <button type="button" onclick="document.execCommand('justifyCenter', false, null)"
-                        class="pcg-toolbar-btn" title="Align Center">
-                        <span class="dashicons dashicons-editor-aligncenter"></span>
-                    </button>
-                    <button type="button" onclick="document.execCommand('justifyRight', false, null)"
-                        class="pcg-toolbar-btn" title="Align Right">
-                        <span class="dashicons dashicons-editor-alignright"></span>
-                    </button>
-                    <button type="button" onclick="document.execCommand('justifyFull', false, null)"
-                        class="pcg-toolbar-btn" title="Justify">
-                        <span class="dashicons dashicons-editor-justify"></span>
-                    </button>
+	                    <button type="button" onclick="document.execCommand('justifyLeft', false, null)"
+	                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Align Left', 'politeia-learning'); ?>">
+	                        <span class="dashicons dashicons-editor-alignleft"></span>
+	                    </button>
+	                    <button type="button" onclick="document.execCommand('justifyCenter', false, null)"
+	                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Align Center', 'politeia-learning'); ?>">
+	                        <span class="dashicons dashicons-editor-aligncenter"></span>
+	                    </button>
+	                    <button type="button" onclick="document.execCommand('justifyRight', false, null)"
+	                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Align Right', 'politeia-learning'); ?>">
+	                        <span class="dashicons dashicons-editor-alignright"></span>
+	                    </button>
+	                    <button type="button" onclick="document.execCommand('justifyFull', false, null)"
+	                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Justify', 'politeia-learning'); ?>">
+	                        <span class="dashicons dashicons-editor-justify"></span>
+	                    </button>
 
                     <div class="pcg-escrito-divider"></div>
 
-                    <button type="button" onclick="document.execCommand('formatBlock', false, 'H1')"
-                        class="pcg-toolbar-btn" title="Heading 1">
-                        <span class="dashicons dashicons-editor-spellcheck"></span>
-                    </button>
+	                    <button type="button" onclick="document.execCommand('formatBlock', false, 'H1')"
+	                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Heading 1', 'politeia-learning'); ?>">
+	                        <span class="dashicons dashicons-editor-spellcheck"></span>
+	                    </button>
 
                     <!-- Headings Dropdown -->
 
                     <div class="pcg-escrito-dropdown">
 
-                        <button type="button" class="pcg-toolbar-btn pcg-dropdown-trigger" title="Headings">
+	                        <button type="button" class="pcg-toolbar-btn pcg-dropdown-trigger"
+	                            title="<?php esc_attr_e('Headings', 'politeia-learning'); ?>">
 
                             <span class="pcg-heading-icon">H</span>
 
                         </button>
 
                         <div class="pcg-dropdown-content">
-                            <button type="button" onclick="document.execCommand('formatBlock', false, 'H1')">H1 -
-                                Título</button>
-                            <button type="button" onclick="document.execCommand('formatBlock', false, 'H2')">H2 -
-                                Sección</button>
-                            <button type="button" onclick="document.execCommand('formatBlock', false, 'H3')">H3 -
-                                Subsección</button>
-                            <button type="button" onclick="document.execCommand('formatBlock', false, 'H4')">H4 -
-                                Detalle</button>
-                            <button type="button" onclick="document.execCommand('formatBlock', false, 'P')">P - Texto
-                                Regular</button>
-                        </div>
-                    </div>
+	                            <button type="button" onclick="document.execCommand('formatBlock', false, 'H1')">
+	                                <?php _e('H1 - Título', 'politeia-learning'); ?>
+	                            </button>
+	                            <button type="button" onclick="document.execCommand('formatBlock', false, 'H2')">
+	                                <?php _e('H2 - Sección', 'politeia-learning'); ?>
+	                            </button>
+	                            <button type="button" onclick="document.execCommand('formatBlock', false, 'H3')">
+	                                <?php _e('H3 - Subsección', 'politeia-learning'); ?>
+	                            </button>
+	                            <button type="button" onclick="document.execCommand('formatBlock', false, 'H4')">
+	                                <?php _e('H4 - Detalle', 'politeia-learning'); ?>
+	                            </button>
+	                            <button type="button" onclick="document.execCommand('formatBlock', false, 'P')">
+	                                <?php _e('P - Texto Regular', 'politeia-learning'); ?>
+	                            </button>
+	                        </div>
+	                    </div>
 
-                    <button type="button" onclick="document.execCommand('formatBlock', false, 'P')"
-                        class="pcg-toolbar-btn" title="Paragraph">
-                        <span class="pcg-txt-icon">TXT</span>
-                    </button>
+	                    <button type="button" onclick="document.execCommand('formatBlock', false, 'P')"
+	                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Paragraph', 'politeia-learning'); ?>">
+	                        <span class="pcg-txt-icon">TXT</span>
+	                    </button>
 
                     <div class="pcg-escrito-divider"></div>
 

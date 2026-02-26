@@ -11,6 +11,7 @@ class PL_Installer
 {
     private const SNAPSHOTS_TABLE = 'politeia_inclusion_snapshots';
     private const APPROVALS_TABLE = 'politeia_inclusion_approvals';
+    private const USER_PROFILE_META_TABLE = 'politeia_user_profile_meta';
 
     /**
      * Attempt to migrate legacy schema changes that dbDelta won't handle (like column renames).
@@ -76,6 +77,7 @@ class PL_Installer
         $roles_table = $wpdb->prefix . 'politeia_course_roles';
         $snapshots_table = $wpdb->prefix . self::SNAPSHOTS_TABLE;
         $approvals_table = $wpdb->prefix . self::APPROVALS_TABLE;
+        $user_profile_meta_table = $wpdb->prefix . self::USER_PROFILE_META_TABLE;
 
         return [
             $roles_table => sprintf(
@@ -135,6 +137,33 @@ class PL_Installer
                     KEY snapshot_status (snapshot_id, status)
                 ) %s;",
                 $approvals_table,
+                $charset_collate
+            ),
+            $user_profile_meta_table => sprintf(
+                "CREATE TABLE %s (
+                    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    user_id BIGINT UNSIGNED NOT NULL,
+                    context VARCHAR(64) NOT NULL DEFAULT 'default',
+                    meta_key VARCHAR(191) NOT NULL,
+                    value_type VARCHAR(16) NOT NULL DEFAULT 'string',
+                    value_string LONGTEXT NULL,
+                    value_json LONGTEXT NULL,
+                    value_int BIGINT NULL,
+                    value_float DECIMAL(20,6) NULL,
+                    value_bool TINYINT(1) NULL,
+                    value_date DATE NULL,
+                    value_datetime DATETIME NULL,
+                    value_hash CHAR(64) NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY  (id),
+                    UNIQUE KEY user_ctx_key (user_id, context, meta_key),
+                    KEY user_ctx (user_id, context),
+                    KEY ctx_key_user (context, meta_key, user_id),
+                    KEY ctx_key_hash (context, meta_key, value_hash),
+                    KEY updated_at (updated_at)
+                ) %s;",
+                $user_profile_meta_table,
                 $charset_collate
             ),
         ];
