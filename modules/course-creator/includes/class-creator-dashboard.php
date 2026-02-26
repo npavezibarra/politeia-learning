@@ -123,17 +123,24 @@ class PL_CC_Creator_Dashboard
     /**
      * Enqueue CSS and JS for the dashboard
      */
-    public function enqueue_assets()
-    {
-        if (get_query_var(self::REWRITE_TAG)) {
-            wp_enqueue_media();
+	    public function enqueue_assets()
+	    {
+	        if (get_query_var(self::REWRITE_TAG)) {
+	            wp_enqueue_media();
 
             // Enqueue Cropper.js from BuddyBoss Platform if available
             wp_enqueue_style('cropperjs', plugins_url('buddyboss-platform/bp-core/css/vendor/cropper.min.css'), [], '1.5.12');
             wp_enqueue_script('cropperjs', plugins_url('buddyboss-platform/bp-core/js/vendor/cropper.min.js'), ['jquery'], '1.5.12', true);
 
-            wp_enqueue_style('pcg-creator-css', PL_CC_URL . 'assets/css/creator-dashboard.css', [], '1.0.7');
-            wp_enqueue_style('pcg-cropper-css', PL_CC_URL . 'assets/css/pcg-cropper.css', ['cropperjs'], '1.0.0');
+	            wp_enqueue_style(
+	                'pcg-material-symbols-outlined',
+	                'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=more_horiz',
+	                [],
+	                null
+	            );
+
+	            wp_enqueue_style('pcg-creator-css', PL_CC_URL . 'assets/css/creator-dashboard.css', [], '1.0.8');
+	            wp_enqueue_style('pcg-cropper-css', PL_CC_URL . 'assets/css/pcg-cropper.css', ['cropperjs'], '1.0.0');
 
 
             // Inject Custom Styles from Admin Options
