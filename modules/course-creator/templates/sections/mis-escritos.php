@@ -12,77 +12,74 @@ if (!defined('ABSPATH'))
         <!-- Minimalist Toolbar -->
         <header class="pcg-escrito-toolbar">
             <div class="pcg-escrito-toolbar-inner">
-	                <!-- Formatting Tools -->
-	                <div class="pcg-escrito-tools-group">
-	                    <button type="button" onclick="document.execCommand('bold', false, null)" class="pcg-toolbar-btn"
-	                        title="<?php esc_attr_e('Bold', 'politeia-learning'); ?>">
-	                        <span class="dashicons dashicons-editor-bold"></span>
-	                    </button>
-	                    <button type="button" onclick="document.execCommand('italic', false, null)" class="pcg-toolbar-btn"
-	                        title="<?php esc_attr_e('Italic', 'politeia-learning'); ?>">
-	                        <span class="dashicons dashicons-editor-italic"></span>
-	                    </button>
+                <!-- Formatting Tools -->
+                <div class="pcg-escrito-tools-group">
+                    <button type="button" onclick="window.pcgEscritoExec && window.pcgEscritoExec('bold')"
+                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Bold', 'politeia-learning'); ?>">
+                        <span class="dashicons dashicons-editor-bold"></span>
+                    </button>
+                    <button type="button" onclick="window.pcgEscritoExec && window.pcgEscritoExec('italic')"
+                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Italic', 'politeia-learning'); ?>">
+                        <span class="dashicons dashicons-editor-italic"></span>
+                    </button>
 
                     <div class="pcg-escrito-divider"></div>
 
-	                    <button type="button" onclick="document.execCommand('justifyLeft', false, null)"
-	                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Align Left', 'politeia-learning'); ?>">
-	                        <span class="dashicons dashicons-editor-alignleft"></span>
-	                    </button>
-	                    <button type="button" onclick="document.execCommand('justifyCenter', false, null)"
-	                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Align Center', 'politeia-learning'); ?>">
-	                        <span class="dashicons dashicons-editor-aligncenter"></span>
-	                    </button>
-	                    <button type="button" onclick="document.execCommand('justifyRight', false, null)"
-	                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Align Right', 'politeia-learning'); ?>">
-	                        <span class="dashicons dashicons-editor-alignright"></span>
-	                    </button>
-	                    <button type="button" onclick="document.execCommand('justifyFull', false, null)"
-	                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Justify', 'politeia-learning'); ?>">
-	                        <span class="dashicons dashicons-editor-justify"></span>
-	                    </button>
+                    <button type="button" onclick="window.pcgEscritoExec && window.pcgEscritoExec('justifyLeft')"
+                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Align Left', 'politeia-learning'); ?>">
+                        <span class="dashicons dashicons-editor-alignleft"></span>
+                    </button>
+                    <button type="button" onclick="window.pcgEscritoExec && window.pcgEscritoExec('justifyCenter')"
+                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Align Center', 'politeia-learning'); ?>">
+                        <span class="dashicons dashicons-editor-aligncenter"></span>
+                    </button>
+                    <button type="button" onclick="window.pcgEscritoExec && window.pcgEscritoExec('justifyRight')"
+                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Align Right', 'politeia-learning'); ?>">
+                        <span class="dashicons dashicons-editor-alignright"></span>
+                    </button>
+                    <button type="button" onclick="window.pcgEscritoExec && window.pcgEscritoExec('justifyFull')"
+                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Justify', 'politeia-learning'); ?>">
+                        <span class="dashicons dashicons-editor-justify"></span>
+                    </button>
 
                     <div class="pcg-escrito-divider"></div>
-
-	                    <button type="button" onclick="document.execCommand('formatBlock', false, 'H1')"
-	                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Heading 1', 'politeia-learning'); ?>">
-	                        <span class="dashicons dashicons-editor-spellcheck"></span>
-	                    </button>
 
                     <!-- Headings Dropdown -->
-
                     <div class="pcg-escrito-dropdown">
 
-	                        <button type="button" class="pcg-toolbar-btn pcg-dropdown-trigger"
-	                            title="<?php esc_attr_e('Headings', 'politeia-learning'); ?>">
+                        <button type="button" class="pcg-toolbar-btn pcg-dropdown-trigger"
+                            title="<?php esc_attr_e('Headings', 'politeia-learning'); ?>">
 
                             <span class="pcg-heading-icon">H</span>
 
                         </button>
 
                         <div class="pcg-dropdown-content">
-	                            <button type="button" onclick="document.execCommand('formatBlock', false, 'H1')">
-	                                <?php _e('H1 - Título', 'politeia-learning'); ?>
-	                            </button>
-	                            <button type="button" onclick="document.execCommand('formatBlock', false, 'H2')">
-	                                <?php _e('H2 - Sección', 'politeia-learning'); ?>
-	                            </button>
-	                            <button type="button" onclick="document.execCommand('formatBlock', false, 'H3')">
-	                                <?php _e('H3 - Subsección', 'politeia-learning'); ?>
-	                            </button>
-	                            <button type="button" onclick="document.execCommand('formatBlock', false, 'H4')">
-	                                <?php _e('H4 - Detalle', 'politeia-learning'); ?>
-	                            </button>
-	                            <button type="button" onclick="document.execCommand('formatBlock', false, 'P')">
-	                                <?php _e('P - Texto Regular', 'politeia-learning'); ?>
-	                            </button>
-	                        </div>
-	                    </div>
+                            <button type="button"
+                                onclick="window.pcgEscritoFormatBlock && window.pcgEscritoFormatBlock('h1')">
+                                <?php _e('H1 - Título', 'politeia-learning'); ?>
+                            </button>
+                            <button type="button"
+                                onclick="window.pcgEscritoFormatBlock && window.pcgEscritoFormatBlock('h2')">
+                                <?php _e('H2 - Sección', 'politeia-learning'); ?>
+                            </button>
+                            <button type="button"
+                                onclick="window.pcgEscritoFormatBlock && window.pcgEscritoFormatBlock('h3')">
+                                <?php _e('H3 - Subsección', 'politeia-learning'); ?>
+                            </button>
+                            <button type="button"
+                                onclick="window.pcgEscritoFormatBlock && window.pcgEscritoFormatBlock('p')">
+                                <?php _e('P - Texto Regular', 'politeia-learning'); ?>
+                            </button>
+                        </div>
+                    </div>
 
-	                    <button type="button" onclick="document.execCommand('formatBlock', false, 'P')"
-	                        class="pcg-toolbar-btn" title="<?php esc_attr_e('Paragraph', 'politeia-learning'); ?>">
-	                        <span class="pcg-txt-icon">TXT</span>
-	                    </button>
+                    <div class="pcg-escrito-divider"></div>
+
+                    <button type="button" id="pcg-btn-escrito-add-image" class="pcg-toolbar-btn"
+                        title="<?php esc_attr_e('Agregar Imagen', 'politeia-learning'); ?>">
+                        <span class="dashicons dashicons-format-image"></span>
+                    </button>
 
                     <div class="pcg-escrito-divider"></div>
 
@@ -95,15 +92,19 @@ if (!defined('ABSPATH'))
 
                 <!-- Action Buttons -->
                 <div class="pcg-escrito-actions-group">
-                    <button type="button" class="pcg-escrito-action-btn pcg-escrito-btn-save pcg-btn-save-escrito">
-                        <?php _e('Save', 'politeia-learning'); ?>
+                    <button type="button" class="pcg-escrito-action-btn pcg-escrito-btn-save pcg-btn-save-escrito"
+                        data-action="draft">
+                        <?php _e('GUARDAR', 'politeia-learning'); ?>
                     </button>
                     <a id="pcg-btn-preview-escrito" class="pcg-escrito-action-btn pcg-escrito-btn-save" href="#"
-                        target="_blank" style="display:none;">
+                        target="_blank" style="display:none; padding: 0 15px;">
                         <span class="dashicons dashicons-visibility"></span>
                     </a>
-                    <button type="button" class="pcg-escrito-action-btn pcg-escrito-btn-publish pcg-btn-save-escrito">
-                        <?php _e('Publish', 'politeia-learning'); ?>
+                    <button type="button" class="pcg-escrito-action-btn pcg-escrito-btn-publish pcg-btn-save-escrito"
+                        data-action="publish">
+                        <?php _e('PUBLICAR', 'politeia-learning'); ?> <span id="pcg-publish-status-icon"
+                            class="dashicons dashicons-update"
+                            style="display:none; margin-left: 6px; font-size: 16px; width: 16px; height: 16px; align-items: center; justify-content: center;"></span>
                     </button>
                 </div>
             </div>
@@ -133,17 +134,21 @@ if (!defined('ABSPATH'))
             </div>
 
             <!-- Content Area (Rich Text) -->
-            <div id="pcg-escrito-content-editor" class="pcg-escrito-content-editor" contenteditable="true"
-                spellcheck="true"></div>
+            <div class="pcg-editor-container" style="position: relative; width: 100%;">
+                <div id="pcg-editor-placeholder"
+                    style="position: absolute; top: 0; left: 0; pointer-events: none; color: #a0a0a0; font-size: 22px; font-family: 'Newsreader', serif; font-weight: 300; font-style: normal; z-index: 10;">
+                    <?php _e('Escribe tu artículo aquí...', 'politeia-learning'); ?>
+                </div>
+                <div id="pcg-escrito-content-editor" class="pcg-escrito-content-editor" contenteditable="true"
+                    spellcheck="true"></div>
+            </div>
 
             <!-- Hidden textarea for compatibility with save logic if needed, or just updated JS -->
             <textarea id="pcg-escrito-content" style="display:none;"></textarea>
             <textarea id="pcg-escrito-excerpt" style="display:none;"></textarea>
         </main>
 
-        <div class="pcg-escrito-footer-note">
-            Newsreader & Poppins • Minimalist Focus
-        </div>
+
     </div>
 </div>
 

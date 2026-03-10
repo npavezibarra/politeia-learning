@@ -57,9 +57,14 @@
                     customerKey: key,
                     name: t.name,
                     email: t.email,
+                    userId: t.userId,
+                    avatarUrl: t.avatarUrl,
                     courses: 0,
+                    coursesValue: 0,
                     books: 0,
+                    booksValue: 0,
                     patronage: 0,
+                    patronageValue: 0,
                     totalValue: 0,
                     currency: t.currency,
                     productsForSearch: new Set(),
@@ -70,10 +75,20 @@
             const isPaid = normalize(t.status) === 'paid';
 
             if (isPaid) {
-                if (t.productType === 'course') u.courses += 1;
-                if (t.productType === 'book') u.books += 1;
-                if (t.productType === 'patronage') u.patronage += 1;
-                u.totalValue += Number(t.paid || 0);
+                const paid = Number(t.paid || 0);
+                if (t.productType === 'course') {
+                    u.courses += 1;
+                    u.coursesValue += paid;
+                }
+                if (t.productType === 'book') {
+                    u.books += 1;
+                    u.booksValue += paid;
+                }
+                if (t.productType === 'patronage') {
+                    u.patronage += 1;
+                    u.patronageValue += paid;
+                }
+                u.totalValue += paid;
             }
 
             if (t.product) u.productsForSearch.add(t.product);
@@ -189,7 +204,7 @@
                 tr.innerHTML = `
                     <td>
                         <div class="pcg-sales-list-user">
-                            <div class="pcg-sales-list-avatar" aria-hidden="true">${escapeHtml(initials(r.name))}</div>
+                            <div class="pcg-sales-list-avatar" aria-hidden="true">${r.avatarUrl ? `<img src="${escapeHtml(r.avatarUrl)}" alt="" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : escapeHtml(initials(r.name))}</div>
                             <div class="pcg-sales-list-user-meta">
                                 <div class="pcg-sales-list-user-name">${escapeHtml(r.name || '')}</div>
                                 <div class="pcg-sales-list-user-email">${escapeHtml(r.email || '')}</div>
@@ -219,13 +234,28 @@
                 const tr = document.createElement('tr');
                 const name = u.name || '';
                 const email = u.email || '';
+                const valCourses = fmtMoney(u.coursesValue, locale, currency);
+                const valBooks = fmtMoney(u.booksValue, locale, currency);
+                const valPatronage = fmtMoney(u.patronageValue, locale, currency);
+                const valTotal = fmtMoney(u.totalValue, locale, currency);
+
                 const nameHtml = enableStudentProfileLinks
-                    ? `<button type="button" class="pcg-sales-list-user-name pcg-sales-list-user-name--link" data-pcg-student-open data-student-name="${escapeHtml(name)}" data-student-email="${escapeHtml(email)}">${escapeHtml(name)}</button>`
+                    ? `<button type="button" class="pcg-sales-list-user-name pcg-sales-list-user-name--link" 
+                        data-pcg-student-open 
+                        data-student-id="${escapeHtml(u.userId || '')}" 
+                        data-student-name="${escapeHtml(name)}" 
+                        data-student-email="${escapeHtml(email)}" 
+                        data-student-avatar="${escapeHtml(u.avatarUrl || '')}"
+                        data-student-val-courses="${escapeHtml(valCourses)}"
+                        data-student-val-books="${escapeHtml(valBooks)}"
+                        data-student-val-patronage="${escapeHtml(valPatronage)}"
+                        data-student-val-total="${escapeHtml(valTotal)}"
+                        >${escapeHtml(name)}</button>`
                     : `<div class="pcg-sales-list-user-name">${escapeHtml(name)}</div>`;
                 tr.innerHTML = `
                     <td>
                         <div class="pcg-sales-list-user">
-                            <div class="pcg-sales-list-avatar" aria-hidden="true">${escapeHtml(initials(u.name))}</div>
+                            <div class="pcg-sales-list-avatar" aria-hidden="true">${u.avatarUrl ? `<img src="${escapeHtml(u.avatarUrl)}" alt="" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : escapeHtml(initials(u.name))}</div>
                             <div class="pcg-sales-list-user-meta">
                                 ${nameHtml}
                                 <div class="pcg-sales-list-user-email">${escapeHtml(email)}</div>

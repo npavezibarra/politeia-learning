@@ -8,6 +8,10 @@
         return Array.from((root || document).querySelectorAll(sel));
     }
 
+    function isMobileLayout() {
+        return window.matchMedia && window.matchMedia('(max-width: 850px)').matches;
+    }
+
     function money(value, locale, currency) {
         const loc = locale || 'es-CL';
         const cur = currency || 'CLP';
@@ -26,6 +30,19 @@
         return d.toLocaleDateString(loc, { month: 'short', day: 'numeric' });
     }
 
+    function weekday2(iso) {
+        const d = new Date(iso + 'T00:00:00');
+        if (isNaN(d.getTime())) return iso;
+        const map = ['DO', 'LU', 'MA', 'MI', 'JU', 'VI', 'SA'];
+        return map[d.getDay()] || iso;
+    }
+
+    function dayNumberLabel(iso) {
+        const d = new Date(iso + 'T00:00:00');
+        if (isNaN(d.getTime())) return iso;
+        return String(d.getDate());
+    }
+
     function initDashboard(root) {
         if (!root || root.__pcgSalesInit) return;
         root.__pcgSalesInit = true;
@@ -39,6 +56,14 @@
         const custom = qs(root, '[data-custom-range]');
         const startInput = qs(root, 'input[data-start-date]');
         const endInput = qs(root, 'input[data-end-date]');
+
+        const rangeOverlay = qs(root, '[data-pcg-sales-range-overlay]');
+        const rangeBackdrop = qs(root, '[data-pcg-sales-range-backdrop]');
+        const rangeModal = qs(root, '[data-pcg-sales-range-modal]');
+        const rangeClose = qs(root, '[data-pcg-sales-range-close]');
+        const rangeApply = qs(root, '[data-pcg-sales-range-apply]');
+        const rangeOptions = rangeOverlay ? qsa(rangeOverlay, '[data-pcg-sales-range]') : [];
+        let pendingRange = 'month';
 
         const elTotal = qs(root, '[data-metric="total"]');
         const elCourses = qs(root, '[data-metric="courses"]');
@@ -55,8 +80,37 @@
         let inFlight = null;
         const i18n = (typeof pcgSalesData !== 'undefined' && pcgSalesData && pcgSalesData.i18n) ? pcgSalesData.i18n : {};
 
+        function isoDate(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
         function setActiveBtn(tf) {
             btns.forEach(b => b.classList.toggle('active', b.getAttribute('data-timeframe') === tf));
+        }
+
+        function setActiveRangeOption(value) {
+            if (!rangeOptions || rangeOptions.length === 0) return;
+            rangeOptions.forEach((btn) => {
+                btn.classList.toggle('is-active', btn.getAttribute('data-pcg-sales-range') === value);
+            });
+        }
+
+        function openRange() {
+            if (!rangeOverlay) return;
+            pendingRange = currentTimeframe === 'custom' ? 'this_month' : currentTimeframe;
+            if (!['week', 'month', 'this_month'].includes(pendingRange)) pendingRange = 'month';
+            setActiveRangeOption(pendingRange);
+            rangeOverlay.classList.remove('pcg-sales-range-overlay--hidden');
+            rangeOverlay.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeRange() {
+            if (!rangeOverlay) return;
+            rangeOverlay.classList.add('pcg-sales-range-overlay--hidden');
+            rangeOverlay.setAttribute('aria-hidden', 'true');
         }
 
         function setMetricText(el, text) {
@@ -97,6 +151,12 @@
             if (currentChart) currentChart.destroy();
 
             const data = Array.isArray(series) ? series : [];
+            const mobile = isMobileLayout();
+            const labels = data.map(d => {
+                if (mobile && currentTimeframe === 'week') return weekday2(d.date);
+                if (currentTimeframe === 'month' || currentTimeframe === 'custom') return dayNumberLabel(d.date);
+                return displayDate(d.date, currentLocale);
+            });
 
             function renderHtmlLegend(chart) {
                 if (!legendContainer) return;
@@ -127,7 +187,7 @@
             currentChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: data.map(d => displayDate(d.date, currentLocale)),
+                    labels,
                     datasets: [
                         { label: 'Cursos', data: data.map(d => d.courses || 0), backgroundColor: '#C79F32', borderWidth: 0, borderRadius: 0 },
                         { label: 'Libros', data: data.map(d => d.books || 0), backgroundColor: '#D1D1D1', borderWidth: 0, borderRadius: 0 },
@@ -155,8 +215,12 @@
                         },
                     },
                     scales: {
-                        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10, weight: '600' }, color: '#A8A8A8' } },
-                        y: { stacked: true, grid: { color: '#EEEEEE' }, ticks: { font: { size: 10, weight: '600' }, color: '#A8A8A8' } },
+                        x: {
+                            stacked: true,
+                            grid: { display: true, color: '#F3F4F6', drawBorder: false },
+                            ticks: { font: { size: 10, weight: '600' }, color: '#A8A8A8' }
+                        },
+                        y: { stacked: true, grid: { color: '#EEEEEE' }, ticks: { font: { size: 10, weight: '600' }, color: '#A8A8A8', precision: 0 } },
                     },
                 },
                 plugins: [htmlLegendPlugin],
@@ -240,6 +304,51 @@
                 if (custom) custom.style.display = currentTimeframe === 'custom' ? '' : 'none';
                 if (currentTimeframe !== 'custom') fetchData();
             });
+        });
+
+        if (rangeOptions && rangeOptions.length) {
+            rangeOptions.forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    pendingRange = btn.getAttribute('data-pcg-sales-range') || 'month';
+                    setActiveRangeOption(pendingRange);
+                });
+            });
+        }
+
+        if (rangeApply) {
+            rangeApply.addEventListener('click', () => {
+                const sel = pendingRange || 'month';
+                if (sel === 'this_month') {
+                    const now = new Date();
+                    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+                    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    if (startInput) startInput.value = isoDate(start);
+                    if (endInput) endInput.value = isoDate(end);
+                    currentTimeframe = 'custom';
+                    setActiveBtn('custom');
+                    if (custom) custom.style.display = '';
+                    fetchData();
+                } else {
+                    currentTimeframe = sel === 'week' ? 'week' : 'month';
+                    setActiveBtn(currentTimeframe);
+                    if (custom) custom.style.display = 'none';
+                    fetchData();
+                }
+                closeRange();
+            });
+        }
+
+        if (rangeClose) rangeClose.addEventListener('click', closeRange);
+        if (rangeBackdrop) rangeBackdrop.addEventListener('click', closeRange);
+        if (rangeModal) {
+            rangeModal.addEventListener('click', (e) => {
+                if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+            });
+        }
+
+        window.addEventListener('pcg:sales-open-range', openRange);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeRange();
         });
 
         if (startInput) startInput.addEventListener('change', fetchData);

@@ -18,10 +18,36 @@ class PL_CC_Creator_Dashboard
         add_filter('query_vars', [$this, 'add_query_vars']);
         add_filter('template_include', [$this, 'load_dashboard_template']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_assets']);
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_escrito_frontend_assets'], 999);
         add_action('bp_setup_nav', [$this, 'add_bp_nav_item'], 100);
 
         // Shortcode as fallback or alternative
         add_shortcode('pcg_course_creator_dashboard', [$this, 'render_dashboard_shortcode']);
+
+        // Wrap the frontend post content to guarantee 1:1 matching with Editor
+        add_filter('the_content', [$this, 'wrap_escrito_content']);
+    }
+
+    /**
+     * Frontend style for Escritos (single posts).
+     * Enqueue late so it reliably overrides theme typography.
+     */
+    public function enqueue_escrito_frontend_assets(): void
+    {
+        if (is_single() && get_post_type() === 'post') {
+            wp_enqueue_style('pcg-escrito-frontend-css', PL_CC_URL . 'assets/css/escrito-frontend.css', [], '1.0.9');
+        }
+    }
+
+    /**
+     * Wrap post content in our editor class for consistent styling
+     */
+    public function wrap_escrito_content($content)
+    {
+        if (is_singular('post') && in_the_loop() && is_main_query()) {
+            return '<div class="pcg-escrito-content-editor">' . $content . '</div>';
+        }
+        return $content;
     }
 
     /**
@@ -123,24 +149,24 @@ class PL_CC_Creator_Dashboard
     /**
      * Enqueue CSS and JS for the dashboard
      */
-	    public function enqueue_assets()
-	    {
-	        if (get_query_var(self::REWRITE_TAG)) {
-	            wp_enqueue_media();
+    public function enqueue_assets()
+    {
+        if (get_query_var(self::REWRITE_TAG)) {
+            wp_enqueue_media();
 
             // Enqueue Cropper.js from BuddyBoss Platform if available
             wp_enqueue_style('cropperjs', plugins_url('buddyboss-platform/bp-core/css/vendor/cropper.min.css'), [], '1.5.12');
             wp_enqueue_script('cropperjs', plugins_url('buddyboss-platform/bp-core/js/vendor/cropper.min.js'), ['jquery'], '1.5.12', true);
 
-	            wp_enqueue_style(
-	                'pcg-material-symbols-outlined',
-	                'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=more_horiz',
-	                [],
-	                null
-	            );
+            wp_enqueue_style(
+                'pcg-material-symbols-outlined',
+                'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=more_horiz',
+                [],
+                null
+            );
 
-	            wp_enqueue_style('pcg-creator-css', PL_CC_URL . 'assets/css/creator-dashboard.css', [], '1.0.8');
-	            wp_enqueue_style('pcg-cropper-css', PL_CC_URL . 'assets/css/pcg-cropper.css', ['cropperjs'], '1.0.0');
+            wp_enqueue_style('pcg-creator-css', PL_CC_URL . 'assets/css/creator-dashboard.css', [], '1.0.19');
+            wp_enqueue_style('pcg-cropper-css', PL_CC_URL . 'assets/css/pcg-cropper.css', ['cropperjs'], '1.0.0');
 
 
             // Inject Custom Styles from Admin Options
@@ -156,10 +182,10 @@ class PL_CC_Creator_Dashboard
             wp_add_inline_style('pcg-creator-css', $custom_css);
 
             wp_enqueue_script('pcg-cropper-js', PL_CC_URL . 'assets/js/pcg-course-cropper.js', ['jquery', 'cropperjs'], '1.0.0', true);
-            wp_enqueue_script('pcg-creator-js', PL_CC_URL . 'assets/js/creator-dashboard.js', ['jquery', 'jquery-ui-sortable', 'pcg-cropper-js'], '1.0.0', true);
+            wp_enqueue_script('pcg-creator-js', PL_CC_URL . 'assets/js/creator-dashboard.js', ['jquery', 'jquery-ui-sortable', 'pcg-cropper-js'], '1.0.12', true);
             wp_enqueue_script('pcg-chartjs', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', [], '4.4.1', true);
             wp_enqueue_script('pcg-sales-dashboard', PL_CC_URL . 'assets/js/pcg-sales-dashboard.js', ['pcg-chartjs'], '1.0.0', true);
-            wp_enqueue_script('pcg-sales-list', PL_CC_URL . 'assets/js/pcg-sales-list.js', [], '1.0.0', true);
+            wp_enqueue_script('pcg-sales-list', PL_CC_URL . 'assets/js/pcg-sales-list.js', [], '1.0.2', true);
             wp_enqueue_script('pcg-students-dashboard', PL_CC_URL . 'assets/js/pcg-students-dashboard.js', ['pcg-chartjs'], '1.0.2', true);
             wp_enqueue_script('pcg-students-rankings', PL_CC_URL . 'assets/js/pcg-students-rankings.js', [], '1.0.0', true);
 
@@ -185,6 +211,8 @@ class PL_CC_Creator_Dashboard
                 'ajaxUrl' => admin_url('admin-ajax.php'),
                 'action' => 'pl_get_user_student_metrics',
                 'nonce' => wp_create_nonce('pl_user_student_metrics'),
+                'studentDetailAction' => 'pl_get_user_student_detail',
+                'studentDetailNonce' => wp_create_nonce('pl_user_student_detail'),
             ]);
 
             wp_localize_script('pcg-students-rankings', 'pcgStudentsRankingsData', [
@@ -314,10 +342,7 @@ class PL_CC_Creator_Dashboard
             ]);
         }
 
-        // Frontend style for Escritos (Posts)
-        if (is_single() && get_post_type() === 'post') {
-            wp_enqueue_style('pcg-escrito-frontend-css', PL_CC_URL . 'assets/css/escrito-frontend.css', [], '1.0.7');
-        }
+        // Frontend styles for Escritos are enqueued via enqueue_escrito_frontend_assets().
     }
 
 

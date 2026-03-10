@@ -4,37 +4,68 @@
  */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,700;1,6..72,400&display=swap');
 
-.single-post .entry-content,
-.single-post .post-content,
-.single-post .entry-content p,
-.single-post .post-content p,
-.single-post .entry-content div:not(h1):not(h2):not(h3):not(h4) {
-    font-family: 'Newsreader', serif !important;
-    line-height: 1.6 !important;
-    font-size: 22px !important;
-    max-width: 650px;
-    margin-left: auto;
-    margin-right: auto;
-    color: #2c2c2c !important;
+.pcg-escrito-content-editor {
+    position: relative;
+    z-index: 0;
+    outline: none !important;
     font-variant-numeric: oldstyle-nums;
     -webkit-font-smoothing: antialiased;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
     text-align: justify;
     hyphens: auto;
     -webkit-hyphens: auto;
     -ms-hyphens: auto;
+    max-width: 650px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
 }
 
-.single-post .entry-content p,
-.single-post .post-content p {
-    margin-bottom: 1.5em !important;
+.single-post .pcg-escrito-content-editor,
+.single-post .pcg-escrito-content-editor p,
+.single-post .pcg-escrito-content-editor>div,
+.single-post .pcg-escrito-content-editor ul,
+.single-post .pcg-escrito-content-editor ol,
+.single-post .pcg-escrito-content-editor li,
+.single-post .pcg-escrito-content-editor li::marker,
+.pcg-escrito-content-editor,
+.pcg-escrito-content-editor p,
+.pcg-escrito-content-editor>div,
+.pcg-escrito-content-editor ul,
+.pcg-escrito-content-editor ol,
+.pcg-escrito-content-editor li,
+.pcg-escrito-content-editor li::marker {
+    font-family: 'Newsreader', serif !important;
+    font-size: 22px !important;
+    line-height: 1.6 !important;
+    color: #2c2c2c !important;
+}
+
+.single-post .pcg-escrito-content-editor p,
+.single-post .pcg-escrito-content-editor>div,
+body .pcg-escrito-content-editor p,
+body .pcg-escrito-content-editor>div {
+    margin-bottom: 1.5rem !important;
+    text-align: justify;
+}
+
+/* Footnote / Link styling */
+.pcg-escrito-content-editor a {
+    color: #c79f32;
+    text-decoration: none;
 }
 
 /* Footnote Pill style */
-.single-post .entry-content a[href^="#"],
-.single-post .post-content a[href^="#"],
-.single-post .footnote-link,
-.single-post [class*="footnote"] {
+.pcg-escrito-content-editor a[href^="#"],
+.pcg-escrito-content-editor .footnote-link,
+.pcg-escrito-content-editor [class*="footnote"] {
     display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: auto !important;
+    height: auto !important;
+    pointer-events: auto !important;
     background: #f3f4f6 !important;
     color: #4b5563 !important;
     font-size: 12px !important;
@@ -49,22 +80,22 @@
     line-height: 1 !important;
 }
 
-.single-post a[href^="#"]:after,
-.single-post .footnote-link:after {
+.pcg-escrito-content-editor a[href^="#"]:after,
+.pcg-escrito-content-editor .footnote-link:after {
     content: "\2193";
-    /* Down arrow */
     margin-left: 4px;
     font-size: 10px;
 }
 
-.single-post .entry-content h1,
-.single-post .entry-content h2,
-.single-post .entry-content h3,
-.single-post .entry-content h4,
-.single-post .post-content h1,
-.single-post .post-content h2,
-.single-post .post-content h3,
-.single-post .post-content h4 {
+.pcg-escrito-content-editor a[href^="#"]:hover {
+    background: #e5e7eb !important;
+    color: #000 !important;
+}
+
+.pcg-escrito-content-editor h1,
+.pcg-escrito-content-editor h2,
+.pcg-escrito-content-editor h3,
+.pcg-escrito-content-editor h4 {
     font-family: 'Poppins', sans-serif !important;
     color: #111 !important;
     margin-top: 1.5rem !important;
@@ -73,28 +104,27 @@
     line-height: 1.2 !important;
 }
 
-.single-post .entry-content h1,
-.single-post .post-content h1 {
-    font-size: 40px !important;
+.pcg-escrito-content-editor h1 {
+    font-size: 34px !important;
     font-weight: 600 !important;
 }
 
-.single-post .entry-content h2,
-.single-post .post-content h2 {
+.pcg-escrito-content-editor h2 {
     font-size: 32px !important;
     font-weight: 600 !important;
 }
 
-.single-post .entry-content h3,
-.single-post .post-content h3 {
-    font-size: 26px !important;
-    font-weight: 600 !important;
-}
-
-.single-post .entry-content h4,
-.single-post .post-content h4 {
+.pcg-escrito-content-editor h3 {
     font-size: 22px !important;
     font-weight: 400 !important;
+}
+
+.pcg-escrito-content-editor img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 2rem auto;
+    border-radius: 4px;
 }
 
 .single-post .entry-title {
@@ -110,15 +140,32 @@
 }
 
 /* Table Font Size Override */
-.single-post .entry-content table td,
-.single-post .entry-content table th,
-.single-post .post-content table td,
-.single-post .post-content table th {
+.pcg-escrito-content-editor table td,
+.pcg-escrito-content-editor table th {
     font-size: 14px !important;
 }
 
 /* Ensure no external decorations interfere */
-.single-post .entry-content * {
+.pcg-escrito-content-editor * {
     max-width: 100%;
     height: auto;
+}
+
+@media (max-width: 850px) {
+
+    .single-post .pcg-escrito-content-editor,
+    .single-post .entry-title {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+        box-sizing: border-box !important;
+    }
+
+    .pcg-escrito-content-editor img,
+    .single-post .post-cover img {
+        width: calc(100% + 20px) !important;
+        max-width: none !important;
+        margin-left: -10px !important;
+        margin-right: -10px !important;
+        border-radius: 0 !important;
+    }
 }

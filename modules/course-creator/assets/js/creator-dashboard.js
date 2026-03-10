@@ -187,6 +187,11 @@ jQuery(document).ready(function ($) {
             if (ctx === 'course') $sources = $('#pcg-course-form-section .pcg-segment');
             if (ctx === 'specialization') $sources = $('#pcg-specialization-form-section .pcg-spec-segment');
             if (ctx === 'programa') $sources = $('#pcg-programa-form-section .pcg-prog-segment');
+            if (!ctx) {
+                const section = String($nav.data('pcgSection') || '').trim();
+                if (section === 'sales') $sources = $('#pcg-sales-tabs .pcg-segment[data-sales-tab]');
+                if (section === 'students') $sources = $('#pcg-students-tabs .pcg-segment[data-students-tab]');
+            }
 
             if (!$sources.length) {
                 $sectionBtn.css('display', 'none');
@@ -229,6 +234,8 @@ jQuery(document).ready(function ($) {
                 'mis-escritos': { label: 'ESCRIBIR', target: '#pcg-show-escritos-form', visibleRoot: '#pcg-my-escritos-section' },
                 'especializacion': { label: '+ ESPECIALIZACIÓN', target: '#pcg-show-specialization-form', visibleRoot: '#pcg-my-specializations-section' },
                 'create-group': { label: '+ PROGRAMA', target: '#pcg-show-programa-form', visibleRoot: '#pcg-my-programas-section' },
+                'sales': { label: 'DATE RANGE', event: 'pcg:sales-open-range', visibleRoot: '[data-sales-panel="general"] [data-pcg-sales-dashboard]' },
+                'students': { label: 'DATE RANGE', event: 'pcg:students-open-range', visibleRoot: '[data-pcg-students-dashboard]' },
             };
 
             const cfg = actions[section];
@@ -237,13 +244,21 @@ jQuery(document).ready(function ($) {
                 return;
             }
 
+            if (section === 'sales') {
+                const generalActive = document.querySelector('#pcg-sales-tabs .pcg-segment.active[data-sales-tab="general"]');
+                if (!generalActive) {
+                    $footer.hide();
+                    return;
+                }
+            }
+
             const $root = $(cfg.visibleRoot);
             if (!$root.length || !$root.is(':visible')) {
                 $footer.hide();
                 return;
             }
 
-            if (!$(cfg.target).length) {
+            if (cfg.target && !$(cfg.target).length) {
                 $footer.hide();
                 return;
             }
@@ -271,6 +286,16 @@ jQuery(document).ready(function ($) {
 
         $actionBtn.on('click', function () {
             const section = String($nav.data('pcgSection') || '').trim();
+            if (section === 'students') {
+                window.dispatchEvent(new CustomEvent('pcg:students-open-range'));
+                closeAll();
+                return;
+            }
+            if (section === 'sales') {
+                window.dispatchEvent(new CustomEvent('pcg:sales-open-range'));
+                closeAll();
+                return;
+            }
             const map = {
                 'create-course': '#pcg-show-creator-form',
                 'mis-escritos': '#pcg-show-escritos-form',
@@ -334,6 +359,14 @@ jQuery(document).ready(function ($) {
                 syncStackHeight();
                 syncDrawerTop();
                 updateFooterAction();
+            }, 0);
+        });
+
+        window.addEventListener('pcg:sales-tab-changed', function () {
+            setTimeout(function () {
+                updateFooterAction();
+                buildSectionMenu();
+                updateTitleFromContext();
             }, 0);
         });
 
@@ -1941,11 +1974,61 @@ jQuery(document).ready(function ($) {
             }
         }
 
-        $(document).on('click', '.pcg-toolbar-btn', function () {
+        function getEditorEl() {
+            return document.getElementById('pcg-escrito-content-editor');
+        }
+
+        // Expose helpers for inline toolbar buttons.
+        window.pcgEscritoExec = function (cmd, value) {
+            focusEditor();
+            try {
+                document.execCommand(cmd, false, value ?? null);
+            } catch (_) {
+                // no-op
+            }
+        };
+
+        window.pcgEscritoFormatBlock = function (tag) {
+            focusEditor();
+            try {
+                const editor = document.getElementById('pcg-escrito-content-editor');
+                if (!editor || !editor.innerHTML.trim()) {
+                    if (editor) editor.innerHTML = '<p><br></p>';
+                }
+                document.execCommand('formatBlock', false, tag);
+            } catch (err) {
+                try {
+                    document.execCommand('formatBlock', false, '<' + tag + '>');
+                } catch (e) {
+                    // fallback
+                }
+            }
+        };
+
+        $(document).on('mousedown', '.pcg-toolbar-btn, .pcg-dropdown-content button', function (e) {
+            e.preventDefault();
+        });
+
+        $(document).on('click', '.pcg-toolbar-btn, .pcg-dropdown-content button', function () {
             if ($(this).attr('onclick')) {
                 focusEditor();
             }
         });
+
+        // robust placeholder logic for contenteditable
+        function handlePlaceholder() {
+            const $ed = $('#pcg-escrito-content-editor');
+            if (!$ed.length) return;
+            // Get raw text (ignores HTML tags)
+            const text = $ed.text().trim();
+            const html = $ed.html().trim().toLowerCase();
+            // It's empty if there's no actual text, AND the HTML is either entirely empty or just browsers' default empty blocks
+            const isEmpty = (text === '' && (html === '' || html === '<br>' || html === '<p><br></p>' || html === '<p></p>' || html === '<br><div></div>' || html.replace(/<[^>]*>/g, '').trim() === ''));
+            $ed.toggleClass('pcg-is-empty', isEmpty);
+            $('#pcg-editor-placeholder').toggle(isEmpty);
+        }
+
+        $(document).on('input keyup blur focus change', '#pcg-escrito-content-editor', handlePlaceholder);
 
         let currentEscritoId = 0;
         let escritoThumbnailId = 0;
@@ -1962,6 +2045,7 @@ jQuery(document).ready(function ($) {
             $('#pcg-escrito-upload-ui').show();
             $('#pcg-current-escrito-label').text('').hide();
             $('#pcg-btn-preview-escrito').hide();
+            handlePlaceholder();
         }
 
         $('#pcg-show-escritos-form').on('click', function () {
@@ -1980,13 +2064,15 @@ jQuery(document).ready(function ($) {
 
         $(document).on('click', '.pcg-btn-save-escrito', function () {
             const $btn = $(this);
+            const action = $btn.data('action') || 'publish';
             const content = $('#pcg-escrito-content-editor').html();
             const payload = {
                 id: currentEscritoId,
                 title: $('#pcg-escrito-title').val(),
                 content: content,
                 excerpt: $('#pcg-escrito-excerpt').val(),
-                thumbnail_id: escritoThumbnailId
+                thumbnail_id: escritoThumbnailId,
+                status: action
             };
 
             if (!payload.title) {
@@ -1994,7 +2080,8 @@ jQuery(document).ready(function ($) {
                 return;
             }
 
-            $btn.addClass('loading').prop('disabled', true);
+            $('.pcg-btn-save-escrito').prop('disabled', true);
+            $btn.addClass('loading');
 
             $.ajax({
                 url: pcgCreatorData.ajaxUrl,
@@ -2006,24 +2093,35 @@ jQuery(document).ready(function ($) {
                 },
                 success: function (response) {
                     $btn.removeClass('loading');
+                    $('.pcg-btn-save-escrito').prop('disabled', false);
+
                     if (response.success) {
                         currentEscritoId = response.data.escrito_id;
                         $('#pcg-current-escrito-id').val(currentEscritoId);
                         $btn.addClass('success');
                         refreshActiveList();
+
+                        // Toggle logic for draft icon
+                        if (action === 'draft') {
+                            $('#pcg-publish-status-icon').show();
+                        } else {
+                            $('#pcg-publish-status-icon').hide();
+                        }
+
                         if (response.data.permalink) {
                             $('#pcg-btn-preview-escrito').attr('href', response.data.permalink).show();
                         }
+
                         setTimeout(() => {
-                            $btn.prop('disabled', false).removeClass('success');
+                            $btn.removeClass('success');
                         }, 2000);
                     } else {
                         alert(t('errorSavingEscrito') + ': ' + (response.data ? response.data.message : t('unknownError')));
-                        $btn.prop('disabled', false);
                     }
                 },
                 error: function () {
-                    $btn.removeClass('loading').prop('disabled', false);
+                    $btn.removeClass('loading');
+                    $('.pcg-btn-save-escrito').prop('disabled', false);
                     alert(t('errorSavingEscrito'));
                 }
             });
@@ -2063,9 +2161,16 @@ jQuery(document).ready(function ($) {
                             $('#pcg-escrito-thumbnail-preview').show();
                             $('#pcg-escrito-upload-ui').hide();
                         }
+                        handlePlaceholder();
 
                         if (data.permalink) {
                             $('#pcg-btn-preview-escrito').attr('href', data.permalink).show();
+                        }
+
+                        if (data.status === 'draft') {
+                            $('#pcg-publish-status-icon').show();
+                        } else {
+                            $('#pcg-publish-status-icon').hide();
                         }
 
                         // Auto-resize title after loading
@@ -2105,8 +2210,8 @@ jQuery(document).ready(function ($) {
         // Image upload
         $(document).on('click', '[data-upload="escrito-thumbnail"]', function () {
             PL_Cropper.open({
-                width: 1024,
-                height: 576,
+                width: 800,
+                height: 300,
                 title: t('uploadImage'),
                 onSave: function (dataUrl) {
                     $.ajax({
@@ -2139,6 +2244,84 @@ jQuery(document).ready(function ($) {
             $('#pcg-escrito-upload-ui').show();
         });
 
+        // Inline Image Insertion via custom Cropper
+        $(document).on('click', '#pcg-btn-escrito-add-image', function (e) {
+            e.preventDefault();
+            focusEditor();
+
+            PL_Cropper.open({
+                width: 800,
+                height: 600,
+                freeCrop: true,
+                title: t('uploadImage'),
+                onSave: function (dataUrl) {
+                    const tempId = 'pcg-loading-' + Date.now();
+                    document.execCommand('insertHTML', false, `<p id="${tempId}" class="pcg-img-loading">Cargando imagen...</p><p><br></p>`);
+
+                    $.ajax({
+                        url: pcgCreatorData.ajaxUrl,
+                        type: 'POST',
+                        data: {
+                            action: 'pcg_upload_cropped_image',
+                            nonce: pcgCreatorData.nonce,
+                            image_data: dataUrl,
+                            type: 'inline',
+                            entity_id: currentEscritoId
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                focusEditor();
+                                const loader = document.getElementById(tempId);
+                                if (loader) {
+                                    $(loader).replaceWith(`<img src="${response.data.url}" />`);
+                                } else {
+                                    document.execCommand('insertImage', false, response.data.url);
+                                }
+                            } else {
+                                alert(t('errorUploadingImage'));
+                                $('#' + tempId).remove();
+                            }
+                        },
+                        error: function () {
+                            alert(t('errorUploadingImage'));
+                            $('#' + tempId).remove();
+                        }
+                    });
+                }
+            });
+        });
+
+        // Floating Remove Button for Inline Images
+        let activeHoverImg = null;
+        const $floatRemoveBtn = $('<button class="pcg-float-remove-btn" title="Remover imagen">&times;</button>').appendTo('body');
+
+        $(document).on('click', '#pcg-escrito-content-editor img', function () {
+            activeHoverImg = $(this);
+            const offset = activeHoverImg.offset();
+            $floatRemoveBtn.css({
+                top: offset.top + 10,
+                left: offset.left + activeHoverImg.width() - 40,
+                display: 'flex'
+            });
+        });
+
+        $(document).on('click', function (e) {
+            if (!$floatRemoveBtn.is(':visible')) return;
+            if ($(e.target).closest('#pcg-escrito-content-editor img').length) return;
+            if ($(e.target).closest('.pcg-float-remove-btn').length) return;
+            $floatRemoveBtn.hide();
+            activeHoverImg = null;
+        });
+
+        $floatRemoveBtn.on('click', function (e) {
+            e.preventDefault();
+            if (activeHoverImg) {
+                activeHoverImg.remove();
+                $floatRemoveBtn.hide();
+                activeHoverImg = null;
+            }
+        });
+
         // Auto-resize title
         $(document).on('input', '#pcg-escrito-title', function () {
             this.style.height = 'auto';
@@ -2156,7 +2339,7 @@ jQuery(document).ready(function ($) {
                 html = html.replace(/<div[^>]*>/gi, '<p>').replace(/<\/div>/gi, '</p>');
 
                 const $temp = $('<div>').html(html);
-                const allowedTags = ['P', 'H1', 'H2', 'H3', 'H4', 'A', 'BR', 'UL', 'OL', 'LI', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'STRONG', 'EM', 'B', 'I'];
+                const allowedTags = ['P', 'H1', 'H2', 'H3', 'A', 'BR', 'UL', 'OL', 'LI', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'STRONG', 'EM', 'B', 'I', 'IMG'];
 
                 // Recursive cleanup
                 function cleanNode(node) {
@@ -2173,10 +2356,13 @@ jQuery(document).ready(function ($) {
                     if (!allowedTags.includes(tag) && tag !== 'BODY' && tag !== 'HTML') {
                         $(node).contents().unwrap();
                     } else if (allowedTags.includes(tag)) {
-                        // Strip all attributes except href for links
                         const attributes = node.attributes;
-                        const isLink = tag === 'A';
-                        const allowedAttrs = isLink ? ['href', 'target'] : [];
+                        let allowedAttrs = [];
+                        if (tag === 'A') {
+                            allowedAttrs = ['href', 'target'];
+                        } else if (tag === 'IMG') {
+                            allowedAttrs = ['src', 'alt', 'class', 'width', 'height'];
+                        }
 
                         for (let i = attributes.length - 1; i >= 0; i--) {
                             if (!allowedAttrs.includes(attributes[i].name)) {
@@ -3419,29 +3605,45 @@ jQuery(document).ready(function ($) {
 
         escritos.forEach(escrito => {
             const thumb = escrito.thumbnail_url || '';
-            const thumbClass = thumb ? '' : ' pcg-course-thumb--no-image';
             const permalinkHtml = escrito.permalink ? `onclick="window.open('${escrito.permalink}', '_blank');"` : '';
+            const trimTitle = (text, max) => {
+                const s = String(text ?? '');
+                const m = Number(max) || 50;
+                if (s.length <= m) return s;
+                return s.slice(0, m) + '...';
+            };
+
+            const hasThumb = !!thumb;
+            const cardClass = hasThumb ? 'pcg-course-card pcg-escrito-card' : 'pcg-course-card pcg-escrito-card pcg-escrito-card--no-thumb';
+            const titleText = hasThumb ? trimTitle(escrito.title, 50) : String(escrito.title ?? '');
             const cardHtml = `
-                <div class="pcg-course-card" data-id="${escrito.id}">
-                    <div class="pcg-course-thumb${thumbClass}" ${permalinkHtml} style="cursor: pointer;">
-                        ${thumb ? `<img src="${thumb}" alt="${escrito.title}">` : ''}
-                    </div>
-                    <div class="pcg-course-content">
-                        <h4 class="pcg-course-title" ${permalinkHtml} style="cursor: pointer;">${escrito.title}</h4>
-                        <div class="pcg-course-meta">
-                            <span class="pcg-escrito-date">${escrito.date}</span>
-                            <div class="pcg-course-actions">
-                                <button class="pcg-btn-icon pcg-btn-edit-escrito" title="${t('edit')}">
-                                    <span class="dashicons dashicons-edit"></span>
-                                </button>
-                                <button class="pcg-btn-icon pcg-btn-delete-escrito" title="${t('delete')}">
-                                    <span class="dashicons dashicons-trash"></span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
+	                <div class="${cardClass}" data-id="${escrito.id}">
+	                    ${hasThumb ? `
+	                        <div class="pcg-course-thumb" ${permalinkHtml} style="cursor: pointer;">
+	                            <img src="${thumb}" alt="${escrito.title}">
+	                        </div>
+	                    ` : ''}
+	                    <div class="pcg-course-content">
+	                        <h4 class="pcg-course-title" ${permalinkHtml} style="cursor: pointer;">${titleText}</h4>
+	                        <div class="pcg-course-meta">
+	                            <span class="pcg-escrito-date">${escrito.date}</span>
+	                            ${escrito.status === 'draft' ? `<span class="pcg-badge" style="background:#e5e7eb; color:#475569; font-size:10px; margin-left:8px; padding:2px 8px; border-radius:10px;">Borrador</span>` : ''}
+	                            <div class="pcg-course-actions">
+	                                <button class="pcg-btn-edit-escrito pcg-card-action-edit" title="${t('edit')}" type="button">EDITAR</button>
+	                                <button class="pcg-btn-delete-escrito pcg-card-action-delete" aria-label="Delete" title="${t('delete')}" type="button">
+	                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+	                                        <path d="M3 6h18"></path>
+	                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+	                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+	                                        <line x1="10" y1="11" x2="10" y2="17"></line>
+	                                        <line x1="14" y1="11" x2="14" y2="17"></line>
+	                                    </svg>
+	                                </button>
+	                            </div>
+	                        </div>
+	                    </div>
+	                </div>
+	            `;
             $grid.append(cardHtml);
         });
     }
@@ -3471,11 +3673,15 @@ jQuery(document).ready(function ($) {
                         <div class="pcg-course-meta">
                             <span class="pcg-course-price">${course.price}</span>
                             <div class="pcg-course-actions">
-                                <button class="pcg-btn-icon pcg-btn-edit-course" title="${t('edit')}">
-                                    <span class="dashicons dashicons-edit"></span>
-                                </button>
-                                <button class="pcg-btn-icon pcg-btn-delete-course" title="${t('delete')}">
-                                    <span class="dashicons dashicons-trash"></span>
+                                <button class="pcg-btn-edit-course pcg-card-action-edit" title="${t('edit')}" type="button">EDITAR</button>
+                                <button class="pcg-btn-delete-course pcg-card-action-delete" aria-label="Delete" title="${t('delete')}" type="button">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 6h18"></path>
+                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -3523,8 +3729,14 @@ jQuery(document).ready(function ($) {
             const permalink = group.permalink || '';
             const canDelete = Boolean(group.can_delete);
             const deleteBtnHtml = canDelete ? `
-                <button class="pcg-btn-icon pcg-btn-delete-specialization" title="${t('delete')}" type="button">
-                    <span class="dashicons dashicons-trash"></span>
+                <button class="pcg-btn-delete-specialization pcg-card-action-delete" aria-label="Delete" title="${t('delete')}" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
                 </button>
             ` : '';
             const courseTitles = Array.isArray(group.course_titles) ? group.course_titles : [];
@@ -3543,9 +3755,7 @@ jQuery(document).ready(function ($) {
             ` : '';
 
             const editBtnHtml = canEdit ? `
-	                    <button class="pcg-btn-icon pcg-btn-edit-specialization" title="${t('edit')}" type="button">
-	                        <span class="dashicons dashicons-edit"></span>
-	                    </button>
+	                    <button class="pcg-btn-edit-specialization pcg-card-action-edit" title="${t('edit')}" type="button">EDITAR</button>
 	            ` : '';
 
             const cardHtml = `
@@ -3605,14 +3815,18 @@ jQuery(document).ready(function ($) {
             const price = programa.price ? programa.price : '';
             const canDelete = Boolean(programa.can_delete);
             const deleteBtnHtml = canDelete ? `
-	                <button class="pcg-btn-icon pcg-btn-delete-programa" title="${t('delete')}" type="button">
-	                    <span class="dashicons dashicons-trash"></span>
+	                <button class="pcg-btn-delete-programa pcg-card-action-delete" aria-label="Delete" title="${t('delete')}" type="button">
+	                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+	                        <path d="M3 6h18"></path>
+	                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+	                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+	                        <line x1="10" y1="11" x2="10" y2="17"></line>
+	                        <line x1="14" y1="11" x2="14" y2="17"></line>
+	                    </svg>
 	                </button>
 	            ` : '';
             const editBtnHtml = canEdit ? `
-		                                <button class="pcg-btn-icon pcg-btn-edit-programa" title="${t('edit')}" type="button">
-		                                    <span class="dashicons dashicons-edit"></span>
-		                                </button>
+		                                <button class="pcg-btn-edit-programa pcg-card-action-edit" title="${t('edit')}" type="button">EDITAR</button>
 	            ` : '';
 
             const approvalActionsHtml = approval ? `

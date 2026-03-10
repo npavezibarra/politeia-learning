@@ -270,9 +270,10 @@ class PL_CC_Course_Save_Handler
             wp_send_json_error(['message' => 'No image data received.']);
         }
 
-        // Remove the data:image/png;base64, part
-        if (strpos($image_data, 'base64,') !== false) {
-            $image_data = substr($image_data, strpos($image_data, 'base64,') + 7);
+        $ext = '.png';
+        if (preg_match('/^data:image\/(\w+);base64,/', $image_data, $typeMatch)) {
+            $ext = $typeMatch[1] === 'jpeg' ? '.jpg' : '.' . $typeMatch[1];
+            $image_data = substr($image_data, strpos($image_data, ',') + 1);
         }
 
         $decoded_image = base64_decode($image_data);
@@ -282,7 +283,11 @@ class PL_CC_Course_Save_Handler
         }
 
         $upload_dir = wp_upload_dir();
-        $filename = 'course-' . $type . '-' . get_current_user_id() . '-' . time() . '.png';
+        $user = wp_get_current_user();
+        $username = sanitize_title($user->user_login);
+        $entity_id = intval($_POST['entity_id'] ?? 0);
+
+        $filename = "{$username}-{$entity_id}-" . time() . '-' . sanitize_title($type) . $ext;
         $file_path = $upload_dir['path'] . '/' . $filename;
 
         // Save to file
@@ -2303,12 +2308,17 @@ class PL_CC_Course_Save_Handler
         $content = wp_kses_post($data['content']);
         $excerpt = wp_kses_post($data['excerpt'] ?? '');
         $thumbnail_id = intval($data['thumbnail_id'] ?? 0);
+        $status = sanitize_text_field($data['status'] ?? 'publish');
+
+        if (!in_array($status, ['draft', 'publish'])) {
+            $status = 'publish';
+        }
 
         $post_data = [
             'post_title' => $title,
             'post_content' => $content,
             'post_excerpt' => $excerpt,
-            'post_status' => 'publish',
+            'post_status' => $status,
             'post_type' => 'post',
             'post_author' => get_current_user_id()
         ];
@@ -2346,7 +2356,7 @@ class PL_CC_Course_Save_Handler
 
         $args = [
             'post_type' => 'post',
-            'post_status' => 'publish',
+            'post_status' => ['publish', 'draft'],
             'author' => get_current_user_id(),
             'posts_per_page' => -1,
             'orderby' => 'date',
@@ -2363,6 +2373,7 @@ class PL_CC_Course_Save_Handler
                 'title' => $post->post_title,
                 'thumbnail_url' => $thumbnail_url ? $thumbnail_url : '',
                 'date' => get_the_date('', $post->ID),
+                'status' => $post->post_status,
                 'permalink' => get_permalink($post->ID)
             ];
         }
@@ -2392,6 +2403,7 @@ class PL_CC_Course_Save_Handler
             'title' => $post->post_title,
             'content' => $post->post_content,
             'excerpt' => $post->post_excerpt,
+            'status' => $post->post_status,
             'thumbnail_id' => $thumbnail_id,
             'thumbnail_url' => $thumbnail_url,
             'permalink' => get_permalink($post->ID)

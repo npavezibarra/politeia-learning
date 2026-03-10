@@ -287,6 +287,7 @@ class PL_Woo_User_Sales_Table
                     'customerKey' => $customer_id > 0 ? (string) $customer_id : $email,
                     'name' => $name,
                     'email' => $email,
+                    'avatarUrl' => get_avatar_url($customer_id > 0 ? $customer_id : $email, ['size' => 64]),
                     'product' => (string) $item->get_name(),
                     'productType' => $bucket,
                     'orderId' => (string) $order->get_order_number(),

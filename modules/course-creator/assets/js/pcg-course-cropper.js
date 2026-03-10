@@ -21,6 +21,7 @@ var PL_Cropper = (function ($) {
     const defaults = {
         width: 360,
         height: 238,
+        freeCrop: false,
         title: '',
         onSave: function (dataUrl) { console.log('Cropped Image:', dataUrl); },
         onCancel: function () { }
@@ -67,7 +68,7 @@ var PL_Cropper = (function ($) {
                         <input type="file" id="pcg-cropper-file-input" class="pcg-hidden-input" accept="image/jpeg,image/png">
                     </div>
                     <div class="pcg-cropper-footer">
-                        <span class="pcg-cropper-status">${t('recommendedSize', 'Recommended size:')} ${currentOptions.width}x${currentOptions.height}px</span>
+                        <span class="pcg-cropper-status">${currentOptions.freeCrop ? t('freeCrop', 'Free crop size') : t('recommendedSize', 'Recommended size:') + ' ' + currentOptions.width + 'x' + currentOptions.height + 'px'}</span>
                         <div class="pcg-cropper-actions">
                             <button type="button" class="pcg-btn-cropper pcg-btn-cropper-cancel">${t('cancel', 'Cancel')}</button>
                             <button type="button" class="pcg-btn-cropper pcg-btn-cropper-save" disabled>${t('saveImage', 'Save Image')}</button>
@@ -121,14 +122,18 @@ var PL_Cropper = (function ($) {
             const $btn = $(this);
             $btn.prop('disabled', true).text(t('saving', 'Saving...'));
 
-            const canvas = cropper.getCroppedCanvas({
-                width: currentOptions.width,
-                height: currentOptions.height,
+            let canvasOptions = {
                 imageSmoothingEnabled: true,
                 imageSmoothingQuality: 'high',
-            });
+            };
+            if (!currentOptions.freeCrop) {
+                canvasOptions.width = currentOptions.width;
+                canvasOptions.height = currentOptions.height;
+            }
 
-            const dataUrl = canvas.toDataURL('image/png');
+            const canvas = cropper.getCroppedCanvas(canvasOptions);
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
 
             if (typeof currentOptions.onSave === 'function') {
                 currentOptions.onSave(dataUrl);
@@ -172,7 +177,7 @@ var PL_Cropper = (function ($) {
         }
 
         cropper = new Cropper($img[0], {
-            aspectRatio: currentOptions.width / currentOptions.height,
+            aspectRatio: currentOptions.freeCrop ? NaN : currentOptions.width / currentOptions.height,
             viewMode: 1,
             autoCropArea: 0.8,
             responsive: true,

@@ -1,3 +1,4 @@
+<div class="pcg-sales-section">
 <div class="pcg-form-nav pcg-sales-nav">
     <div class="pcg-sales-nav-inner">
         <div class="pcg-nav-left">
@@ -60,9 +61,10 @@
                         <span class="pcg-metric-icon dashicons dashicons-chart-line"></span>
                         <span class="pcg-metric-tag"><?php _e('General', 'politeia-learning'); ?></span>
                     </div>
-                    <div class="pcg-metric-label" data-label="total"><?php _e('Ventas totales', 'politeia-learning'); ?>
+                    <div class="pcg-metric-main">
+                        <div class="pcg-metric-label" data-label="total"><?php _e('Ventas totales', 'politeia-learning'); ?></div>
+                        <div class="pcg-metric-value" data-metric="total">$0</div>
                     </div>
-                    <div class="pcg-metric-value" data-metric="total">$0</div>
                     <div class="pcg-metric-foot"><?php _e('Desempeño total', 'politeia-learning'); ?></div>
                 </div>
 
@@ -71,9 +73,10 @@
                         <span class="pcg-metric-icon dashicons dashicons-welcome-learn-more"></span>
                         <span class="pcg-metric-tag"><?php _e('Cursos', 'politeia-learning'); ?></span>
                     </div>
-                    <div class="pcg-metric-label" data-label="courses">
-                        <?php _e('Ventas de cursos', 'politeia-learning'); ?></div>
-                    <div class="pcg-metric-value" data-metric="courses">$0</div>
+                    <div class="pcg-metric-main">
+                        <div class="pcg-metric-label" data-label="courses"><?php _e('Ventas de cursos', 'politeia-learning'); ?></div>
+                        <div class="pcg-metric-value" data-metric="courses">$0</div>
+                    </div>
                     <div class="pcg-metric-foot" data-metric-pct="courses"
                         data-suffix="<?php _e('del total', 'politeia-learning'); ?>">0%</div>
                 </div>
@@ -83,9 +86,10 @@
                         <span class="pcg-metric-icon dashicons dashicons-book"></span>
                         <span class="pcg-metric-tag"><?php _e('Libros', 'politeia-learning'); ?></span>
                     </div>
-                    <div class="pcg-metric-label" data-label="books">
-                        <?php _e('Ventas de libros', 'politeia-learning'); ?></div>
-                    <div class="pcg-metric-value" data-metric="books">$0</div>
+                    <div class="pcg-metric-main">
+                        <div class="pcg-metric-label" data-label="books"><?php _e('Ventas de libros', 'politeia-learning'); ?></div>
+                        <div class="pcg-metric-value" data-metric="books">$0</div>
+                    </div>
                     <div class="pcg-metric-foot" data-metric-pct="books"
                         data-suffix="<?php _e('del total', 'politeia-learning'); ?>">0%</div>
                 </div>
@@ -95,9 +99,10 @@
                         <span class="pcg-metric-icon dashicons dashicons-heart"></span>
                         <span class="pcg-metric-tag"><?php _e('Apoyo', 'politeia-learning'); ?></span>
                     </div>
-                    <div class="pcg-metric-label" data-label="patronage"><?php _e('Patrocinio', 'politeia-learning'); ?>
+                    <div class="pcg-metric-main">
+                        <div class="pcg-metric-label" data-label="patronage"><?php _e('Patrocinio', 'politeia-learning'); ?></div>
+                        <div class="pcg-metric-value" data-metric="patronage">$0</div>
                     </div>
-                    <div class="pcg-metric-value" data-metric="patronage">$0</div>
                     <div class="pcg-metric-foot" data-metric-pct="patronage"
                         data-suffix="<?php _e('del total', 'politeia-learning'); ?>">0%</div>
                 </div>
@@ -107,12 +112,31 @@
                 <div class="pcg-sales-chart-head">
                     <div>
                         <h3><?php _e('Distribución de ingresos', 'politeia-learning'); ?></h3>
-                        <p><?php _e('Desglose por día', 'politeia-learning'); ?></p>
                     </div>
                     <div class="pcg-sales-chart-legend" data-pcg-sales-legend aria-label="<?php esc_attr_e('Leyenda', 'politeia-learning'); ?>"></div>
                 </div>
                 <div class="pcg-sales-chart-wrap">
                     <canvas data-pcg-sales-chart></canvas>
+                </div>
+            </div>
+
+            <div class="pcg-sales-range-overlay pcg-sales-range-overlay--hidden" data-pcg-sales-range-overlay aria-hidden="true">
+                <div class="pcg-sales-range-overlay__backdrop" data-pcg-sales-range-backdrop></div>
+                <div class="pcg-sales-range-modal" data-pcg-sales-range-modal role="dialog" aria-modal="true" aria-label="<?php esc_attr_e('Seleccionar rango', 'politeia-learning'); ?>">
+                    <div class="pcg-sales-range-modal__head">
+                        <h3 class="pcg-sales-range-modal__title"><?php _e('Seleccionar rango', 'politeia-learning'); ?></h3>
+                        <button type="button" class="pcg-sales-range-modal__close" data-pcg-sales-range-close aria-label="<?php esc_attr_e('Cerrar', 'politeia-learning'); ?>">
+                            <span class="dashicons dashicons-no-alt" aria-hidden="true"></span>
+                        </button>
+                    </div>
+
+                    <div class="pcg-sales-range-modal__options">
+                        <button type="button" class="pcg-sales-range-modal__option" data-pcg-sales-range="week"><?php _e('Últimos 7 días', 'politeia-learning'); ?></button>
+                        <button type="button" class="pcg-sales-range-modal__option" data-pcg-sales-range="month"><?php _e('Últimos 30 días', 'politeia-learning'); ?></button>
+                        <button type="button" class="pcg-sales-range-modal__option" data-pcg-sales-range="this_month"><?php _e('Este mes', 'politeia-learning'); ?></button>
+                    </div>
+
+                    <button type="button" class="pcg-sales-range-modal__apply" data-pcg-sales-range-apply><?php _e('Aplicar filtro', 'politeia-learning'); ?></button>
                 </div>
             </div>
         </div>
@@ -227,3 +251,5 @@
         }, true);
     })();
 </script>
+
+</div>

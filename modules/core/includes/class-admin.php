@@ -55,6 +55,15 @@ class PL_Core_Admin
             'pcg-style-options',
             [$this, 'render_style_options']
         );
+
+        add_submenu_page(
+            'politeia-learning',
+            __('Módulos', 'politeia-learning'),
+            __('Módulos', 'politeia-learning'),
+            'manage_options',
+            'pcg-modules-options',
+            [$this, 'render_modules_options']
+        );
     }
 
     /**
@@ -97,6 +106,48 @@ class PL_Core_Admin
         $container_max_width = get_option('pcg_container_max_width', '1200px');
 
         include PL_CORE_PATH . 'templates/style-options.php';
+    }
+
+    /**
+     * Render the Modules Options (Functionalities) page.
+     */
+    public function render_modules_options()
+    {
+        $modules_config = [
+            'create-course' => ['label' => 'Mis Cursos'],
+            'mis-escritos' => ['label' => 'Mis Escritos'],
+            'especializacion' => ['label' => 'Especializaciones'],
+            'create-group' => ['label' => 'Programas'],
+            'sales' => ['label' => 'Ventas'],
+            'students' => ['label' => 'Estudiantes']
+        ];
+
+        if (isset($_POST['pcg_modules_options_submitted']) && check_admin_referer('pcg_save_modules_options')) {
+            $submitted_modules = isset($_POST['pcg_modules']) && is_array($_POST['pcg_modules']) ? $_POST['pcg_modules'] : [];
+
+            $sanitized_modules = [];
+            foreach ($modules_config as $key => $config) {
+                // Determine checked state for both context
+                $sanitized_modules[$key] = [
+                    'users' => !empty($submitted_modules[$key]['users']),
+                    'admin' => !empty($submitted_modules[$key]['admin'])
+                ];
+            }
+
+            update_option('pcg_modules_visibility', $sanitized_modules);
+
+            echo '<div class="updated"><p>' . __('Settings saved.', 'politeia-learning') . '</p></div>';
+        }
+
+        // Use default 'true' everywhere if not set
+        $default_settings = [];
+        foreach ($modules_config as $key => $config) {
+            $default_settings[$key] = ['users' => true, 'admin' => true];
+        }
+
+        $current_settings = get_option('pcg_modules_visibility', $default_settings);
+
+        include PL_CORE_PATH . 'templates/modules-options.php';
     }
 
     /**
