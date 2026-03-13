@@ -2406,12 +2406,12 @@ div#pcg-quiz-creator-container {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 10px 14px;
-    border-radius: 6px;
+    padding: 6px 14px;
+    border-radius: 4px;
     border: none;
     cursor: pointer;
-    background: var(--pcg-gold-grad);
-    color: #000;
+    background: black;
+    color: #ffffff;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.12em;
