@@ -56,3 +56,35 @@ msgstr ""
 #: modules/quiz-control/init.php:99
 msgid "No se encontraron resultados"
 msgstr ""
+
+#: modules/quiz-control/functions.php:499
+msgid "You must complete all course lessons before taking the Final Quiz."
+msgstr ""
+
+#: modules/quiz-control/functions.php:500
+msgid "You have already completed the initial evaluation. Please finish the course content to unlock the final evaluation."
+msgstr ""
+
+#: modules/quiz-control/functions.php:503
+msgid "Resume Course"
+msgstr ""
+
+#: modules/quiz-control/overrides/quiz/partials/show_quiz_result_box.php:567
+msgid "Buy Course"
+msgstr ""
+
+#: modules/quiz-control/overrides/quiz/partials/show_quiz_result_box.php:572
+msgid "Go to Course"
+msgstr ""
+
+#: modules/quiz-control/overrides/quiz/partials/show_quiz_result_box.php:578
+msgid "Remember"
+msgstr ""
+
+#: modules/quiz-control/overrides/quiz/partials/show_quiz_result_box.php:579
+msgid "After completing all the lessons, you will be able to take the final quiz to see how your results evolve over time."
+msgstr ""
+
+#: modules/quiz-control/overrides/quiz/partials/show_quiz_result_box.php:584
+msgid "More Courses"
+msgstr ""

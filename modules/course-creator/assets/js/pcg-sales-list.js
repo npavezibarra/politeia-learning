@@ -28,12 +28,28 @@
         return (a + b).toUpperCase();
     }
 
+    function applyResponsiveLabels(tbody) {
+        if (!tbody) return;
+        const table = tbody.closest('table');
+        if (!table) return;
+        const headers = Array.from(table.querySelectorAll('thead th')).map((th) => (th.textContent || '').trim());
+        if (!headers.length) return;
+
+        Array.from(tbody.querySelectorAll('tr')).forEach((tr) => {
+            Array.from(tr.children).forEach((cell, idx) => {
+                if (!cell || cell.tagName !== 'TD') return;
+                cell.setAttribute('data-label', headers[idx] || '');
+            });
+        });
+    }
+
     function statusBadge(status) {
         const s = normalize(status);
-        if (s === 'paid') return { label: 'Paid', dot: 'good' };
-        if (s === 'pending') return { label: 'Pending', dot: 'warn' };
-        if (s === 'refunded') return { label: 'Refunded', dot: 'bad' };
-        return { label: status || 'Unknown', dot: '' };
+        const i18n = (typeof pcgSalesListData !== 'undefined' && pcgSalesListData && pcgSalesListData.i18n) ? pcgSalesListData.i18n : {};
+        if (s === 'paid') return { label: i18n.paid || 'Paid', dot: 'good' };
+        if (s === 'pending') return { label: i18n.pending || 'Pending', dot: 'warn' };
+        if (s === 'refunded') return { label: i18n.refunded || 'Refunded', dot: 'bad' };
+        return { label: status || i18n.unknown || 'Unknown', dot: '' };
     }
 
     function fmtMoney(amount, locale, currency) {
@@ -222,6 +238,8 @@
                 opBody.appendChild(tr);
             }
 
+            applyResponsiveLabels(opBody);
+
             if (opEmpty) opEmpty.hidden = rows.length !== 0;
             if (opCount) opCount.textContent = String(rows.length);
         }
@@ -269,6 +287,8 @@
                 `;
                 sumBody.appendChild(tr);
             }
+
+            applyResponsiveLabels(sumBody);
 
             if (sumEmpty) sumEmpty.hidden = rows.length !== 0;
             if (sumCount) sumCount.textContent = String(rows.length);

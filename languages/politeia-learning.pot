@@ -1361,3 +1361,27 @@ msgstr ""
 #: modules/woo/includes/class-user-sales-table.php:138
 msgid "Cliente"
 msgstr ""
+
+#: modules/core/templates/dashboard.php:61
+msgid "Course Programs"
+msgstr ""
+
+#: modules/core/templates/dashboard.php:71
+msgid "Course Integration"
+msgstr ""
+
+#: modules/course-programs/templates/archive-course_program.php:3
+msgid "Programas Filosóficos"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:212
+msgid "Pendiente"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:213
+msgid "Reembolsado"
+msgstr ""
+
+#: modules/course-creator/includes/class-creator-dashboard.php:214
+msgid "Desconocido"
+msgstr ""

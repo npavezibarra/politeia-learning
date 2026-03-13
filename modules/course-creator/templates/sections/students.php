@@ -632,8 +632,28 @@
 
             const coursesBody = panel.querySelector('[data-profile-panel="courses"] tbody');
             const booksBody = panel.querySelector('[data-profile-panel="books"] tbody');
+            const patronageBody = panel.querySelector('[data-profile-panel="patronage"] tbody');
 
             if (!index || !detail) return;
+
+            const applyResponsiveLabels = (tbody) => {
+                if (!tbody) return;
+                const table = tbody.closest('table');
+                if (!table) return;
+                const headers = Array.from(table.querySelectorAll('thead th')).map((th) => (th.textContent || '').trim());
+                if (!headers.length) return;
+
+                Array.from(tbody.querySelectorAll('tr')).forEach((tr) => {
+                    Array.from(tr.children).forEach((cell, idx) => {
+                        if (!cell || cell.tagName !== 'TD') return;
+                        cell.setAttribute('data-label', headers[idx] || '');
+                    });
+                });
+            };
+
+            const applyResponsiveLabelsToProfileTables = () => {
+                [coursesBody, booksBody, patronageBody].forEach(applyResponsiveLabels);
+            };
 
             const showIndex = () => {
                 index.hidden = false;
@@ -741,6 +761,7 @@
                                 if (coursesBody) {
                                     if (Array.isArray(res.data.courses) && res.data.courses.length > 0) {
                                         coursesBody.innerHTML = res.data.courses.map(renderCourseRow).join('');
+                                        applyResponsiveLabels(coursesBody);
                                     } else {
                                         coursesBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#666;"><?php _e('No hay cursos registrados.', 'politeia-learning'); ?></td></tr>';
                                     }
@@ -749,6 +770,7 @@
                                 if (booksBody) {
                                     if (Array.isArray(res.data.books) && res.data.books.length > 0) {
                                         booksBody.innerHTML = res.data.books.map(renderBookRow).join('');
+                                        applyResponsiveLabels(booksBody);
                                     } else {
                                         booksBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#666;"><?php _e('No hay libros registrados.', 'politeia-learning'); ?></td></tr>';
                                     }
@@ -795,6 +817,7 @@
 
             // Default state
             showIndex();
+            applyResponsiveLabelsToProfileTables();
         })();
     </script>
 

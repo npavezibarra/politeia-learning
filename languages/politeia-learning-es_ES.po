@@ -1092,6 +1092,30 @@ msgstr ""
 msgid "Cliente"
 msgstr ""
 
+#: modules/core/templates/dashboard.php:61
+msgid "Course Programs"
+msgstr "Programas de cursos"
+
+#: modules/core/templates/dashboard.php:71
+msgid "Course Integration"
+msgstr "Integración de cursos"
+
+#: modules/course-programs/templates/archive-course_program.php:3
+msgid "Programas Filosóficos"
+msgstr "Programas Filosóficos"
+
+#: modules/course-creator/includes/class-creator-dashboard.php:212
+msgid "Pendiente"
+msgstr "Pendiente"
+
+#: modules/course-creator/includes/class-creator-dashboard.php:213
+msgid "Reembolsado"
+msgstr "Reembolsado"
+
+#: modules/course-creator/includes/class-creator-dashboard.php:214
+msgid "Desconocido"
+msgstr "Desconocido"
+
 #: modules/course-creator/includes/class-creator-dashboard.php:163
 msgid "PRODUCTOS VENDIDOS"
 msgstr ""

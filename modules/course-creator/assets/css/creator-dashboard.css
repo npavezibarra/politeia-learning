@@ -1066,6 +1066,19 @@ button#pcg-mobile-sectionmenu-btn {
     text-decoration: underline;
 }
 
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-user-name--link,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-user-name--link:hover,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-user-name--link:focus,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-user-name--link:focus-visible,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-user-name--link:active,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-user-name--link:visited {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    color: #000 !important;
+}
+
 .pcg-sales-list-user-email {
     font-size: 12px;
     color: #333;
@@ -1173,6 +1186,21 @@ button#pcg-mobile-sectionmenu-btn {
     .pcg-sales-custom-range {
         justify-content: flex-start;
         width: 100%;
+    }
+
+    .pcg-sales-section [data-sales-panel="list"] .pcg-sales-dashboard-header {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .pcg-sales-section [data-sales-panel="list"] .pcg-sales-dashboard-header>div:first-child {
+        min-width: 0;
+    }
+
+    .pcg-sales-section [data-sales-panel="list"] .pcg-sales-list-pagination {
+        margin-left: auto;
+        flex-shrink: 0;
     }
 }
 
@@ -3696,6 +3724,10 @@ div#specialization-grid {
     color: #000;
 }
 
+.pcg-students-profile-detail {
+    margin-top: 20px;
+}
+
 .pcg-students-profile__nav {
     display: flex;
     align-items: center;
@@ -3846,6 +3878,19 @@ div#specialization-grid {
 .pcg-students-profile__metric--total .pcg-students-profile__metric-label,
 .pcg-students-profile__metric--total .pcg-students-profile__metric-val {
     color: #000;
+}
+
+@media (max-width: 513px) {
+    .pcg-students-profile__metrics {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+        gap: 8px;
+    }
+
+    .pcg-students-profile__metric {
+        min-width: 0;
+    }
 }
 
 .pcg-students-profile__tabs {
@@ -4009,6 +4054,103 @@ div#specialization-grid {
     font-size: 10px;
     color: #a3a3a3;
     font-weight: 600;
+}
+
+@media (max-width: 1040px) {
+    .pcg-sales-list-table-wrap,
+    .pcg-students-profile__table-wrap {
+        overflow: visible;
+    }
+
+    .pcg-sales-list-table,
+    .pcg-students-profile__table {
+        min-width: 0;
+    }
+
+    .pcg-sales-list-table thead,
+    .pcg-students-profile__table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        clip-path: inset(50%);
+        border: 0;
+        white-space: nowrap;
+    }
+
+    .pcg-sales-list-table tbody,
+    .pcg-students-profile__table tbody,
+    .pcg-sales-list-table tbody tr,
+    .pcg-students-profile__table tbody tr,
+    .pcg-sales-list-table tbody td,
+    .pcg-students-profile__table tbody td {
+        display: block;
+        width: 100%;
+    }
+
+    .pcg-sales-list-table tbody tr,
+    .pcg-students-profile__table tbody tr {
+        background: #fff;
+        overflow: hidden;
+        border-bottom: 1px solid #e0e0e0;
+        padding: 10px;
+    }
+
+    .pcg-sales-list-table tbody td,
+    .pcg-students-profile__table tbody td {
+        padding: 10px 14px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        text-align: left !important;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .pcg-sales-list-table tbody td:last-child,
+    .pcg-students-profile__table tbody td:last-child {
+        border-bottom: 0;
+    }
+
+    .pcg-sales-list-table tbody td::before,
+    .pcg-students-profile__table tbody td::before {
+        content: attr(data-label) ":";
+        color: rgba(0, 0, 0, 0.65);
+        font-weight: 600;
+        flex: 0 0 120px;
+        max-width: 45%;
+    }
+
+    .pcg-sales-list-table tbody td:first-child,
+    .pcg-students-profile__table tbody td:first-child {
+        display: block;
+        padding-top: 14px;
+    }
+
+    .pcg-sales-list-table tbody td:first-child::before,
+    .pcg-students-profile__table tbody td:first-child::before,
+    .pcg-sales-list-table tbody td[data-label=""]::before,
+    .pcg-students-profile__table tbody td[data-label=""]::before,
+    .pcg-sales-list-table tbody td[colspan]::before,
+    .pcg-students-profile__table tbody td[colspan]::before {
+        display: none;
+    }
+
+    .pcg-sales-list-table .pcg-sales-list-user {
+        min-width: 0;
+    }
+
+    .pcg-sales-list-table .pcg-sales-list-money,
+    .pcg-students-profile__th-right {
+        text-align: left !important;
+    }
+
+    .pcg-students-profile__progress-bar {
+        width: 100%;
+    }
 }
 
 .pcg-students-profile__value-grid {

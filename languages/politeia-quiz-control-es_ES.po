@@ -54,3 +54,35 @@ msgstr ""
 #: politeia-learning.php
 msgid "Nico / Politeia"
 msgstr "Nico / Politeia"
+
+#: modules/quiz-control/functions.php:499
+msgid "You must complete all course lessons before taking the Final Quiz."
+msgstr "Debes completar todas las lecciones del curso antes de rendir la evaluación final."
+
+#: modules/quiz-control/functions.php:500
+msgid "You have already completed the initial evaluation. Please finish the course content to unlock the final evaluation."
+msgstr "Ya completaste la evaluación inicial. Finaliza el contenido del curso para desbloquear la evaluación final."
+
+#: modules/quiz-control/functions.php:503
+msgid "Resume Course"
+msgstr "Reanudar curso"
+
+#: modules/quiz-control/overrides/quiz/partials/show_quiz_result_box.php:567
+msgid "Buy Course"
+msgstr "Comprar curso"
+
+#: modules/quiz-control/overrides/quiz/partials/show_quiz_result_box.php:572
+msgid "Go to Course"
+msgstr "Ir al curso"
+
+#: modules/quiz-control/overrides/quiz/partials/show_quiz_result_box.php:578
+msgid "Remember"
+msgstr "Recuerda"
+
+#: modules/quiz-control/overrides/quiz/partials/show_quiz_result_box.php:579
+msgid "After completing all the lessons, you will be able to take the final quiz to see how your results evolve over time."
+msgstr "Después de completar todas las lecciones, podrás rendir la evaluación final para ver cómo evolucionan tus resultados en el tiempo."
+
+#: modules/quiz-control/overrides/quiz/partials/show_quiz_result_box.php:584
+msgid "More Courses"
+msgstr "Más cursos"

@@ -58,7 +58,7 @@ if (!defined('ABSPATH'))
                 <?php _e('Módulos de Politeia', 'politeia-learning'); ?>
             </h2>
             <div class="pcg-module-item">
-                <h3>Course Programs</h3>
+                <h3><?php esc_html_e('Course Programs', 'politeia-learning'); ?></h3>
                 <p>
                     <?php _e('Gestión de programas filosóficos y grupos de cursos.', 'politeia-learning'); ?>
                 </p>
@@ -68,7 +68,7 @@ if (!defined('ABSPATH'))
             </div>
             <hr>
             <div class="pcg-module-item">
-                <h3>Course Integration</h3>
+                <h3><?php esc_html_e('Course Integration', 'politeia-learning'); ?></h3>
                 <p>
                     <?php _e('Integración avanzada WooCommerce + LearnDash + Politeia.', 'politeia-learning'); ?>
                 </p>

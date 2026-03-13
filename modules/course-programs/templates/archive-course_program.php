@@ -1,6 +1,6 @@
 <?php get_header(); ?>
 <main class="pcg-archive">
-  <h1>Programas Filosóficos</h1>
+  <h1><?php esc_html_e('Programas Filosóficos', 'politeia-learning'); ?></h1>
   <div class="program-list">
   <?php while ( have_posts() ) : the_post(); ?>
     <article>

@@ -182,7 +182,7 @@ class PL_CC_Creator_Dashboard
             wp_add_inline_style('pcg-creator-css', $custom_css);
 
             wp_enqueue_script('pcg-cropper-js', PL_CC_URL . 'assets/js/pcg-course-cropper.js', ['jquery', 'cropperjs'], '1.0.0', true);
-            wp_enqueue_script('pcg-creator-js', PL_CC_URL . 'assets/js/creator-dashboard.js', ['jquery', 'jquery-ui-sortable', 'pcg-cropper-js'], '1.0.12', true);
+            wp_enqueue_script('pcg-creator-js', PL_CC_URL . 'assets/js/creator-dashboard.js', ['jquery', 'jquery-ui-sortable', 'pcg-cropper-js'], '1.0.15', true);
             wp_enqueue_script('pcg-chartjs', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', [], '4.4.1', true);
             wp_enqueue_script('pcg-sales-dashboard', PL_CC_URL . 'assets/js/pcg-sales-dashboard.js', ['pcg-chartjs'], '1.0.0', true);
             wp_enqueue_script('pcg-sales-list', PL_CC_URL . 'assets/js/pcg-sales-list.js', [], '1.0.2', true);
@@ -205,6 +205,12 @@ class PL_CC_Creator_Dashboard
                 'ajaxUrl' => admin_url('admin-ajax.php'),
                 'action' => 'pl_get_user_sales_table',
                 'nonce' => wp_create_nonce('pl_user_sales_table'),
+                'i18n' => [
+                    'paid' => __('Pagado', 'politeia-learning'),
+                    'pending' => __('Pendiente', 'politeia-learning'),
+                    'refunded' => __('Reembolsado', 'politeia-learning'),
+                    'unknown' => __('Desconocido', 'politeia-learning'),
+                ],
             ]);
 
             wp_localize_script('pcg-students-dashboard', 'pcgStudentsData', [

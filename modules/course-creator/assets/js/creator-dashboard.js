@@ -1978,6 +1978,90 @@ jQuery(document).ready(function ($) {
             return document.getElementById('pcg-escrito-content-editor');
         }
 
+        let savedEditorRange = null;
+        let isSelectionLocked = false;
+
+        function isRangeInsideEditor(range, editor) {
+            if (!range || !editor) return false;
+            return editor.contains(range.startContainer) && editor.contains(range.endContainer);
+        }
+
+        function saveEditorSelection(force = false) {
+            if (isSelectionLocked && !force) return;
+            const editor = getEditorEl();
+            if (!editor) return;
+            const sel = window.getSelection ? window.getSelection() : null;
+            if (!sel || sel.rangeCount === 0) return;
+            const range = sel.getRangeAt(0);
+            if (!isRangeInsideEditor(range, editor)) return;
+            savedEditorRange = range.cloneRange();
+        }
+
+        function restoreEditorSelection() {
+            const editor = getEditorEl();
+            if (!editor) return false;
+
+            if (savedEditorRange && isRangeInsideEditor(savedEditorRange, editor)) {
+                const sel = window.getSelection ? window.getSelection() : null;
+                if (!sel) return false;
+                sel.removeAllRanges();
+                sel.addRange(savedEditorRange);
+                return true;
+            }
+
+            return false;
+        }
+
+        function placeCaretAtEnd(editor) {
+            if (!editor || !window.getSelection || !document.createRange) return;
+            const range = document.createRange();
+            range.selectNodeContents(editor);
+            range.collapse(false);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
+        function insertHtmlAtEditorSelection(html) {
+            const editor = getEditorEl();
+            if (!editor) return false;
+
+            const sel = window.getSelection ? window.getSelection() : null;
+            let range = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0) : null;
+
+            if (!isRangeInsideEditor(range, editor)) {
+                range = (savedEditorRange && isRangeInsideEditor(savedEditorRange, editor)) ? savedEditorRange.cloneRange() : null;
+            }
+            if (!range) {
+                placeCaretAtEnd(editor);
+                if (sel && sel.rangeCount > 0) {
+                    range = sel.getRangeAt(0);
+                }
+            }
+            if (!range) return false;
+
+            range.deleteContents();
+            const container = document.createElement('div');
+            container.innerHTML = html;
+            const frag = document.createDocumentFragment();
+            let lastNode = null;
+            while (container.firstChild) {
+                lastNode = frag.appendChild(container.firstChild);
+            }
+            range.insertNode(frag);
+
+            if (sel && lastNode) {
+                const next = document.createRange();
+                next.setStartAfter(lastNode);
+                next.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(next);
+                savedEditorRange = next.cloneRange();
+            }
+
+            return true;
+        }
+
         // Expose helpers for inline toolbar buttons.
         window.pcgEscritoExec = function (cmd, value) {
             focusEditor();
@@ -2029,6 +2113,7 @@ jQuery(document).ready(function ($) {
         }
 
         $(document).on('input keyup blur focus change', '#pcg-escrito-content-editor', handlePlaceholder);
+        $(document).on('keyup mouseup focus blur input', '#pcg-escrito-content-editor', saveEditorSelection);
 
         let currentEscritoId = 0;
         let escritoThumbnailId = 0;
@@ -2244,19 +2329,50 @@ jQuery(document).ready(function ($) {
             $('#pcg-escrito-upload-ui').show();
         });
 
+        $(document).on('mousedown', '#pcg-btn-escrito-add-image', function () {
+            saveEditorSelection(true);
+        });
+
         // Inline Image Insertion via custom Cropper
         $(document).on('click', '#pcg-btn-escrito-add-image', function (e) {
             e.preventDefault();
-            focusEditor();
+            saveEditorSelection(true);
+            isSelectionLocked = true;
+            const markerId = 'pcg-insert-marker-' + Date.now();
+            const preModalScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+
+            const editor = getEditorEl();
+            if (editor) {
+                focusEditor();
+                if (!restoreEditorSelection()) {
+                    placeCaretAtEnd(editor);
+                }
+            }
+
+            const markerInserted = insertHtmlAtEditorSelection(`<span id="${markerId}" class="pcg-insert-marker" contenteditable="false"></span>`);
+            if (!markerInserted && editor) {
+                editor.insertAdjacentHTML('beforeend', `<span id="${markerId}" class="pcg-insert-marker" contenteditable="false"></span>`);
+            }
 
             PL_Cropper.open({
                 width: 800,
                 height: 600,
                 freeCrop: true,
                 title: t('uploadImage'),
+                onCancel: function () {
+                    isSelectionLocked = false;
+                    $('#' + markerId).remove();
+                },
                 onSave: function (dataUrl) {
                     const tempId = 'pcg-loading-' + Date.now();
-                    document.execCommand('insertHTML', false, `<p id="${tempId}" class="pcg-img-loading">Cargando imagen...</p><p><br></p>`);
+                    const $marker = $('#' + markerId);
+                    if ($marker.length) {
+                        $marker.replaceWith(`<span id="${tempId}" class="pcg-img-loading">Cargando imagen...</span>`);
+                    } else if (editor) {
+                        editor.insertAdjacentHTML('beforeend', `<span id="${tempId}" class="pcg-img-loading">Cargando imagen...</span>`);
+                    }
+                    isSelectionLocked = false;
+                    saveEditorSelection(true);
 
                     $.ajax({
                         url: pcgCreatorData.ajaxUrl,
@@ -2270,12 +2386,19 @@ jQuery(document).ready(function ($) {
                         },
                         success: function (response) {
                             if (response.success) {
-                                focusEditor();
                                 const loader = document.getElementById(tempId);
                                 if (loader) {
-                                    $(loader).replaceWith(`<img src="${response.data.url}" />`);
+                                    $(loader).replaceWith(`<img src="${response.data.url}" class="pcg-new-inline-image" />`);
+                                    const insertedImg = document.querySelector('#pcg-escrito-content-editor img.pcg-new-inline-image');
+                                    if (insertedImg) {
+                                        insertedImg.classList.remove('pcg-new-inline-image');
+                                        insertedImg.scrollIntoView({ block: 'center', inline: 'nearest' });
+                                    } else {
+                                        window.scrollTo(0, preModalScrollY);
+                                    }
                                 } else {
-                                    document.execCommand('insertImage', false, response.data.url);
+                                    insertHtmlAtEditorSelection(`<img src="${response.data.url}" />`);
+                                    window.scrollTo(0, preModalScrollY);
                                 }
                             } else {
                                 alert(t('errorUploadingImage'));

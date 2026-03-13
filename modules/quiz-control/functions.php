@@ -496,11 +496,11 @@ function politeia_block_final_quiz_if_no_progress()
     // (This implies they finished the First Quiz but haven't finished lessons yet)
     wp_die(
         '<div style="text-align:center; padding: 3em; border: 2px dashed #ccc; background: #fff;">
-            <h2 style="color:#b71c1c; font-size: 1.5em;">' . esc_html__('You must complete all course lessons before taking the Final Quiz.', 'text-domain') . '</h2>
-            <p>' . esc_html__('You have already completed the initial evaluation. Please finish the course content to unlock the final evaluation.', 'text-domain') . '</p>
+            <h2 style="color:#b71c1c; font-size: 1.5em;">' . esc_html__('You must complete all course lessons before taking the Final Quiz.', 'politeia-quiz-control') . '</h2>
+            <p>' . esc_html__('You have already completed the initial evaluation. Please finish the course content to unlock the final evaluation.', 'politeia-quiz-control') . '</p>
             <a href="' . esc_url(get_permalink($course_id_final)) . '" 
                 style="display:inline-block; margin-top:2em; padding:0.85em 1.5em; background:black; color:#fff; font-weight:bold; border-radius:6px; text-decoration:none;">
-                ' . esc_html__('Resume Course', 'text-domain') . '
+                ' . esc_html__('Resume Course', 'politeia-quiz-control') . '
             </a>
         </div>',
         '',

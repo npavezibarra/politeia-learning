@@ -150,19 +150,6 @@
                     <p class="pcg-sales-subtitle"><?php _e('Resumen de desempeño por periodo', 'politeia-learning'); ?>
                     </p>
                 </div>
-            </div>
-        </div>
-
-        <div class="pcg-sales-dashboard" data-pcg-sales-list>
-	            <div class="pcg-sales-list-topbar">
-	                <div class="pcg-sales-list-tabs" role="tablist" aria-label="<?php _e('Tablas', 'politeia-learning'); ?>">
-	                    <button type="button" class="pcg-sales-list-tab" id="pcg-sales-list-operational-tab"
-	                        data-pcg-sales-list-tab="operational" role="tab" aria-selected="true"
-	                        aria-controls="pcg-sales-list-operational">
-	                        <?php _e('Operacional', 'politeia-learning'); ?>
-	                    </button>
-	                </div>
-
                 <div class="pcg-sales-list-pagination" aria-label="<?php esc_attr_e('Paginación', 'politeia-learning'); ?>">
                     <button type="button" class="pcg-sales-list-page-btn" data-pcg-sales-page-prev
                         aria-label="<?php esc_attr_e('Página anterior', 'politeia-learning'); ?>">‹</button>
@@ -171,9 +158,12 @@
                         aria-label="<?php esc_attr_e('Página siguiente', 'politeia-learning'); ?>">›</button>
                 </div>
             </div>
+        </div>
 
-            <section class="pcg-sales-list-panel" id="pcg-sales-list-operational" role="tabpanel"
-                data-pcg-sales-list-panel="operational" aria-labelledby="pcg-sales-list-operational-tab">
+        <div class="pcg-sales-dashboard" data-pcg-sales-list>
+            <section class="pcg-sales-list-panel" id="pcg-sales-list-operational" role="region"
+                data-pcg-sales-list-panel="operational"
+                aria-label="<?php esc_attr_e('Ventas operacionales', 'politeia-learning'); ?>">
                 <div class="pcg-sales-list-panel-head">
                     <div class="pcg-sales-list-panel-title">
                         <h3><?php _e('Ventas operacionales', 'politeia-learning'); ?></h3>

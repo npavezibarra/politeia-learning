@@ -564,24 +564,24 @@ if ($is_final_quiz && $course_id) {
         if ($related_product_id && !$has_bought) {
             $product_link = get_permalink($related_product_id);
             echo '<a href="' . esc_url($product_link) . '" class="button politeia-quiz-result-btn">'
-                . esc_html__('Buy Course', 'text-domain')
+                . esc_html__('Buy Course', 'politeia-quiz-control')
                 . '</a>';
         } else {
             $course_link = get_permalink($course_id);
             echo '<a href="' . esc_url($course_link) . '" class="button politeia-quiz-result-btn">'
-                . esc_html__('Go to Course', 'text-domain')
+                . esc_html__('Go to Course', 'politeia-quiz-control')
                 . '</a>';
         }
 
         // Reminder box for first quiz
         echo '<div class="politeia-reminder-box">';
-        echo '<span class="reminder-title">' . esc_html__('Remember', 'text-domain') . '</span>';
-        echo esc_html__('After completing all the lessons, you will be able to take the final quiz to see how your results evolve over time.', 'text-domain');
+        echo '<span class="reminder-title">' . esc_html__('Remember', 'politeia-quiz-control') . '</span>';
+        echo esc_html__('After completing all the lessons, you will be able to take the final quiz to see how your results evolve over time.', 'politeia-quiz-control');
         echo '</div>';
 
     } elseif ($is_final_quiz) {
         echo '<a href="' . esc_url(home_url('/courses/')) . '" class="button politeia-quiz-result-btn">'
-            . esc_html__('More Courses', 'text-domain')
+            . esc_html__('More Courses', 'politeia-quiz-control')
             . '</a>';
     }
 
