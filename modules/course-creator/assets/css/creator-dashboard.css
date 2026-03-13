@@ -678,7 +678,7 @@ button#pcg-mobile-sectionmenu-btn {
     text-transform: uppercase !important;
     letter-spacing: 0.15em !important;
     cursor: pointer !important;
-    border-radius: 2px !important;
+    border-radius: 4px !important;
     background: black !important;
     color: white !important;
     border: 1px solid black !important;
