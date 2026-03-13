@@ -66,8 +66,8 @@
             const prevSlide = Number($(this).data('prev') || 0);
 
             if (current === 4) {
-                // Route back to the correct question step.
-                pqcGoToSlide(method === 'manual' ? 3 : 2);
+                // Route back to the correct step.
+                pqcGoToSlide(method === 'manual' ? 3 : 5);
                 return;
             }
 
@@ -284,12 +284,10 @@
 
         let html = `<div class="pqc-slide pqc-manual-slide" data-manual-index="${i}">`;
         html += `<div class="pqc-manual-field">
-                    <label>${labelQuestionTitle}</label>
-                    <input type="text" class="pqc-manual-q-title" placeholder="${placeholderInternalName}" value="" />
+                    <input type="text" class="pqc-manual-q-title" placeholder="Tema de la Pregunta" value="" />
                 </div>
                 <div class="pqc-manual-field">
-                    <label>${labelQuestionText}</label>
-                    <input type="text" class="pqc-manual-q-text" placeholder="${placeholderQuestion}" required />
+                    <input type="text" class="pqc-manual-q-text" placeholder="Escribe la pregunta..." required />
                 </div>`;
 
         html += `<div class="pqc-manual-field">
@@ -380,10 +378,6 @@
             $slide.attr('data-manual-index', idx);
 
             const $fields = $slide.find('.pqc-manual-field');
-            const $titleLabel = $fields.eq(0).find('label').first();
-            if ($titleLabel.length) {
-                $titleLabel.text(labelQuestionTitle);
-            }
 
             // Keep radio group unique per question by index
             $slide.find('.pqc-manual-correct-radio').attr('name', `manual_correct_${idx}`);
@@ -484,6 +478,16 @@
     function updateNavState(current, total) {
         $('.pqc-prev-slide').prop('disabled', current === 0);
         $('.pqc-next-slide').prop('disabled', current === total - 1);
+
+        const $counter = $('#pqc-editor-counter');
+        if ($counter.length) {
+            const oldText = $counter.text();
+            // Match "Pregunta 1/10" or "Question 1/10" or any similar pattern with numbers
+            const newText = oldText.replace(/(\d+)\s*\/\s*(\d+)/, (match, p1, p2) => {
+                return `${current + 1} / ${total}`;
+            });
+            $counter.text(newText);
+        }
     }
 
     $(document).on('click', '.pqc-save-quiz-btn', function () {
@@ -516,6 +520,53 @@
                     refreshQuizEditor(quizId, goToIndexAfterAdd);
                 } else {
                     alert((response && response.data) ? response.data : 'Could not add question.');
+                    $btn.prop('disabled', false).removeClass('is-loading');
+                }
+            },
+            error: function () {
+                alert('Network error occurred.');
+                $btn.prop('disabled', false).removeClass('is-loading');
+            }
+        });
+    });
+
+    $(document).on('click', '.pqc-delete-question-btn', function () {
+        const $container = $('.pqc-editor-container');
+        const quizId = $container.data('quiz-id');
+        const $slide = $(this).closest('.pqc-slide');
+        const questionId = $slide.data('question-id');
+        const currentSlideIndex = $container.data('current-slide') || 0;
+
+        if (!quizId || !questionId) return;
+
+        const s = (window.pqcData && window.pqcData.strings) ? window.pqcData.strings : {};
+        const confirmMsg = s.confirmDeleteQuestion || 'Are you sure you want to delete this question?';
+
+        if (!confirm(confirmMsg)) return;
+
+        const $btn = $(this);
+        $btn.prop('disabled', true).addClass('is-loading');
+
+        $.ajax({
+            url: pqcData.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'pqc_delete_question',
+                nonce: pqcData.nonce,
+                quiz_id: quizId,
+                question_id: questionId
+            },
+            success: function (response) {
+                if (response && response.success) {
+                    // If we deleted the last slide, we should go to the previous one
+                    const totalSlides = $('.pqc-slide').length;
+                    let newIndex = currentSlideIndex;
+                    if (currentSlideIndex >= totalSlides - 1 && currentSlideIndex > 0) {
+                        newIndex = currentSlideIndex - 1;
+                    }
+                    refreshQuizEditor(quizId, newIndex);
+                } else {
+                    alert((response && response.data) ? response.data : 'Could not delete question.');
                     $btn.prop('disabled', false).removeClass('is-loading');
                 }
             },
@@ -574,6 +625,49 @@
             $row.addClass('is-correct');
         } else {
             $row.removeClass('is-correct');
+        }
+    });
+
+    $(document).on('click', '.pqc-editor-add-answer-btn', function () {
+        const $list = $(this).closest('.pqc-answers-section').find('.pqc-answers-editor-list');
+        if (!$list.length) return;
+
+        const nextIndex = $list.find('.pqc-answer-edit-row').length;
+        const newRow = `
+            <div class="pqc-answer-edit-row" data-answer-index="${nextIndex}">
+                <div class="pqc-answer-check-wrap">
+                    <input type="checkbox" class="pqc-answer-correct-check" title="Mark as correct">
+                </div>
+                <div class="pqc-answer-text-wrap" contenteditable="true" data-field="answer_text" data-placeholder="Nueva respuesta..."></div>
+                <button type="button" class="pqc-remove-answer-btn" title="Remove answer">
+                    <span class="dashicons dashicons-no-alt"></span>
+                </button>
+            </div>
+        `;
+
+        $list.append(newRow);
+        // Focus the new answer
+        $list.find('.pqc-answer-edit-row').last().find('.pqc-answer-text-wrap').focus();
+    });
+
+    $(document).on('click', '.pqc-remove-answer-btn', function () {
+        const $list = $(this).closest('.pqc-answers-editor-list');
+        const $row = $(this).closest('.pqc-answer-edit-row');
+        
+        // Don't allow removing if it's the only answer left (optional but good for UX)
+        if ($list.find('.pqc-answer-edit-row').length <= 1) {
+            alert('A question must have at least one answer.');
+            return;
+        }
+
+        if (confirm('Are you sure you want to remove this answer?')) {
+            $row.fadeOut(200, function() {
+                $(this).remove();
+                // Re-index remaining rows
+                $list.find('.pqc-answer-edit-row').each(function(index) {
+                    $(this).attr('data-answer-index', index);
+                });
+            });
         }
     });
 
@@ -697,25 +791,45 @@
     }
 
     function initFormValidation() {
-        $(document).on('change keyup', '#pqc-quiz-title, #pqc-json-paste, .pqc-manual-q-title, .pqc-manual-q-text, .pqc-manual-answer-text', function () {
+        $(document).on('input change', '#pqc-quiz-title, #pqc-json-paste, .pqc-manual-q-title, .pqc-manual-q-text, .pqc-manual-answer-text, #pqc-num-questions-ui, #pqc-answers-per-question-ui, #pqc-keywords', function () {
             validateStep3();
+            validatePromptButton();
         });
+        
+        // Run once on init
+        validatePromptButton();
+    }
+
+    function validatePromptButton() {
+        const numQ = $('#pqc-num-questions-ui').val();
+        const ansPerQ = $('#pqc-answers-per-question-ui').val();
+        const keywords = $('#pqc-keywords').val() ? $('#pqc-keywords').val().trim() : '';
+
+        const isValid = numQ > 0 && ansPerQ > 0 && keywords.length > 0;
+        $('.pqc-copy-prompt-btn').prop('disabled', !isValid);
+        
+        // Also enable the "Next" button on slide 2 if these are valid
+        $('.pqc-wizard-next[data-next="5"]').prop('disabled', !isValid);
     }
 
     function validateStep3() {
         const method = $('#pqc-creation-method').val();
         const hasTitle = $('#pqc-quiz-title').val() ? $('#pqc-quiz-title').val().trim().length > 0 : false;
 
+        // Slide 2 (Prompt Config)
+        validatePromptButton();
+
+        // Slide 5 (Paste Result - only if in LLM mode)
         let hasContent = false;
         if (method === 'llm') {
             hasContent = selectedFile !== null || ($('#pqc-json-paste').val() ? $('#pqc-json-paste').val().trim().length > 0 : false);
+            $('.pqc-wizard-next[data-next="4"]').prop('disabled', !hasContent);
         } else {
             const $manualSlides = $('.pqc-manual-slide');
             if (!$manualSlides.length) {
                 hasContent = false;
-                const canProceed = hasTitle && hasContent;
-                $('.pqc-submit-btn').prop('disabled', !canProceed);
-                $('.pqc-wizard-next[data-next="4"]').prop('disabled', !canProceed);
+                $('.pqc-submit-btn').prop('disabled', !hasTitle);
+                $('.pqc-wizard-next[data-next="4"]').prop('disabled', true);
                 return;
             }
 
@@ -746,11 +860,11 @@
                 if (!allFilled) return false;
             });
             hasContent = allFilled;
+            $('.pqc-wizard-next[data-next="4"]').prop('disabled', !hasContent);
         }
 
         const canProceed = hasTitle && hasContent;
         $('.pqc-submit-btn').prop('disabled', !canProceed);
-        $('.pqc-wizard-next[data-next="4"]').prop('disabled', !canProceed);
     }
 
     function initUploadArea() {

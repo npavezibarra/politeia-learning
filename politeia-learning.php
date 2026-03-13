@@ -26,6 +26,17 @@ require_once PL_PATH . 'includes/class-user-profile-meta-store.php';
 // Automatic Database Upgrades
 add_action('plugins_loaded', ['PL_Upgrader', 'maybe_upgrade']);
 
+// Step 1 & 6: Introduce a proper activation hook with background seeding
+register_activation_hook(__FILE__, function () {
+    // Run database installation
+    PL_Installer::install();
+
+    // Schedule background taxonomy seeding
+    if (!get_option('pl_learning_taxonomy_seed_v1')) {
+        wp_schedule_single_event(time(), 'pl_seed_default_categories');
+    }
+});
+
 // Unified taxonomy registration.
 add_action('plugins_loaded', function () {
     if (class_exists('PL_Taxonomy')) {
@@ -113,6 +124,7 @@ class PL_Module_Loader
      */
     public static function init()
     {
+        $t_start = microtime(true);
         foreach (self::$modules as $module_slug => $enabled) {
             if ($enabled) {
                 $init_file = PL_PATH . 'modules/' . $module_slug . '/init.php';
@@ -121,6 +133,7 @@ class PL_Module_Loader
                 }
             }
         }
+        error_log('[Politeia Audit] Modules init time: ' . (microtime(true) - $t_start));
     }
 
     /**

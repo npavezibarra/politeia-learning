@@ -12,6 +12,7 @@ class PL_Installer
     private const SNAPSHOTS_TABLE = 'politeia_inclusion_snapshots';
     private const APPROVALS_TABLE = 'politeia_inclusion_approvals';
     private const USER_PROFILE_META_TABLE = 'politeia_user_profile_meta';
+    private static bool $has_run = false;
 
     /**
      * Attempt to migrate legacy schema changes that dbDelta won't handle (like column renames).
@@ -174,13 +175,21 @@ class PL_Installer
      */
     public static function install(): void
     {
+        if (self::$has_run) {
+            return;
+        }
+
+        self::$has_run = true;
+
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-        // Handle legacy migrations before dbDelta.
-        self::migrate_roles_table();
-
-        foreach (self::get_schema_sql() as $table => $sql) {
-            dbDelta($sql);
+        // Step 4: Run legacy migrations only once.
+        if (!get_option('pl_roles_table_migrated')) {
+            self::migrate_roles_table();
+            update_option('pl_roles_table_migrated', 1);
         }
+
+        $full_sql = implode("\n", self::get_schema_sql());
+        dbDelta($full_sql);
     }
 }

@@ -10,20 +10,6 @@ if (!defined('ABSPATH')) {
 ?>
 
 <div class="pqc-container pqc-wizard-container">
-    <div class="pqc-header">
-        <div class="pqc-header-top"
-            style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-            <h2><?php _e('Quiz Creator', 'politeia-quiz-creator'); ?></h2>
-            <?php if ($quiz_id): ?>
-                <button type="button" class="pqc-delete-quiz-btn" data-quiz-id="<?php echo esc_attr($quiz_id); ?>"
-                    style="background: none; border: none; color: #e53e3e; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
-                    <span class="dashicons dashicons-trash" style="font-size: 16px; width: 16px; height: 16px;"></span>
-                    <?php _e('Delete Existing Quiz', 'politeia-quiz-creator'); ?>
-                </button>
-            <?php endif; ?>
-        </div>
-    </div>
-
     <form id="pqc-quiz-form" class="pqc-quiz-form">
         <!-- Hidden method tracker -->
         <input type="hidden" id="pqc-creation-method" name="creation_method" value="llm">
@@ -99,7 +85,7 @@ if (!defined('ABSPATH')) {
                     </div>
 
                     <div class="pqc-prompt-action">
-                        <button type="button" class="pqc-copy-prompt-btn">
+                        <button type="button" class="pqc-copy-prompt-btn" disabled>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -113,6 +99,30 @@ if (!defined('ABSPATH')) {
                         <p class="pqc-prompt-hint">
                             <?php _e('Paste the prompt into ChatGPT and then return with the JSON result.', 'politeia-quiz-creator'); ?>
                         </p>
+                    </div>
+                </div>
+
+                <div class="pqc-wizard-footer">
+                    <button type="button" class="pqc-wizard-prev"
+                        data-prev="1"><?php _e('Back', 'politeia-quiz-creator'); ?></button>
+                    <button type="button" class="pqc-wizard-next pqc-btn-primary"
+                        data-next="5"><?php _e('Next', 'politeia-quiz-creator'); ?></button>
+                </div>
+            </div>
+
+            <!-- SLIDE 5: AI PATH (PASTE RESULT) -->
+            <div class="pqc-wizard-slide" data-slide="5">
+                <div id="pqc-path-llm-result" class="pqc-method-path">
+                    <div class="pqc-section-header">
+                        <div class="pqc-header-left-group">
+                            <button type="button" class="pqc-wizard-prev pqc-back-icon-btn" data-prev="2" title="<?php echo esc_attr__('Back', 'politeia-quiz-creator'); ?>">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
+                            </button>
+                            <h3><?php _e('Step 2: Paste AI Result', 'politeia-quiz-creator'); ?></h3>
+                        </div>
                     </div>
 
                     <div class="pqc-input-choice-grid">
@@ -144,9 +154,9 @@ if (!defined('ABSPATH')) {
 
                 <div class="pqc-wizard-footer">
                     <button type="button" class="pqc-wizard-prev"
-                        data-prev="1"><?php _e('Back', 'politeia-quiz-creator'); ?></button>
+                        data-prev="2"><?php _e('Back', 'politeia-quiz-creator'); ?></button>
                     <button type="button" class="pqc-wizard-next pqc-btn-primary"
-                        data-next="4"><?php _e('Next: Behavior', 'politeia-quiz-creator'); ?></button>
+                        data-next="4"><?php _e('Next', 'politeia-quiz-creator'); ?></button>
                 </div>
             </div>
 
@@ -154,8 +164,19 @@ if (!defined('ABSPATH')) {
             <div class="pqc-wizard-slide" data-slide="3">
                 <div id="pqc-path-manual" class="pqc-method-path">
 	                    <div class="pqc-section-header pqc-manual-header-row">
-	                        <div class="pqc-header-title-nav">
-	                            <h3><?php _e('Step 2: Write Questions', 'politeia-quiz-creator'); ?></h3>
+	                        <div class="pqc-header-title-line">
+	                            <div class="pqc-header-left-group">
+	                                <button type="button" class="pqc-wizard-prev pqc-back-icon-btn" data-prev="1" title="<?php echo esc_attr__('Back', 'politeia-quiz-creator'); ?>">
+	                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+	                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+	                                        <polyline points="15 18 9 12 15 6"></polyline>
+	                                    </svg>
+	                                </button>
+	                                <h3><?php _e('Step 2: Write Questions', 'politeia-quiz-creator'); ?></h3>
+	                            </div>
+	                        </div>
+	                        
+	                        <div class="pqc-header-actions-line">
 	                            <div class="pqc-manual-actions">
 	                                <button type="button" class="pqc-manual-add-btn" title="<?php echo esc_attr__('Add question', 'politeia-quiz-creator'); ?>">
 	                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -182,8 +203,6 @@ if (!defined('ABSPATH')) {
 	                                </div>
 	                            </div>
 	                        </div>
-	                        <p><?php _e('Complete all slides with your questions and answers.', 'politeia-quiz-creator'); ?>
-	                        </p>
 	                    </div>
 
                     <div class="pqc-manual-questions-container">
@@ -200,7 +219,7 @@ if (!defined('ABSPATH')) {
                     <button type="button" class="pqc-wizard-prev"
                         data-prev="1"><?php _e('Back', 'politeia-quiz-creator'); ?></button>
                     <button type="button" class="pqc-wizard-next pqc-btn-primary"
-                        data-next="4"><?php _e('Next: Behavior', 'politeia-quiz-creator'); ?></button>
+                        data-next="4"><?php _e('Next', 'politeia-quiz-creator'); ?></button>
                 </div>
             </div>
 

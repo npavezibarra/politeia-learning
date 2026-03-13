@@ -686,4 +686,71 @@ class PQC_Quiz_Creator
 
         return true;
     }
+
+    /**
+     * Delete a single question from a quiz
+     * 
+     * @param int $quiz_post_id
+     * @param int $question_post_id
+     * @return bool|WP_Error
+     */
+    public static function delete_question($quiz_post_id, $question_post_id)
+    {
+        global $wpdb;
+
+        $quiz_post_id = intval($quiz_post_id);
+        $question_post_id = intval($question_post_id);
+
+        if (!$quiz_post_id || get_post_type($quiz_post_id) !== 'sfwd-quiz') {
+            return new WP_Error('invalid_quiz', __('Invalid quiz.', 'politeia-quiz-creator'));
+        }
+
+        $quiz_questions = get_post_meta($quiz_post_id, 'ld_quiz_questions', true);
+        if (!is_array($quiz_questions) || !isset($quiz_questions[$question_post_id])) {
+            return new WP_Error('invalid_question', __('Question not found in quiz.', 'politeia-quiz-creator'));
+        }
+
+        $question_pro_id = intval($quiz_questions[$question_post_id]);
+        $quiz_pro_id = intval(get_post_meta($quiz_post_id, 'quiz_pro_id', true));
+
+        // Get the sort order of the question to be deleted
+        $sort_order = $wpdb->get_var($wpdb->prepare(
+            "SELECT sort FROM {$wpdb->prefix}learndash_pro_quiz_question WHERE id = %d",
+            $question_pro_id
+        ));
+
+        // Delete from ProQuiz Question table
+        $wpdb->delete($wpdb->prefix . 'learndash_pro_quiz_question', ['id' => $question_pro_id]);
+
+        // Shift remaining ProQuiz question sort orders
+        if ($sort_order) {
+            $wpdb->query(
+                $wpdb->prepare(
+                    "UPDATE {$wpdb->prefix}learndash_pro_quiz_question SET sort = sort - 1 WHERE quiz_id = %d AND sort > %d",
+                    $quiz_pro_id,
+                    $sort_order
+                )
+            );
+        }
+
+        // Delete the question post
+        wp_delete_post($question_post_id, true);
+
+        // Update quiz questions meta
+        unset($quiz_questions[$question_post_id]);
+        update_post_meta($quiz_post_id, 'ld_quiz_questions', $quiz_questions);
+
+        // Update step counts
+        $count = count($quiz_questions);
+        update_post_meta($quiz_post_id, '_ld_course_steps_count', $count);
+        update_post_meta($quiz_post_id, 'ld_quiz_questions_dirty', $quiz_post_id);
+
+        $ld_steps = get_post_meta($quiz_post_id, 'ld_course_steps', true);
+        if (is_array($ld_steps)) {
+            $ld_steps['steps_count'] = $count;
+            update_post_meta($quiz_post_id, 'ld_course_steps', $ld_steps);
+        }
+
+        return true;
+    }
 }

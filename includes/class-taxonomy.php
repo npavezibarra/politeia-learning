@@ -16,6 +16,7 @@ class PL_Taxonomy
     {
         add_action('init', [__CLASS__, 'register_taxonomies'], 20);
         add_action('init', [__CLASS__, 'maybe_seed_default_categories'], 30);
+        add_action('pl_seed_default_categories', [__CLASS__, 'maybe_seed_default_categories']);
     }
 
     public static function register_taxonomies(): void
@@ -104,7 +105,8 @@ class PL_Taxonomy
      */
     public static function maybe_seed_default_categories(): void
     {
-        if (!is_admin()) {
+        // Step 6: Allow running in background (Cron) or in Admin.
+        if (!is_admin() && !doing_action('pl_seed_default_categories')) {
             return;
         }
 

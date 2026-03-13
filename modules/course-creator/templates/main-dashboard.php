@@ -144,7 +144,7 @@ get_header();
                     <?php echo esc_html($user->display_name); ?>
                 </h2>
                 <span class="user-role">
-                    <?php _e('Creador de Cursos', 'politeia-learning'); ?>
+                    <?php _e('OPERACIONES', 'politeia-learning'); ?>
                 </span>
             </div>
 
