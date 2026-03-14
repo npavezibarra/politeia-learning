@@ -262,6 +262,7 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
     
     /* Utility classes to replace Tailwind since we are in a WP plugin environment */
     .pcg-profile-view .flex { display: flex; }
+    .pcg-profile-view .flex-col { flex-direction: column; }
     .pcg-profile-view .items-center { align-items: center; }
     .pcg-profile-view .justify-end { justify-content: flex-end; }
     .pcg-profile-view .gap-6 { gap: 1.5rem; }
@@ -279,6 +280,7 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
     @media (min-width: 768px) {
         .pcg-profile-view .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .pcg-profile-view .md\:flex-row { flex-direction: row; }
+        .pcg-profile-view .md\:flex-col { flex-direction: column; }
         .pcg-profile-view .md\:w-2\/5 { width: 40%; }
         .pcg-profile-view .md\:w-3\/5 { width: 60%; }
     }
