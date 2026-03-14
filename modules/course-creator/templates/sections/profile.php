@@ -28,7 +28,8 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
         background-color: #FAFAFB;
         font-family: 'Poppins', sans-serif;
         color: var(--pcg-profile-pure-black);
-        padding: 40px 20px;
+        padding: 20px 20px;
+        max-width: 1080px;
     }
 
     .pcg-profile-view .form-card {
