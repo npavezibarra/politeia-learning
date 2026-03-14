@@ -27,7 +27,8 @@ $def_modules = [
     'especializacion' => true,
     'create-group' => true,
     'sales' => true,
-    'students' => true
+    'students' => true,
+    'profile' => true
 ];
 $saved_settings = get_option('pcg_modules_visibility', []);
 $active_modules = [];
@@ -125,6 +126,12 @@ get_header();
                         <?php _e('ESTUDIANTES', 'politeia-learning'); ?>
                     </a>
                 <?php endif; ?>
+                <?php if ($active_modules['profile']): ?>
+                    <a class="pcg-mobile-drawer-item <?php echo $current_section === 'profile' ? 'active' : ''; ?>"
+                        href="?section=profile">
+                        <?php _e('PERFIL', 'politeia-learning'); ?>
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -138,15 +145,17 @@ get_header();
     <div class="pcg-creator-container">
 
         <aside id="pcg-creator-sidebar" class="pcg-creator-sidebar">
-            <div class="pcg-user-info">
-                <?php echo get_avatar($user->ID, 64); ?>
-                <h2>
-                    <?php echo esc_html($user->display_name); ?>
-                </h2>
-                <span class="user-role">
-                    <?php _e('OPERACIONES', 'politeia-learning'); ?>
-                </span>
-            </div>
+            <a href="?section=profile" class="pcg-user-info-link">
+                <div class="pcg-user-info">
+                    <?php echo get_avatar($user->ID, 64); ?>
+                    <h2>
+                        <?php echo esc_html($user->display_name); ?>
+                    </h2>
+                    <span class="user-role">
+                        <?php _e('OPERACIONES', 'politeia-learning'); ?>
+                    </span>
+                </div>
+            </a>
 
             <nav class="pcg-creator-nav">
                 <ul>
@@ -195,6 +204,14 @@ get_header();
                             <a href="?section=students">
                                 <span class="dashicons dashicons-groups"></span>
                                 <?php _e('ESTUDIANTES', 'politeia-learning'); ?>
+                            </a>
+                        </li>
+                    <?php endif; ?>
+                    <?php if ($active_modules['profile']): ?>
+                        <li class="<?php echo $current_section === 'profile' ? 'active' : ''; ?>">
+                            <a href="?section=profile">
+                                <span class="dashicons dashicons-admin-users"></span>
+                                <?php _e('PERFIL', 'politeia-learning'); ?>
                             </a>
                         </li>
                     <?php endif; ?>

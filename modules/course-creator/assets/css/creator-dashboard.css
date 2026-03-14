@@ -496,11 +496,23 @@ button#pcg-mobile-sectionmenu-btn {
     overflow: visible !important;
 }
 
+.pcg-user-info-link {
+    text-decoration: none !important;
+    color: inherit !important;
+    display: block;
+    transition: background 0.2s ease;
+}
+
+.pcg-user-info-link:hover .pcg-user-info {
+    background: #fafafa;
+}
+
 .pcg-user-info {
     text-align: center;
     padding: 20px;
     border-bottom: 1px solid #f0f0f0;
     margin-bottom: 0px;
+    transition: background 0.2s ease;
 }
 
 .pcg-user-info img {
