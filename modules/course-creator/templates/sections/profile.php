@@ -295,54 +295,26 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
 <!-- Load Font Awesome if not present -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
-<div class="pcg-form-nav pcg-profile-nav">
-    <div class="pcg-profile-nav-inner" style="max-width: 1180px; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; box-sizing: border-box; height: 50px;">
+<div class="pcg-form-nav pcg-sales-nav">
+    <div class="pcg-sales-nav-inner">
         <div class="pcg-nav-left">
-            <span class="pcg-current-course-label" style="font-weight: 700; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;"><?php _e('PERFIL', 'politeia-learning'); ?></span>
+            <span class="pcg-current-course-label"><?php _e('PERFIL', 'politeia-learning'); ?></span>
         </div>
         <div class="pcg-nav-right">
-            <div class="pcg-segmented-control" id="pcg-profile-tabs" style="display: flex; background: #f5f5f5; padding: 4px; border-radius: 8px; gap: 4px;">
-                <div class="pcg-segment active" data-profile-tab="profile" style="padding: 6px 16px; font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.05em;">
+            <div class="pcg-segmented-control" id="pcg-profile-tabs">
+                <div class="pcg-segment active" data-profile-tab="profile">
                     <?php _e('Profile', 'politeia-learning'); ?>
                 </div>
-                <div class="pcg-segment" data-profile-tab="portfolio" style="padding: 6px 16px; font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.05em;">
+                <div class="pcg-segment" data-profile-tab="portfolio">
                     <?php _e('Portfolio', 'politeia-learning'); ?>
                 </div>
-                <div class="pcg-segment" data-profile-tab="interests" style="padding: 6px 16px; font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.05em;">
+                <div class="pcg-segment" data-profile-tab="interests">
                     <?php _e('My Interest', 'politeia-learning'); ?>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-    #pcg-profile-tabs .pcg-segment.active {
-        background: #fff;
-        color: #000;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    #pcg-profile-tabs .pcg-segment:not(.active) {
-        color: #737373;
-    }
-    #pcg-profile-tabs .pcg-segment:hover:not(.active) {
-        color: #000;
-        background: rgba(0,0,0,0.02);
-    }
-    
-    .pcg-profile-nav {
-        position: sticky !important;
-        top: 76px !important;
-        background: rgba(255, 255, 255, 0.98);
-        backdrop-filter: blur(10px);
-        border-bottom: 1px solid #f3f4f6;
-        z-index: 99 !important;
-        margin-bottom: 30px;
-    }
-    .admin-bar .pcg-profile-nav {
-        top: 108px !important;
-    }
-</style>
 
 <div class="pcg-creator-section">
     <!-- Profile Settings Panel -->
