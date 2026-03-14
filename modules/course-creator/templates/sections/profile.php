@@ -28,8 +28,14 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
         background-color: #FAFAFB;
         font-family: 'Poppins', sans-serif;
         color: var(--pcg-profile-pure-black);
-        padding: 20px 20px;
+        padding: 40px 20px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .pcg-profile-inner {
         max-width: 1080px;
+        margin: 0 auto;
     }
 
     .pcg-profile-view .form-card {
@@ -339,194 +345,193 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
 </style>
 
 <div class="pcg-creator-section">
-    <div data-profile-panel="profile">
-    <div class="max-w-4xl mx-auto">
-        <!-- Header with Photo and Name -->
-        <header class="mb-12 flex items-center gap-6">
-            <div class="profile-photo-container">
-                <img src="<?php echo esc_url($avatar_url); ?>" alt="<?php echo esc_attr($user->display_name); ?>" class="profile-photo">
-            </div>
-            <div>
-                <h1 class="text-4xl font-semibold text-black tracking-tight" style="font-size: 2.25rem;"><?php echo esc_html($user->display_name); ?></h1>
-                <div class="h-1 w-24 mt-2" style="height: 4px; width: 96px; background: var(--pcg-profile-gold-grad);"></div>
-            </div>
-        </header>
-
-        <form id="pcg-profile-form" class="space-y-8">
-            <!-- Basic Information -->
-            <div class="form-card">
-                <div class="card-header-accent"></div>
-                <div class="p-8">
-                    <div class="flex items-center mb-6">
-                        <h2 class="section-title">
-                            <i class="fa-solid fa-id-card icon-gold"></i>
-                            Basic Information
-                        </h2>
-                        <label class="privacy-wrapper">
-                            <span class="privacy-label">Private</span>
-                            <div class="toggle-switch">
-                                <input type="checkbox" name="privacy_basic">
-                                <span class="slider"></span>
-                            </div>
-                        </label>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div>
-                            <span class="label-text">First Name</span>
-                            <input type="text" placeholder="<?php echo esc_attr($first_name); ?>" class="input-field">
-                        </div>
-                        <div>
-                            <span class="label-text">Last Name</span>
-                            <input type="text" placeholder="<?php echo esc_attr($last_name); ?>" class="input-field">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Social Media -->
-            <div class="form-card">
-                <div class="card-header-accent"></div>
-                <div class="p-8">
-                    <div class="flex items-center mb-6">
-                        <h2 class="section-title">
-                            <i class="fa-solid fa-globe icon-gold"></i>
-                            Connectivity
-                        </h2>
-                        <label class="privacy-wrapper">
-                            <span class="privacy-label">Private</span>
-                            <div class="toggle-switch">
-                                <input type="checkbox" name="privacy_social">
-                                <span class="slider"></span>
-                            </div>
-                        </label>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="relative flex items-end">
-                            <i class="fa-brands fa-x-twitter mb-3 icon-gold mr-4" style="margin-right: 1rem; margin-bottom: 0.75rem;"></i>
-                            <div class="flex-1">
-                                <span class="label-text">X Profile</span>
-                                <input type="url" placeholder="https://x.com/username" class="input-field">
-                            </div>
-                        </div>
-                        <div class="relative flex items-end">
-                            <i class="fa-brands fa-facebook mb-3 icon-gold mr-4" style="margin-right: 1rem; margin-bottom: 0.75rem;"></i>
-                            <div class="flex-1">
-                                <span class="label-text">Facebook Profile</span>
-                                <input type="url" placeholder="https://facebook.com/username" class="input-field">
-                            </div>
-                        </div>
-                        <div class="relative flex items-end">
-                            <i class="fa-brands fa-instagram mb-3 icon-gold mr-4" style="margin-right: 1rem; margin-bottom: 0.75rem;"></i>
-                            <div class="flex-1">
-                                <span class="label-text">Instagram Profile</span>
-                                <input type="url" placeholder="https://instagram.com/username" class="input-field">
-                            </div>
-                        </div>
-                        <div class="relative flex items-end">
-                            <i class="fa-brands fa-linkedin mb-3 icon-gold mr-4" style="margin-right: 1rem; margin-bottom: 0.75rem;"></i>
-                            <div class="flex-1">
-                                <span class="label-text">LinkedIn Profile</span>
-                                <input type="url" placeholder="https://linkedin.com/in/username" class="input-field">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Top Five Favorites Combined -->
-            <div class="form-card">
-                <div class="card-header-accent"></div>
-                <div class="flex flex-col md:flex-row">
-                    <!-- Left Tabs -->
-                    <div class="w-full md:w-2/5 bg-[#F9F9F9]" style="border-right: 1px solid #f0f0f0;">
-                        <div class="p-6 hidden md:block" style="border-bottom: 1px solid #f0f0f0; padding: 1.5rem;">
-                            <h3 style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #a1a1aa; margin: 0;">Curated Favorites</h3>
-                        </div>
-                        <nav id="pcg-profile-tabs-nav" class="flex flex-col">
-                            <button type="button" class="tab-btn active" data-target="nonFictionAuthors">
-                                Non-Fiction Authors
-                            </button>
-                            <button type="button" class="tab-btn" data-target="fictionAuthors">
-                                Fiction Authors
-                            </button>
-                            <button type="button" class="tab-btn" data-target="topBooks">
-                                Books of All Time
-                            </button>
-                        </nav>
-                    </div>
-
-                    <!-- Right Content -->
-                    <div class="w-full md:w-3/5 p-8 bg-white">
-                        <div id="nonFictionAuthorsContent" class="tab-pane">
+    <!-- Profile Settings Panel -->
+    <div data-profile-panel="profile" class="pcg-profile-view">
+        <div class="pcg-profile-inner">
+            <div class="max-w-4xl mx-auto">
+                <form id="pcg-profile-form" class="space-y-8">
+                    <!-- Basic Information -->
+                    <div class="form-card">
+                        <div class="card-header-accent"></div>
+                        <div class="p-8">
                             <div class="flex items-center mb-6">
-                                <h3 style="font-size: 1.125rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                                    <i class="fa-solid fa-feather-pointed icon-gold"></i>
-                                    Non-Fiction
-                                </h3>
+                                <h2 class="section-title">
+                                    <i class="fa-solid fa-id-card icon-gold"></i>
+                                    Basic Information
+                                </h2>
                                 <label class="privacy-wrapper">
                                     <span class="privacy-label">Private</span>
                                     <div class="toggle-switch">
-                                        <input type="checkbox" name="privacy_nf">
+                                        <input type="checkbox" name="privacy_basic">
                                         <span class="slider"></span>
                                     </div>
                                 </label>
                             </div>
-                            <div class="space-y-4" id="nonFictionAuthors"></div>
-                        </div>
-
-                        <div id="fictionAuthorsContent" class="tab-pane hidden">
-                            <div class="flex items-center mb-6">
-                                <h3 style="font-size: 1.125rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                                    <i class="fa-solid fa-book-open icon-gold"></i>
-                                    Fiction
-                                </h3>
-                                <label class="privacy-wrapper">
-                                    <span class="privacy-label">Private</span>
-                                    <div class="toggle-switch">
-                                        <input type="checkbox" name="privacy_fiction">
-                                        <span class="slider"></span>
+                            <div class="flex gap-10 items-start">
+                                <!-- Profile Photo inside block -->
+                                <div class="profile-photo-container" style="width: 120px; height: 120px;">
+                                    <img src="<?php echo esc_url($avatar_url); ?>" alt="<?php echo esc_attr($user->display_name); ?>" class="profile-photo">
+                                </div>
+                                
+                                <div class="flex-1 flex flex-col gap-6">
+                                    <div>
+                                        <span class="label-text">First Name</span>
+                                        <input type="text" value="<?php echo esc_attr($first_name); ?>" class="input-field" style="font-size: 1.1rem; font-weight: 500;">
                                     </div>
-                                </label>
-                            </div>
-                            <div class="space-y-4" id="fictionAuthors"></div>
-                        </div>
-
-                        <div id="topBooksContent" class="tab-pane hidden">
-                            <div class="flex items-center mb-6">
-                                <h3 style="font-size: 1.125rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                                    <i class="fa-solid fa-crown icon-gold"></i>
-                                    Top 5 Books
-                                </h3>
-                                <label class="privacy-wrapper">
-                                    <span class="privacy-label">Private</span>
-                                    <div class="toggle-switch">
-                                        <input type="checkbox" name="privacy_books">
-                                        <span class="slider"></span>
+                                    <div>
+                                        <span class="label-text">Last Name</span>
+                                        <input type="text" value="<?php echo esc_attr($last_name); ?>" class="input-field" style="font-size: 1.1rem; font-weight: 500;">
                                     </div>
-                                </label>
+                                </div>
                             </div>
-                            <div class="space-y-4" id="topBooks"></div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Actions -->
-            <div class="flex items-center justify-end gap-6 pt-4">
-                <button type="button" style="color: #a1a1aa; background: transparent; border: none; font-weight: 500; cursor: pointer;">Discard</button>
-                <button type="submit" class="gold-cta">
-                    Update Profile
-                </button>
-            </div>
-        </form>
+                    <!-- Social Media -->
+                    <div class="form-card">
+                        <div class="card-header-accent"></div>
+                        <div class="p-8">
+                            <div class="flex items-center mb-6">
+                                <h2 class="section-title">
+                                    <i class="fa-solid fa-globe icon-gold"></i>
+                                    Connectivity
+                                </h2>
+                                <label class="privacy-wrapper">
+                                    <span class="privacy-label">Private</span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" name="privacy_social">
+                                        <span class="slider"></span>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="relative flex items-end">
+                                    <i class="fa-brands fa-x-twitter mb-3 icon-gold mr-4" style="margin-right: 1rem; margin-bottom: 0.75rem;"></i>
+                                    <div class="flex-1">
+                                        <span class="label-text">X Profile</span>
+                                        <input type="url" placeholder="https://x.com/username" class="input-field">
+                                    </div>
+                                </div>
+                                <div class="relative flex items-end">
+                                    <i class="fa-brands fa-facebook mb-3 icon-gold mr-4" style="margin-right: 1rem; margin-bottom: 0.75rem;"></i>
+                                    <div class="flex-1">
+                                        <span class="label-text">Facebook Profile</span>
+                                        <input type="url" placeholder="https://facebook.com/username" class="input-field">
+                                    </div>
+                                </div>
+                                <div class="relative flex items-end">
+                                    <i class="fa-brands fa-instagram mb-3 icon-gold mr-4" style="margin-right: 1rem; margin-bottom: 0.75rem;"></i>
+                                    <div class="flex-1">
+                                        <span class="label-text">Instagram Profile</span>
+                                        <input type="url" placeholder="https://instagram.com/username" class="input-field">
+                                    </div>
+                                </div>
+                                <div class="relative flex items-end">
+                                    <i class="fa-brands fa-linkedin mb-3 icon-gold mr-4" style="margin-right: 1rem; margin-bottom: 0.75rem;"></i>
+                                    <div class="flex-1">
+                                        <span class="label-text">LinkedIn Profile</span>
+                                        <input type="url" placeholder="https://linkedin.com/in/username" class="input-field">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-        <div id="pcg-profile-status-msg" class="hidden text-center font-semibold"></div>
-    </div>
-</div>
+                    <!-- Top Five Favorites Combined -->
+                    <div class="form-card">
+                        <div class="card-header-accent"></div>
+                        <div class="flex flex-col md:flex-row">
+                            <!-- Left Tabs -->
+                            <div class="w-full md:w-2/5 bg-[#F9F9F9]" style="border-right: 1px solid #f0f0f0;">
+                                <div class="p-6 hidden md:block" style="border-bottom: 1px solid #f0f0f0; padding: 1.5rem;">
+                                    <h3 style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #a1a1aa; margin: 0;">Curated Favorites</h3>
+                                </div>
+                                <nav id="pcg-profile-tabs-nav" class="flex flex-col">
+                                    <button type="button" class="tab-btn active" data-target="nonFictionAuthors">
+                                        Non-Fiction Authors
+                                    </button>
+                                    <button type="button" class="tab-btn" data-target="fictionAuthors">
+                                        Fiction Authors
+                                    </button>
+                                    <button type="button" class="tab-btn" data-target="topBooks">
+                                        Books of All Time
+                                    </button>
+                                </nav>
+                            </div>
+
+                            <!-- Right Content -->
+                            <div class="w-full md:w-3/5 p-8 bg-white">
+                                <div id="nonFictionAuthorsContent" class="tab-pane">
+                                    <div class="flex items-center mb-6">
+                                        <h3 style="font-size: 1.125rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                            <i class="fa-solid fa-feather-pointed icon-gold"></i>
+                                            Non-Fiction
+                                        </h3>
+                                        <label class="privacy-wrapper">
+                                            <span class="privacy-label">Private</span>
+                                            <div class="toggle-switch">
+                                                <input type="checkbox" name="privacy_nf">
+                                                <span class="slider"></span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="space-y-4" id="nonFictionAuthors"></div>
+                                </div>
+
+                                <div id="fictionAuthorsContent" class="tab-pane hidden">
+                                    <div class="flex items-center mb-6">
+                                        <h3 style="font-size: 1.125rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                            <i class="fa-solid fa-book-open icon-gold"></i>
+                                            Fiction
+                                        </h3>
+                                        <label class="privacy-wrapper">
+                                            <span class="privacy-label">Private</span>
+                                            <div class="toggle-switch">
+                                                <input type="checkbox" name="privacy_fiction">
+                                                <span class="slider"></span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="space-y-4" id="fictionAuthors"></div>
+                                </div>
+
+                                <div id="topBooksContent" class="tab-pane hidden">
+                                    <div class="flex items-center mb-6">
+                                        <h3 style="font-size: 1.125rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                            <i class="fa-solid fa-crown icon-gold"></i>
+                                            Top 5 Books
+                                        </h3>
+                                        <label class="privacy-wrapper">
+                                            <span class="privacy-label">Private</span>
+                                            <div class="toggle-switch">
+                                                <input type="checkbox" name="privacy_books">
+                                                <span class="slider"></span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="space-y-4" id="topBooks"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center justify-end gap-6 pt-4">
+                        <button type="button" style="color: #a1a1aa; background: transparent; border: none; font-weight: 500; cursor: pointer;">Discard</button>
+                        <button type="submit" class="gold-cta">
+                            Update Profile
+                        </button>
+                    </div>
+                </form>
+
+                <div id="pcg-profile-status-msg" class="hidden text-center font-semibold"></div>
+            </div>
+        </div>
     </div>
 
-    <div data-profile-panel="portfolio" style="display:none;">
-        <div class="pcg-profile-view">
+    <!-- Portfolio Panel -->
+    <div data-profile-panel="portfolio" class="pcg-profile-view" style="display:none;">
+        <div class="pcg-profile-inner">
             <div class="max-w-4xl mx-auto">
                 <div class="form-card p-8">
                     <h2 class="section-title mb-4">
@@ -539,8 +544,9 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
         </div>
     </div>
 
-    <div data-profile-panel="interests" style="display:none;">
-        <div class="pcg-profile-view">
+    <!-- Interests Panel -->
+    <div data-profile-panel="interests" class="pcg-profile-view" style="display:none;">
+        <div class="pcg-profile-inner">
             <div class="max-w-4xl mx-auto">
                 <div class="form-card p-8">
                     <h2 class="section-title mb-4">
