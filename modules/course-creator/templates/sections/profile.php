@@ -289,7 +289,57 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
 <!-- Load Font Awesome if not present -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
-<div class="pcg-profile-view">
+<div class="pcg-form-nav pcg-profile-nav">
+    <div class="pcg-profile-nav-inner" style="max-width: 1180px; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; box-sizing: border-box; height: 50px;">
+        <div class="pcg-nav-left">
+            <span class="pcg-current-course-label" style="font-weight: 700; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;"><?php _e('PERFIL', 'politeia-learning'); ?></span>
+        </div>
+        <div class="pcg-nav-right">
+            <div class="pcg-segmented-control" id="pcg-profile-tabs" style="display: flex; background: #f5f5f5; padding: 4px; border-radius: 8px; gap: 4px;">
+                <div class="pcg-segment active" data-profile-tab="profile" style="padding: 6px 16px; font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.05em;">
+                    <?php _e('Profile', 'politeia-learning'); ?>
+                </div>
+                <div class="pcg-segment" data-profile-tab="portfolio" style="padding: 6px 16px; font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.05em;">
+                    <?php _e('Portfolio', 'politeia-learning'); ?>
+                </div>
+                <div class="pcg-segment" data-profile-tab="interests" style="padding: 6px 16px; font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.05em;">
+                    <?php _e('My Interest', 'politeia-learning'); ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #pcg-profile-tabs .pcg-segment.active {
+        background: #fff;
+        color: #000;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    #pcg-profile-tabs .pcg-segment:not(.active) {
+        color: #737373;
+    }
+    #pcg-profile-tabs .pcg-segment:hover:not(.active) {
+        color: #000;
+        background: rgba(0,0,0,0.02);
+    }
+    
+    .pcg-profile-nav {
+        position: sticky !important;
+        top: 76px !important;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid #f3f4f6;
+        z-index: 99 !important;
+        margin-bottom: 30px;
+    }
+    .admin-bar .pcg-profile-nav {
+        top: 108px !important;
+    }
+</style>
+
+<div class="pcg-creator-section">
+    <div data-profile-panel="profile">
     <div class="max-w-4xl mx-auto">
         <!-- Header with Photo and Name -->
         <header class="mb-12 flex items-center gap-6">
@@ -473,6 +523,36 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
         <div id="pcg-profile-status-msg" class="hidden text-center font-semibold"></div>
     </div>
 </div>
+    </div>
+
+    <div data-profile-panel="portfolio" style="display:none;">
+        <div class="pcg-profile-view">
+            <div class="max-w-4xl mx-auto">
+                <div class="form-card p-8">
+                    <h2 class="section-title mb-4">
+                        <i class="fa-solid fa-briefcase icon-gold"></i>
+                        <?php _e('Portfolio', 'politeia-learning'); ?>
+                    </h2>
+                    <p style="color: #737373;"><?php _e('Sección en construcción...', 'politeia-learning'); ?></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div data-profile-panel="interests" style="display:none;">
+        <div class="pcg-profile-view">
+            <div class="max-w-4xl mx-auto">
+                <div class="form-card p-8">
+                    <h2 class="section-title mb-4">
+                        <i class="fa-solid fa-heart icon-gold"></i>
+                        <?php _e('My Interest', 'politeia-learning'); ?>
+                    </h2>
+                    <p style="color: #737373;"><?php _e('Sección en construcción...', 'politeia-learning'); ?></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     (function($) {
@@ -520,6 +600,22 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
             setTimeout(() => {
                 $status.addClass('hidden');
             }, 4000);
+        });
+
+        // Main Profile Tabs Switching
+        $('#pcg-profile-tabs .pcg-segment').on('click', function() {
+            const tab = $(this).data('profile-tab');
+            
+            // UI
+            $('#pcg-profile-tabs .pcg-segment').removeClass('active');
+            $(this).addClass('active');
+            
+            // Panels
+            $('[data-profile-panel]').hide();
+            $(`[data-profile-panel="${tab}"]`).show();
+            
+            // Global event if needed
+            window.dispatchEvent(new CustomEvent('pcg:profile-tab-changed', { detail: { tab } }));
         });
     })(jQuery);
 </script>
