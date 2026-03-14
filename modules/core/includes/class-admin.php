@@ -58,6 +58,15 @@ class PL_Core_Admin
 
         add_submenu_page(
             'politeia-learning',
+            __('Profile Template', 'politeia-learning'),
+            __('Profile Template', 'politeia-learning'),
+            'manage_options',
+            'pcg-profile-template',
+            [$this, 'render_profile_template_settings']
+        );
+
+        add_submenu_page(
+            'politeia-learning',
             __('Módulos', 'politeia-learning'),
             __('Módulos', 'politeia-learning'),
             'manage_options',
@@ -106,6 +115,23 @@ class PL_Core_Admin
         $container_max_width = get_option('pcg_container_max_width', '1200px');
 
         include PL_CORE_PATH . 'templates/style-options.php';
+    }
+
+    /**
+     * Render the Profile Template settings page.
+     */
+    public function render_profile_template_settings()
+    {
+        if (isset($_POST['pcg_profile_template_submitted']) && check_admin_referer('pcg_save_profile_template')) {
+            $profile_template = sanitize_text_field($_POST['pcg_profile_template'] ?? 'default');
+            update_option('pcg_profile_template', $profile_template);
+
+            echo '<div class="updated"><p>' . __('Settings saved.', 'politeia-learning') . '</p></div>';
+        }
+
+        $current_template = get_option('pcg_profile_template', 'default');
+
+        include PL_CORE_PATH . 'templates/profile-template-options.php';
     }
 
     /**

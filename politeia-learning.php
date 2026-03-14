@@ -117,6 +117,7 @@ class PL_Module_Loader
         'quiz-creator' => true,
         'quiz-control' => true,
         'woo' => true,
+        'member-profile' => true,
     ];
 
     /**
