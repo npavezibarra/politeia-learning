@@ -392,7 +392,7 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
                         <div class="p-6 hidden md:block" style="border-bottom: 1px solid #f0f0f0; padding: 1.5rem;">
                             <h3 style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #a1a1aa; margin: 0;">Curated Favorites</h3>
                         </div>
-                        <nav id="pcg-profile-tabs-nav" class="flex md:flex-col overflow-x-auto md:overflow-x-visible">
+                        <nav id="pcg-profile-tabs-nav" class="flex flex-col">
                             <button type="button" class="tab-btn active" data-target="nonFictionAuthors">
                                 Non-Fiction Authors
                             </button>
