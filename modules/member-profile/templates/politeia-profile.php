@@ -26,7 +26,9 @@ $avatar_url = function_exists('bp_core_fetch_avatar')
     ? bp_core_fetch_avatar(['item_id' => $user_id, 'html' => false, 'type' => 'full']) 
     : get_avatar_url($user_id);
 
-// Social Links (Placeholders or BuddyBoss fields)
+// --- Portfolio Settings ---
+$portfolio_manager = PL_Member_Profile_Portfolio_Manager::get_instance();
+$portfolio_settings = $portfolio_manager->get_settings($user_id);
 $twitter = function_exists('xprofile_get_field_data') ? xprofile_get_field_data('Twitter', $user_id) : '';
 $linkedin = function_exists('xprofile_get_field_data') ? xprofile_get_field_data('LinkedIn', $user_id) : '';
 $github = function_exists('xprofile_get_field_data') ? xprofile_get_field_data('GitHub', $user_id) : '';
@@ -35,52 +37,113 @@ $instagram = function_exists('xprofile_get_field_data') ? xprofile_get_field_dat
 // Rank
 $rank = get_user_meta($user_id, 'pl_profile_rank', true) ?: 'Premium Member';
 
-// --- Fetch Real Data ---
+// --- Filter Queries based on Portfolio ---
+$show_courses = !(isset($portfolio_settings['courses']) && $portfolio_settings['courses']->is_private == 1);
+$show_writings = !(isset($portfolio_settings['writings']) && $portfolio_settings['writings']->is_private == 1);
+$show_specs = !(isset($portfolio_settings['specializations']) && $portfolio_settings['specializations']->is_private == 1);
 
-// Courses
-$courses_query = new WP_Query([
-    'post_type' => 'sfwd-courses',
-    'post_status' => 'publish',
-    'author' => $user_id,
-    'posts_per_page' => -1
-]);
-$user_courses = [];
-if ($courses_query->have_posts()) {
-    while ($courses_query->have_posts()) {
-        $courses_query->the_post();
-        $user_courses[] = [
-            'id' => get_the_ID(),
-            'title' => get_the_title(),
-            'price' => get_post_meta(get_the_ID(), 'course_price', true) ?: 'Free',
-            'img' => get_the_post_thumbnail_url(get_the_ID(), 'large') ?: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=400&q=80',
-            'link' => get_permalink()
-        ];
+if ($show_courses && isset($portfolio_settings['courses'])) {
+    if ($portfolio_settings['courses']->visibility_mode === 'selected') {
+        $courses_ids = !empty($portfolio_settings['courses']->selected_ids) ? $portfolio_settings['courses']->selected_ids : [-1]; // -1 ensures no results if empty
     }
-    wp_reset_postdata();
+}
+if ($show_writings && isset($portfolio_settings['writings'])) {
+    if ($portfolio_settings['writings']->visibility_mode === 'selected') {
+        $writings_ids = !empty($portfolio_settings['writings']->selected_ids) ? $portfolio_settings['writings']->selected_ids : [-1];
+    }
+}
+if ($show_specs && isset($portfolio_settings['specializations'])) {
+    if ($portfolio_settings['specializations']->visibility_mode === 'selected') {
+        $specs_ids = !empty($portfolio_settings['specializations']->selected_ids) ? $portfolio_settings['specializations']->selected_ids : [-1];
+    }
 }
 
-// Writings (Blog posts)
-$writings_query = new WP_Query([
-    'post_type' => 'post',
-    'post_status' => 'publish',
-    'author' => $user_id,
-    'posts_per_page' => -1
-]);
-$user_writings = [];
-if ($writings_query->have_posts()) {
-    while ($writings_query->have_posts()) {
-        $writings_query->the_post();
-        $categories = get_the_category();
-        $category_name = !empty($categories) ? $categories[0]->name : 'Writing';
-        $user_writings[] = [
-            'id' => get_the_ID(),
-            'category' => $category_name,
-            'title' => get_the_title(),
-            'img' => get_the_post_thumbnail_url(get_the_ID(), 'large') ?: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80',
-            'link' => get_permalink()
-        ];
+// Courses Query
+$user_courses = [];
+if ($show_courses) {
+    $courses_args = [
+        'post_type' => 'sfwd-courses',
+        'post_status' => 'publish',
+        'author' => $user_id,
+        'posts_per_page' => -1
+    ];
+    if (!empty($courses_ids)) {
+        $courses_args['post__in'] = $courses_ids;
+        $courses_args['orderby'] = 'post__in';
     }
-    wp_reset_postdata();
+    $courses_query = new WP_Query($courses_args);
+    if ($courses_query->have_posts()) {
+        while ($courses_query->have_posts()) {
+            $courses_query->the_post();
+            $user_courses[] = [
+                'id' => get_the_ID(),
+                'title' => get_the_title(),
+                'price' => get_post_meta(get_the_ID(), 'course_price', true) ?: 'Free',
+                'img' => get_the_post_thumbnail_url(get_the_ID(), 'large') ?: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=400&q=80',
+                'link' => get_permalink()
+            ];
+        }
+        wp_reset_postdata();
+    }
+}
+
+// Writings Query
+$user_writings = [];
+if ($show_writings) {
+    $writings_args = [
+        'post_type' => 'post',
+        'post_status' => 'publish',
+        'author' => $user_id,
+        'posts_per_page' => -1
+    ];
+    if (!empty($writings_ids)) {
+        $writings_args['post__in'] = $writings_ids;
+        $writings_args['orderby'] = 'post__in';
+    }
+    $writings_query = new WP_Query($writings_args);
+    if ($writings_query->have_posts()) {
+        while ($writings_query->have_posts()) {
+            $writings_query->the_post();
+            $categories = get_the_category();
+            $category_name = !empty($categories) ? $categories[0]->name : 'Writing';
+            $user_writings[] = [
+                'id' => get_the_ID(),
+                'category' => $category_name,
+                'title' => get_the_title(),
+                'img' => get_the_post_thumbnail_url(get_the_ID(), 'large') ?: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80',
+                'link' => get_permalink()
+            ];
+        }
+        wp_reset_postdata();
+    }
+}
+
+// Specializations Query (Groups)
+$user_specs = [];
+if ($show_specs) {
+    $specs_args = [
+        'post_type' => 'groups',
+        'post_status' => 'publish',
+        'author' => $user_id,
+        'posts_per_page' => -1
+    ];
+    if (!empty($specs_ids)) {
+        $specs_args['post__in'] = $specs_ids;
+        $specs_args['orderby'] = 'post__in';
+    }
+    $specs_query = new WP_Query($specs_args);
+    if ($specs_query->have_posts()) {
+        while ($specs_query->have_posts()) {
+            $specs_query->the_post();
+            $user_specs[] = [
+                'id' => get_the_ID(),
+                'title' => get_the_title(),
+                'img' => get_the_post_thumbnail_url(get_the_ID(), 'large') ?: 'https://images.unsplash.com/photo-1579621970795-87f967b16ce8?auto=format&fit=crop&w=400&q=80',
+                'link' => get_permalink()
+            ];
+        }
+        wp_reset_postdata();
+    }
 }
 
 // Book Notes (Thoughts Feed)
@@ -500,17 +563,32 @@ get_header();
 <script>
     (function() {
         // --- Data Layer ---
-        const menuItems = [
-            { id: 'main', label: 'Main', icon: 'home' },
-            { id: 'courses', label: 'Courses', icon: 'graduation-cap' },
-            { id: 'writings', label: 'Writings', icon: 'book-open' },
-            { id: 'special', label: 'Especializaciones', icon: 'award' },
-            { id: 'thoughts', label: 'Thoughts Feed', icon: 'message-circle' },
-            { id: 'book', label: 'Book', icon: 'book' }
+        const portfolioSettings = <?php echo json_encode($portfolio_settings); ?>;
+        const userdata = {
+            display_name: '<?php echo esc_js($display_name); ?>',
+            description: '<?php echo esc_js(get_user_meta($user_id, 'description', true)); ?>'
+        };
+
+        const allMenuItems = [
+            { id: 'main', label: 'Inicio', icon: 'home' },
+            { id: 'courses', label: 'Mis Cursos', icon: 'graduation-cap' },
+            { id: 'writings', label: 'Escritos', icon: 'book-open' },
+            { id: 'specializations', label: 'Especializaciones', icon: 'award' },
+            { id: 'thoughts', label: 'Feed de Pensamientos', icon: 'message-circle' },
+            { id: 'book', label: 'Libros', icon: 'book' }
         ];
+
+        // Filter menu items based on privacy
+        const menuItems = allMenuItems.filter(item => {
+            if (portfolioSettings[item.id] && portfolioSettings[item.id].is_private == 1) {
+                return false;
+            }
+            return true;
+        });
 
         const courses = <?php echo json_encode($user_courses); ?>;
         const articles = <?php echo json_encode($user_writings); ?>;
+        const specializations = <?php echo json_encode($user_specs); ?>;
 
         const thoughts = <?php echo json_encode($book_thoughts); ?>;
 
@@ -594,8 +672,8 @@ get_header();
                     wrapper.innerHTML = `
                         <div class="space-y-8">
                             <div class="p-8 rounded-[6px] bg-neutral-50 border border-neutral-200 shadow-sm">
-                                <h1 class="text-3xl font-semibold text-neutral-900 mb-4">Dashboard <span class="gold-text">Overview</span></h1>
-                                <p class="text-neutral-600 max-w-2xl leading-relaxed text-sm">Welcome to your data-driven environment. This version uses advanced JavaScript rendering to manage your content dynamically.</p>
+                                <h1 class="text-3xl font-semibold text-neutral-900 mb-4">Perfil de <span class="gold-text">${userdata.display_name}</span></h1>
+                                <p class="text-neutral-600 max-w-2xl leading-relaxed text-sm">${userdata.description || 'Welcome to this Curiosity Profile.'}</p>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="p-6 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
@@ -658,6 +736,25 @@ get_header();
                                     </a>
                                 </div>
                             </div>
+                        `).join('');
+                    }
+                    break;
+
+                case 'specializations':
+                    if (specializations.length === 0) {
+                        wrapper.innerHTML = `<div class="py-20 text-center text-neutral-400 font-semibold">No specialized works yet.</div>`;
+                    } else {
+                        wrapper.className += ' grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6';
+                        wrapper.innerHTML = specializations.map(s => `
+                            <a href="${s.link}" class="bg-white rounded-[6px] overflow-hidden border border-neutral-200 group hover:border-[#8A6B1E] hover:shadow-xl transition-all block text-inherit no-underline">
+                                <div class="aspect-video overflow-hidden">
+                                    <img src="${s.img}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                                </div>
+                                <div class="p-5">
+                                    <h3 class="text-neutral-900 font-semibold text-base mb-1">${s.title}</h3>
+                                    <p class="text-[#8A6B1E] font-semibold text-sm">Specialization</p>
+                                </div>
+                            </a>
                         `).join('');
                     }
                     break;

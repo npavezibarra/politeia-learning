@@ -29,4 +29,7 @@ add_action('plugins_loaded', function () {
     if (class_exists('PL_Member_Profile_Template')) {
         new PL_Member_Profile_Template();
     }
+    if (class_exists('PL_Member_Profile_Portfolio_Manager')) {
+        new PL_Member_Profile_Portfolio_Manager();
+    }
 }, 11);

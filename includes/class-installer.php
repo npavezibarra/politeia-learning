@@ -12,6 +12,7 @@ class PL_Installer
     private const SNAPSHOTS_TABLE = 'politeia_inclusion_snapshots';
     private const APPROVALS_TABLE = 'politeia_inclusion_approvals';
     private const USER_PROFILE_META_TABLE = 'politeia_user_profile_meta';
+    private const PORTFOLIO_SETTINGS_TABLE = 'politeia_portfolio_settings';
     private static bool $has_run = false;
 
     /**
@@ -79,6 +80,7 @@ class PL_Installer
         $snapshots_table = $wpdb->prefix . self::SNAPSHOTS_TABLE;
         $approvals_table = $wpdb->prefix . self::APPROVALS_TABLE;
         $user_profile_meta_table = $wpdb->prefix . self::USER_PROFILE_META_TABLE;
+        $portfolio_settings_table = $wpdb->prefix . self::PORTFOLIO_SETTINGS_TABLE;
 
         return [
             $roles_table => sprintf(
@@ -165,6 +167,22 @@ class PL_Installer
                     KEY updated_at (updated_at)
                 ) %s;",
                 $user_profile_meta_table,
+                $charset_collate
+            ),
+            $portfolio_settings_table => sprintf(
+                "CREATE TABLE %s (
+                    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    user_id BIGINT UNSIGNED NOT NULL,
+                    section_id VARCHAR(50) NOT NULL,
+                    is_private TINYINT(1) NOT NULL DEFAULT 0,
+                    visibility_mode VARCHAR(20) NOT NULL DEFAULT 'all',
+                    selected_ids LONGTEXT NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY  (id),
+                    UNIQUE KEY user_section (user_id, section_id)
+                ) %s;",
+                $portfolio_settings_table,
                 $charset_collate
             ),
         ];

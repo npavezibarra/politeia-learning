@@ -10,6 +10,8 @@ $user = get_user_by('slug', $user_slug);
 $first_name = get_user_meta($user->ID, 'first_name', true) ?: $user->display_name;
 $last_name = get_user_meta($user->ID, 'last_name', true);
 $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
+$portfolio_manager = PL_Member_Profile_Portfolio_Manager::get_instance();
+$portfolio_settings = $portfolio_manager->get_settings($user->ID);
 ?>
 
 <style>
@@ -25,17 +27,18 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
     }
 
     .pcg-profile-view {
+        width: 100%;
+        max-width: 1180px;
+        margin: 0;
         background-color: #FAFAFB;
         font-family: 'Poppins', sans-serif;
         color: var(--pcg-profile-pure-black);
-        padding: 40px 20px;
-        width: 100%;
+        padding: 30px 20px;
         box-sizing: border-box;
     }
 
     .pcg-profile-inner {
-        max-width: 1080px;
-        margin: 0 auto;
+        width: 100%;
     }
 
     .pcg-profile-view .form-card {
@@ -290,6 +293,123 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
         .pcg-profile-view .md\:w-2\/5 { width: 40%; }
         .pcg-profile-view .md\:w-3\/5 { width: 60%; }
     }
+
+    /* Portfolio Specific Styles */
+    .pcg-portfolio-section {
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 2rem;
+        margin-bottom: 2rem;
+    }
+    .pcg-portfolio-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    .pcg-item-selection {
+        background: #f9f9f9;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-top: 1rem;
+        font-size: 12px !important;
+    }
+    .pcg-item-selection * {
+        font-size: 12px !important;
+    }
+    .pcg-selected-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    .pcg-tag-pill {
+        background: white;
+        border: 1px solid #e2e8f0;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px !important;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .pcg-tag-remove {
+        cursor: pointer;
+        color: #ef4444;
+        font-weight: bold;
+    }
+    .pcg-autocomplete-results {
+        position: absolute;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        width: 100%;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 100;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .pcg-autocomplete-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+    .pcg-autocomplete-item:hover {
+        background: #f1f5f9;
+    }
+    .pcg-search-wrapper {
+        position: relative;
+    }
+    
+    /* Grid Selection Styles */
+    .pcg-item-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    .pcg-grid-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 12px !important;
+        padding: 6px 0;
+        line-height: 1.4;
+    }
+    .pcg-grid-item label {
+        font-size: 12px !important;
+        cursor: pointer;
+    }
+    .pcg-grid-item input[type="checkbox"] {
+        cursor: pointer;
+        margin-top: 2px;
+    }
+    .pcg-pagination {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 1rem;
+        font-size: 12px !important;
+    }
+    .pcg-pagination button {
+        background: transparent !important;
+        border: none !important;
+        padding: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #404040 !important;
+        box-shadow: none !important;
+    }
+    .pcg-pagination button:hover {
+        background: transparent !important;
+    }
+    .pcg-pagination button:disabled {
+        opacity: 0.2;
+        cursor: not-allowed;
+    }
+    .pcg-pagination .pcg-page-info {
+        color: #737373;
+    }
 </style>
 
 <!-- Load Font Awesome if not present -->
@@ -320,8 +440,7 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
     <!-- Profile Settings Panel -->
     <div data-profile-panel="profile" class="pcg-profile-view">
         <div class="pcg-profile-inner">
-            <div class="max-w-4xl mx-auto">
-                <form id="pcg-profile-form" class="space-y-8">
+            <form id="pcg-profile-form" class="space-y-8">
                     <!-- Basic Information -->
                     <div class="form-card">
                         <div class="card-header-accent"></div>
@@ -497,30 +616,112 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
                 </form>
 
                 <div id="pcg-profile-status-msg" class="hidden text-center font-semibold"></div>
-            </div>
         </div>
     </div>
 
     <!-- Portfolio Panel -->
     <div data-profile-panel="portfolio" class="pcg-profile-view" style="display:none;">
         <div class="pcg-profile-inner">
-            <div class="max-w-4xl mx-auto">
-                <div class="form-card p-8">
-                    <h2 class="section-title mb-4">
+            <div class="form-card p-8">
+                    <h2 class="section-title mb-6">
                         <i class="fa-solid fa-briefcase icon-gold"></i>
-                        <?php _e('Portfolio', 'politeia-learning'); ?>
+                        <?php _e('Portfolio Management', 'politeia-learning'); ?>
                     </h2>
-                    <p style="color: #737373;"><?php _e('Sección en construcción...', 'politeia-learning'); ?></p>
+                    
+                    <p class="mb-8" style="color: #737373; font-size: 0.9rem;">
+                        <?php _e('Choose which sections and specific works are visible on your public curiosity profile.', 'politeia-learning'); ?>
+                    </p>
+
+                    <div class="pcg-portfolio-sections">
+                        <?php 
+                        $sections = [
+                            'courses' => [
+                                'label' => __('Cursos', 'politeia-learning'),
+                                'type' => 'courses',
+                                'icon' => 'fa-graduation-cap'
+                            ],
+                            'writings' => [
+                                'label' => __('Writings', 'politeia-learning'),
+                                'type' => 'writings',
+                                'icon' => 'fa-pen-nib'
+                            ],
+                            'specializations' => [
+                                'label' => __('Especializaciones', 'politeia-learning'),
+                                'type' => 'specializations',
+                                'icon' => 'fa-award'
+                            ]
+                        ];
+
+                        foreach ($sections as $id => $section_data):
+                            $settings = $portfolio_settings[$id] ?? (object)[
+                                'is_private' => 0,
+                                'visibility_mode' => 'selected',
+                                'selected_ids' => []
+                            ];
+                        ?>
+                            <div class="pcg-portfolio-section" data-section="<?php echo $id; ?>">
+                                <div class="flex items-center mb-4">
+                                    <h3 style="font-size: 1rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fa-solid <?php echo $section_data['icon']; ?> icon-gold"></i>
+                                        <?php echo $section_data['label']; ?>
+                                    </h3>
+                                    
+                                    <label class="privacy-wrapper">
+                                        <span class="privacy-label"><?php _e('Private', 'politeia-learning'); ?></span>
+                                        <div class="toggle-switch">
+                                            <input type="checkbox" name="portfolio[<?php echo $id; ?>][is_private]" 
+                                                   class="pcg-portfolio-toggle" <?php checked($settings->is_private, 1); ?>>
+                                            <span class="slider"></span>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div class="pcg-portfolio-controls <?php echo $settings->is_private ? 'hidden' : ''; ?>">
+                                     <div class="pcg-item-selection">
+                                        <div class="pcg-item-grid-container" data-page="1">
+                                            <div class="pcg-item-grid" id="grid-<?php echo $id; ?>">
+                                                <!-- Dynamic Content -->
+                                                <div class="col-span-2 text-center py-4 text-neutral-400">
+                                                    <i class="fa-solid fa-spinner fa-spin"></i> <?php _e('Cargando...', 'politeia-learning'); ?>
+                                                </div>
+                                            </div>
+                                             <div class="pcg-pagination flex justify-end items-center" id="pagination-<?php echo $id; ?>">
+                                                 <button type="button" class="pcg-prev-page" disabled><i class="fa-solid fa-chevron-left" style="font-size: 14px; display: block;"></i></button>
+                                                 <span class="pcg-page-info mx-2" style="font-weight: 500;">1 / 1</span>
+                                                 <button type="button" class="pcg-next-page" disabled><i class="fa-solid fa-chevron-right" style="font-size: 14px; display: block;"></i></button>
+                                             </div>
+                                             
+                                             <!-- Hidden storage for selection logic -->
+                                             <div class="pcg-selected-items-data hidden">
+                                                 <?php 
+                                                 if (!empty($settings->selected_ids)) {
+                                                     foreach ($settings->selected_ids as $item_id) {
+                                                         echo '<div class="pcg-tag-pill" data-id="' . $item_id . '"></div>';
+                                                     }
+                                                 }
+                                                 ?>
+                                             </div>
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <div class="flex justify-end mt-8">
+                         <button type="button" id="pcg-save-portfolio" class="gold-cta">
+                            <?php _e('Save Portfolio Settings', 'politeia-learning'); ?>
+                        </button>
+                    </div>
                 </div>
-            </div>
         </div>
     </div>
 
     <!-- Interests Panel -->
     <div data-profile-panel="interests" class="pcg-profile-view" style="display:none;">
         <div class="pcg-profile-inner">
-            <div class="max-w-4xl mx-auto">
-                <div class="form-card p-8">
+            <div class="form-card p-8">
                     <h2 class="section-title mb-4">
                         <i class="fa-solid fa-heart icon-gold"></i>
                         <?php _e('My Interest', 'politeia-learning'); ?>
@@ -530,7 +731,6 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
             </div>
         </div>
     </div>
-</div>
 
 <script>
     (function($) {
@@ -591,9 +791,230 @@ $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
             // Panels
             $('[data-profile-panel]').hide();
             $(`[data-profile-panel="${tab}"]`).show();
+
+            // Lazy load portfolio items if this is the first time visiting the tab
+            if (tab === 'portfolio' && !window.pcgPortfolioLoaded) {
+                initPortfolioBulkLoad();
+            }
             
             // Global event if needed
             window.dispatchEvent(new CustomEvent('pcg:profile-tab-changed', { detail: { tab } }));
+        });
+
+        // Portfolio Logic
+        const portfolioNonce = '<?php echo wp_create_nonce("pl_portfolio_nonce"); ?>';
+
+        $('.pcg-portfolio-toggle').on('change', function() {
+            const $section = $(this).closest('.pcg-portfolio-section');
+            const isPrivate = $(this).is(':checked');
+            $section.find('.pcg-portfolio-controls').toggleClass('hidden', isPrivate);
+        });
+
+        // Mode switch is removed, we default to curated (selected) items if not private.
+
+        function loadPortfolioItems(sectionId, page) {
+            const $section = $(`.pcg-portfolio-section[data-section="${sectionId}"]`);
+            const $grid = $section.find('.pcg-item-grid');
+            const $pagination = $section.find('.pcg-pagination');
+            const type = sectionId;
+
+            // Show spinner
+            $grid.html('<div class="col-span-2 text-center py-4 text-neutral-400"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</div>');
+
+            $.ajax({
+                url: pcgCreatorData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'pl_get_portfolio_items',
+                    nonce: portfolioNonce,
+                    type: type,
+                    paged: page
+                },
+                success: function(response) {
+                    if (response.success) {
+                        renderGrid($grid, response.data.items, sectionId);
+                        renderPagination($pagination, response.data, sectionId);
+                    }
+                }
+            });
+        }
+
+        function initPortfolioBulkLoad() {
+            const sectionsToLoad = [];
+            $('.pcg-portfolio-section').each(function() {
+                const $sec = $(this);
+                // Load all non-private sections since curation is the only mode now
+                if (!$sec.find('.pcg-portfolio-toggle').is(':checked')) {
+                    sectionsToLoad.push($sec.data('section'));
+                }
+            });
+
+            if (sectionsToLoad.length === 0) {
+                window.pcgPortfolioLoaded = true;
+                return;
+            }
+
+            $.ajax({
+                url: pcgCreatorData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'pl_get_bulk_portfolio_items',
+                    nonce: portfolioNonce,
+                    sections: sectionsToLoad
+                },
+                success: function(response) {
+                    if (response.success) {
+                        window.pcgPortfolioLoaded = true;
+                        Object.keys(response.data).forEach(sectionId => {
+                            const data = response.data[sectionId];
+                            const $section = $(`.pcg-portfolio-section[data-section="${sectionId}"]`);
+                            const $grid = $section.find('.pcg-item-grid');
+                            const $pagination = $section.find('.pcg-pagination');
+                            renderGrid($grid, data.items, sectionId);
+                            renderPagination($pagination, data, sectionId);
+                        });
+                    }
+                }
+            });
+        }
+
+        function renderGrid($grid, items, sectionId) {
+            const $section = $(`.pcg-portfolio-section[data-section="${sectionId}"]`);
+            const selectedIds = [];
+            $section.find('.pcg-tag-pill').each(function() {
+                selectedIds.push(parseInt($(this).data('id')));
+            });
+
+            if (items.length === 0) {
+                $grid.html('<div class="col-span-2 text-center py-4 text-neutral-400">No hay elementos disponibles.</div>');
+                return;
+            }
+
+            let html = '';
+            items.forEach(item => {
+                const isChecked = selectedIds.includes(item.id) ? 'checked' : '';
+                html += `
+                    <div class="pcg-grid-item">
+                        <input type="checkbox" id="item-${item.id}" value="${item.id}" data-title="${item.title}" ${isChecked} class="pcg-item-checkbox">
+                        <label for="item-${item.id}" title="${item.title}">${item.title}</label>
+                    </div>
+                `;
+            });
+            $grid.html(html);
+        }
+
+        function renderPagination($pagination, data, sectionId) {
+            $pagination.find('.pcg-page-info').text(`${data.current_page} / ${data.total_pages}`);
+            $pagination.find('.pcg-prev-page').prop('disabled', data.current_page <= 1);
+            $pagination.find('.pcg-next-page').prop('disabled', data.current_page >= data.total_pages);
+            $pagination.closest('.pcg-item-grid-container').data('page', data.current_page);
+        }
+
+        $(document).on('click', '.pcg-prev-page', function() {
+            const $section = $(this).closest('.pcg-portfolio-section');
+            const sectionId = $section.data('section');
+            const currentPage = parseInt($section.find('.pcg-item-grid-container').data('page'));
+            loadPortfolioItems(sectionId, currentPage - 1);
+        });
+
+        $(document).on('click', '.pcg-next-page', function() {
+            const $section = $(this).closest('.pcg-portfolio-section');
+            const sectionId = $section.data('section');
+            const currentPage = parseInt($section.find('.pcg-item-grid-container').data('page'));
+            loadPortfolioItems(sectionId, currentPage + 1);
+        });
+
+        $(document).on('change', '.pcg-item-checkbox', function() {
+            const $cb = $(this);
+            const id = parseInt($cb.val());
+            const $section = $cb.closest('.pcg-portfolio-section');
+            const $container = $section.find('.pcg-selected-items-data');
+
+            if ($cb.is(':checked')) {
+                if ($container.find(`[data-id="${id}"]`).length === 0) {
+                    $container.append(`<div class="pcg-tag-pill" data-id="${id}"></div>`);
+                }
+            } else {
+                $container.find(`[data-id="${id}"]`).remove();
+            }
+        });
+
+        // Initialize state markers but defer loading
+        window.pcgPortfolioLoaded = false;
+
+        // Check if portfolio is initial tab and trigger load
+        $(document).ready(function() {
+            if ($('#pcg-profile-tabs .pcg-segment.active').data('profile-tab') === 'portfolio') {
+                initPortfolioBulkLoad();
+            }
+        });
+
+        $(document).on('click', '.pcg-tag-remove', function() {
+            const $tag = $(this).parent();
+            const id = $tag.data('id');
+            const $section = $(this).closest('.pcg-portfolio-section');
+            
+            // Uncheck in grid if present
+            $section.find(`.pcg-item-checkbox[value="${id}"]`).prop('checked', false);
+            
+            $tag.remove();
+        });
+
+        // Save Portfolio
+        $('#pcg-save-portfolio').on('click', function() {
+            const $btn = $(this);
+            const $status = $('#pcg-profile-status-msg');
+            const originalText = $btn.text();
+
+            $btn.prop('disabled', true).text('Saving...');
+
+            const sections = [];
+            $('.pcg-portfolio-section').each(function() {
+                const $sec = $(this);
+                const sectionId = $sec.data('section');
+                const isPrivate = $sec.find('.pcg-portfolio-toggle').is(':checked') ? 1 : 0;
+                const mode = $sec.find('.pcg-portfolio-mode:checked').val();
+                const selectedIds = [];
+                $sec.find('.pcg-tag-pill').each(function() {
+                    selectedIds.push($(this).data('id'));
+                });
+
+                sections.push({
+                    section_id: sectionId,
+                    is_private: isPrivate,
+                    visibility_mode: 'selected', // Always curated
+                    selected_ids: selectedIds
+                });
+            });
+
+            // We save each section (could be optimized to bulk, but manager expects one)
+            let completed = 0;
+            let success = true;
+
+            sections.forEach(sec => {
+                $.ajax({
+                    url: pcgCreatorData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'pl_save_portfolio_settings',
+                        nonce: portfolioNonce,
+                        ...sec
+                    },
+                    complete: function() {
+                        completed++;
+                        if (completed === sections.length) {
+                            $btn.prop('disabled', false).text(originalText);
+                            $status.text(success ? "Portfolio settings updated successfully." : "Error saving some settings.");
+                            $status.removeClass('hidden');
+                            $status[0].scrollIntoView({ behavior: 'smooth' });
+                            setTimeout(() => $status.addClass('hidden'), 4000);
+                        }
+                    },
+                    error: function() {
+                        success = false;
+                    }
+                });
+            });
         });
     })(jQuery);
 </script>

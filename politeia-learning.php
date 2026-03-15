@@ -15,7 +15,7 @@ if (!defined('ABSPATH'))
 // Core Constants
 define('PL_PATH', plugin_dir_path(__FILE__));
 define('PL_URL', plugin_dir_url(__FILE__));
-define('PL_DB_VERSION', '1.4.0');
+define('PL_DB_VERSION', '1.4.1');
 
 // Load Global Includes
 require_once PL_PATH . 'includes/class-installer.php';
