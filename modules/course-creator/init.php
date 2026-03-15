@@ -25,7 +25,7 @@ spl_autoload_register(function ($class) {
 /**
  * Initialize Module
  */
-add_action('plugins_loaded', function () {
+add_action('init', function () {
     if (class_exists('PL_CC_Creator_Dashboard')) {
         new PL_CC_Creator_Dashboard();
     }
@@ -35,4 +35,4 @@ add_action('plugins_loaded', function () {
     if (class_exists('PL_CC_Inclusion_Approvals')) {
         PL_CC_Inclusion_Approvals::init();
     }
-}, 20);
+}, 0);

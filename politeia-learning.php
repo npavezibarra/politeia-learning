@@ -12,6 +12,7 @@
 if (!defined('ABSPATH'))
     exit;
 
+
 // Core Constants
 define('PL_PATH', plugin_dir_path(__FILE__));
 define('PL_URL', plugin_dir_url(__FILE__));

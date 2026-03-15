@@ -136,11 +136,7 @@ class PL_CC_Creator_Dashboard
                 }
             }
 
-            // If user not found or unauthorized, we could return a 404 or redirect
-            global $wp_query;
-            $wp_query->set_404();
-            status_header(404);
-            return get_404_template();
+            return $template;
         }
 
         return $template;

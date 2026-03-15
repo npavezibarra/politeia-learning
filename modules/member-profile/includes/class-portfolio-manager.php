@@ -230,56 +230,40 @@ class PL_Member_Profile_Portfolio_Manager
      */
     public function ajax_get_bulk_items()
     {
-        check_ajax_referer('pl_portfolio_nonce', 'nonce');
-
         $user_id = get_current_user_id();
-        if (!$user_id) {
-            wp_send_json_error();
-        }
-
         $sections = isset($_POST['sections']) ? (array)$_POST['sections'] : [];
         $results = [];
 
         foreach ($sections as $type) {
             $post_type = 'sfwd-courses';
-            if ($type === 'writings') {
-                $post_type = 'post';
-            } elseif ($type === 'specializations') {
-                $post_type = 'groups';
-            } elseif ($type === 'programs') {
-                $post_type = 'course_program';
-            }
+            if ($type === 'writings') $post_type = 'post';
+            elseif ($type === 'specializations') $post_type = 'groups';
+            elseif ($type === 'programs') $post_type = 'course_program';
 
-            // High performance query
-            $query = new WP_Query([
+            $args = [
                 'post_type' => $post_type,
                 'post_status' => 'publish',
-                'author' => $user_id,
                 'posts_per_page' => 10,
-                'paged' => 1,
                 'orderby' => 'date',
-                'order' => 'DESC',
-                'update_post_meta_cache' => false,
-                'update_post_term_cache' => false,
-                'suppress_filters' => true, // Bypass slow filters
-                'no_found_rows' => false    // Keep false to get max_num_pages
-            ]);
-
-            $items = [];
-            if ($query->have_posts()) {
-                while ($query->have_posts()) {
-                    $query->the_post();
-                    $items[] = [
-                        'id' => get_the_ID(),
-                        'title' => get_the_title()
-                    ];
-                }
+                'order' => 'DESC'
+            ];
+            
+            if ($user_id) {
+                $args['author'] = $user_id;
             }
-            wp_reset_postdata();
+
+            $posts = get_posts($args);
+            $items = [];
+            foreach ($posts as $post) {
+                $items[] = [
+                    'id' => $post->ID,
+                    'title' => $post->post_title
+                ];
+            }
 
             $results[$type] = [
                 'items' => $items,
-                'total_pages' => (int)$query->max_num_pages,
+                'total_pages' => 1,
                 'current_page' => 1
             ];
         }
