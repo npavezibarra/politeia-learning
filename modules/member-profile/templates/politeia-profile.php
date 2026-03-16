@@ -578,6 +578,7 @@ get_header();
             { id: 'writings', label: 'Escritos', icon: 'book-open' },
             { id: 'specializations', label: 'Especializaciones', icon: 'award' },
             { id: 'thoughts', label: 'Feed de Pensamientos', icon: 'message-circle' },
+            { id: 'plans', label: 'Planes', icon: 'list-checks' },
             { id: 'book', label: 'Libros', icon: 'book' }
         ];
 
@@ -854,6 +855,21 @@ get_header();
                             </button>
                         </div>
                     `).join('');
+                    break;
+                
+                case 'plans':
+                    wrapper.innerHTML = `
+                        <div class="py-20 text-center p-8 bg-neutral-50 rounded-[6px] border border-neutral-200">
+                            <div class="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <i data-lucide="list-checks" class="text-neutral-400" size="32"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold text-neutral-900 mb-2">Planes de Lectura</h3>
+                            <p class="text-neutral-500 mb-8 max-w-md mx-auto">Visualiza todos tus planes de formación de hábitos y lectura de libros.</p>
+                            <a href="/members/<?php echo esc_js($userdata->user_nicename); ?>/my-plans-ver-2" class="inline-flex py-3 px-8 gold-gradient text-black font-semibold rounded-[6px] shadow-sm hover:shadow-lg transition-all no-underline text-sm uppercase tracking-widest">
+                                Manage My Plans
+                            </a>
+                        </div>
+                    `;
                     break;
 
                 default:

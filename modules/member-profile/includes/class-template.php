@@ -10,9 +10,9 @@ class PL_Member_Profile_Template
 {
     public function __construct()
     {
-        // High priority to ensure we override BuddyBoss defaults
-        add_filter('template_include', [$this, 'load_profile_template'], 999);
-        add_filter('bp_template_include', [$this, 'load_profile_template'], 999);
+        // Lower priority (9) allows specialized routes (at 10+) to override this template
+        add_filter('template_include', [$this, 'load_profile_template'], 9);
+        add_filter('bp_template_include', [$this, 'load_profile_template'], 9);
     }
 
     /**

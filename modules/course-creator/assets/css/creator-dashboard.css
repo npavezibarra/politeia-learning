@@ -621,6 +621,11 @@ button#pcg-mobile-sectionmenu-btn {
     padding: 0;
 }
 
+/* Template Center-2 Specific Styles */
+.pcg-template-center-2 main#pcg-creator-content {
+    border-right: 1px solid #e5e5e5;
+}
+
 .pcg-content-header {
     margin-bottom: 2rem;
 }

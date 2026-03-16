@@ -129,6 +129,9 @@ class PL_Core_Admin
             update_option('pcg_profile_template', $profile_template);
             update_option('pcg_operation_template', $operation_template);
 
+            // Flush rewrite rules to ensure the new operation template slug is active
+            flush_rewrite_rules(false);
+
             echo '<div class="updated"><p>' . __('Settings saved.', 'politeia-learning') . '</p></div>';
         }
 
