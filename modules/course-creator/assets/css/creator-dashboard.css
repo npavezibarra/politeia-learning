@@ -6212,3 +6212,31 @@ body,
     width: 16px !important;
     height: 16px !important;
 }
+
+/* ───────────────────────────────────────────────────────────
+   Template Center-2 Specific Styles
+   ─────────────────────────────────────────────────────────── */
+
+/* Reset outer header/footer to full width */
+body.pcg-template-center-2-active #masthead,
+body.pcg-template-center-2-active #colophon {
+    max-width: none !important;
+    width: 100% !important;
+}
+
+/* Constrain inner containers and dashboard content to 1280px and center them */
+body.pcg-template-center-2-active #masthead .container,
+body.pcg-template-center-2-active #colophon .container,
+body.pcg-template-center-2-active .pcg-creator-container {
+    max-width: 1280px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 100% !important;
+    float: none !important;
+}
+
+/* Ensure the wrapper handles the centered child correctly */
+body.pcg-template-center-2-active .pcg-creator-dashboard-wrapper {
+    background: #fafafa;
+    width: 100% !important;
+}

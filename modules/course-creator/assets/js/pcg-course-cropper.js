@@ -22,6 +22,7 @@ var PL_Cropper = (function ($) {
         width: 360,
         height: 238,
         freeCrop: false,
+        circleMask: false,
         title: '',
         onSave: function (dataUrl) { console.log('Cropped Image:', dataUrl); },
         onCancel: function () { }
@@ -43,8 +44,10 @@ var PL_Cropper = (function ($) {
         // Remove existing if any
         $('.pcg-cropper-modal').remove();
 
+        const circleClass = currentOptions.circleMask ? 'pcg-cropper-circle-mask' : '';
+
         const html = `
-            <div class="pcg-cropper-modal">
+            <div class="pcg-cropper-modal ${circleClass}">
                 <div class="pcg-cropper-content">
                     <div class="pcg-cropper-header">
                         <h3>${currentOptions.title}</h3>

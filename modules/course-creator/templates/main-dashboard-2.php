@@ -59,7 +59,7 @@ if (empty($active_modules[$current_section])) {
 get_header();
 ?>
 
-<div class="pcg-creator-dashboard-wrapper pcg-template-center">
+<div class="pcg-creator-dashboard-wrapper pcg-template-center-2">
     <div class="pcg-mobile-nav" data-pcg-mobile-nav data-pcg-section="<?php echo esc_attr($current_section); ?>">
         <div class="pcg-mobile-topbar">
             <div class="pcg-mobile-subbar" role="navigation"
@@ -152,7 +152,7 @@ get_header();
                         <?php echo esc_html($user->display_name); ?>
                     </h2>
                     <span class="user-role">
-                        <?php _e('OPERACIONES', 'politeia-learning'); ?>
+                        <?php _e('OPERACIONES 2', 'politeia-learning'); ?>
                     </span>
                 </div>
             </a>

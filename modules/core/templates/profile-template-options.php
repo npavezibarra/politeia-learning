@@ -47,6 +47,26 @@ if (!defined('ABSPATH'))
                             </p>
                         </td>
                     </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="pcg_operation_template">
+                                <?php _e('Operation Template', 'politeia-learning'); ?>
+                            </label>
+                        </th>
+                        <td>
+                            <select name="pcg_operation_template" id="pcg_operation_template">
+                                <option value="/center" <?php selected($current_operation_template, '/center'); ?>>
+                                    /center
+                                </option>
+                                <option value="/center-2" <?php selected($current_operation_template, '/center-2'); ?>>
+                                    /center-2
+                                </option>
+                            </select>
+                            <p class="description">
+                                <?php _e('Selecciona el template que se utilizará para las operaciones.', 'politeia-learning'); ?>
+                            </p>
+                        </td>
+                    </tr>
                 </table>
 
                 <p class="submit">

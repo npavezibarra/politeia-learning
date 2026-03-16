@@ -211,3 +211,13 @@
     background-image: none !important;
     background-color: #000;
 }
+
+/* Circle Mask for Profile Photos */
+.pcg-cropper-circle-mask .cropper-view-box,
+.pcg-cropper-circle-mask .cropper-face {
+    border-radius: 50%;
+}
+
+.pcg-cropper-circle-mask .cropper-view-box {
+    outline: 1px solid #c79f32;
+}

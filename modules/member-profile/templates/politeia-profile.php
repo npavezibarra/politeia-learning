@@ -211,6 +211,7 @@ get_header();
 <script src="https://unpkg.com/lucide@latest"></script>
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&family=Inter:wght@400;500;600;700;900&family=Newsreader:opsz,wght@6..72,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=space_dashboard" />
 
 <style>
     /* 
@@ -520,12 +521,14 @@ get_header();
             <!-- JS will inject items here -->
         </nav>
 
-        <!-- Sidebar Footer -->
         <div class="p-4 border-t border-neutral-200">
-            <div class="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
-                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span class="text-[10px] text-neutral-500 font-semibold uppercase tracking-widest"><?php echo esc_html($rank); ?></span>
-            </div>
+            <?php $op_template = get_option('pcg_operation_template', '/center'); ?>
+            <a href="<?php echo esc_url(function_exists('bp_core_get_user_domain') ? bp_core_get_user_domain($user_id) . ltrim($op_template, '/') . '/' : $op_template); ?>" class="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-[6px] shadow-sm hover:bg-neutral-50 transition-colors">
+                <span class="material-symbols-outlined text-[20px] text-neutral-500">space_dashboard</span>
+                <span class="text-[10px] text-neutral-500 font-semibold uppercase tracking-widest">
+                    <?php echo (strpos(get_locale(), 'es') !== false) ? 'OPERACIONES' : 'OPERATIONS'; ?>
+                </span>
+            </a>
         </div>
     </aside>
 

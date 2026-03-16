@@ -113,14 +113,41 @@ $portfolio_settings = $portfolio_manager->get_settings($user->ID);
 
     /* Profile Photo Styles */
     .pcg-profile-view .profile-photo-container {
-        width: 80px;
-        height: 80px;
+        width: 100px;
+        height: 100px;
         border-radius: 50%;
         position: relative;
         background: var(--pcg-profile-gold-grad) border-box;
         border: 2px solid transparent;
         padding: 2px;
         flex-shrink: 0;
+        cursor: pointer;
+        overflow: hidden;
+    }
+
+    .pcg-profile-view .profile-photo-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 2;
+        border-radius: 50%;
+    }
+
+    .pcg-profile-view .profile-photo-overlay i {
+        color: white;
+        font-size: 24px;
+    }
+
+    .pcg-profile-view .profile-photo-container:hover .profile-photo-overlay {
+        opacity: 1;
     }
 
     .pcg-profile-view .profile-photo {
@@ -129,6 +156,11 @@ $portfolio_settings = $portfolio_manager->get_settings($user->ID);
         border-radius: 50%;
         object-fit: cover;
         background: #eee;
+        transition: filter 0.3s ease;
+    }
+
+    .pcg-profile-view .profile-photo-container:hover .profile-photo {
+        filter: blur(1px);
     }
 
     /* Tab Styles */
@@ -468,6 +500,9 @@ $portfolio_settings = $portfolio_manager->get_settings($user->ID);
                             <div class="p-8" style="width: 33.333%; flex: 0 0 33.333%; border-right: 1px solid #f0f0f0;">
                                 <div class="flex flex-col gap-y-[32px] items-start">
                                     <div class="profile-photo-container mx-auto" style="width: 100px; height: 100px; margin-bottom: 24px;">
+                                        <div class="profile-photo-overlay">
+                                            <i class="fa-solid fa-camera"></i>
+                                        </div>
                                         <img src="<?php echo esc_url($avatar_url); ?>" alt="<?php echo esc_attr($user->display_name); ?>" class="profile-photo">
                                     </div>
                                     
@@ -828,6 +863,61 @@ $portfolio_settings = $portfolio_manager->get_settings($user->ID);
             $(this).addClass('active');
             $panes.addClass('hidden');
             $('#' + target + 'Content').removeClass('hidden');
+        });
+
+        // Profile Photo Upload
+        $(document).on('click', '.profile-photo-container', function() {
+            if (typeof PL_Cropper === 'undefined') {
+                console.error('PL_Cropper not found');
+                return;
+            }
+
+            PL_Cropper.open({
+                width: pcgCreatorData.avatarFullWidth || 300,
+                height: pcgCreatorData.avatarFullHeight || 300,
+                circleMask: true,
+                title: '<?php _e('Cambiar foto de perfil', 'politeia-learning'); ?>',
+                onSave: function(dataUrl) {
+                    // Check size approx (Base64)
+                    const stringLength = dataUrl.length - 'data:image/png;base64,'.length;
+                    const sizeInBytes = 4 * Math.ceil((stringLength / 3)) * 0.5624896334383812; // Adjusted factor for precision or just use a simpler check
+                    const sizeInKb = sizeInBytes / 1024;
+                    
+                    // console.log('Size: ' + sizeInKb + 'kb');
+
+                    if (sizeInKb > 300) {
+                        alert('<?php _e('La imagen es demasiado pesada. El máximo permitido es 300kb.', 'politeia-learning'); ?>');
+                        // We could try to re-compress but for now just alert.
+                        // return;
+                    }
+
+                    const $img = $('.profile-photo');
+                    const originalSrc = $img.attr('src');
+                    $img.css('opacity', '0.5');
+
+                    $.ajax({
+                        url: pcgCreatorData.ajaxUrl,
+                        type: 'POST',
+                        data: {
+                            action: 'pcg_save_profile_avatar',
+                            nonce: pcgCreatorData.nonce,
+                            image_data: dataUrl
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                $img.attr('src', response.data.url).css('opacity', '1');
+                            } else {
+                                alert(response.data.message || 'Error uploading avatar');
+                                $img.attr('src', originalSrc).css('opacity', '1');
+                            }
+                        },
+                        error: function() {
+                            alert('Connection error');
+                            $img.attr('src', originalSrc).css('opacity', '1');
+                        }
+                    });
+                }
+            });
         });
 
         // Form

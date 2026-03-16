@@ -124,12 +124,16 @@ class PL_Core_Admin
     {
         if (isset($_POST['pcg_profile_template_submitted']) && check_admin_referer('pcg_save_profile_template')) {
             $profile_template = sanitize_text_field($_POST['pcg_profile_template'] ?? 'default');
+            $operation_template = sanitize_text_field($_POST['pcg_operation_template'] ?? '/center');
+            
             update_option('pcg_profile_template', $profile_template);
+            update_option('pcg_operation_template', $operation_template);
 
             echo '<div class="updated"><p>' . __('Settings saved.', 'politeia-learning') . '</p></div>';
         }
 
         $current_template = get_option('pcg_profile_template', 'default');
+        $current_operation_template = get_option('pcg_operation_template', '/center');
 
         include PL_CORE_PATH . 'templates/profile-template-options.php';
     }

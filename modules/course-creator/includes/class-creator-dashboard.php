@@ -26,6 +26,25 @@ class PL_CC_Creator_Dashboard
 
         // Wrap the frontend post content to guarantee 1:1 matching with Editor
         add_filter('the_content', [$this, 'wrap_escrito_content']);
+
+        add_filter('body_class', [$this, 'add_dashboard_body_classes']);
+    }
+
+    /**
+     * Add specific classes to the body when dashboard is active
+     */
+    public function add_dashboard_body_classes($classes)
+    {
+        if (get_query_var(self::REWRITE_TAG)) {
+            $classes[] = 'pcg-operation-page';
+            $op_template = get_option('pcg_operation_template', '/center');
+            if ($op_template === '/center-2') {
+                $classes[] = 'pcg-template-center-2-active';
+            } else {
+                $classes[] = 'pcg-template-center-active';
+            }
+        }
+        return $classes;
     }
 
     /**
@@ -55,8 +74,11 @@ class PL_CC_Creator_Dashboard
      */
     public function add_rewrite_rules()
     {
+        $op_template = get_option('pcg_operation_template', '/center');
+        $slug = ltrim($op_template, '/');
+
         add_rewrite_rule(
-            'members/([^/]+)/center/?$',
+            'members/([^/]+)/' . preg_quote($slug) . '/?$',
             'index.php?' . self::REWRITE_TAG . '=$matches[1]',
             'top'
         );
@@ -71,9 +93,12 @@ class PL_CC_Creator_Dashboard
             return;
         }
 
+        $op_template = get_option('pcg_operation_template', '/center');
+        $slug = ltrim($op_template, '/');
+
         bp_core_new_nav_item([
             'name' => __('Center', 'politeia-learning'),
-            'slug' => 'center',
+            'slug' => $slug,
             'position' => 10,
             'screen_function' => [$this, 'dashboard_screen'],
             'default_subnav_slug' => 'create-course',
@@ -96,7 +121,10 @@ class PL_CC_Creator_Dashboard
         // If we want it to look EXACTLY as it looks now (with get_header/get_footer),
         // we should probably NOT use bp_core_load_template which wraps it in profile template.
         // Instead, we can just load the template directly if it's the main page.
-        $template = PL_CC_PATH . 'templates/main-dashboard.php';
+        $op_template = get_option('pcg_operation_template', '/center');
+        $template_name = ($op_template === '/center-2') ? 'main-dashboard-2.php' : 'main-dashboard.php';
+        
+        $template = PL_CC_PATH . 'templates/' . $template_name;
         if (file_exists($template)) {
             load_template($template);
             exit;
@@ -129,7 +157,10 @@ class PL_CC_Creator_Dashboard
                 $current_user_id = get_current_user_id();
 
                 if ($current_user_id === $user->ID || current_user_can('manage_options')) {
-                    $custom_template = PL_CC_PATH . 'templates/main-dashboard.php';
+                    $op_template = get_option('pcg_operation_template', '/center');
+                    $template_name = ($op_template === '/center-2') ? 'main-dashboard-2.php' : 'main-dashboard.php';
+                    
+                    $custom_template = PL_CC_PATH . 'templates/' . $template_name;
                     if (file_exists($custom_template)) {
                         return $custom_template;
                     }
@@ -243,6 +274,8 @@ class PL_CC_Creator_Dashboard
                 'currentUserName' => $full_name . ' (' . $current_user->user_email . ')',
                 'currentUserAvatar' => get_avatar_url($current_user->ID, ['size' => 64]),
                 'currentUserFullNameEmail' => $full_name . ' (' . $current_user->user_email . ')',
+                'avatarFullWidth' => bp_core_avatar_full_width(),
+                'avatarFullHeight' => bp_core_avatar_full_height(),
                 'i18n' => [
                     'loadingCourses' => __('Cargando cursos...', 'politeia-learning'),
                     'loading' => __('Cargando...', 'politeia-learning'),
@@ -370,6 +403,9 @@ class PL_CC_Creator_Dashboard
         if (!$user)
             return;
 
-        include PL_CC_PATH . 'templates/main-dashboard.php';
+        $op_template = get_option('pcg_operation_template', '/center');
+        $template_name = ($op_template === '/center-2') ? 'main-dashboard-2.php' : 'main-dashboard.php';
+
+        include PL_CC_PATH . 'templates/' . $template_name;
     }
 }
