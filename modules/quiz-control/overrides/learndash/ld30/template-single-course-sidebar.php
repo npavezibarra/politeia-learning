@@ -85,6 +85,34 @@ $progress_status = (100 == $progress['percentage']) ? 'completed' : 'notcomplete
 if (0 < $progress['percentage'] && 100 !== $progress['percentage']) {
     $progress_status = 'progress';
 }
+
+$pl_percent_to_int = static function ($percentage): int {
+    $raw = is_string($percentage) ? $percentage : (string) $percentage;
+    $raw = trim(str_replace('%', '', $raw));
+    $val = (float) $raw;
+    if ($val < 0) {
+        $val = 0;
+    }
+    if ($val > 100) {
+        $val = 100;
+    }
+    return (int) round($val);
+};
+
+$pl_render_progress = static function (string $label, $percentage) use ($pl_percent_to_int): void {
+    $pct = $pl_percent_to_int($percentage);
+    ?>
+    <div class="pl-progress-block">
+        <div class="pl-progress-meta">
+            <span><?php echo esc_html($label); ?></span>
+            <span><?php echo esc_html($pct . '%'); ?></span>
+        </div>
+        <div class="pl-progress-bar">
+            <div class="pl-progress-fill" style="width: <?php echo esc_attr((string) $pct); ?>%"></div>
+        </div>
+    </div>
+    <?php
+};
 ?>
 
 <?php
@@ -102,116 +130,189 @@ $icon_quiz = '<svg style="width:20px;height:20px;margin-right:8px;flex-shrink:0;
 $icon_cart = '<svg style="width:20px;height:20px;margin-right:8px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>';
 ?>
 <style>
-    /* ── Shared base for ALL sidebar buttons ── */
+    .bb-single-course-sidebar.bb-preview-wrap {
+        max-width: 360px;
+        margin: 0 auto;
+    }
+
+    .bb-single-course-sidebar .widget.bb-enroll-widget {
+        border-radius: 6px;
+        overflow: hidden;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.10), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .bb-single-course-sidebar .thumbnail-container {
+        aspect-ratio: 16 / 9;
+        background: #f1f5f9;
+        overflow: hidden;
+    }
+
+    .bb-single-course-sidebar .bb-course-video-overlay {
+        display: none !important;
+    }
+
+    .bb-single-course-sidebar .thumbnail-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .bb-single-course-sidebar .bb-course-preview-content {
+        padding: 20px;
+    }
+
+    .bb-single-course-sidebar .bb-button-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .bb-single-course-sidebar .bb-button-wrap > a,
+    .bb-single-course-sidebar .bb-button-wrap > form,
+    .bb-single-course-sidebar .bb-button-wrap > div {
+        margin: 0 !important;
+    }
+
+    .bb-single-course-sidebar .bb-course-type {
+        order: -3;
+        margin: 0 0 10px;
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        font-size: 20px !important;
+        line-height: 1.1 !important;
+    }
+
+    .bb-single-course-sidebar .pl-progress-block {
+        order: -2;
+    }
+
+    .bb-single-course-sidebar .pl-progress-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 10px;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 6px;
+    }
+
+    .bb-single-course-sidebar .pl-progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #f1f5f9;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .bb-single-course-sidebar .pl-progress-fill {
+        height: 100%;
+        background: linear-gradient(135deg, #8A6B1E, #C79F32, #E9D18A);
+        transition: width 0.3s ease;
+    }
+
+    /* Buttons: gold gradient primary */
     .bb-single-course-sidebar .btn-advance,
     .bb-single-course-sidebar a.btn-advance,
     .bb-single-course-sidebar a.btn-advance.ld-primary-background,
     .bb-single-course-sidebar .btn-join,
     .bb-single-course-sidebar a.btn-join,
     .bb-single-course-sidebar #btn-join,
-    .bb-single-course-sidebar #learndash-course-enroll-button,
-    body .bb-single-course-sidebar .btn-advance,
-    body .bb-single-course-sidebar a.btn-advance.ld-primary-background {
+    .bb-single-course-sidebar #learndash-course-enroll-button {
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         width: 100% !important;
         padding: 12px !important;
-        font-weight: 600 !important;
-        font-size: 16px !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
         cursor: pointer !important;
         border: none !important;
-        border-top: none !important;
-        border-right: none !important;
-        border-bottom: none !important;
-        border-left: none !important;
-        border-width: 0 !important;
         outline: none !important;
         text-decoration: none !important;
-        border-radius: 6px !important;
+        border-radius: 4px !important;
         transition: all 0.2s ease !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
         box-sizing: border-box !important;
     }
 
-    .bb-single-course-sidebar .btn-advance:active,
-    .bb-single-course-sidebar a.btn-advance:active,
-    .bb-single-course-sidebar .btn-join:active,
-    .bb-single-course-sidebar a.btn-join:active {
-        transform: scale(0.95) !important;
-    }
-
-    /* ── "Take First Quiz" — gold gradient ── */
     .bb-single-course-sidebar .btn-advance,
     .bb-single-course-sidebar a.btn-advance,
-    .bb-single-course-sidebar a.btn-advance.ld-primary-background,
-    body .bb-single-course-sidebar .btn-advance,
-    body .bb-single-course-sidebar a.btn-advance.ld-primary-background {
+    .bb-single-course-sidebar a.btn-advance.ld-primary-background {
         background: linear-gradient(135deg, #8A6B1E, #C79F32, #E9D18A) !important;
-        background-color: transparent !important;
         color: #ffffff !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
     }
 
     .bb-single-course-sidebar .btn-advance:hover,
     .bb-single-course-sidebar a.btn-advance:hover,
     .bb-single-course-sidebar a.btn-advance.ld-primary-background:hover {
-        opacity: 0.95 !important;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+        filter: brightness(1.06);
         color: #ffffff !important;
     }
 
-    /* ── "Comprar Curso" — black bg, white text, NO border ── */
-    .bb-single-course-sidebar .btn-join,
-    .bb-single-course-sidebar a.btn-join,
-    .bb-single-course-sidebar #btn-join,
-    body .bb-single-course-sidebar .btn-join,
-    body .bb-single-course-sidebar a.btn-join,
-    .bb-single-course-sidebar .btn-join:hover,
-    .bb-single-course-sidebar a.btn-join:hover,
-    .bb-single-course-sidebar #btn-join:hover,
-    .bb-single-course-sidebar .btn-join:focus,
-    .bb-single-course-sidebar .btn-join:active,
-    .bb-single-course-sidebar .btn-join:visited {
-        background: #000000 !important;
-        background-color: #000000 !important;
-        color: #ffffff !important;
-        border: 0 none transparent !important;
-        border-top: 0 none transparent !important;
-        border-right: 0 none transparent !important;
-        border-bottom: 0 none transparent !important;
-        border-left: 0 none transparent !important;
-        border-width: 0 !important;
-        border-style: none !important;
-        border-color: transparent !important;
-        box-shadow: none !important;
-        outline: none !important;
+    .bb-single-course-sidebar a.disabled,
+    .bb-single-course-sidebar .btn-advance-disable,
+    .bb-single-course-sidebar button:disabled {
+        opacity: 0.4 !important;
+        cursor: not-allowed !important;
     }
 
-    .bb-single-course-sidebar .btn-join:hover,
-    .bb-single-course-sidebar a.btn-join:hover,
-    .bb-single-course-sidebar #btn-join:hover {
-        background: #222222 !important;
-        background-color: #222222 !important;
+    .bb-single-course-sidebar .pl-course-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 14px;
+        padding-top: 6px;
+        color: #64748b;
     }
 
-    /* ── Price spacing ── */
-    .bb-single-course-sidebar .bb-course-type {
-        margin-top: 20px !important;
-        color: #000000 !important;
-        font-weight: 700 !important;
-        font-family: 'Poppins', sans-serif !important;
+    .bb-single-course-sidebar .pl-course-lessons {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .bb-single-course-sidebar .pl-course-lessons svg {
+        width: 16px;
+        height: 16px;
+        color: #64748b;
+    }
+
+    .bb-single-course-sidebar .pl-add-partner {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 8px;
+        font-size: 10px;
+        font-weight: 800;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+        background: transparent;
+        border-radius: 3px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .bb-single-course-sidebar .pl-add-partner:hover {
+        background: #f8fafc;
+        color: #4f46e5;
+        border-color: #e0e7ff;
+    }
+
+    /* Remove the default "Course Includes" block from this card layout */
+    .bb-single-course-sidebar .bb-course-volume {
+        display: none !important;
     }
 </style>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var btnJoin = document.querySelector('.bb-single-course-sidebar .btn-join, .bb-single-course-sidebar #btn-join');
-        if (btnJoin && !btnJoin.querySelector('svg')) {
-            var icon = '<svg style="width:20px;height:20px;margin-right:8px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>';
-            btnJoin.innerHTML = icon + '<span>' + btnJoin.textContent.trim() + '</span>';
-        }
-    });
-</script>
-<div class="bb-single-course-sidebar bb-preview-wrap">
+<div class="bb-single-course-sidebar bb-preview-wrap" data-pl-course-card="v2">
     <div class="bb-ld-sticky-sidebar">
         <div class="widget bb-enroll-widget">
             <div class="bb-enroll-widget flex-1 push-right">
@@ -420,17 +521,19 @@ $icon_cart = '<svg style="width:20px;height:20px;margin-right:8px;flex-shrink:0;
                                 <?php
 
                                 // 3) Ambos quizzes completados → mostrar “COMPLETED COURSE” primero, luego porcentajes, y salir
-                            } elseif ($first_quiz_completed && $final_quiz_completed) {
+                        } elseif ($first_quiz_completed && $final_quiz_completed) {
                             ?>
-                            <p style="margin-top:8px; font-size:14px; color:#007bff; font-weight:bold;">
-                                <?php esc_html_e('COMPLETED COURSE', 'buddyboss-theme'); ?>
-                            </p>
-                            <p style="margin-top:8px; font-size:14px; color:#666;">
-                                <?php printf(esc_html__('First Quiz: %s', 'buddyboss-theme'), esc_html($last_first_attempt['percentage'])); ?>
-                            </p>
-                            <p style="margin-top:8px; font-size:14px; color:#666;">
-                                <?php printf(esc_html__('Final Quiz: %s', 'buddyboss-theme'), esc_html($last_final_attempt['percentage'])); ?>
-                            </p>
+                            <div class="pl-progress-block" style="order:-2;">
+                                <div class="pl-progress-meta">
+                                    <span><?php echo esc_html__('Course completed', 'buddyboss-theme'); ?></span>
+                                    <span><?php echo esc_html__('100%', 'buddyboss-theme'); ?></span>
+                                </div>
+                                <div class="pl-progress-bar">
+                                    <div class="pl-progress-fill" style="width:100%"></div>
+                                </div>
+                            </div>
+                            <?php $pl_render_progress('Evaluación Inicial', $last_first_attempt['percentage']); ?>
+                            <?php $pl_render_progress('Evaluación Final', $last_final_attempt['percentage']); ?>
                             <?php
                             // Evitamos que se renderice lo que venga después (Free, Course Includes, etc.)
                             return;
@@ -442,9 +545,7 @@ $icon_cart = '<svg style="width:20px;height:20px;margin-right:8px;flex-shrink:0;
                             if ($first_quiz_id) {
                                 if ($first_quiz_completed) {
                                     ?>
-                                    <p style="margin-top:8px; font-size:14px; color:#666;">
-                                        <?php printf(esc_html__('First Quiz: %s', 'buddyboss-theme'), esc_html($last_first_attempt['percentage'])); ?>
-                                    </p>
+                                    <?php $pl_render_progress('Evaluación Inicial', $last_first_attempt['percentage']); ?>
                                 <?php } else { ?>
                                     <a id="first-test-button" href="<?php echo esc_url($first_quiz_url); ?>"
                                         class="btn-advance-start btn-advance ld-primary-background"
@@ -507,9 +608,7 @@ $icon_cart = '<svg style="width:20px;height:20px;margin-right:8px;flex-shrink:0;
                                 } else {
                                     // mostrar porcentaje final si ya hay intento
                                     ?>
-                                    <p style="margin-top:8px; font-size:14px; color:#666;">
-                                        <?php printf(esc_html__('Final Quiz: %s', 'buddyboss-theme'), esc_html($last_final_attempt['percentage'])); ?>
-                                    </p>
+                                    <?php $pl_render_progress('Evaluación Final', $last_final_attempt['percentage']); ?>
                                     <?php
                                 }
                             }
@@ -521,9 +620,7 @@ $icon_cart = '<svg style="width:20px;height:20px;margin-right:8px;flex-shrink:0;
                             if ($first_quiz_id) {
                                 if (!empty($first_attempts)) {
                                     ?>
-                                    <p style="margin-top:8px; font-size:14px; color:#666;">
-                                        <?php printf(esc_html__('First Quiz: %s', 'buddyboss-theme'), esc_html($last_first_attempt['percentage'])); ?>
-                                    </p>
+                                    <?php $pl_render_progress('Evaluación Inicial', $last_first_attempt['percentage']); ?>
                                 <?php } else { ?>
                                     <a id="first-test-button" href="<?php echo esc_url($first_quiz_url); ?>"
                                         class="btn-advance-start btn-advance ld-primary-background"
@@ -767,80 +864,74 @@ $icon_cart = '<svg style="width:20px;height:20px;margin-right:8px;flex-shrink:0;
                 </div>
 
                 <?php
-                // =============================================================================
-                // 7. CÁLCULO Y VISUALIZACIÓN DEL CONTENIDO DEL CURSO
-                // =============================================================================
-                // Descripción: Esta sección calcula el número total de lecciones, temas y
-                // quizzes en el curso. Luego, muestra un resumen de lo que el curso incluye,
-                // como "X Lecciones", "Y Temas" y si ofrece un certificado.
-                // =============================================================================
-                $topics_count = 0;
-                foreach ($lesson_count as $lesson) {
-                    $lesson_topics = learndash_get_topic_list($lesson->ID);
-                    if ($lesson_topics) {
-                        $topics_count += sizeof($lesson_topics);
+                $lessons_total = is_array($lesson_count) ? count($lesson_count) : 0;
+                $lessons_label = sprintf(
+                    /* translators: %d: lessons count */
+                    _n('%d lección', '%d lecciones', $lessons_total, 'buddyboss-theme'),
+                    $lessons_total
+                );
+
+                $show_add_partner = false;
+                if (is_user_logged_in()) {
+                    if (current_user_can('manage_options')) {
+                        $show_add_partner = true;
+                    } else {
+                        $author_id = (int) get_post_field('post_author', $course_id);
+                        $teacher_ids = get_post_meta($course_id, '_pcg_course_teachers', false);
+                        $teacher_ids = array_map('absint', (array) $teacher_ids);
+                        $show_add_partner = ($author_id === (int) $current_user_id) || in_array((int) $current_user_id, $teacher_ids, true);
                     }
-                }
-
-                // course quizzes.
-                $course_quizzes = learndash_get_course_quiz_list($course_id);
-                $course_quizzes_count = sizeof($course_quizzes);
-
-                // lessons quizzes.
-                if (is_array($lesson_count) || is_object($lesson_count)) {
-                    foreach ($lesson_count as $lesson) {
-                        $quizzes = learndash_get_lesson_quiz_list($lesson->ID, null, $course_id);
-                        $lesson_topics = learndash_topic_dots($lesson->ID, false, 'array', null, $course_id);
-                        if ($quizzes && !empty($quizzes)) {
-                            $course_quizzes_count += count($quizzes);
-                        }
-                        if ($lesson_topics && !empty($lesson_topics)) {
-                            foreach ($lesson_topics as $topic) {
-                                $quizzes = learndash_get_lesson_quiz_list($topic, null, $course_id);
-                                if (!$quizzes || empty($quizzes)) {
-                                    continue;
-                                }
-                                $course_quizzes_count += count($quizzes);
-                            }
-                        }
-                    }
-                }
-
-                if (0 < sizeof($lesson_count) || 0 < $topics_count || 0 < $course_quizzes_count || $course_certificate) {
-                    $course_label = LearnDash_Custom_Label::get_label('course');
-                    ?>
-                    <div class="bb-course-volume">
-                        <h4><?php echo sprintf(esc_html__('%s Includes', 'buddyboss-theme'), $course_label); ?></h4>
-                        <ul class="bb-course-volume-list">
-                            <?php if (sizeof($lesson_count) > 0) { ?>
-                                <li>
-                                    <i class="bb-icon-l bb-icon-book"></i><?php echo sizeof($lesson_count); ?>
-                                    <?php echo sizeof($lesson_count) > 1 ? LearnDash_Custom_Label::get_label('lessons') : LearnDash_Custom_Label::get_label('lesson'); ?>
-                                </li>
-                            <?php } ?>
-                            <?php if ($topics_count > 0) { ?>
-                                <li>
-                                    <i class="bb-icon-l bb-icon-text"></i><?php echo $topics_count; ?>
-                                    <?php echo $topics_count != 1 ? LearnDash_Custom_Label::get_label('topics') : LearnDash_Custom_Label::get_label('topic'); ?>
-                                </li>
-                            <?php } ?>
-                            <?php if ($course_quizzes_count > 0) { ?>
-                                <li>
-                                    <i class="bb-icon-rl bb-icon-question"></i><?php echo $course_quizzes_count; ?>
-                                    <?php echo $course_quizzes_count != 1 ? LearnDash_Custom_Label::get_label('quizzes') : LearnDash_Custom_Label::get_label('quiz'); ?>
-                                </li>
-                            <?php } ?>
-                            <?php if ($course_certificate) { ?>
-                                <li>
-                                    <i
-                                        class="bb-icon-l bb-icon-certificate"></i><?php echo sprintf(esc_html__('%s Certificate', 'buddyboss-theme'), $course_label); ?>
-                                </li>
-                            <?php } ?>
-                        </ul>
-                    </div>
-                    <?php
                 }
                 ?>
+                <div class="pl-course-footer">
+                    <div class="pl-course-lessons">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                        <span><?php echo esc_html($lessons_label); ?></span>
+                    </div>
+
+                    <?php
+                    $has_partner = false;
+                    $partner = null;
+                    if ($show_add_partner && class_exists('PL_Partnerships_Repository') && method_exists('PL_Partnerships_Repository', 'get_single_partner')) {
+                        try {
+                            $partner = PL_Partnerships_Repository::get_single_partner('course', $course_id);
+                            $has_partner = !empty($partner);
+                        } catch (\Throwable $e) {
+                            $has_partner = false;
+                            $partner = null;
+                        }
+                    }
+                    ?>
+
+                    <?php if ($show_add_partner) : ?>
+                        <?php if ($partner) : ?>
+                            <div class="text-sm text-slate-600" style="margin-bottom:8px;">
+                                Partner:
+                                <strong>
+                                    <?php
+                                    $partner_user = !empty($partner['partner_user_id']) ? get_userdata((int) $partner['partner_user_id']) : null;
+                                    echo esc_html($partner_user ? (string) $partner_user->display_name : '');
+                                    ?>
+                                </strong>
+                            </div>
+                        <?php endif; ?>
+
+                        <button type="button" class="pl-add-partner addPartnerBtn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                aria-hidden="true">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                            <?php echo esc_html($partner ? 'Replace Partner' : 'Add Partner'); ?>
+                        </button>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
         <?php

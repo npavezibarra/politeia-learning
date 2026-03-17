@@ -37,6 +37,28 @@ $instagram = function_exists('xprofile_get_field_data') ? xprofile_get_field_dat
 // Rank
 $rank = get_user_meta($user_id, 'pl_profile_rank', true) ?: 'Premium Member';
 
+// Header + BuddyBoss context helpers.
+$logged_in_user_id = (int) get_current_user_id();
+$is_own_profile = is_user_logged_in() && $logged_in_user_id > 0 && $logged_in_user_id === (int) $user_id;
+
+$user_domain = function_exists('bp_core_get_user_domain') ? (string) bp_core_get_user_domain($user_id) : '';
+$friends_url = $user_domain ? trailingslashit($user_domain . 'friends') : '';
+$notifications_url = $user_domain ? trailingslashit($user_domain . 'notifications') : '';
+
+$friends_count = ($is_own_profile && function_exists('friends_get_total_friend_count'))
+    ? (int) friends_get_total_friend_count($user_id)
+    : 0;
+$unread_notifications = ($is_own_profile && function_exists('bp_notifications_get_unread_notification_count'))
+    ? (int) bp_notifications_get_unread_notification_count($user_id)
+    : 0;
+
+$is_notifications_view = function_exists('bp_is_user_notifications') ? (bool) bp_is_user_notifications() : false;
+$is_friends_view = function_exists('bp_is_user_friends') ? (bool) bp_is_user_friends() : false;
+
+$server_view = $is_notifications_view ? 'notifications' : ($is_friends_view ? 'friends' : '');
+$initial_tab = $server_view !== '' ? $server_view : 'main';
+$initial_label = $server_view === 'notifications' ? 'Notifications' : ($server_view === 'friends' ? 'Friends' : 'Main');
+
 // --- Filter Queries based on Portfolio ---
 $show_courses = !(isset($portfolio_settings['courses']) && $portfolio_settings['courses']->is_private == 1);
 $show_writings = !(isset($portfolio_settings['writings']) && $portfolio_settings['writings']->is_private == 1);
@@ -257,6 +279,184 @@ get_header();
         overflow: hidden;
         width: 100%;
         margin: auto;
+    }
+
+    /* BuddyBoss (Friends/Notifications) view overrides: keep everything black/neutral, no blue accents */
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap,
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap *:not(i):not(.bb-icon):not(.material-symbols-outlined) {
+        font-family: 'Poppins', sans-serif;
+    }
+
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap a {
+        color: inherit;
+    }
+
+    /* Make "Unread" / "Read" tabs horizontal (not stacked) */
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap #subnav {
+        margin-top: 0;
+        margin-bottom: 16px;
+    }
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap #subnav ul.subnav {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 10px;
+        align-items: center;
+    }
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap #subnav ul.subnav > li {
+        margin: 0 !important;
+        padding: 0 !important;
+        float: none !important;
+        width: auto !important;
+    }
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap #subnav ul.subnav > li > a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 18px;
+        border-radius: 10px;
+        border: 1px solid #d1d5db;
+        background: #f3f4f6;
+        color: #111827;
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: none !important;
+    }
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap #subnav ul.subnav > li.selected > a,
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap #subnav ul.subnav > li.current > a {
+        background: #111827;
+        border-color: #111827;
+        color: #ffffff;
+    }
+
+    /* Notifications header layout (BuddyBoss Theme) */
+    .pcg-profile-wrapper #pcg-content-area #buddypress .notifications-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        flex-wrap: nowrap;
+    }
+    .pcg-profile-wrapper #pcg-content-area #buddypress .notifications-header #subnav ul.subnav {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 10px;
+        align-items: center;
+    }
+    /* Unique hook for notifications subnav list */
+    .pcg-profile-wrapper #pcg-content-area #pcg-notifications-subnav {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 10px;
+        align-items: center;
+    }
+    .pcg-profile-wrapper #pcg-content-area #pcg-notifications-subnav > li > a {
+        box-sizing: border-box;
+        height: 44px;
+        padding-top: 0;
+        padding-bottom: 0;
+        line-height: 1;
+    }
+
+    ul.subnav {
+        display: flex !important;
+    }
+
+    nav#subnav {
+        margin: 0px !important;
+    }
+    .pcg-profile-wrapper #pcg-content-area #buddypress .notifications-header #subnav ul.subnav > li {
+        float: none !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .pcg-profile-wrapper #pcg-content-area #buddypress .notifications-header #subnav ul.subnav > li > a {
+        white-space: nowrap;
+    }
+
+    @media (max-width: 720px) {
+        .pcg-profile-wrapper #pcg-content-area #buddypress .notifications-header {
+            flex-wrap: wrap;
+            justify-content: flex-start;
+        }
+    }
+
+    /* Notifications: remove BuddyBoss filter dropdown/search UI */
+    .pcg-profile-wrapper #pcg-content-area .bb-subnav-filters-container.bb-subnav-filters-search,
+    .pcg-profile-wrapper #pcg-content-area #buddypress .notifications-header .subnav-filters {
+        display: none !important;
+    }
+
+    /* Remove blue focus rings and accents */
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap :focus {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap select,
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap input[type="text"],
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap input[type="search"],
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap input[type="email"],
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap input[type="password"],
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap textarea {
+        border-color: #d1d5db !important;
+    }
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap select:focus,
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap input:focus,
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap textarea:focus {
+        border-color: #111827 !important;
+    }
+
+    /* No blue buttons: default BuddyBoss buttons become black */
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap .button,
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap button,
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap input[type="submit"],
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap input[type="button"],
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap a.button {
+        background: #111827 !important;
+        border-color: #111827 !important;
+        color: #ffffff !important;
+        box-shadow: none !important;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap .button:hover,
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap button:hover,
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap input[type="submit"]:hover,
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap input[type="button"]:hover,
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap a.button:hover {
+        background: #000000 !important;
+        border-color: #000000 !important;
+        color: #ffffff !important;
+    }
+
+    /* Form controls (checkbox/radio) accents */
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap input[type="checkbox"],
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap input[type="radio"] {
+        accent-color: #111827;
+    }
+
+    /* Notices: remove BuddyBoss blue info styling */
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap .bp-feedback.info,
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap .bp-feedback.help {
+        background: #ffffff !important;
+        border-color: #d1d5db !important;
+        color: #111827 !important;
+    }
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap .bp-feedback.info .bp-icon,
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap .bp-feedback.help .bp-icon {
+        background: #111827 !important;
+        border-radius: 10px 0 0 10px;
+    }
+    .pcg-profile-wrapper #pcg-content-area .bp-feedback.help .bp-icon,
+    .pcg-profile-wrapper #pcg-content-area .bp-feedback.info .bp-icon {
+        background-color: #000000 !important;
+    }
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap .bp-feedback.info .bp-icon:before,
+    .pcg-profile-wrapper #pcg-content-area .buddypress-wrap .bp-feedback.help .bp-icon:before {
+        color: #ffffff !important;
     }
     .bb-grid-cell:not(.no-gutter), .bb-grid>:not(.no-gutter) {
         padding-left: 0 !important;
@@ -541,14 +741,23 @@ get_header();
                     <i class="bb-icon-l bb-icon-bars"></i>
                 </button>
                 <h2 class="text-sm font-medium text-neutral-400">
-                    Profile / <span id="pcg-current-tab-label" class="text-neutral-900 font-semibold">Main</span>
+                    Profile / <span id="pcg-current-tab-label" class="text-neutral-900 font-semibold"><?php echo esc_html($initial_label); ?></span>
                 </h2>
             </div>
             <div class="flex items-center gap-4">
-                <div class="relative group cursor-pointer text-neutral-500 hover:text-neutral-900 transition-colors">
-                    <i data-lucide="bell" size="16"></i>
-                    <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-white"></span>
-                </div>
+                <?php if ($is_own_profile) : ?>
+                    <a href="<?php echo esc_url($friends_url); ?>" class="relative group flex items-center gap-2 text-neutral-500 hover:text-neutral-900 transition-colors no-underline">
+                        <i data-lucide="users" size="16"></i>
+                        <span class="text-xs font-semibold"><?php echo (int) $friends_count; ?></span>
+                    </a>
+
+                    <a href="<?php echo esc_url($notifications_url); ?>" class="relative group cursor-pointer text-neutral-500 hover:text-neutral-900 transition-colors no-underline" aria-label="Notifications">
+                        <i data-lucide="bell" size="16"></i>
+                        <?php if ($unread_notifications > 0) : ?>
+                            <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-white"></span>
+                        <?php endif; ?>
+                    </a>
+                <?php endif; ?>
                 <div class="hidden sm:block text-right">
                     <p class="text-[8px] text-neutral-400 font-semibold tracking-widest uppercase">Rank</p>
                     <p class="text-xs font-semibold text-[#8A6B1E]"><?php echo esc_html($rank); ?></p>
@@ -557,8 +766,23 @@ get_header();
         </header>
 
         <!-- Dynamic Content Container -->
-        <div id="pcg-content-area" class="flex-1 overflow-y-auto p-8 custom-scrollbar">
-            <!-- JS will inject content here -->
+        <div id="pcg-content-area"
+            class="flex-1 overflow-y-auto p-8 custom-scrollbar"
+            <?php if ($server_view !== '') : ?>
+                data-server-view="<?php echo esc_attr($server_view); ?>"
+            <?php endif; ?>
+        >
+            <?php if ($server_view === 'notifications' && function_exists('bp_get_template_part')) : ?>
+                <div class="max-w-6xl mx-auto">
+                    <?php bp_get_template_part('members/single/notifications'); ?>
+                </div>
+            <?php elseif ($server_view === 'friends' && function_exists('bp_get_template_part')) : ?>
+                <div class="max-w-6xl mx-auto">
+                    <?php bp_get_template_part('members/single/friends'); ?>
+                </div>
+            <?php else : ?>
+                <!-- JS will inject content here -->
+            <?php endif; ?>
         </div>
     </main>
 </div>
@@ -567,6 +791,11 @@ get_header();
     (function() {
         // --- Data Layer ---
         const portfolioSettings = <?php echo json_encode($portfolio_settings); ?>;
+        const serverView = <?php echo json_encode($server_view); ?>;
+        const profileUrls = {
+            friends: <?php echo json_encode($friends_url); ?>,
+            notifications: <?php echo json_encode($notifications_url); ?>,
+        };
         const userdata = {
             display_name: '<?php echo esc_js($display_name); ?>',
             description: '<?php echo esc_js(get_user_meta($user_id, 'description', true)); ?>'
@@ -579,7 +808,11 @@ get_header();
             { id: 'specializations', label: 'Especializaciones', icon: 'award' },
             { id: 'thoughts', label: 'Feed de Pensamientos', icon: 'message-circle' },
             { id: 'plans', label: 'Planes', icon: 'list-checks' },
-            { id: 'book', label: 'Libros', icon: 'book' }
+            { id: 'book', label: 'Libros', icon: 'book' },
+            <?php if ($is_own_profile) : ?>
+            { id: 'friends', label: 'Friends', icon: 'users' },
+            { id: 'notifications', label: 'Notifications', icon: 'bell' }
+            <?php endif; ?>
         ];
 
         // Filter menu items based on privacy
@@ -602,7 +835,14 @@ get_header();
         ];
 
         // --- Core Logic ---
-        let currentTab = 'main';
+        let currentTab = <?php echo json_encode($initial_tab); ?>;
+
+        function ensureNotificationsSubnavId() {
+            if (serverView !== 'notifications') return;
+            const ul = document.querySelector('#buddypress .notifications-header nav#subnav ul.subnav');
+            if (!ul) return;
+            if (!ul.id) ul.id = 'pcg-notifications-subnav';
+        }
 
         window.toggleSidebar = function() {
             document.getElementById('politeia-profile-sidebar').classList.toggle('open');
@@ -640,7 +880,8 @@ get_header();
         window.switchTab = function(tabId) {
             currentTab = tabId;
             const label = document.getElementById('pcg-current-tab-label');
-            if (label) label.innerText = menuItems.find(m => m.id === tabId).label;
+            const item = menuItems.find(m => m.id === tabId);
+            if (label && item) label.innerText = item.label;
             renderSidebar();
             renderContent();
             if (window.innerWidth < 800) document.getElementById('politeia-profile-sidebar').classList.remove('open');
@@ -662,16 +903,52 @@ get_header();
         function renderContent() {
             const container = document.getElementById('pcg-content-area');
             if (!container) return;
-            
+
             // Set dynamic background for thoughts feed
             container.style.backgroundColor = (currentTab === 'thoughts') ? '#f1f1f1' : 'white';
-            
+
+            // Preserve server-rendered views (BuddyBoss pages like /friends/ and /notifications/).
+            if (serverView && container.dataset && container.dataset.serverView === serverView && currentTab === serverView) {
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
             container.innerHTML = '';
             
             const wrapper = document.createElement('div');
             wrapper.className = 'max-w-6xl mx-auto card-transition';
 
             switch (currentTab) {
+                case 'friends':
+                    wrapper.innerHTML = `
+                        <div class="py-20 text-center p-8 bg-neutral-50 rounded-[6px] border border-neutral-200">
+                            <div class="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <i data-lucide="users" class="text-neutral-400" size="32"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold text-neutral-900 mb-2">Friends</h3>
+                            <p class="text-neutral-500 mb-8 max-w-md mx-auto">Open your Friends page to see all your connections.</p>
+                            <a href="${profileUrls.friends || '#'}" class="inline-flex py-3 px-8 gold-gradient text-black font-semibold rounded-[6px] shadow-sm hover:shadow-lg transition-all no-underline text-sm uppercase tracking-widest">
+                                View Friends
+                            </a>
+                        </div>
+                    `;
+                    break;
+
+                case 'notifications':
+                    wrapper.innerHTML = `
+                        <div class="py-20 text-center p-8 bg-neutral-50 rounded-[6px] border border-neutral-200">
+                            <div class="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <i data-lucide="bell" class="text-neutral-400" size="32"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold text-neutral-900 mb-2">Notifications</h3>
+                            <p class="text-neutral-500 mb-8 max-w-md mx-auto">Open your Notifications page to see unread and read notifications.</p>
+                            <a href="${profileUrls.notifications || '#'}" class="inline-flex py-3 px-8 gold-gradient text-black font-semibold rounded-[6px] shadow-sm hover:shadow-lg transition-all no-underline text-sm uppercase tracking-widest">
+                                View Notifications
+                            </a>
+                        </div>
+                    `;
+                    break;
+
                 case 'main':
                     wrapper.innerHTML = `
                         <div class="space-y-8">
@@ -881,6 +1158,7 @@ get_header();
         }
 
         function init() {
+            ensureNotificationsSubnavId();
             renderSidebar();
             renderContent();
             if (window.lucide) lucide.createIcons();
@@ -889,6 +1167,7 @@ get_header();
         // Use DOMContentLoaded to ensure we run after standard WP init if needed
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', init);
+            document.addEventListener('DOMContentLoaded', ensureNotificationsSubnavId);
         } else {
             init();
         }

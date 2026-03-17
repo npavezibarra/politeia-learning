@@ -51,6 +51,12 @@ class PL_Partnerships_Repository
         return is_array($rows) ? $rows : [];
     }
 
+    public static function get_single_partner($object_type, $object_id)
+    {
+        $partners = self::get_object_partners($object_type, $object_id);
+        return !empty($partners) ? $partners[0] : null;
+    }
+
     /**
      * Add (or reactivate) an active partner relationship for an object.
      *
@@ -79,6 +85,31 @@ class PL_Partnerships_Repository
         }
 
         $table = $wpdb->prefix . self::TABLE_SLUG;
+
+        if ($object_type === 'course') {
+            // Remove existing partner (overwrite).
+            $wpdb->update(
+                $table,
+                [
+                    'status' => 'revoked',
+                    'revoked_at' => current_time('mysql'),
+                ],
+                [
+                    'object_type' => $object_type,
+                    'object_id' => $object_id,
+                    'status' => 'active',
+                ],
+                [
+                    '%s',
+                    '%s',
+                ],
+                [
+                    '%s',
+                    '%d',
+                    '%s',
+                ]
+            );
+        }
 
         $existing = $wpdb->get_row(
             $wpdb->prepare(

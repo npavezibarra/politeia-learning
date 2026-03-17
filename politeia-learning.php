@@ -24,6 +24,22 @@ require_once PL_PATH . 'includes/class-upgrader.php';
 require_once PL_PATH . 'includes/class-taxonomy.php';
 require_once PL_PATH . 'includes/class-user-profile-meta-store.php';
 require_once PL_PATH . 'includes/class-partnerships-repository.php';
+require_once PL_PATH . 'includes/class-email.php';
+require_once PL_PATH . 'includes/class-rest-partnerships.php';
+require_once PL_PATH . 'includes/class-partner-add-shortcode.php';
+require_once PL_PATH . 'includes/class-course-partner-modal.php';
+
+if (class_exists('PL_Rest_Partnerships')) {
+    PL_Rest_Partnerships::init();
+}
+
+if (class_exists('PL_Partner_Add_Shortcode')) {
+    PL_Partner_Add_Shortcode::init();
+}
+
+if (class_exists('PL_Course_Partner_Modal')) {
+    PL_Course_Partner_Modal::init();
+}
 
 // WP-CLI commands (loaded only under WP-CLI).
 if (defined('WP_CLI') && WP_CLI) {
@@ -91,6 +107,37 @@ add_filter('bp_core_get_user_displayname', function ($display_name, $user_id) {
 
     return pl_get_user_full_name_or_display_name((int) $user_id, (string) $display_name);
 }, 10, 2);
+
+// Enforce Poppins typography across LearnDash course pages.
+add_action('wp_enqueue_scripts', function () {
+    if (!is_singular('sfwd-courses')) {
+        return;
+    }
+
+    wp_enqueue_style(
+        'pl-course-poppins',
+        'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap',
+        [],
+        null
+    );
+
+    wp_add_inline_style(
+        'pl-course-poppins',
+        'body.single-sfwd-courses{font-family:"Poppins",sans-serif!important;}' .
+        'body.single-sfwd-courses button,' .
+        'body.single-sfwd-courses input,' .
+        'body.single-sfwd-courses select,' .
+        'body.single-sfwd-courses textarea,' .
+        'body.single-sfwd-courses h1,' .
+        'body.single-sfwd-courses h2,' .
+        'body.single-sfwd-courses h3,' .
+        'body.single-sfwd-courses h4,' .
+        'body.single-sfwd-courses h5,' .
+        'body.single-sfwd-courses h6{' .
+        'font-family:"Poppins",sans-serif!important;' .
+        '}'
+    );
+}, 20);
 
 /**
  * Load Global Dependencies
