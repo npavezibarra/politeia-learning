@@ -131,6 +131,111 @@ class PL_Woo_Order_Split_Snapshot
         }
 
         $roles_table = $wpdb->prefix . 'politeia_course_roles';
+        $denormalize_role_slug = static function (string $role_value): string {
+            $key = trim($role_value);
+            if ($key === '') {
+                return __('Colaborador', 'politeia-learning');
+            }
+
+            $raw_lower = $key;
+            if (function_exists('remove_accents')) {
+                $raw_lower = remove_accents($raw_lower);
+            }
+            $raw_lower = strtolower($raw_lower);
+
+            $legacy_map = [
+                'autor principal' => __('Autor principal', 'politeia-learning'),
+                'editor' => __('Editor', 'politeia-learning'),
+                'profesor' => __('Profesor', 'politeia-learning'),
+                'teacher' => __('Teacher', 'politeia-learning'),
+            ];
+            if (isset($legacy_map[$raw_lower])) {
+                return $legacy_map[$raw_lower];
+            }
+
+            $map = [
+                'author' => __('Autor principal', 'politeia-learning'),
+                'editor' => __('Editor', 'politeia-learning'),
+                'teacher' => __('Teacher', 'politeia-learning'),
+                'collaborator' => __('Colaborador', 'politeia-learning'),
+            ];
+
+            return $map[strtolower($key)] ?? __('Colaborador', 'politeia-learning');
+        };
+
+        if (class_exists('PL_Partnerships_Repository') && method_exists('PL_Partnerships_Repository', 'get_object_partners')) {
+            try {
+                $partners = PL_Partnerships_Repository::get_object_partners($container_type, $container_id);
+                if (!empty($partners)) {
+                    $partner_user_ids = [];
+                    foreach ($partners as $row) {
+                        if (!is_array($row)) {
+                            continue;
+                        }
+                        $uid = (int) ($row['partner_user_id'] ?? 0);
+                        if ($uid > 0) {
+                            $partner_user_ids[] = $uid;
+                        }
+                    }
+                    $partner_user_ids = array_values(array_unique(array_filter($partner_user_ids)));
+
+                    $rows = [];
+                    $rows_by_user_id = [];
+                    if (!empty($partner_user_ids)) {
+                        $placeholders = implode(',', array_fill(0, count($partner_user_ids), '%d'));
+                        $sql = $wpdb->prepare(
+                            "SELECT user_id, role_slug, role_description, profit_percentage
+                             FROM {$roles_table}
+                             WHERE object_type = %s AND object_id = %d
+                               AND user_id IN ({$placeholders})",
+                            array_merge([$container_type, $container_id], $partner_user_ids)
+                        );
+                        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+                        $rows = $wpdb->get_results($sql);
+                        foreach ((array) $rows as $r) {
+                            $uid = (int) ($r->user_id ?? 0);
+                            if ($uid > 0) {
+                                $rows_by_user_id[$uid] = $r;
+                            }
+                        }
+                    }
+
+                    $out = [];
+                    foreach ($partners as $row) {
+                        if (!is_array($row)) {
+                            continue;
+                        }
+                        $uid = (int) ($row['partner_user_id'] ?? 0);
+                        if ($uid <= 0) {
+                            continue;
+                        }
+
+                        if (!empty($rows_by_user_id[$uid])) {
+                            $r = $rows_by_user_id[$uid];
+                            $out[] = [
+                                'user_id' => $uid,
+                                'role_slug' => (string) ($r->role_slug ?? ''),
+                                'role_description' => (string) ($r->role_description ?? ''),
+                                'profit_percentage' => (float) ($r->profit_percentage ?? 0),
+                            ];
+                            continue;
+                        }
+
+                        $out[] = [
+                            'user_id' => $uid,
+                            'role_slug' => $denormalize_role_slug((string) ($row['role'] ?? '')),
+                            'role_description' => '',
+                            'profit_percentage' => 0.0,
+                        ];
+                    }
+
+                    return $out;
+                }
+            } catch (\Throwable $e) {
+                // Best-effort: fall back to legacy reads.
+            }
+        }
+
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT user_id, role_slug, role_description, profit_percentage

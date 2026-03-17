@@ -16,13 +16,19 @@ if (!defined('ABSPATH'))
 // Core Constants
 define('PL_PATH', plugin_dir_path(__FILE__));
 define('PL_URL', plugin_dir_url(__FILE__));
-define('PL_DB_VERSION', '1.4.1');
+define('PL_DB_VERSION', '1.5.0');
 
 // Load Global Includes
 require_once PL_PATH . 'includes/class-installer.php';
 require_once PL_PATH . 'includes/class-upgrader.php';
 require_once PL_PATH . 'includes/class-taxonomy.php';
 require_once PL_PATH . 'includes/class-user-profile-meta-store.php';
+require_once PL_PATH . 'includes/class-partnerships-repository.php';
+
+// WP-CLI commands (loaded only under WP-CLI).
+if (defined('WP_CLI') && WP_CLI) {
+    require_once PL_PATH . 'includes/class-cli-partnerships.php';
+}
 
 // Automatic Database Upgrades
 add_action('plugins_loaded', ['PL_Upgrader', 'maybe_upgrade']);

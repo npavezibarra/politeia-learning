@@ -413,23 +413,14 @@ $icon_cart = '<svg style="width:20px;height:20px;margin-right:8px;flex-shrink:0;
                             <?php
                             // Start Course DESHABILITADO
                             ?>
-                            <a class="btn-advance ld-primary-background disabled"
-                                style="pointer-events:none;opacity:0.5;display:block;width:100%;margin:12px 0;">
-                                <?php esc_html_e('Start Course', 'buddyboss-theme'); ?>
-                            </a>
-                            <?php
-                            // Take Final Quiz DESHABILITADO
-                            if ($final_quiz_id) {
-                                ?>
-                                <a class="btn-advance btn-advance-start ld-primary-background disabled"
-                                    style="pointer-events:none;opacity:0.5;display:block;width:100%;margin-bottom:12px;">
-                                    <?php esc_html_e('Take Final Quiz', 'buddyboss-theme'); ?>
+                                <a class="btn-advance ld-primary-background disabled"
+                                    style="pointer-events:none;opacity:0.5;display:block;width:100%;margin:12px 0;">
+                                    <?php esc_html_e('Start Course', 'buddyboss-theme'); ?>
                                 </a>
                                 <?php
-                            }
 
-                            // 3) Ambos quizzes completados → mostrar “COMPLETED COURSE” primero, luego porcentajes, y salir
-                        } elseif ($first_quiz_completed && $final_quiz_completed) {
+                                // 3) Ambos quizzes completados → mostrar “COMPLETED COURSE” primero, luego porcentajes, y salir
+                            } elseif ($first_quiz_completed && $final_quiz_completed) {
                             ?>
                             <p style="margin-top:8px; font-size:14px; color:#007bff; font-weight:bold;">
                                 <?php esc_html_e('COMPLETED COURSE', 'buddyboss-theme'); ?>
@@ -491,14 +482,15 @@ $icon_cart = '<svg style="width:20px;height:20px;margin-right:8px;flex-shrink:0;
                                     <?php esc_html_e('All Lessons Finished', 'buddyboss-theme'); ?>
                                 </p>
                                 <?php
-                            }
+                                }
 
-                            // 4.3) Final Quiz: botón o porcentaje
-                            if ($final_quiz_id) {
-                                if (!$all_lessons_completed) {
-                                    // aún no terminó lecciones
-                                    ?>
-                                    <a class="btn-advance btn-advance-start ld-primary-background disabled"
+                                // 4.3) Final Quiz: botón o porcentaje
+                                // Solo mostrar el Final Quiz cuando el First Quiz YA fue tomado (o si no existe First Quiz).
+                                if ($final_quiz_id && ( !$first_quiz_id || $first_quiz_completed )) {
+                                    if (!$all_lessons_completed) {
+                                        // aún no terminó lecciones
+                                        ?>
+                                        <a class="btn-advance btn-advance-start ld-primary-background disabled"
                                         style="pointer-events:none;opacity:0.5;display:block;width:100%;margin-bottom:12px;">
                                         <?php esc_html_e('Take Final Quiz', 'buddyboss-theme'); ?>
                                     </a>

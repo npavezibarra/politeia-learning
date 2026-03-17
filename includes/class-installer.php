@@ -13,6 +13,7 @@ class PL_Installer
     private const APPROVALS_TABLE = 'politeia_inclusion_approvals';
     private const USER_PROFILE_META_TABLE = 'politeia_user_profile_meta';
     private const PORTFOLIO_SETTINGS_TABLE = 'politeia_portfolio_settings';
+    private const PARTNERSHIPS_TABLE = 'politeia_user_object_partnerships';
     private static bool $has_run = false;
 
     /**
@@ -81,6 +82,7 @@ class PL_Installer
         $approvals_table = $wpdb->prefix . self::APPROVALS_TABLE;
         $user_profile_meta_table = $wpdb->prefix . self::USER_PROFILE_META_TABLE;
         $portfolio_settings_table = $wpdb->prefix . self::PORTFOLIO_SETTINGS_TABLE;
+        $partnerships_table = $wpdb->prefix . self::PARTNERSHIPS_TABLE;
 
         return [
             $roles_table => sprintf(
@@ -183,6 +185,39 @@ class PL_Installer
                     UNIQUE KEY user_section (user_id, section_id)
                 ) %s;",
                 $portfolio_settings_table,
+                $charset_collate
+            ),
+            $partnerships_table => sprintf(
+                "CREATE TABLE %s (
+                    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    object_type VARCHAR(32) NOT NULL,
+                    object_id BIGINT UNSIGNED NOT NULL,
+                    owner_user_id BIGINT UNSIGNED NULL,
+                    partner_user_id BIGINT UNSIGNED NULL,
+                    invitee_email VARCHAR(191) NULL,
+                    role VARCHAR(50) NOT NULL DEFAULT 'observer',
+                    status VARCHAR(20) NOT NULL DEFAULT 'active',
+                    invitation_token_hash CHAR(64) NULL,
+                    invited_at DATETIME NULL,
+                    expires_at DATETIME NULL,
+                    accepted_at DATETIME NULL,
+                    declined_at DATETIME NULL,
+                    revoked_at DATETIME NULL,
+                    notification_preferences LONGTEXT NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY  (id),
+                    UNIQUE KEY uq_invitation_token_hash (invitation_token_hash),
+                    UNIQUE KEY uq_object_partner_role (object_type, object_id, partner_user_id, role),
+                    UNIQUE KEY uq_object_invitee_role (object_type, object_id, invitee_email, role),
+                    KEY idx_object (object_type, object_id),
+                    KEY idx_owner_user (owner_user_id),
+                    KEY idx_partner_user (partner_user_id),
+                    KEY idx_invitee_email (invitee_email),
+                    KEY idx_status (status),
+                    KEY idx_object_status (object_type, object_id, status)
+                ) %s;",
+                $partnerships_table,
                 $charset_collate
             ),
         ];

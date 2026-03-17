@@ -29,6 +29,25 @@ function pqc_user_has_course_role(int $course_id, int $user_id): bool
         return false;
     }
 
+    if (class_exists('PL_Partnerships_Repository') && method_exists('PL_Partnerships_Repository', 'get_object_partners')) {
+        try {
+            $partners = PL_Partnerships_Repository::get_object_partners('course', $course_id);
+            if (!empty($partners)) {
+                foreach ($partners as $row) {
+                    if (!is_array($row)) {
+                        continue;
+                    }
+                    if ((int) ($row['partner_user_id'] ?? 0) === $user_id) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        } catch (\Throwable $e) {
+            // Best-effort: fall back to legacy check.
+        }
+    }
+
     $table = $wpdb->prefix . 'politeia_course_roles';
     // If the table doesn't exist, treat as no role.
     // (wpdb->get_var will return null/false if it errors.)

@@ -13,6 +13,173 @@ class PL_CC_Course_Save_Handler
     private const AJAX_META_TERMS = 'pcg_get_learning_meta_terms';
     private const AJAX_CREATE_TAG = 'pcg_create_learning_tag';
 
+    private function normalize_partnership_role(string $role_slug): string
+    {
+        $key = trim($role_slug);
+        if ($key === '') {
+            return 'collaborator';
+        }
+
+        if (function_exists('remove_accents')) {
+            $key = remove_accents($key);
+        }
+
+        $key = strtolower($key);
+
+        $map = [
+            'autor principal' => 'author',
+            'editor' => 'editor',
+            'teacher' => 'teacher',
+            'profesor' => 'teacher',
+        ];
+
+        return $map[$key] ?? 'collaborator';
+    }
+
+    private function denormalize_partnership_role_slug(string $role_value): string
+    {
+        $key = trim($role_value);
+        if ($key === '') {
+            return __('Colaborador', 'politeia-learning');
+        }
+
+        $raw_lower = $key;
+        if (function_exists('remove_accents')) {
+            $raw_lower = remove_accents($raw_lower);
+        }
+        $raw_lower = strtolower($raw_lower);
+
+        // If the row already stores a human-facing role_slug (legacy/migrated rows), preserve it.
+        $legacy_map = [
+            'autor principal' => __('Autor principal', 'politeia-learning'),
+            'editor' => __('Editor', 'politeia-learning'),
+            'profesor' => __('Profesor', 'politeia-learning'),
+            'teacher' => __('Teacher', 'politeia-learning'),
+        ];
+        if (isset($legacy_map[$raw_lower])) {
+            return $legacy_map[$raw_lower];
+        }
+
+        $map = [
+            'author' => __('Autor principal', 'politeia-learning'),
+            'editor' => __('Editor', 'politeia-learning'),
+            'teacher' => __('Teacher', 'politeia-learning'),
+            'collaborator' => __('Colaborador', 'politeia-learning'),
+        ];
+
+        return $map[strtolower($key)] ?? __('Colaborador', 'politeia-learning');
+    }
+
+    /**
+     * Read collaborators for an object, preferring the unified partnerships table when available.
+     *
+     * Returns the legacy structure (objects with user_id, role_slug, profit_percentage, role_description).
+     *
+     * @return array<int,object>
+     */
+    private function get_course_roles_for_object(string $object_type, int $object_id): array
+    {
+        if ($object_type === '' || $object_id <= 0) {
+            return [];
+        }
+
+        global $wpdb;
+        if (!$wpdb) {
+            return [];
+        }
+
+        $roles_table = $wpdb->prefix . 'politeia_course_roles';
+
+        if (class_exists('PL_Partnerships_Repository') && method_exists('PL_Partnerships_Repository', 'get_object_partners')) {
+            try {
+                $partners = PL_Partnerships_Repository::get_object_partners($object_type, $object_id);
+                if (!empty($partners)) {
+                    $partner_user_ids = [];
+                    foreach ($partners as $row) {
+                        if (!is_array($row)) {
+                            continue;
+                        }
+                        $uid = (int) ($row['partner_user_id'] ?? 0);
+                        if ($uid > 0) {
+                            $partner_user_ids[] = $uid;
+                        }
+                    }
+                    $partner_user_ids = array_values(array_unique(array_filter($partner_user_ids)));
+
+                    $legacy_by_user_id = [];
+                    if (!empty($partner_user_ids)) {
+                        $placeholders = implode(',', array_fill(0, count($partner_user_ids), '%d'));
+                        $sql = $wpdb->prepare(
+                            "SELECT *
+                            FROM {$roles_table}
+                            WHERE object_type = %s
+                              AND object_id = %d
+                              AND user_id IN ({$placeholders})",
+                            array_merge([$object_type, $object_id], $partner_user_ids)
+                        );
+                        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+                        $legacy_rows = $wpdb->get_results($sql);
+                        foreach ((array) $legacy_rows as $lr) {
+                            $legacy_by_user_id[(int) ($lr->user_id ?? 0)] = $lr;
+                        }
+                    }
+
+                    $out = [];
+                    foreach ($partners as $row) {
+                        if (!is_array($row)) {
+                            continue;
+                        }
+
+                        $uid = (int) ($row['partner_user_id'] ?? 0);
+                        if ($uid <= 0) {
+                            continue;
+                        }
+
+                        if (!empty($legacy_by_user_id[$uid])) {
+                            $out[] = $legacy_by_user_id[$uid];
+                            continue;
+                        }
+
+                        $out[] = (object) [
+                            'user_id' => $uid,
+                            'role_slug' => $this->denormalize_partnership_role_slug((string) ($row['role'] ?? '')),
+                            'profit_percentage' => 0,
+                            'role_description' => '',
+                        ];
+                    }
+
+                    if (!empty($out)) {
+                        return $out;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Best-effort: fall back to legacy reads.
+            }
+        }
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $rows = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$roles_table} WHERE object_type = %s AND object_id = %d", $object_type, $object_id));
+        return is_array($rows) ? $rows : [];
+    }
+
+    private function maybe_dual_write_partnership(string $object_type, int $object_id, int $user_id, string $role_slug): void
+    {
+        if ($object_type === '' || $object_id <= 0 || $user_id <= 0) {
+            return;
+        }
+
+        if (!class_exists('PL_Partnerships_Repository') || !method_exists('PL_Partnerships_Repository', 'add_partner')) {
+            return;
+        }
+
+        $normalized_role = $this->normalize_partnership_role($role_slug);
+        try {
+            PL_Partnerships_Repository::add_partner($object_type, $object_id, $user_id, $normalized_role);
+        } catch (\Throwable $e) {
+            // Best-effort dual-write: never break the legacy flow.
+        }
+    }
+
     private function user_can_manage_group(int $group_id, int $user_id): bool
     {
         if ($group_id <= 0 || $user_id <= 0) {
@@ -386,14 +553,18 @@ class PL_CC_Course_Save_Handler
 
         if (!empty($teacher_ids) && is_array($teacher_ids)) {
             foreach ($teacher_ids as $teacher) {
+                $teacher_user_id = intval($teacher['user_id'] ?? 0);
+                $teacher_role_slug = sanitize_text_field((string) ($teacher['role_slug'] ?? ''));
                 $wpdb->insert($roles_table, [
                     'object_type' => 'course',
                     'object_id' => $course_id,
-                    'user_id' => intval($teacher['user_id']),
-                    'role_slug' => sanitize_text_field($teacher['role_slug']),
+                    'user_id' => $teacher_user_id,
+                    'role_slug' => $teacher_role_slug,
                     'profit_percentage' => floatval($teacher['profit_percentage']),
                     'role_description' => wp_kses_post($teacher['role_description']),
                 ], ['%s', '%d', '%d', '%s', '%f', '%s']);
+
+                $this->maybe_dual_write_partnership('course', (int) $course_id, (int) $teacher_user_id, (string) $teacher_role_slug);
             }
         }
 
@@ -738,14 +909,18 @@ class PL_CC_Course_Save_Handler
 
             $wpdb->delete($roles_table, ['object_type' => 'group', 'object_id' => $container_id], ['%s', '%d']);
             foreach ($participants as $p) {
+                $user_id = (int) ($p['user_id'] ?? 0);
+                $role_slug = sanitize_text_field((string) ($p['role_slug'] ?? ''));
                 $wpdb->insert($roles_table, [
                     'object_type' => 'group',
                     'object_id' => $container_id,
-                    'user_id' => (int) ($p['user_id'] ?? 0),
-                    'role_slug' => sanitize_text_field((string) ($p['role_slug'] ?? '')),
+                    'user_id' => $user_id,
+                    'role_slug' => $role_slug,
                     'profit_percentage' => (float) ($p['profit_percentage'] ?? 0),
                     'role_description' => wp_kses_post((string) ($p['role_description'] ?? '')),
                 ], ['%s', '%d', '%d', '%s', '%f', '%s']);
+
+                $this->maybe_dual_write_partnership('group', (int) $container_id, (int) $user_id, (string) $role_slug);
             }
 
             return;
@@ -786,14 +961,18 @@ class PL_CC_Course_Save_Handler
 
             $wpdb->delete($roles_table, ['object_type' => 'program', 'object_id' => $container_id], ['%s', '%d']);
             foreach ($participants as $p) {
+                $user_id = (int) ($p['user_id'] ?? 0);
+                $role_slug = sanitize_text_field((string) ($p['role_slug'] ?? ''));
                 $wpdb->insert($roles_table, [
                     'object_type' => 'program',
                     'object_id' => $container_id,
-                    'user_id' => (int) ($p['user_id'] ?? 0),
-                    'role_slug' => sanitize_text_field((string) ($p['role_slug'] ?? '')),
+                    'user_id' => $user_id,
+                    'role_slug' => $role_slug,
                     'profit_percentage' => (float) ($p['profit_percentage'] ?? 0),
                     'role_description' => wp_kses_post((string) ($p['role_description'] ?? '')),
                 ], ['%s', '%d', '%d', '%s', '%f', '%s']);
+
+                $this->maybe_dual_write_partnership('program', (int) $container_id, (int) $user_id, (string) $role_slug);
             }
         }
     }
@@ -1494,9 +1673,7 @@ class PL_CC_Course_Save_Handler
                 ];
             }
         } else {
-            global $wpdb;
-            $roles_table = $wpdb->prefix . 'politeia_course_roles';
-            $roles = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$roles_table} WHERE object_type = %s AND object_id = %d", 'group', $group_id));
+            $roles = $this->get_course_roles_for_object('group', (int) $group_id);
 
             foreach ((array) $roles as $role) {
                 $user = get_userdata($role->user_id);
@@ -2064,9 +2241,7 @@ class PL_CC_Course_Save_Handler
                 ];
             }
         } else {
-            global $wpdb;
-            $roles_table = $wpdb->prefix . 'politeia_course_roles';
-            $roles = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$roles_table} WHERE object_type = %s AND object_id = %d", 'program', $programa_id));
+            $roles = $this->get_course_roles_for_object('program', (int) $programa_id);
 
             foreach ((array) $roles as $role) {
                 $user = get_userdata($role->user_id);
@@ -2207,9 +2382,7 @@ class PL_CC_Course_Save_Handler
         $cover_photo_id = get_post_meta($course_id, $cover_meta_key, true);
         $cover_photo_url = wp_get_attachment_url($cover_photo_id);
 
-        global $wpdb;
-        $roles_table = $wpdb->prefix . 'politeia_course_roles';
-        $roles = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$roles_table} WHERE object_type = %s AND object_id = %d", 'course', $course_id));
+        $roles = $this->get_course_roles_for_object('course', (int) $course_id);
         $teachers_data = [];
 
         foreach ($roles as $role) {
