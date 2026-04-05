@@ -3,7 +3,7 @@
  * Template Name: Quiz Debug Template
  */
 
-get_header();
+pl_template_open();
 
 the_post();
 remove_all_actions('learndash-quiz-content'); // bloquear inyección automática del contenido del quiz
@@ -160,4 +160,4 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <?php
-get_footer();
+pl_template_close();

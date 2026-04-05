@@ -7,7 +7,7 @@
  * @package BuddyBoss_Theme
  */
 
-get_header();
+pl_template_open();
 ?>
 
 <div id="primary" class="content-area bb-grid-cell">
@@ -39,4 +39,4 @@ get_header();
 	</main><!-- #main -->
 </div><!-- #primary -->
 
-<?php get_footer();
+<?php pl_template_close();

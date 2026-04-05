@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-get_header();
+pl_template_open();
 
 if ( have_posts() ) {
     while ( have_posts() ) {
@@ -239,4 +239,4 @@ if ( have_posts() ) {
     }
 }
 
-get_footer();
+pl_template_close();

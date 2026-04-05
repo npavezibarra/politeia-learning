@@ -56,7 +56,7 @@ if (empty($active_modules[$current_section])) {
     }
 }
 
-get_header();
+pl_template_open();
 ?>
 
 <div class="pcg-creator-dashboard-wrapper pcg-template-center">
@@ -241,4 +241,4 @@ get_header();
 </div>
 
 <?php
-get_footer();
+pl_template_close();

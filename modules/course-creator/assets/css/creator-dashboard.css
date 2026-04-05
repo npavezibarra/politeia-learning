@@ -3806,6 +3806,8 @@ input:checked+.pcg-slider:before {
     top: 107px !important;
     left: 0;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid #f3f4f6;

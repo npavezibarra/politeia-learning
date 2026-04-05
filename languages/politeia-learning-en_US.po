@@ -330,6 +330,12 @@ msgstr "About the specialization"
 msgid "Center"
 msgstr "Center"
 
+msgid "My Reading Stats"
+msgstr "My Reading Stats"
+
+msgid "My Plans"
+msgstr "My Plans"
+
 #: modules/core/includes/class-admin.php:35
 #: modules/core/includes/class-admin.php:36
 msgid "Style Options"
@@ -1604,3 +1610,15 @@ msgstr "Course saved and synced with the store successfully."
 #: modules/course-creator/includes/class-course-save-handler.php:2183
 msgid "Curso y producto asociado eliminados."
 msgstr "Course and associated product deleted."
+
+#: modules/blog-post/templates/single-post.php:157
+msgid "por"
+msgstr "by"
+
+#: modules/blog-post/templates/single-post.php:182
+msgid "Artículos relacionados"
+msgstr "Related Articles"
+
+#: modules/menu-management/includes/class-menu-manager.php:707
+msgid "Cerrar Sesión"
+msgstr "Log Out"

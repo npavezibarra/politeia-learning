@@ -181,9 +181,22 @@ class PL_CC_Creator_Dashboard
         if (get_query_var(self::REWRITE_TAG)) {
             wp_enqueue_media();
 
-            // Enqueue Cropper.js from BuddyBoss Platform if available
-            wp_enqueue_style('cropperjs', plugins_url('buddyboss-platform/bp-core/css/vendor/cropper.min.css'), [], '1.5.12');
-            wp_enqueue_script('cropperjs', plugins_url('buddyboss-platform/bp-core/js/vendor/cropper.min.js'), ['jquery'], '1.5.12', true);
+            // Load Cropper.js from a stable CDN instead of the BuddyBoss path.
+            // The BuddyBoss plugin is not present in this install, so the old URL
+            // silently failed and the cropper modal never became interactive.
+            wp_enqueue_style(
+                'cropperjs',
+                'https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.css',
+                [],
+                '1.5.13'
+            );
+            wp_enqueue_script(
+                'cropperjs',
+                'https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js',
+                ['jquery'],
+                '1.5.13',
+                true
+            );
 
             wp_enqueue_style(
                 'pcg-material-symbols-outlined',
@@ -274,8 +287,9 @@ class PL_CC_Creator_Dashboard
                 'currentUserName' => $full_name . ' (' . $current_user->user_email . ')',
                 'currentUserAvatar' => get_avatar_url($current_user->ID, ['size' => 64]),
                 'currentUserFullNameEmail' => $full_name . ' (' . $current_user->user_email . ')',
-                'avatarFullWidth' => bp_core_avatar_full_width(),
-                'avatarFullHeight' => bp_core_avatar_full_height(),
+                // BuddyPress/BuddyBoss optional: provide safe defaults when not installed.
+                'avatarFullWidth' => function_exists('bp_core_avatar_full_width') ? bp_core_avatar_full_width() : 150,
+                'avatarFullHeight' => function_exists('bp_core_avatar_full_height') ? bp_core_avatar_full_height() : 150,
                 'i18n' => [
                     'loadingCourses' => __('Cargando cursos...', 'politeia-learning'),
                     'loading' => __('Cargando...', 'politeia-learning'),

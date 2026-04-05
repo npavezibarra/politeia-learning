@@ -321,6 +321,12 @@ msgstr "Sobre la especialización"
 msgid "Center"
 msgstr "Centro"
 
+msgid "My Reading Stats"
+msgstr "Mis estadísticas de lectura"
+
+msgid "My Plans"
+msgstr "Mis planes"
+
 #: modules/core/includes/class-admin.php:35
 #: modules/core/includes/class-admin.php:36
 msgid "Style Options"
@@ -1546,3 +1552,15 @@ msgstr "Encabezados"
 #: modules/course-creator/templates/sections/mis-escritos.php:77
 msgid "Paragraph"
 msgstr "Párrafo"
+
+#: modules/blog-post/templates/single-post.php:157
+msgid "por"
+msgstr "por"
+
+#: modules/blog-post/templates/single-post.php:182
+msgid "Artículos relacionados"
+msgstr "Artículos relacionados"
+
+#: modules/menu-management/includes/class-menu-manager.php:707
+msgid "Cerrar Sesión"
+msgstr "Cerrar Sesión"

@@ -178,6 +178,12 @@ msgstr ""
 msgid "Center"
 msgstr ""
 
+msgid "My Reading Stats"
+msgstr ""
+
+msgid "My Plans"
+msgstr ""
+
 #: modules/course-creator/includes/class-creator-dashboard.php:163
 msgid "PRODUCTOS VENDIDOS"
 msgstr ""
@@ -1384,4 +1390,16 @@ msgstr ""
 
 #: modules/course-creator/includes/class-creator-dashboard.php:214
 msgid "Desconocido"
+msgstr ""
+
+#: modules/blog-post/templates/single-post.php:157
+msgid "por"
+msgstr ""
+
+#: modules/blog-post/templates/single-post.php:182
+msgid "Artículos relacionados"
+msgstr ""
+
+#: modules/menu-management/includes/class-menu-manager.php:707
+msgid "Cerrar Sesión"
 msgstr ""

@@ -69,4 +69,37 @@ class PL_Email
             'Content-Type: text/html; charset=UTF-8',
         ]);
     }
+
+    public static function send_auth_confirmation(string $email, string $user_name, string $verification_url, string $token): bool
+    {
+        $email = sanitize_email($email);
+        if (!$email || !is_email($email)) {
+            return false;
+        }
+
+        $user_name = trim(sanitize_text_field($user_name));
+        $verification_url = esc_url_raw($verification_url);
+        $token = trim(sanitize_text_field($token));
+
+        $html = self::render('auth-confirmation', [
+            'user_name' => $user_name,
+            'verification_url' => $verification_url,
+            'token' => $token,
+        ]);
+
+        if ('' === trim($html)) {
+            $html = sprintf(
+                '<p>%s</p><p><a href="%s">%s</a></p><p>%s: <code>%s</code></p>',
+                esc_html(sprintf(__('Hi %s, please confirm your account.', 'politeia-learning'), $user_name !== '' ? $user_name : __('there', 'politeia-learning'))),
+                esc_url($verification_url),
+                esc_html__('Confirm account', 'politeia-learning'),
+                esc_html__('Token', 'politeia-learning'),
+                esc_html($token)
+            );
+        }
+
+        return (bool) wp_mail($email, __('Confirm your Politeia account', 'politeia-learning'), $html, [
+            'Content-Type: text/html; charset=UTF-8',
+        ]);
+    }
 }

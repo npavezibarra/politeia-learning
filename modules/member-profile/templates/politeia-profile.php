@@ -6,8 +6,8 @@
 
 if (!defined('ABSPATH')) exit;
 
-// Get displayed user ID (BuddyBoss context)
-$user_id = bp_displayed_user_id();
+// Get displayed user ID (BuddyBoss optional; pure WordPress fallback)
+$user_id = function_exists('bp_displayed_user_id') ? (int) bp_displayed_user_id() : 0;
 if (!$user_id) {
     if (is_user_logged_in()) {
         $user_id = get_current_user_id();
@@ -22,9 +22,12 @@ $display_name = function_exists('pl_get_user_full_name_or_display_name')
     ? pl_get_user_full_name_or_display_name($user_id, $userdata->display_name) 
     : $userdata->display_name;
 
-$avatar_url = function_exists('bp_core_fetch_avatar') 
-    ? bp_core_fetch_avatar(['item_id' => $user_id, 'html' => false, 'type' => 'full']) 
-    : get_avatar_url($user_id);
+$avatar_url = function_exists('pl_get_user_profile_avatar_custom_url')
+    ? pl_get_user_profile_avatar_custom_url($user_id, 128)
+    : '';
+if ($avatar_url === '') {
+    $avatar_url = get_avatar_url($user_id, ['size' => 128]);
+}
 
 // --- Portfolio Settings ---
 $portfolio_manager = PL_Member_Profile_Portfolio_Manager::get_instance();
@@ -224,7 +227,7 @@ foreach ( $user_notes as $note ) {
 add_filter('buddyboss_theme_remove_header', '__return_false', 999);
 add_filter('buddyboss_theme_remove_footer', '__return_false', 999);
 
-get_header(); 
+pl_template_open();
 ?>
 
 <!-- Tailwind CSS CDN -->
@@ -1174,4 +1177,4 @@ get_header();
     })();
 </script>
 
-<?php get_footer(); ?>
+<?php pl_template_close(); ?>

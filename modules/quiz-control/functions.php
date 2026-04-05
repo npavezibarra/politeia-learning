@@ -57,6 +57,12 @@ function politeia_course_debug_table_refactored($content)
         return $content;
     }
 
+    // Keep this debugging helper out of the public course page.
+    // The front-end template renders the real course UI directly.
+    if (!current_user_can('manage_options')) {
+        return $content;
+    }
+
     // --- 1. Usar las clases para obtener los datos ---
     $user_id = get_current_user_id();
     $user_data = get_userdata($user_id);

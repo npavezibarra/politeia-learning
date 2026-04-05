@@ -22,9 +22,15 @@ spl_autoload_register(function ($class) {
     }
 });
 
-add_action('plugins_loaded', function () {
+if (did_action('plugins_loaded')) {
     if (class_exists('PL_MM_Menu_Manager')) {
         new PL_MM_Menu_Manager();
     }
-}, 20);
+} else {
+    add_action('plugins_loaded', function () {
+        if (class_exists('PL_MM_Menu_Manager')) {
+            new PL_MM_Menu_Manager();
+        }
+    }, 20);
+}
 

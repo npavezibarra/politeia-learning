@@ -28,6 +28,7 @@ require_once PL_PATH . 'includes/class-email.php';
 require_once PL_PATH . 'includes/class-rest-partnerships.php';
 require_once PL_PATH . 'includes/class-partner-add-shortcode.php';
 require_once PL_PATH . 'includes/class-course-partner-modal.php';
+require_once PL_PATH . 'includes/template-helpers.php';
 
 if (class_exists('PL_Rest_Partnerships')) {
     PL_Rest_Partnerships::init();
@@ -108,9 +109,9 @@ add_filter('bp_core_get_user_displayname', function ($display_name, $user_id) {
     return pl_get_user_full_name_or_display_name((int) $user_id, (string) $display_name);
 }, 10, 2);
 
-// Enforce Poppins typography across LearnDash course pages.
+// Enforce Poppins typography across LearnDash course and lesson pages.
 add_action('wp_enqueue_scripts', function () {
-    if (!is_singular('sfwd-courses')) {
+    if (!is_singular('sfwd-courses') && !is_singular('sfwd-lessons')) {
         return;
     }
 
@@ -123,7 +124,7 @@ add_action('wp_enqueue_scripts', function () {
 
     wp_add_inline_style(
         'pl-course-poppins',
-        'body.single-sfwd-courses{font-family:"Poppins",sans-serif!important;}' .
+        'body.single-sfwd-courses,body.single-sfwd-lessons{font-family:"Poppins",sans-serif!important;}' .
         'body.single-sfwd-courses button,' .
         'body.single-sfwd-courses input,' .
         'body.single-sfwd-courses select,' .
@@ -133,7 +134,17 @@ add_action('wp_enqueue_scripts', function () {
         'body.single-sfwd-courses h3,' .
         'body.single-sfwd-courses h4,' .
         'body.single-sfwd-courses h5,' .
-        'body.single-sfwd-courses h6{' .
+        'body.single-sfwd-courses h6,' .
+        'body.single-sfwd-lessons button,' .
+        'body.single-sfwd-lessons input,' .
+        'body.single-sfwd-lessons select,' .
+        'body.single-sfwd-lessons textarea,' .
+        'body.single-sfwd-lessons h1,' .
+        'body.single-sfwd-lessons h2,' .
+        'body.single-sfwd-lessons h3,' .
+        'body.single-sfwd-lessons h4,' .
+        'body.single-sfwd-lessons h5,' .
+        'body.single-sfwd-lessons h6{' .
         'font-family:"Poppins",sans-serif!important;' .
         '}'
     );
@@ -165,6 +176,8 @@ class PL_Module_Loader
     private static $modules = [
         'core' => true,
         'menu-management' => true,
+        'blog-post' => true,
+        'login-register' => true,
         'course-programs' => true,
         'course-integration' => true,
         'course-creator' => true,

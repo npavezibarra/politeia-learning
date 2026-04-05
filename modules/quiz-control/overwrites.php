@@ -93,8 +93,8 @@ add_filter('template_include', function($template) {
 function politeia_override_single_course_template_file( $template ) {
     // Verifica si estamos en la página de un curso single ('sfwd-courses').
     if ( is_singular( 'sfwd-courses' ) ) {
-        // Define la ruta a nuestra copia de single-sfwd-courses.php dentro del plugin.
-        $new_template = __DIR__ . '/overrides/buddyboss/single-sfwd-courses.php';
+        // Define la ruta a nuestra copia del template dentro del plugin.
+        $new_template = __DIR__ . '/templates/learndash/course-single.php';
 
         // Si nuestro archivo existe, le decimos a WordPress que lo use.
         if ( file_exists( $new_template ) ) {
@@ -106,6 +106,25 @@ function politeia_override_single_course_template_file( $template ) {
     return $template;
 }
 add_filter( 'template_include', 'politeia_override_single_course_template_file', 99 );
+
+/**
+ * Sobrescribe el template principal de la página de una lección (single-sfwd-lessons.php).
+ *
+ * @param string $template La ruta a la plantilla que WordPress planea usar.
+ * @return string La ruta a nuestra plantilla personalizada o la original.
+ */
+function politeia_override_single_lesson_template_file( $template ) {
+    if ( is_singular( 'sfwd-lessons' ) ) {
+        $new_template = __DIR__ . '/templates/learndash/lesson-single.php';
+
+        if ( file_exists( $new_template ) ) {
+            return $new_template;
+        }
+    }
+
+    return $template;
+}
+add_filter( 'template_include', 'politeia_override_single_lesson_template_file', 98 );
 
 
 /* OVERWRITE QUIZ RESULT */

@@ -1,4 +1,4 @@
-<?php get_header(); ?>
+<?php pl_template_open(); ?>
 <main class="pcg-archive">
   <h1><?php esc_html_e('Programas Filosóficos', 'politeia-learning'); ?></h1>
   <div class="program-list">
@@ -12,4 +12,4 @@
   <?php endwhile; ?>
   </div>
 </main>
-<?php get_footer(); ?>
+<?php pl_template_close(); ?>

@@ -1,0 +1,558 @@
+<?php
+/**
+ * Login/register modal template.
+ *
+ * Available variables:
+ * - $view
+ * - $notice
+ * - $error
+ * - $redirect_to
+ * - $action_url
+ * - $nonce
+ * - $auto_open
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+$auto_open = !empty($auto_open);
+$is_spanish = strpos(get_locale(), 'es') === 0;
+
+// Translation helpers for UI
+$labels = [
+    'welcome' => $is_spanish ? 'Bienvenido de nuevo' : 'Welcome back',
+    'register_title' => $is_spanish ? 'Crea tu cuenta' : 'Create your account',
+    'login_copy' => $is_spanish ? 'Inicia sesión para continuar o crea una nueva cuenta.' : 'Log in to continue or create a new account.',
+    'register_copy' => $is_spanish ? 'Crea una cuenta para recibir tu email de confirmación.' : 'Create an account and we will send you a confirmation email.',
+    'login' => $is_spanish ? 'Ingresar' : 'Login',
+    'register' => $is_spanish ? 'Registrarse' : 'Register',
+    'first_name' => $is_spanish ? 'Nombre' : 'First name',
+    'last_name' => $is_spanish ? 'Apellido' : 'Last name',
+    'email' => $is_spanish ? 'Correo electrónico' : 'Email',
+    'confirm_email' => $is_spanish ? 'Confirmar correo' : 'Confirm email',
+    'password' => $is_spanish ? 'Contraseña' : 'Password',
+    'confirm_password' => $is_spanish ? 'Confirmar contraseña' : 'Confirm password',
+    'remember_me' => $is_spanish ? 'Recuérdame' : 'Remember me',
+    'create_account' => $is_spanish ? 'Crear cuenta' : 'Create account',
+    'new_here' => $is_spanish ? '¿No tienes cuenta?' : 'New here?',
+    'create_account_link' => $is_spanish ? 'Crea una cuenta' : 'Create an account',
+    'already_account' => $is_spanish ? '¿Ya tienes cuenta?' : 'Already have an account?',
+    'back_to_login' => $is_spanish ? 'Inicia sesión' : 'Back to login',
+];
+
+$login_url = PL_Auth_Login_Register::build_modal_url('login', $redirect_to);
+$register_url = PL_Auth_Login_Register::build_modal_url('register', $redirect_to);
+?>
+<style>
+    #pl-auth-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: rgba(15, 23, 42, 0.68);
+        backdrop-filter: blur(10px);
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 180ms ease, visibility 180ms ease;
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        box-sizing: border-box;
+    }
+
+    #pl-auth-overlay * {
+        box-sizing: border-box;
+    }
+
+    #pl-auth-overlay.is-open {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    #pl-auth-card {
+        width: min(100%, 520px);
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 24px;
+        box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28);
+        overflow: hidden;
+        transform: translateY(12px) scale(0.98);
+        transition: transform 180ms ease;
+    }
+
+    #pl-auth-overlay.is-open #pl-auth-card {
+        transform: translateY(0) scale(1);
+    }
+
+    .pl-auth-shell {
+        padding: 40px;
+    }
+
+    .pl-auth-eyebrow {
+        margin: 0 0 8px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+
+    .pl-auth-title {
+        margin: 0 0 10px;
+        font-size: 28px;
+        line-height: 1.05;
+        color: #0f172a;
+    }
+
+    .pl-auth-copy {
+        margin: 0 0 22px;
+        color: #475569;
+        font-size: 15px;
+        line-height: 1.5;
+    }
+
+    .pl-auth-tabs {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-bottom: 18px;
+        padding: 4px;
+        background: rgba(15, 23, 42, 0.04);
+        border-radius: 8px;
+    }
+
+    .pl-auth-tab {
+        appearance: none;
+        border: 0;
+        border-radius: 6px;
+        padding: 11px 14px;
+        background: transparent;
+        color: #475569;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .pl-auth-tab.is-active {
+        background: #111827;
+        color: #ffffff;
+        box-shadow: 0 10px 20px rgba(17, 24, 39, 0.2);
+    }
+
+    .pl-auth-form {
+        display: grid;
+        gap: 14px;
+    }
+
+    .pl-auth-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .pl-auth-field {
+        display: grid;
+        gap: 7px;
+    }
+
+    .pl-auth-field label {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+
+    .pl-auth-field input {
+        width: 100%;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        border-radius: 6px;
+        padding: 12px 14px;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 15px;
+        outline: none;
+        transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .pl-auth-field input:focus {
+        border-color: #111827;
+        box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.08);
+    }
+
+    .pl-auth-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .pl-auth-remember {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #475569;
+        font-size: 14px;
+    }
+
+    .pl-auth-message {
+        display: none;
+        margin: 0 0 2px;
+        padding: 12px 14px;
+        border-radius: 6px;
+        font-size: 14px;
+        line-height: 1.45;
+    }
+
+    .pl-auth-message.is-visible {
+        display: block;
+    }
+
+    .pl-auth-message.is-error {
+        background: rgba(239, 68, 68, 0.08);
+        color: #b91c1c;
+        border: 1px solid rgba(239, 68, 68, 0.18);
+    }
+
+    .pl-auth-message.is-notice {
+        background: rgba(16, 185, 129, 0.08);
+        color: #047857;
+        border: 1px solid rgba(16, 185, 129, 0.18);
+    }
+
+    .pl-auth-submit {
+        border: 0;
+        border-radius: 6px;
+        padding: 13px 16px;
+        background: linear-gradient(135deg, #111827 0%, #334155 100%);
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        cursor: pointer;
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.24);
+    }
+
+    .pl-auth-footer {
+        margin-top: 18px;
+        padding-top: 18px;
+        border-top: 1px solid rgba(15, 23, 42, 0.08);
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .pl-auth-footer a {
+        color: #111827;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .pl-auth-close {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        width: 40px;
+        height: 40px;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.06);
+        color: #0f172a;
+        cursor: pointer;
+    }
+
+    .pl-auth-hidden {
+        display: none !important;
+    }
+
+    @media (max-width: 640px) {
+        .pl-auth-shell {
+            padding: 22px;
+        }
+
+        .pl-auth-title {
+            font-size: 24px;
+        }
+
+        .pl-auth-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+<div id="pl-auth-overlay" data-initial-view="<?php echo esc_attr($view); ?>" data-notice="<?php echo esc_attr($notice); ?>" data-error="<?php echo esc_attr($error); ?>" data-auto-open="<?php echo esc_attr($auto_open ? '1' : '0'); ?>">
+    <div id="pl-auth-card" role="dialog" aria-modal="true" aria-label="<?php echo esc_attr__('Authentication', 'politeia-learning'); ?>">
+        <button class="pl-auth-close" type="button" data-pl-auth-close aria-label="<?php echo esc_attr__('Close', 'politeia-learning'); ?>">×</button>
+        <div class="pl-auth-shell">
+            <p class="pl-auth-eyebrow"><?php echo esc_html__('Politeia Learning', 'politeia-learning'); ?></p>
+            <h2 class="pl-auth-title" data-pl-auth-title><?php echo esc_html($view === 'register' ? $labels['register_title'] : $labels['welcome']); ?></h2>
+            <p class="pl-auth-copy" data-pl-auth-copy><?php echo esc_html($view === 'register' ? $labels['register_copy'] : $labels['login_copy']); ?></p>
+
+            <div class="pl-auth-message" data-pl-auth-message></div>
+
+            <div class="pl-auth-tabs">
+                <button class="pl-auth-tab is-active" type="button" data-pl-auth-view="login"><?php echo esc_html($labels['login']); ?></button>
+                <button class="pl-auth-tab" type="button" data-pl-auth-view="register"><?php echo esc_html($labels['register']); ?></button>
+            </div>
+
+            <form class="pl-auth-form" method="post" action="<?php echo esc_url($action_url); ?>" data-pl-auth-form>
+                <input type="hidden" name="action" value="pl_auth_submit">
+                <input type="hidden" name="pl_auth_nonce" value="<?php echo esc_attr($nonce); ?>">
+                <input type="hidden" name="mode" value="<?php echo esc_attr($view); ?>" data-pl-auth-mode>
+                <input type="hidden" name="redirect_to" value="<?php echo esc_attr($redirect_to); ?>" data-pl-auth-redirect>
+
+                <div class="pl-auth-grid pl-auth-register-only pl-auth-hidden" data-pl-auth-register-fields>
+                    <div class="pl-auth-field">
+                        <label for="pl-auth-first-name"><?php echo esc_html($labels['first_name']); ?></label>
+                        <input id="pl-auth-first-name" name="first_name" type="text" autocomplete="given-name" placeholder="Ana">
+                    </div>
+                    <div class="pl-auth-field">
+                        <label for="pl-auth-last-name"><?php echo esc_html($labels['last_name']); ?></label>
+                        <input id="pl-auth-last-name" name="last_name" type="text" autocomplete="family-name" placeholder="García">
+                    </div>
+                </div>
+
+                <div class="pl-auth-field">
+                    <label for="pl-auth-email"><?php echo esc_html($labels['email']); ?></label>
+                    <input id="pl-auth-email" name="user_login" type="email" autocomplete="email" placeholder="correo@ejemplo.com">
+                </div>
+
+                <div class="pl-auth-field pl-auth-register-only pl-auth-hidden" data-pl-auth-email-confirm>
+                    <label for="pl-auth-email-confirm"><?php echo esc_html($labels['confirm_email']); ?></label>
+                    <input id="pl-auth-email-confirm" name="email_confirm" type="email" autocomplete="email" placeholder="correo@ejemplo.com">
+                </div>
+
+                <div class="pl-auth-field">
+                    <label for="pl-auth-password"><?php echo esc_html($labels['password']); ?></label>
+                    <input id="pl-auth-password" name="password" type="password" autocomplete="<?php echo esc_attr($view === 'register' ? 'new-password' : 'current-password'); ?>" placeholder="********">
+                </div>
+
+                <div class="pl-auth-field pl-auth-register-only pl-auth-hidden" data-pl-auth-password-confirm>
+                    <label for="pl-auth-password-confirm"><?php echo esc_html($labels['confirm_password']); ?></label>
+                    <input id="pl-auth-password-confirm" name="password_confirm" type="password" autocomplete="new-password" placeholder="********">
+                </div>
+
+                <div class="pl-auth-row pl-auth-login-only" data-pl-auth-login-row>
+                    <label class="pl-auth-remember">
+                        <input type="checkbox" name="remember" value="1">
+                        <?php echo esc_html($labels['remember_me']); ?>
+                    </label>
+                </div>
+
+                <button class="pl-auth-submit" type="submit" data-pl-auth-submit><?php echo esc_html($view === 'register' ? $labels['create_account'] : $labels['login']); ?></button>
+            </form>
+
+            <div class="pl-auth-footer">
+                <span data-pl-auth-footer-copy><?php echo esc_html($view === 'register' ? $labels['already_account'] : $labels['new_here']); ?></span>
+                <a href="<?php echo esc_url($view === 'register' ? $login_url : $register_url); ?>" data-pl-auth-toggle-link><?php echo esc_html($view === 'register' ? $labels['back_to_login'] : $labels['create_account_link']); ?></a>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    var overlay = document.getElementById('pl-auth-overlay');
+    if (!overlay) {
+        return;
+    }
+
+    var closeBtn = overlay.querySelector('[data-pl-auth-close]');
+    var tabs = overlay.querySelectorAll('[data-pl-auth-view]');
+    var form = overlay.querySelector('[data-pl-auth-form]');
+    var modeInput = overlay.querySelector('[data-pl-auth-mode]');
+    var submitBtn = overlay.querySelector('[data-pl-auth-submit]');
+    var title = overlay.querySelector('[data-pl-auth-title]');
+    var copy = overlay.querySelector('[data-pl-auth-copy]');
+    var footerCopy = overlay.querySelector('[data-pl-auth-footer-copy]');
+    var toggleLink = overlay.querySelector('[data-pl-auth-toggle-link]');
+    var message = overlay.querySelector('[data-pl-auth-message]');
+    var loginOnly = overlay.querySelector('[data-pl-auth-login-row]');
+    var registerFields = overlay.querySelectorAll('.pl-auth-register-only');
+    var initialView = overlay.getAttribute('data-initial-view') || 'login';
+    var notice = overlay.getAttribute('data-notice') || '';
+    var error = overlay.getAttribute('data-error') || '';
+    var autoOpen = overlay.getAttribute('data-auto-open') === '1';
+
+    function setMessage(type, text) {
+        if (!message) {
+            return;
+        }
+
+        if (!text) {
+            message.textContent = '';
+            message.className = 'pl-auth-message';
+            return;
+        }
+
+        message.textContent = text;
+        message.className = 'pl-auth-message is-visible ' + (type === 'error' ? 'is-error' : 'is-notice');
+    }
+
+    function currentLabel(view) {
+        return view === 'register' ? 'register' : 'login';
+    }
+
+    function showView(view) {
+        var isRegister = view === 'register';
+
+        tabs.forEach(function (tab) {
+            tab.classList.toggle('is-active', tab.getAttribute('data-pl-auth-view') === view);
+        });
+
+        if (modeInput) {
+            modeInput.value = view;
+        }
+
+        if (submitBtn) {
+            submitBtn.textContent = isRegister ? '<?php echo esc_js($labels['create_account']); ?>' : '<?php echo esc_js($labels['login']); ?>';
+        }
+
+        if (title) {
+            title.textContent = isRegister ? '<?php echo esc_js($labels['register_title']); ?>' : '<?php echo esc_js($labels['welcome']); ?>';
+        }
+
+        if (copy) {
+            copy.textContent = isRegister
+                ? '<?php echo esc_js($labels['register_copy']); ?>'
+                : '<?php echo esc_js($labels['login_copy']); ?>';
+        }
+
+        if (footerCopy && toggleLink) {
+            footerCopy.textContent = isRegister
+                ? '<?php echo esc_js($labels['already_account']); ?>'
+                : '<?php echo esc_js($labels['new_here']); ?>';
+            toggleLink.textContent = isRegister
+                ? '<?php echo esc_js($labels['back_to_login']); ?>'
+                : '<?php echo esc_js($labels['create_account_link']); ?>';
+            toggleLink.setAttribute('href', isRegister ? '<?php echo esc_js($login_url); ?>' : '<?php echo esc_js($register_url); ?>');
+        }
+
+        if (loginOnly) {
+            loginOnly.classList.toggle('pl-auth-hidden', isRegister);
+        }
+
+        registerFields.forEach(function (field) {
+            field.classList.toggle('pl-auth-hidden', !isRegister);
+        });
+    }
+
+    function openModal(view) {
+        showView(view);
+        overlay.classList.add('is-open');
+    }
+
+    window.PLAuthOpenModal = function (view) {
+        openModal(view === 'register' ? 'register' : 'login');
+    };
+
+    window.PLAuthCloseModal = function () {
+        overlay.classList.remove('is-open');
+    };
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            showView(currentLabel(tab.getAttribute('data-pl-auth-view') || 'login'));
+            setMessage('', '');
+        });
+    });
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function () {
+            window.PLAuthCloseModal();
+        });
+    }
+
+    overlay.addEventListener('click', function (event) {
+        if (event.target === overlay) {
+            window.PLAuthCloseModal();
+        }
+    });
+
+    document.addEventListener('click', function (event) {
+        var trigger = event.target && event.target.closest ? event.target.closest('[data-pl-auth-open], [data-rcp-auth-open]') : null;
+        if (!trigger) {
+            return;
+        }
+
+        event.preventDefault();
+        openModal(trigger.getAttribute('data-pl-auth-view') === 'register' ? 'register' : 'login');
+    });
+
+    if (form) {
+        form.addEventListener('submit', function (event) {
+            var view = modeInput ? modeInput.value : 'login';
+            var email = document.getElementById('pl-auth-email');
+            var emailConfirm = document.getElementById('pl-auth-email-confirm');
+            var password = document.getElementById('pl-auth-password');
+            var passwordConfirm = document.getElementById('pl-auth-password-confirm');
+
+            if (view === 'register') {
+                var emailValue = email ? email.value.trim() : '';
+                var emailConfirmValue = emailConfirm ? emailConfirm.value.trim() : '';
+                var passwordValue = password ? password.value : '';
+                var passwordConfirmValue = passwordConfirm ? passwordConfirm.value : '';
+
+                if (emailValue !== emailConfirmValue) {
+                    event.preventDefault();
+                    setMessage('error', '<?php echo esc_js(__('The email addresses do not match.', 'politeia-learning')); ?>');
+                    return;
+                }
+
+                if (passwordValue !== passwordConfirmValue) {
+                    event.preventDefault();
+                    setMessage('error', '<?php echo esc_js(__('The passwords do not match.', 'politeia-learning')); ?>');
+                    return;
+                }
+            }
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+            }
+        });
+    }
+
+    if (notice === 'verification_sent') {
+        setMessage('notice', '<?php echo esc_js($is_spanish ? "Hemos enviado un correo de confirmación. Por favor, revisa tu bandeja de entrada." : "We sent a confirmation email. Please check your inbox."); ?>');
+    } else if (notice === 'verified') {
+        setMessage('notice', '<?php echo esc_js($is_spanish ? "Tu correo ha sido verificado. Ahora puedes iniciar sesión." : "Your email has been confirmed. You can now log in."); ?>');
+    } else if (error) {
+        var isSpanish = <?php echo $is_spanish ? 'true' : 'false'; ?>;
+        var messageMap = isSpanish ? {
+            invalid_nonce: 'No pudimos verificar tu solicitud. Por favor, inténtalo de nuevo.',
+            missing_login: 'Por favor, ingresa tu correo y contraseña.',
+            invalid_login: 'Los datos de acceso no son válidos.',
+            pl_auth_unverified: 'Tu cuenta aún no está verificada. Por favor, confirma tu correo primero.',
+            invalid_email: 'Por favor, ingresa un correo electrónico válido.',
+            email_mismatch: 'Los correos electrónicos no coinciden.',
+            weak_password: 'La contraseña debe tener al menos 8 caracteres.',
+            password_mismatch: 'Las contraseñas no coinciden.',
+            account_exists: 'Ya existe una cuenta con ese correo electrónico.',
+            invalid_token: 'El enlace de confirmación no es válido o ha expirado.',
+            token_expired: 'El enlace de confirmación ha expirado.'
+        } : {
+            invalid_nonce: 'We could not verify your request. Please try again.',
+            missing_login: 'Please enter your email and password.',
+            invalid_login: 'The login details were not valid.',
+            pl_auth_unverified: 'Your account is not verified yet. Please confirm your email address first.',
+            invalid_email: 'Please enter a valid email address.',
+            email_mismatch: 'The email addresses do not match.',
+            weak_password: 'Your password must be at least 8 characters long.',
+            password_mismatch: 'The passwords do not match.',
+            account_exists: 'An account already exists with that email address.',
+            invalid_token: 'The confirmation link is invalid or expired.',
+            token_expired: 'The confirmation link is invalid or expired.'
+        };
+
+        setMessage('error', messageMap[error] || (isSpanish ? 'Algo salió mal. Por favor, inténtalo de nuevo.' : 'Something went wrong. Please try again.'));
+    }
+
+    if (autoOpen) {
+        openModal(initialView === 'register' ? 'register' : 'login');
+    } else {
+        showView(initialView === 'register' ? 'register' : 'login');
+    }
+})();
+</script>

@@ -2609,7 +2609,7 @@ class PL_CC_Course_Save_Handler
             wp_send_json_error(['message' => __('No autorizado.', 'politeia-learning')]);
         }
 
-        $image_data = $_POST['image_data'] ?? '';
+        $image_data = isset($_POST['image_data']) ? (string) wp_unslash($_POST['image_data']) : '';
         if (empty($image_data)) {
             wp_send_json_error(['message' => 'No image data received.']);
         }
@@ -2625,76 +2625,70 @@ class PL_CC_Course_Save_Handler
         }
 
         $user_id = get_current_user_id();
+        $upload_dir = wp_upload_dir();
+        if (!empty($upload_dir['error'])) {
+            wp_send_json_error(['message' => $upload_dir['error']]);
+        }
 
-        // Ensure BuddyPress/BuddyBoss avatar core is available
-        if (!function_exists('bp_avatar_handle_capture')) {
-            // Try to find it in buddyboss-platform
-            $bp_avatar_file = WP_PLUGIN_DIR . '/buddyboss-platform/bp-core/bp-core-avatars.php';
-            if (file_exists($bp_avatar_file)) {
-                require_once $bp_avatar_file;
+        $subdir = trailingslashit($upload_dir['basedir']) . 'politeia/profile-avatars/' . $user_id;
+        if (!wp_mkdir_p($subdir)) {
+            wp_send_json_error(['message' => 'Could not create avatar directory.']);
+        }
+
+        $extension = 'png';
+        if (preg_match('/^data:image\/(\w+);base64,/', $image_data, $type_match)) {
+            $extension = strtolower((string) $type_match[1]);
+            if ($extension === 'jpeg') {
+                $extension = 'jpg';
+            }
+            if (!in_array($extension, ['jpg', 'png', 'gif', 'webp'], true)) {
+                $extension = 'png';
             }
         }
 
-        if (function_exists('bp_core_avatar_upload_path')) {
-            // Setup target directories
-            $avatar_dir_path = bp_core_avatar_upload_path() . '/avatars';
-            if (!file_exists($avatar_dir_path)) wp_mkdir_p($avatar_dir_path);
+        $filename = sprintf('avatar-%d-%s.%s', $user_id, wp_generate_password(12, false, false), $extension);
+        $file_path = trailingslashit($subdir) . $filename;
 
-            $user_avatar_dir = $avatar_dir_path . '/' . $user_id;
-            if (!file_exists($user_avatar_dir)) wp_mkdir_p($user_avatar_dir);
-
-            // Save the base64 as a temp file in the avatars folder so BuddyBoss can crop it
-            $temp_filename = '/webcam-capture-' . $user_id . '.png';
-            $original_file = $user_avatar_dir . $temp_filename;
-            
-            if (file_put_contents($original_file, $decoded_image)) {
-                // Get the actual size of the image we just saved
-                $img_info = @getimagesize($original_file);
-                $width = $img_info[0] ?? 300;
-                $height = $img_info[1] ?? 300;
-
-                // Path relative to BP upload directory
-                $relative_path = str_replace(bp_core_avatar_upload_path(), '', $original_file);
-
-                $crop_args = [
-                    'item_id'       => $user_id,
-                    'original_file' => $relative_path,
-                    'crop_x'        => 0,
-                    'crop_y'        => 0,
-                    'crop_w'        => $width, // Use actual image width
-                    'crop_h'        => $height // Use actual image height
-                ];
-
-                // BuddyBoss core function to handle the final versions
-                if (function_exists('bp_core_avatar_handle_crop')) {
-                    $result = bp_core_avatar_handle_crop($crop_args);
-                } else {
-                    // Fallback using the attachment class
-                    if (!class_exists('BP_Attachment_Avatar')) {
-                         $bp_avatar_class = WP_PLUGIN_DIR . '/buddyboss-platform/bp-core/classes/class-bp-attachment-avatar.php';
-                         if (file_exists($bp_avatar_class)) require_once $bp_avatar_class;
-                    }
-                    if (class_exists('BP_Attachment_Avatar')) {
-                        $avatar_attachment = new BP_Attachment_Avatar();
-                        $result = $avatar_attachment->crop($crop_args);
-                    }
-                }
-
-                if ($result) {
-                    // Clear cache
-                    if (function_exists('bp_core_clear_avatar_cache')) {
-                        bp_core_clear_avatar_cache($user_id);
-                    }
-
-                    wp_send_json_success([
-                        'url' => get_avatar_url($user_id, ['size' => 128]) . '?t=' . time(),
-                        'message' => __('Foto de perfil actualizada exitosamente.', 'politeia-learning')
-                    ]);
-                }
-            }
+        if (file_put_contents($file_path, $decoded_image) === false) {
+            wp_send_json_error(['message' => 'Could not save avatar file.']);
         }
 
-        // Fallback for everything else (should not normally reach here)
-        wp_send_json_error(['message' => 'Failed to process avatar via BuddyBoss.']);
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+
+        $filetype = wp_check_filetype($file_path, null);
+        $attachment_id = wp_insert_attachment(
+            [
+                'post_mime_type' => $filetype['type'] ?: 'image/png',
+                'post_title' => sprintf('Profile avatar %d', $user_id),
+                'post_content' => '',
+                'post_status' => 'inherit',
+                'post_author' => $user_id,
+            ],
+            $file_path
+        );
+
+        if (is_wp_error($attachment_id) || !$attachment_id) {
+            wp_send_json_error(['message' => 'Could not create avatar attachment.']);
+        }
+
+        $metadata = wp_generate_attachment_metadata((int) $attachment_id, $file_path);
+        if (!is_wp_error($metadata) && !empty($metadata)) {
+            wp_update_attachment_metadata((int) $attachment_id, $metadata);
+        }
+
+        $previous_attachment_id = absint(get_user_meta($user_id, '_pl_profile_avatar_attachment_id', true));
+        if ($previous_attachment_id > 0 && $previous_attachment_id !== (int) $attachment_id) {
+            wp_delete_attachment($previous_attachment_id, true);
+        }
+
+        update_user_meta($user_id, '_pl_profile_avatar_attachment_id', (int) $attachment_id);
+        update_user_meta($user_id, '_pl_profile_avatar_url', wp_get_attachment_url((int) $attachment_id));
+
+        wp_send_json_success([
+            'url' => wp_get_attachment_image_url((int) $attachment_id, 'full') ?: wp_get_attachment_url((int) $attachment_id),
+            'message' => __('Foto de perfil actualizada exitosamente.', 'politeia-learning')
+        ]);
     }
 }
