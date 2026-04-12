@@ -319,9 +319,12 @@ pl_template_open();
 <script src="https://unpkg.com/lucide@latest"></script>
 	<!-- Fonts -->
 	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&family=Inter:wght@400;500;600;700;900&family=Newsreader:opsz,wght@6..72,300&display=swap" rel="stylesheet">
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=space_dashboard,diversity_3" />
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=space_dashboard,diversity_3" />
 
-<style>
+	<style>
+	    .material-symbols-outlined {
+	        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+	    }
 	    /* 
 	       THEME OVERRIDES
 	       The active theme may have nested containers.
