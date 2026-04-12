@@ -6,6 +6,13 @@ if (!defined('ABSPATH'))
     exit;
 ?>
 
+<?php
+$save_label = __('Guardar Cambios', 'politeia-learning');
+if ($save_label === '') {
+    $save_label = 'Guardar Cambios';
+}
+?>
+
 <div class="wrap pcg-dashboard">
     <div class="pcg-dashboard-header">
         <h1>
@@ -59,7 +66,7 @@ if (!defined('ABSPATH'))
 
                 <p class="submit">
                     <input type="submit" name="submit" id="submit" class="button button-primary"
-                        value="<?php _e('Guardar Cambios', 'politeia-learning'); ?>">
+                        value="<?php echo esc_attr($save_label); ?>">
                 </p>
             </form>
         </div>
