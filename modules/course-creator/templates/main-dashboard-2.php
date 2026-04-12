@@ -31,14 +31,19 @@ $def_modules = [
     'profile' => true
 ];
 $saved_settings = get_option('pcg_modules_visibility', []);
-$active_modules = [];
-foreach ($def_modules as $key => $default) {
-    if (isset($saved_settings[$key])) {
-        $active_modules[$key] = $is_admin ? !empty($saved_settings[$key]['admin']) : !empty($saved_settings[$key]['users']);
-    } else {
-        $active_modules[$key] = $default;
-    }
-}
+	$active_modules = [];
+	foreach ($def_modules as $key => $default) {
+	    if (isset($saved_settings[$key])) {
+	        $active_modules[$key] = $is_admin ? !empty($saved_settings[$key]['admin']) : !empty($saved_settings[$key]['users']);
+	    } else {
+	        $active_modules[$key] = $default;
+	    }
+	}
+
+	$pcg_specialization_label = __('ESPECIALIZACIÓN', 'politeia-learning');
+	if ($pcg_specialization_label === '') {
+	    $pcg_specialization_label = 'ESPECIALIZACIÓN';
+	}
 
 // Security: Check if current section is actually enabled for this user.
 if (empty($active_modules[$current_section])) {
@@ -102,12 +107,12 @@ pl_template_open();
                         <?php _e('MIS ESCRITOS', 'politeia-learning'); ?>
                     </a>
                 <?php endif; ?>
-                <?php if ($active_modules['especializacion']): ?>
-                    <a class="pcg-mobile-drawer-item <?php echo $current_section === 'especializacion' ? 'active' : ''; ?>"
-                        href="?section=especializacion">
-                        <?php _e('ESPECIALIZACIÓN', 'politeia-learning'); ?>
-                    </a>
-                <?php endif; ?>
+	                <?php if ($active_modules['especializacion']): ?>
+	                    <a class="pcg-mobile-drawer-item <?php echo $current_section === 'especializacion' ? 'active' : ''; ?>"
+	                        href="?section=especializacion">
+	                        <?php echo esc_html($pcg_specialization_label); ?>
+	                    </a>
+	                <?php endif; ?>
                 <?php if ($active_modules['create-group']): ?>
                     <a class="pcg-mobile-drawer-item <?php echo $current_section === 'create-group' ? 'active' : ''; ?>"
                         href="?section=create-group">
@@ -175,14 +180,14 @@ pl_template_open();
                             </a>
                         </li>
                     <?php endif; ?>
-                    <?php if ($active_modules['especializacion']): ?>
-                        <li class="<?php echo $current_section === 'especializacion' ? 'active' : ''; ?>">
-                            <a href="?section=especializacion">
-                                <span class="dashicons dashicons-welcome-learn-more"></span>
-                                <?php _e('ESPECIALIZACIÓN', 'politeia-learning'); ?>
-                            </a>
-                        </li>
-                    <?php endif; ?>
+	                    <?php if ($active_modules['especializacion']): ?>
+	                        <li class="<?php echo $current_section === 'especializacion' ? 'active' : ''; ?>">
+	                            <a href="?section=especializacion">
+	                                <span class="dashicons dashicons-welcome-learn-more"></span>
+	                                <?php echo esc_html($pcg_specialization_label); ?>
+	                            </a>
+	                        </li>
+	                    <?php endif; ?>
                     <?php if ($active_modules['create-group']): ?>
                         <li class="<?php echo $current_section === 'create-group' ? 'active' : ''; ?>">
                             <a href="?section=create-group">

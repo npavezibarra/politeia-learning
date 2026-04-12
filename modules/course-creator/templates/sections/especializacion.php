@@ -23,7 +23,13 @@ if (!defined('ABSPATH')) {
         <div class="pcg-nav-right">
             <div class="pcg-segmented-control">
                 <div class="pcg-segment pcg-spec-segment active" data-value="especializacion">
-                    <?php _e('ESPECIALIZACIÓN', 'politeia-learning'); ?>
+                    <?php
+                    $pcg_specialization_label = __('ESPECIALIZACIÓN', 'politeia-learning');
+                    if ($pcg_specialization_label === '') {
+                        $pcg_specialization_label = 'ESPECIALIZACIÓN';
+                    }
+                    echo esc_html($pcg_specialization_label);
+                    ?>
                 </div>
                 <div class="pcg-segment pcg-spec-segment" data-value="cursos">
                     <?php _e('CURSOS', 'politeia-learning'); ?>
