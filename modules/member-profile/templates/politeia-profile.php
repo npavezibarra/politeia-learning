@@ -72,7 +72,7 @@ $pl_subscribe_active = false;
 if (class_exists('PL_Relationships')) {
     $pl_access_level = PL_Relationships::get_access_level($logged_in_user_id, (int) $user_id);
     if ($pl_access_level === 'owner') {
-        $pl_allowed_tabs = ['main', 'courses', 'writings', 'specializations', 'thoughts', 'plans', 'book'];
+        $pl_allowed_tabs = ['main', 'courses', 'writings', 'specializations', 'thoughts', 'plans', 'book', 'requests'];
     } else {
         $policy_kind = in_array($pl_access_level, [PL_Relationships::TYPE_FOLLOW, PL_Relationships::TYPE_FRIEND, PL_Relationships::TYPE_SUBSCRIBE], true)
             ? $pl_access_level
