@@ -15,6 +15,7 @@ class PL_Installer
     private const PORTFOLIO_SETTINGS_TABLE = 'politeia_portfolio_settings';
     private const PARTNERSHIPS_TABLE = 'politeia_user_object_partnerships';
     private const RELATIONSHIPS_TABLE = 'politeia_user_relationships';
+    private const EMAIL_LOGS_TABLE = 'politeia_email_logs';
     private static bool $has_run = false;
 
     /**
@@ -69,6 +70,30 @@ class PL_Installer
     }
 
     /**
+     * Migrate legacy email log table name: wp_pl_email_logs -> wp_politeia_email_logs.
+     */
+    private static function migrate_email_logs_table(): void
+    {
+        global $wpdb;
+        if (!$wpdb) {
+            return;
+        }
+
+        $old = $wpdb->prefix . 'pl_email_logs';
+        $new = $wpdb->prefix . self::EMAIL_LOGS_TABLE;
+
+        $old_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $old)) === $old);
+        $new_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $new)) === $new);
+
+        if ($old_exists && !$new_exists) {
+            $old_escaped = str_replace('`', '``', $old);
+            $new_escaped = str_replace('`', '``', $new);
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            $wpdb->query("RENAME TABLE `{$old_escaped}` TO `{$new_escaped}`");
+        }
+    }
+
+    /**
      * Return the schema definition for all plugin tables.
      *
      * @return array<string,string>
@@ -85,6 +110,7 @@ class PL_Installer
         $portfolio_settings_table = $wpdb->prefix . self::PORTFOLIO_SETTINGS_TABLE;
         $partnerships_table = $wpdb->prefix . self::PARTNERSHIPS_TABLE;
         $relationships_table = $wpdb->prefix . self::RELATIONSHIPS_TABLE;
+        $email_logs_table = $wpdb->prefix . self::EMAIL_LOGS_TABLE;
 
         return [
             $roles_table => sprintf(
@@ -241,6 +267,24 @@ class PL_Installer
                 $relationships_table,
                 $charset_collate
             ),
+            $email_logs_table => sprintf(
+                "CREATE TABLE %s (
+                    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    recipient LONGTEXT NOT NULL,
+                    subject LONGTEXT NOT NULL,
+                    content LONGTEXT NOT NULL,
+                    headers LONGTEXT NULL,
+                    email_type VARCHAR(50) NOT NULL DEFAULT 'general',
+                    template VARCHAR(100) NOT NULL DEFAULT '',
+                    file_path VARCHAR(255) NOT NULL DEFAULT '',
+                    sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY  (id),
+                    KEY sent_at (sent_at),
+                    KEY email_type (email_type)
+                ) %s;",
+                $email_logs_table,
+                $charset_collate
+            ),
         ];
     }
 
@@ -261,6 +305,11 @@ class PL_Installer
         if (!get_option('pl_roles_table_migrated')) {
             self::migrate_roles_table();
             update_option('pl_roles_table_migrated', 1);
+        }
+
+        if (!get_option('politeia_email_logs_table_migrated')) {
+            self::migrate_email_logs_table();
+            update_option('politeia_email_logs_table_migrated', 1);
         }
 
         $full_sql = implode("\n", self::get_schema_sql());
