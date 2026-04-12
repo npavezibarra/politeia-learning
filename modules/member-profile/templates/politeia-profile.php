@@ -758,12 +758,48 @@ pl_template_open();
                 </div>
             </div>
 
-            <h2 class="text-lg font-semibold text-neutral-900 mb-4"><?php echo esc_html($display_name); ?></h2>
-            
-            <div class="flex gap-4 text-neutral-400 mb-2">
-                <?php if ($twitter): ?><a href="<?php echo esc_url($twitter); ?>" class="hover:text-[#8A6B1E] transition-colors"><i data-lucide="twitter" size="16"></i></a><?php endif; ?>
-                <?php if ($linkedin): ?><a href="<?php echo esc_url($linkedin); ?>" class="hover:text-[#8A6B1E] transition-colors"><i data-lucide="linkedin" size="16"></i></a><?php endif; ?>
-                <?php if ($github): ?><a href="<?php echo esc_url($github); ?>" class="hover:text-[#8A6B1E] transition-colors"><i data-lucide="github" size="16"></i></a><?php endif; ?>
+	            <h2 class="text-lg font-semibold text-neutral-900 mb-4"><?php echo esc_html($display_name); ?></h2>
+
+	            <?php if (!$is_own_profile) : ?>
+	                <div class="w-full mb-4">
+	                    <?php if (!is_user_logged_in()) : ?>
+	                        <a href="<?php echo esc_url(wp_login_url(esc_url_raw(home_url((string) ($_SERVER['REQUEST_URI'] ?? '/'))))); ?>" class="inline-flex w-full items-center justify-center px-4 py-2 text-xs font-semibold uppercase tracking-widest rounded-[6px] border border-neutral-200 text-neutral-800 hover:bg-white no-underline">
+	                            <?php echo esc_html__('Follow', 'politeia-learning'); ?>
+	                        </a>
+	                    <?php elseif (class_exists('PL_Relationships') && $pl_access_level !== 'blocked') : ?>
+	                        <?php
+	                        $label_follow = __('Follow', 'politeia-learning');
+	                        $label_following = __('Following', 'politeia-learning');
+	                        $label_requested = __('Requested', 'politeia-learning');
+	                        if ($label_follow === '') $label_follow = 'Follow';
+	                        if ($label_following === '') $label_following = 'Following';
+	                        if ($label_requested === '') $label_requested = 'Requested';
+	                        ?>
+	                        <?php if (PL_Relationships::is_effective((int) $logged_in_user_id, (int) $user_id, PL_Relationships::TYPE_FOLLOW)) : ?>
+	                            <span class="inline-flex w-full items-center justify-center px-4 py-2 text-xs font-semibold uppercase tracking-widest rounded-[6px] bg-neutral-100 text-neutral-800">
+	                                <?php echo esc_html($label_following); ?>
+	                            </span>
+	                        <?php elseif ($pl_follow_status === PL_Relationships::STATUS_PENDING) : ?>
+	                            <span class="inline-flex w-full items-center justify-center px-4 py-2 text-xs font-semibold uppercase tracking-widest rounded-[6px] bg-neutral-50 text-neutral-500 border border-neutral-200">
+	                                <?php echo esc_html($label_requested); ?>
+	                            </span>
+	                        <?php else : ?>
+	                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="m-0">
+	                                <?php wp_nonce_field('pl_relationship_request'); ?>
+	                                <input type="hidden" name="action" value="pl_relationship_request" />
+	                                <input type="hidden" name="to_user_id" value="<?php echo esc_attr((string) $user_id); ?>" />
+	                                <input type="hidden" name="rel_type" value="<?php echo esc_attr(PL_Relationships::TYPE_FOLLOW); ?>" />
+	                                <input type="submit" class="inline-flex w-full items-center justify-center px-4 py-2 text-xs font-semibold uppercase tracking-widest rounded-[6px] gold-gradient text-black shadow-sm hover:shadow-lg transition-all cursor-pointer" value="<?php echo esc_attr($label_follow); ?>" />
+	                            </form>
+	                        <?php endif; ?>
+	                    <?php endif; ?>
+	                </div>
+	            <?php endif; ?>
+	            
+	            <div class="flex gap-4 text-neutral-400 mb-2">
+	                <?php if ($twitter): ?><a href="<?php echo esc_url($twitter); ?>" class="hover:text-[#8A6B1E] transition-colors"><i data-lucide="twitter" size="16"></i></a><?php endif; ?>
+	                <?php if ($linkedin): ?><a href="<?php echo esc_url($linkedin); ?>" class="hover:text-[#8A6B1E] transition-colors"><i data-lucide="linkedin" size="16"></i></a><?php endif; ?>
+	                <?php if ($github): ?><a href="<?php echo esc_url($github); ?>" class="hover:text-[#8A6B1E] transition-colors"><i data-lucide="github" size="16"></i></a><?php endif; ?>
                 <?php if ($instagram): ?><a href="<?php echo esc_url($instagram); ?>" class="hover:text-[#8A6B1E] transition-colors"><i data-lucide="instagram" size="16"></i></a><?php endif; ?>
                 
                 <?php if (!$twitter && !$linkedin && !$github && !$instagram): ?>
