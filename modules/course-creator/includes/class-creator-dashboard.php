@@ -74,14 +74,33 @@ class PL_CC_Creator_Dashboard
      */
     public function add_rewrite_rules()
     {
-        $op_template = get_option('pcg_operation_template', '/center');
-        $slug = ltrim($op_template, '/');
+        // Register both slugs to avoid needing a rewrite-flush when switching templates.
+        foreach (['center', 'center-2'] as $slug) {
+            add_rewrite_rule(
+                'members/([^/]+)/' . preg_quote($slug, '/') . '/?$',
+                'index.php?' . self::REWRITE_TAG . '=$matches[1]',
+                'top'
+            );
+        }
+    }
 
-        add_rewrite_rule(
-            'members/([^/]+)/' . preg_quote($slug) . '/?$',
-            'index.php?' . self::REWRITE_TAG . '=$matches[1]',
-            'top'
-        );
+    private function resolve_user_slug_from_request_uri(): string
+    {
+        $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        if ($uri === '') {
+            return '';
+        }
+
+        $path = (string) wp_parse_url($uri, PHP_URL_PATH);
+        if ($path === '') {
+            return '';
+        }
+
+        if (preg_match('#^/members/([^/]+)/(center|center-2)/?$#', $path, $m)) {
+            return sanitize_key(rawurldecode((string) ($m[1] ?? '')));
+        }
+
+        return '';
     }
 
     /**
@@ -147,6 +166,13 @@ class PL_CC_Creator_Dashboard
     public function load_dashboard_template($template)
     {
         $user_slug = get_query_var(self::REWRITE_TAG);
+        if (empty($user_slug)) {
+            // Fallback when rewrites haven't been flushed yet.
+            $user_slug = $this->resolve_user_slug_from_request_uri();
+            if ($user_slug !== '') {
+                set_query_var(self::REWRITE_TAG, $user_slug);
+            }
+        }
 
         if (!empty($user_slug)) {
             $user = get_user_by('slug', $user_slug);
