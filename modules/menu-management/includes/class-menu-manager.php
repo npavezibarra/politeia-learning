@@ -660,6 +660,24 @@ class PL_MM_Menu_Manager
         return home_url(sprintf('/members/%s/my-reading-stats', rawurlencode($username)));
     }
 
+    private function get_my_profile_url_for_current_user(): string
+    {
+        $current_user = wp_get_current_user();
+        if (!$current_user || 0 === (int) $current_user->ID) {
+            return '';
+        }
+
+        $slug = isset($current_user->user_nicename) ? (string) $current_user->user_nicename : '';
+        if ($slug === '') {
+            $slug = isset($current_user->user_login) ? (string) $current_user->user_login : '';
+        }
+        if ($slug === '') {
+            return '';
+        }
+
+        return home_url(sprintf('/profile/%s', rawurlencode($slug)));
+    }
+
     private function get_my_plans_url_for_current_user(): string
     {
         $current_user = wp_get_current_user();
@@ -772,6 +790,19 @@ class PL_MM_Menu_Manager
     private function get_user_dropdown_items(): array
     {
         $items = [];
+
+        $profile_url = $this->get_my_profile_url_for_current_user();
+        if ($profile_url !== '') {
+            $profile_label = __('Perfil', 'politeia-learning');
+            if ($profile_label === '') {
+                $profile_label = 'Perfil';
+            }
+            $items[] = [
+                'label' => $profile_label,
+                'url' => $profile_url,
+                'classes' => ['pl-user-menu__dropdown-item', 'pl-user-menu__dropdown-item--profile'],
+            ];
+        }
 
         $stats_url = $this->get_my_reading_stats_url_for_current_user();
         if ($stats_url !== '') {
