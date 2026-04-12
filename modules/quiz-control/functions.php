@@ -404,8 +404,16 @@ add_action('wp_footer', 'politeia_add_quiz_script');
 // Automatically redirects the user to the checkout page with the product added to the cart
 // when they access a product page that belongs to the 'cursos' category.
 add_action('template_redirect', function () {
+    // Guard: WooCommerce may be inactive on some environments. Avoid fatals.
+    if (!function_exists('is_product') || !function_exists('is_checkout') || !function_exists('wc_get_checkout_url')) {
+        return;
+    }
+
     if (is_product() && !is_admin() && !is_checkout()) {
         global $post;
+        if (!($post instanceof WP_Post)) {
+            return;
+        }
 
         $product_id = $post->ID;
 
