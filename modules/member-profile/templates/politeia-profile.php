@@ -111,23 +111,30 @@ if ($is_own_profile && class_exists('PL_Relationships')) {
     $pl_relationship_respond_nonce = (string) wp_create_nonce('pl_relationship_respond');
     $pl_relationship_block_nonce = (string) wp_create_nonce('pl_relationship_block');
     $pending = PL_Relationships::get_pending_requests_for_owner((int) $logged_in_user_id);
-    foreach ($pending as $req) {
-        if (($req['rel_type'] ?? '') !== PL_Relationships::TYPE_FOLLOW) {
-            continue;
-        }
-        $from_id = (int) ($req['from_user_id'] ?? 0);
-        if ($from_id <= 0) {
-            continue;
-        }
-        $u = get_userdata($from_id);
-        $name = ($u instanceof WP_User) ? ((string) ($u->display_name ?: $u->user_login)) : ('User #' . $from_id);
-        $pl_pending_follow_requests[] = [
-            'id' => (int) ($req['id'] ?? 0),
-            'from_user_id' => $from_id,
-            'from_name' => $name,
-            'created_at' => (string) ($req['created_at'] ?? ''),
-        ];
-    }
+	    foreach ($pending as $req) {
+	        if (($req['rel_type'] ?? '') !== PL_Relationships::TYPE_FOLLOW) {
+	            continue;
+	        }
+	        $from_id = (int) ($req['from_user_id'] ?? 0);
+	        if ($from_id <= 0) {
+	            continue;
+	        }
+	        $u = get_userdata($from_id);
+	        $name = ($u instanceof WP_User) ? ((string) ($u->display_name ?: $u->user_login)) : ('User #' . $from_id);
+	        $avatar = function_exists('pl_get_user_profile_avatar_custom_url')
+	            ? pl_get_user_profile_avatar_custom_url($from_id, 64)
+	            : '';
+	        if ($avatar === '') {
+	            $avatar = (string) get_avatar_url($from_id, ['size' => 64]);
+	        }
+	        $pl_pending_follow_requests[] = [
+	            'id' => (int) ($req['id'] ?? 0),
+	            'from_user_id' => $from_id,
+	            'from_name' => $name,
+	            'from_avatar_url' => $avatar,
+	            'created_at' => (string) ($req['created_at'] ?? ''),
+	        ];
+	    }
 }
 
 $is_notifications_view = function_exists('bp_is_user_notifications') ? (bool) bp_is_user_notifications() : false;
@@ -310,9 +317,9 @@ pl_template_open();
 <script src="https://cdn.tailwindcss.com"></script>
 <!-- Lucide Icons -->
 <script src="https://unpkg.com/lucide@latest"></script>
-<!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&family=Inter:wght@400;500;600;700;900&family=Newsreader:opsz,wght@6..72,300&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=space_dashboard" />
+	<!-- Fonts -->
+	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&family=Inter:wght@400;500;600;700;900&family=Newsreader:opsz,wght@6..72,300&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=space_dashboard,diversity_3" />
 
 <style>
 	    /* 
@@ -997,7 +1004,7 @@ pl_template_open();
 	            { id: 'plans', label: 'Planes', icon: 'list-checks' },
 	            { id: 'book', label: 'Libros', icon: 'book' },
 	            <?php if ($is_own_profile) : ?>
-	            { id: 'requests', label: <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Solicitudes' : 'Requests'); ?>, icon: 'inbox' },
+	            { id: 'requests', label: <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Solicitudes' : 'Requests'); ?>, materialIcon: 'diversity_3' },
 	            { id: 'friends', label: 'Friends', icon: 'users' },
 	            { id: 'notifications', label: 'Notifications', icon: 'bell' }
 	            <?php endif; ?>
@@ -1084,18 +1091,18 @@ pl_template_open();
             if (window.innerWidth < 800) document.getElementById('politeia-profile-sidebar').classList.remove('open');
         };
 
-        function renderSidebar() {
-            const nav = document.getElementById('pcg-nav-menu');
-            if (!nav) return;
-            nav.innerHTML = menuItems.map(item => `
-                <button onclick="switchTab('${item.id}')" 
-                        class="pcg-nav-item ${currentTab === item.id ? 'active' : ''} gap-4 px-6 py-3 text-neutral-500 hover:text-black hover:bg-neutral-100 group">
-                    <i data-lucide="${item.icon}" size="18"></i>
-                    <span class="font-semibold text-sm">${item.label}</span>
-                </button>
-            `).join('');
-            if (window.lucide) lucide.createIcons();
-        }
+	        function renderSidebar() {
+	            const nav = document.getElementById('pcg-nav-menu');
+	            if (!nav) return;
+	            nav.innerHTML = menuItems.map(item => `
+	                <button onclick="switchTab('${item.id}')" 
+	                        class="pcg-nav-item ${currentTab === item.id ? 'active' : ''} gap-4 px-6 py-3 text-neutral-500 hover:text-black hover:bg-neutral-100 group">
+	                    ${item.materialIcon ? `<span class="material-symbols-outlined" style="font-size:18px;line-height:1;">${item.materialIcon}</span>` : `<i data-lucide="${item.icon}" size="18"></i>`}
+	                    <span class="font-semibold text-sm">${item.label}</span>
+	                </button>
+	            `).join('');
+	            if (window.lucide) lucide.createIcons();
+	        }
 
         function renderContent() {
             const container = document.getElementById('pcg-content-area');
@@ -1133,23 +1140,27 @@ pl_template_open();
 	                        break;
 	                    }
 
-	                    const itemsHtml = followRequests.map(req => {
-	                        const name = String(req.from_name || 'User');
-	                        const created = req.created_at ? `<span class="text-xs text-neutral-400">${String(req.created_at)}</span>` : '';
-	                        const reqId = Number(req.id) || 0;
-	                        const fromUserId = Number(req.from_user_id) || 0;
+		                    const itemsHtml = followRequests.map(req => {
+		                        const name = String(req.from_name || 'User');
+		                        const avatarUrl = String(req.from_avatar_url || '');
+		                        const created = req.created_at ? `<span class="text-xs text-neutral-400">${String(req.created_at)}</span>` : '';
+		                        const reqId = Number(req.id) || 0;
+		                        const fromUserId = Number(req.from_user_id) || 0;
 	                        const nonceInput = respondNonce ? `<input type="hidden" name="_wpnonce" value="${respondNonce}">` : '';
-	                        const blockNonceInput = blockNonce ? `<input type="hidden" name="_wpnonce" value="${blockNonce}">` : '';
-	                        return `
-	                            <div class="flex items-center justify-between gap-4 p-4 border border-neutral-200 rounded-[6px] bg-neutral-50">
-	                                <div class="min-w-0">
-	                                    <div class="flex items-center gap-2">
-	                                        <p class="text-sm font-semibold text-neutral-900 truncate">${name}</p>
-	                                        ${created}
-	                                    </div>
-	                                    <p class="text-xs text-neutral-500">follow</p>
-	                                </div>
-	                                <div class="flex items-center gap-2 shrink-0">
+		                        const blockNonceInput = blockNonce ? `<input type="hidden" name="_wpnonce" value="${blockNonce}">` : '';
+		                        return `
+		                            <div class="flex items-center justify-between gap-4 p-4 border border-neutral-200 rounded-[6px] bg-neutral-50">
+		                                <div class="min-w-0 flex items-center gap-3">
+		                                    ${avatarUrl ? `<img src="${avatarUrl}" alt="" class="w-10 h-10 rounded-full object-cover border border-neutral-200 bg-white" />` : `<div class="w-10 h-10 rounded-full bg-neutral-200 border border-neutral-200"></div>`}
+		                                    <div class="min-w-0">
+		                                        <div class="flex items-center gap-2">
+		                                            <p class="text-sm font-semibold text-neutral-900 truncate">${name}</p>
+		                                            ${created}
+		                                        </div>
+		                                    <p class="text-xs text-neutral-500">follow</p>
+		                                    </div>
+		                                </div>
+		                                <div class="flex items-center gap-2 shrink-0">
 	                                    <form method="post" action="${adminPostUrl}" class="m-0">
 	                                        ${nonceInput}
 	                                        <input type="hidden" name="action" value="pl_relationship_respond">
