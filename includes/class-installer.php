@@ -14,6 +14,7 @@ class PL_Installer
     private const USER_PROFILE_META_TABLE = 'politeia_user_profile_meta';
     private const PORTFOLIO_SETTINGS_TABLE = 'politeia_portfolio_settings';
     private const PARTNERSHIPS_TABLE = 'politeia_user_object_partnerships';
+    private const RELATIONSHIPS_TABLE = 'politeia_user_relationships';
     private static bool $has_run = false;
 
     /**
@@ -83,6 +84,7 @@ class PL_Installer
         $user_profile_meta_table = $wpdb->prefix . self::USER_PROFILE_META_TABLE;
         $portfolio_settings_table = $wpdb->prefix . self::PORTFOLIO_SETTINGS_TABLE;
         $partnerships_table = $wpdb->prefix . self::PARTNERSHIPS_TABLE;
+        $relationships_table = $wpdb->prefix . self::RELATIONSHIPS_TABLE;
 
         return [
             $roles_table => sprintf(
@@ -218,6 +220,25 @@ class PL_Installer
                     KEY idx_object_status (object_type, object_id, status)
                 ) %s;",
                 $partnerships_table,
+                $charset_collate
+            ),
+            $relationships_table => sprintf(
+                "CREATE TABLE %s (
+                    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    from_user_id BIGINT UNSIGNED NOT NULL,
+                    to_user_id BIGINT UNSIGNED NOT NULL,
+                    rel_type VARCHAR(20) NOT NULL,
+                    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                    expires_at DATETIME NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY  (id),
+                    UNIQUE KEY uq_from_to_type (from_user_id, to_user_id, rel_type),
+                    KEY idx_to_status_type (to_user_id, status, rel_type),
+                    KEY idx_from_type_status (from_user_id, rel_type, status),
+                    KEY idx_expires_at (expires_at)
+                ) %s;",
+                $relationships_table,
                 $charset_collate
             ),
         ];

@@ -65,6 +65,18 @@ class PL_Member_Profile_Template
 
         set_query_var('pl_profile_user_id', (int) $user->ID);
 
+        // Blocked viewers should not see the profile.
+        $viewer_user_id = (int) get_current_user_id();
+        if ($viewer_user_id > 0 && class_exists('PL_Relationships') && PL_Relationships::is_blocked($viewer_user_id, (int) $user->ID)) {
+            global $wp_query;
+            if ($wp_query instanceof WP_Query) {
+                $wp_query->is_404 = true;
+            }
+            status_header(404);
+            $not_found = get_404_template();
+            return $not_found ?: $template;
+        }
+
         // Prevent WordPress from sending a 404 for our custom rewrite route.
         global $wp_query;
         if ($wp_query instanceof WP_Query) {

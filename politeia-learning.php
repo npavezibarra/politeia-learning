@@ -16,13 +16,15 @@ if (!defined('ABSPATH'))
 // Core Constants
 define('PL_PATH', plugin_dir_path(__FILE__));
 define('PL_URL', plugin_dir_url(__FILE__));
-define('PL_DB_VERSION', '1.5.0');
+define('PL_DB_VERSION', '1.6.0');
 
 // Load Global Includes
 require_once PL_PATH . 'includes/class-installer.php';
 require_once PL_PATH . 'includes/class-upgrader.php';
 require_once PL_PATH . 'includes/class-taxonomy.php';
 require_once PL_PATH . 'includes/class-user-profile-meta-store.php';
+require_once PL_PATH . 'includes/class-relationships.php';
+require_once PL_PATH . 'includes/class-relationship-policies-ui.php';
 require_once PL_PATH . 'includes/class-partnerships-repository.php';
 require_once PL_PATH . 'includes/class-email.php';
 require_once PL_PATH . 'includes/class-rest-partnerships.php';
@@ -40,6 +42,14 @@ if (class_exists('PL_Partner_Add_Shortcode')) {
 
 if (class_exists('PL_Course_Partner_Modal')) {
     PL_Course_Partner_Modal::init();
+}
+
+if (class_exists('PL_Relationships')) {
+    PL_Relationships::init();
+}
+
+if (class_exists('PL_Relationship_Policies_UI')) {
+    PL_Relationship_Policies_UI::init();
 }
 
 // WP-CLI commands (loaded only under WP-CLI).

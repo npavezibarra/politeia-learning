@@ -64,6 +64,35 @@ $rank = get_user_meta($user_id, 'pl_profile_rank', true) ?: 'Premium Member';
 $logged_in_user_id = (int) get_current_user_id();
 $is_own_profile = is_user_logged_in() && $logged_in_user_id > 0 && $logged_in_user_id === (int) $user_id;
 
+$pl_access_level = 'public';
+$pl_allowed_tabs = ['main'];
+$pl_follow_status = '';
+$pl_friend_status = '';
+$pl_subscribe_active = false;
+if (class_exists('PL_Relationships')) {
+    $pl_access_level = PL_Relationships::get_access_level($logged_in_user_id, (int) $user_id);
+    if ($pl_access_level === 'owner') {
+        $pl_allowed_tabs = ['main', 'courses', 'writings', 'specializations', 'thoughts', 'plans', 'book'];
+    } else {
+        $policy_kind = in_array($pl_access_level, [PL_Relationships::TYPE_FOLLOW, PL_Relationships::TYPE_FRIEND, PL_Relationships::TYPE_SUBSCRIBE], true)
+            ? $pl_access_level
+            : 'public';
+        $policy = PL_Relationships::get_owner_policy((int) $user_id, $policy_kind);
+        $pl_allowed_tabs = isset($policy['profile_tabs']) && is_array($policy['profile_tabs']) ? $policy['profile_tabs'] : ['main'];
+        if ($pl_allowed_tabs === []) {
+            $pl_allowed_tabs = ['main'];
+        }
+    }
+
+    if (!$is_own_profile && $logged_in_user_id > 0) {
+        $follow = PL_Relationships::get_relationship($logged_in_user_id, (int) $user_id, PL_Relationships::TYPE_FOLLOW);
+        $friend = PL_Relationships::get_relationship($logged_in_user_id, (int) $user_id, PL_Relationships::TYPE_FRIEND);
+        $pl_follow_status = is_array($follow) ? (string) ($follow['status'] ?? '') : '';
+        $pl_friend_status = is_array($friend) ? (string) ($friend['status'] ?? '') : '';
+        $pl_subscribe_active = PL_Relationships::is_effective($logged_in_user_id, (int) $user_id, PL_Relationships::TYPE_SUBSCRIBE);
+    }
+}
+
 $user_domain = function_exists('bp_core_get_user_domain') ? (string) bp_core_get_user_domain($user_id) : '';
 $friends_url = $user_domain ? trailingslashit($user_domain . 'friends') : '';
 $notifications_url = $user_domain ? trailingslashit($user_domain . 'notifications') : '';
@@ -83,9 +112,13 @@ $initial_tab = $server_view !== '' ? $server_view : 'main';
 $initial_label = $server_view === 'notifications' ? 'Notifications' : ($server_view === 'friends' ? 'Friends' : 'Main');
 
 // --- Filter Queries based on Portfolio ---
-$show_courses = !(isset($portfolio_settings['courses']) && $portfolio_settings['courses']->is_private == 1);
-$show_writings = !(isset($portfolio_settings['writings']) && $portfolio_settings['writings']->is_private == 1);
-$show_specs = !(isset($portfolio_settings['specializations']) && $portfolio_settings['specializations']->is_private == 1);
+$pl_allow_courses = in_array('courses', $pl_allowed_tabs, true);
+$pl_allow_writings = in_array('writings', $pl_allowed_tabs, true);
+$pl_allow_specs = in_array('specializations', $pl_allowed_tabs, true);
+
+$show_courses = $pl_allow_courses && !(isset($portfolio_settings['courses']) && $portfolio_settings['courses']->is_private == 1);
+$show_writings = $pl_allow_writings && !(isset($portfolio_settings['writings']) && $portfolio_settings['writings']->is_private == 1);
+$show_specs = $pl_allow_specs && !(isset($portfolio_settings['specializations']) && $portfolio_settings['specializations']->is_private == 1);
 
 if ($show_courses && isset($portfolio_settings['courses'])) {
     if ($portfolio_settings['courses']->visibility_mode === 'selected') {
@@ -761,7 +794,7 @@ pl_template_open();
     <!-- Main Content Area -->
     <main class="flex-1 flex flex-col overflow-hidden bg-white">
         <!-- Dashboard Header -->
-        <header class="pcg-dashboard-header h-16 border-b border-neutral-200 bg-white flex items-center justify-between px-5 shrink-0">
+	        <header class="pcg-dashboard-header h-16 border-b border-neutral-200 bg-white flex items-center justify-between px-5 shrink-0">
             <div class="flex items-center gap-4">
                 <button onclick="toggleSidebar()" class="lg:hidden pcg-minimal-button text-neutral-900 !text-[24px]">
                     <i class="bb-icon-l bb-icon-bars"></i>
@@ -770,12 +803,12 @@ pl_template_open();
                     Profile / <span id="pcg-current-tab-label" class="text-neutral-900 font-semibold"><?php echo esc_html($initial_label); ?></span>
                 </h2>
             </div>
-            <div class="flex items-center gap-4">
-                <?php if ($is_own_profile) : ?>
-                    <a href="<?php echo esc_url($friends_url); ?>" class="relative group flex items-center gap-2 text-neutral-500 hover:text-neutral-900 transition-colors no-underline">
-                        <i data-lucide="users" size="16"></i>
-                        <span class="text-xs font-semibold"><?php echo (int) $friends_count; ?></span>
-                    </a>
+	            <div class="flex items-center gap-4">
+	                <?php if ($is_own_profile) : ?>
+	                    <a href="<?php echo esc_url($friends_url); ?>" class="relative group flex items-center gap-2 text-neutral-500 hover:text-neutral-900 transition-colors no-underline">
+	                        <i data-lucide="users" size="16"></i>
+	                        <span class="text-xs font-semibold"><?php echo (int) $friends_count; ?></span>
+	                    </a>
 
                     <a href="<?php echo esc_url($notifications_url); ?>" class="relative group cursor-pointer text-neutral-500 hover:text-neutral-900 transition-colors no-underline" aria-label="Notifications">
                         <i data-lucide="bell" size="16"></i>
@@ -783,13 +816,78 @@ pl_template_open();
                             <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-white"></span>
                         <?php endif; ?>
                     </a>
-                <?php endif; ?>
-                <div class="hidden sm:block text-right">
-                    <p class="text-[8px] text-neutral-400 font-semibold tracking-widest uppercase">Rank</p>
-                    <p class="text-xs font-semibold text-[#8A6B1E]"><?php echo esc_html($rank); ?></p>
-                </div>
-            </div>
-        </header>
+	                <?php endif; ?>
+	                <?php if (!$is_own_profile) : ?>
+	                    <?php if (!is_user_logged_in()) : ?>
+	                        <a href="<?php echo esc_url(wp_login_url(get_permalink())); ?>" class="hidden sm:inline-flex items-center px-3 py-1.5 text-xs font-semibold border border-neutral-200 rounded-[6px] text-neutral-700 hover:bg-neutral-50 no-underline">
+	                            <?php echo esc_html__('Inicia sesión', 'politeia-learning'); ?>
+	                        </a>
+	                    <?php elseif (class_exists('PL_Relationships') && $pl_access_level !== 'blocked') : ?>
+	                        <?php
+	                        $label_follow = __('Seguir', 'politeia-learning');
+	                        $label_friend = __('Amistad', 'politeia-learning');
+	                        $label_pending = __('Solicitud enviada', 'politeia-learning');
+	                        $label_following = __('Siguiendo', 'politeia-learning');
+	                        $label_friends = __('Amigos', 'politeia-learning');
+	                        $label_subscribed = __('Suscrito', 'politeia-learning');
+	                        $label_subscribe = __('Suscribirme', 'politeia-learning');
+	                        $label_request_friend = __('Solicitar amistad', 'politeia-learning');
+	                        if ($label_follow === '') $label_follow = 'Seguir';
+	                        if ($label_friend === '') $label_friend = 'Amistad';
+	                        if ($label_pending === '') $label_pending = 'Solicitud enviada';
+	                        if ($label_following === '') $label_following = 'Siguiendo';
+	                        if ($label_friends === '') $label_friends = 'Amigos';
+	                        if ($label_subscribed === '') $label_subscribed = 'Suscrito';
+	                        if ($label_subscribe === '') $label_subscribe = 'Suscribirme';
+	                        if ($label_request_friend === '') $label_request_friend = 'Solicitar amistad';
+
+	                        $pl_subscribe_url = (string) apply_filters('pl_subscribe_checkout_url', '', (int) $user_id, (int) $logged_in_user_id);
+	                        ?>
+	                        <div class="hidden sm:flex items-center gap-2">
+	                            <?php if ($pl_subscribe_active) : ?>
+	                                <span class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-[6px] bg-neutral-100 text-neutral-800"><?php echo esc_html($label_subscribed); ?></span>
+	                            <?php elseif ($pl_subscribe_url !== '') : ?>
+	                                <a href="<?php echo esc_url($pl_subscribe_url); ?>" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-[6px] gold-gradient text-black no-underline">
+	                                    <?php echo esc_html($label_subscribe); ?>
+	                                </a>
+	                            <?php endif; ?>
+
+	                            <?php if (PL_Relationships::is_effective_friendship((int) $logged_in_user_id, (int) $user_id)) : ?>
+	                                <span class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-[6px] bg-neutral-100 text-neutral-800"><?php echo esc_html($label_friends); ?></span>
+	                            <?php elseif ($pl_friend_status === PL_Relationships::STATUS_PENDING) : ?>
+	                                <span class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-[6px] bg-neutral-50 text-neutral-500 border border-neutral-200"><?php echo esc_html($label_pending); ?></span>
+	                            <?php else : ?>
+	                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="m-0">
+	                                    <?php wp_nonce_field('pl_relationship_request'); ?>
+	                                    <input type="hidden" name="action" value="pl_relationship_request" />
+	                                    <input type="hidden" name="to_user_id" value="<?php echo esc_attr((string) $user_id); ?>" />
+	                                    <input type="hidden" name="rel_type" value="<?php echo esc_attr(PL_Relationships::TYPE_FRIEND); ?>" />
+	                                    <input type="submit" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold border border-neutral-200 rounded-[6px] text-neutral-700 hover:bg-neutral-50" value="<?php echo esc_attr($label_request_friend); ?>" />
+	                                </form>
+	                            <?php endif; ?>
+
+	                            <?php if (PL_Relationships::is_effective((int) $logged_in_user_id, (int) $user_id, PL_Relationships::TYPE_FOLLOW)) : ?>
+	                                <span class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-[6px] bg-neutral-100 text-neutral-800"><?php echo esc_html($label_following); ?></span>
+	                            <?php elseif ($pl_follow_status === PL_Relationships::STATUS_PENDING) : ?>
+	                                <span class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-[6px] bg-neutral-50 text-neutral-500 border border-neutral-200"><?php echo esc_html($label_pending); ?></span>
+	                            <?php else : ?>
+	                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="m-0">
+	                                    <?php wp_nonce_field('pl_relationship_request'); ?>
+	                                    <input type="hidden" name="action" value="pl_relationship_request" />
+	                                    <input type="hidden" name="to_user_id" value="<?php echo esc_attr((string) $user_id); ?>" />
+	                                    <input type="hidden" name="rel_type" value="<?php echo esc_attr(PL_Relationships::TYPE_FOLLOW); ?>" />
+	                                    <input type="submit" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold border border-neutral-200 rounded-[6px] text-neutral-700 hover:bg-neutral-50" value="<?php echo esc_attr($label_follow); ?>" />
+	                                </form>
+	                            <?php endif; ?>
+	                        </div>
+	                    <?php endif; ?>
+	                <?php endif; ?>
+	                <div class="hidden sm:block text-right">
+	                    <p class="text-[8px] text-neutral-400 font-semibold tracking-widest uppercase">Rank</p>
+	                    <p class="text-xs font-semibold text-[#8A6B1E]"><?php echo esc_html($rank); ?></p>
+	                </div>
+	            </div>
+	        </header>
 
 	        <!-- Dynamic Content Container -->
 	        <div id="pcg-content-area"
@@ -840,15 +938,20 @@ pl_template_open();
             { id: 'friends', label: 'Friends', icon: 'users' },
             { id: 'notifications', label: 'Notifications', icon: 'bell' }
             <?php endif; ?>
-        ];
+	        ];
 
-        // Filter menu items based on privacy
-        const menuItems = allMenuItems.filter(item => {
-            if (portfolioSettings[item.id] && portfolioSettings[item.id].is_private == 1) {
-                return false;
-            }
-            return true;
-        });
+	        const allowedTabs = <?php echo json_encode($pl_allowed_tabs); ?>;
+
+	        // Filter menu items based on relationship policy + privacy
+	        const menuItems = allMenuItems.filter(item => {
+	            if (Array.isArray(allowedTabs) && allowedTabs.length > 0 && !allowedTabs.includes(item.id)) {
+	                return false;
+	            }
+	            if (portfolioSettings[item.id] && portfolioSettings[item.id].is_private == 1) {
+	                return false;
+	            }
+	            return true;
+	        });
 
         const courses = <?php echo json_encode($user_courses); ?>;
         const articles = <?php echo json_encode($user_writings); ?>;
