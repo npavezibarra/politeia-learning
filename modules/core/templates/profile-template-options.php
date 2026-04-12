@@ -35,15 +35,15 @@ if (!defined('ABSPATH'))
                         </th>
                         <td>
                             <select name="pcg_profile_template" id="pcg_profile_template">
-                                <option value="default" <?php selected($current_template, 'default'); ?>>
-                                    <?php _e('Default BuddyBoss', 'politeia-learning'); ?>
-                                </option>
                                 <option value="politeia-profile" <?php selected($current_template, 'politeia-profile'); ?>>
-                                    <?php _e('Politeia Profile', 'politeia-learning'); ?>
+                                    <?php _e('Politeia Profile (Max width)', 'politeia-learning'); ?>
+                                </option>
+                                <option value="politeia-profile-fullwidth" <?php selected($current_template, 'politeia-profile-fullwidth'); ?>>
+                                    <?php _e('Politeia Profile (Full width)', 'politeia-learning'); ?>
                                 </option>
                             </select>
                             <p class="description">
-                                <?php _e('Elige entre el diseño estándar de BuddyBoss o el nuevo diseño de Politeia.', 'politeia-learning'); ?>
+                                <?php _e('Selecciona el layout del perfil público (/profile/{username}).', 'politeia-learning'); ?>
                             </p>
                         </td>
                     </tr>

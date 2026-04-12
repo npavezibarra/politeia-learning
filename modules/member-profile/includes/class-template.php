@@ -8,11 +8,14 @@ if (!defined('ABSPATH'))
 
 class PL_Member_Profile_Template
 {
+    private const TEMPLATE_DEFAULT = 'politeia-profile';
+    private const TEMPLATE_FULLWIDTH = 'politeia-profile-fullwidth';
+
     public function __construct()
     {
-        // Lower priority (9) allows specialized routes (at 10+) to override this template
+        // Lower priority (9) allows specialized routes (at 10+) to override this template.
+        // IMPORTANT: Pure WordPress only (no BuddyBoss/BuddyPress dependencies).
         add_filter('template_include', [$this, 'load_profile_template'], 9);
-        add_filter('bp_template_include', [$this, 'load_profile_template'], 9);
     }
 
     /**
@@ -20,22 +23,56 @@ class PL_Member_Profile_Template
      */
     public function load_profile_template($template)
     {
-        // Use bp_is_user() to detect any member-related page
-        if (function_exists('bp_is_user') && bp_is_user()) {
-            
-            // Specifically target the main profile view/front
-            $is_profile_path = bp_is_user_profile() || bp_is_user_front() || (function_exists('bp_is_my_profile') && bp_is_my_profile());
-            
-            if ($is_profile_path) {
-                $selected_template = get_option('pcg_profile_template', 'default');
-                if ($selected_template === 'politeia-profile') {
-                    $custom = PL_MEMBER_PROFILE_PATH . 'templates/politeia-profile.php';
-                    if (file_exists($custom)) {
-                        return $custom;
-                    }
-                }
+        $username = (string) get_query_var('pl_profile_username', '');
+        if ($username === '') {
+            return $template;
+        }
+
+        $selected_template = (string) get_option('pcg_profile_template', self::TEMPLATE_DEFAULT);
+        // Back-compat: previous UI had a "default" option; keep route working.
+        if ($selected_template === 'default' || $selected_template === '') {
+            $selected_template = self::TEMPLATE_DEFAULT;
+        }
+
+        $templates = [
+            self::TEMPLATE_DEFAULT => PL_MEMBER_PROFILE_PATH . 'templates/politeia-profile.php',
+            self::TEMPLATE_FULLWIDTH => PL_MEMBER_PROFILE_PATH . 'templates/politeia-profile-fullwidth.php',
+        ];
+
+        $custom = $templates[$selected_template] ?? $templates[self::TEMPLATE_DEFAULT];
+        if (!file_exists($custom)) {
+            // Always fail back to default template if the selected file is missing.
+            $custom = $templates[self::TEMPLATE_DEFAULT];
+            if (!file_exists($custom)) {
+                return $template;
             }
         }
-        return $template;
+
+        // Resolve user for the template (pure WP).
+        $decoded = trim(rawurldecode($username));
+        if ($decoded === '') {
+            return $template;
+        }
+
+        $user = get_user_by('slug', $decoded);
+        if (!$user) {
+            $user = get_user_by('login', $decoded);
+        }
+        if (!$user) {
+            // Keep default 404 behavior when user doesn't exist.
+            return $template;
+        }
+
+        set_query_var('pl_profile_user_id', (int) $user->ID);
+
+        // Prevent WordPress from sending a 404 for our custom rewrite route.
+        global $wp_query;
+        if ($wp_query instanceof WP_Query) {
+            $wp_query->is_404 = false;
+            $wp_query->set('error', '');
+        }
+        status_header(200);
+
+        return $custom;
     }
 }

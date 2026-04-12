@@ -6,8 +6,21 @@
 
 if (!defined('ABSPATH')) exit;
 
-// Get displayed user ID (BuddyBoss optional; pure WordPress fallback)
-$user_id = function_exists('bp_displayed_user_id') ? (int) bp_displayed_user_id() : 0;
+// Layout variant (set by wrapper template when needed).
+$pl_profile_layout = isset($pl_profile_layout) ? (string) $pl_profile_layout : 'maxwidth';
+$pl_profile_is_fullwidth = ($pl_profile_layout === 'fullwidth');
+$pl_container_max_width = (string) get_option('pcg_container_max_width', '1200px');
+$pl_profile_content_container_class = $pl_profile_is_fullwidth ? 'w-full' : 'max-w-6xl mx-auto';
+
+// Public profile route: /profile/{username}
+$user_id = (int) get_query_var('pl_profile_user_id', 0);
+
+// Legacy BuddyBoss/BuddyPress support (should be unused in pure WP).
+if (!$user_id && function_exists('bp_displayed_user_id')) {
+    $user_id = (int) bp_displayed_user_id();
+}
+
+// Pure WordPress fallback: logged-in user's own profile.
 if (!$user_id) {
     if (is_user_logged_in()) {
         $user_id = get_current_user_id();
@@ -18,6 +31,13 @@ if (!$user_id) {
 }
 
 $userdata = get_userdata($user_id);
+$userdata = $userdata instanceof WP_User ? $userdata : null;
+if (!$userdata) {
+    status_header(404);
+    nocache_headers();
+    require get_404_template();
+    exit;
+}
 $display_name = function_exists('pl_get_user_full_name_or_display_name') 
     ? pl_get_user_full_name_or_display_name($user_id, $userdata->display_name) 
     : $userdata->display_name;
@@ -222,11 +242,8 @@ foreach ( $user_notes as $note ) {
 }
 
 /**
- * Force BuddyBoss Header/Footer
+ * Template shell
  */
-add_filter('buddyboss_theme_remove_header', '__return_false', 999);
-add_filter('buddyboss_theme_remove_footer', '__return_false', 999);
-
 pl_template_open();
 ?>
 
@@ -239,24 +256,24 @@ pl_template_open();
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=space_dashboard" />
 
 <style>
-    /* 
-       THEME OVERRIDES
-       BuddyBoss Theme has several nested containers. 
-       We need to "break out" so our dashboard fits exactly between peak and base.
-    */
+	    /* 
+	       THEME OVERRIDES
+	       The active theme may have nested containers.
+	       We "break out" so the dashboard can occupy the expected space.
+	    */
     #primary, #primary .entry-content {
         margin: 0 !important;
         padding: 0 !important;
     }
 
-    /* Fix Tailwind/Theme Container Conflict */
-    .container {
-        max-width: 1260px !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
-        padding-left: 20px !important;
-        padding-right: 20px !important;
-    }
+	    /* Fix Tailwind/Theme Container Conflict */
+	    .container {
+	        max-width: <?php echo $pl_profile_is_fullwidth ? 'none' : esc_html($pl_container_max_width); ?> !important;
+	        margin-left: auto !important;
+	        margin-right: auto !important;
+	        padding-left: <?php echo $pl_profile_is_fullwidth ? '0' : '20px'; ?> !important;
+	        padding-right: <?php echo $pl_profile_is_fullwidth ? '0' : '20px'; ?> !important;
+	    }
 
     /* Target ONLY Content Area Container padding on mobile/tablet */
     @media (max-width: 1023px) {
@@ -272,17 +289,23 @@ pl_template_open();
         }
     }
 
-    .pcg-profile-wrapper {
-        font-family: 'Poppins', sans-serif;
-        background-color: #ffffff;
-        color: #171717;
-        display: flex;
-        height: 80vh; 
-        min-height: 600px;
-        overflow: hidden;
-        width: 100%;
-        margin: auto;
-    }
+	    .pcg-profile-wrapper {
+	        font-family: 'Poppins', sans-serif;
+	        background-color: #ffffff;
+	        color: #171717;
+	        display: flex;
+	        height: 80vh; 
+	        min-height: 600px;
+	        overflow: hidden;
+	        width: 100%;
+	        margin-left: auto;
+	        margin-right: auto;
+	        <?php if (!$pl_profile_is_fullwidth) : ?>
+	        max-width: var(--wp--style--global--wide-size);
+	        <?php else : ?>
+	        max-width: none;
+	        <?php endif; ?>
+	    }
 
     /* BuddyBoss (Friends/Notifications) view overrides: keep everything black/neutral, no blue accents */
     .pcg-profile-wrapper #pcg-content-area .buddypress-wrap,
@@ -332,7 +355,7 @@ pl_template_open();
         color: #ffffff;
     }
 
-    /* Notifications header layout (BuddyBoss Theme) */
+	    /* Notifications header layout (theme override) */
     .pcg-profile-wrapper #pcg-content-area #buddypress .notifications-header {
         display: flex;
         align-items: center;
@@ -768,25 +791,25 @@ pl_template_open();
             </div>
         </header>
 
-        <!-- Dynamic Content Container -->
-        <div id="pcg-content-area"
-            class="flex-1 overflow-y-auto p-8 custom-scrollbar"
+	        <!-- Dynamic Content Container -->
+	        <div id="pcg-content-area"
+	            class="flex-1 overflow-y-auto p-8 custom-scrollbar"
             <?php if ($server_view !== '') : ?>
                 data-server-view="<?php echo esc_attr($server_view); ?>"
             <?php endif; ?>
-        >
-            <?php if ($server_view === 'notifications' && function_exists('bp_get_template_part')) : ?>
-                <div class="max-w-6xl mx-auto">
-                    <?php bp_get_template_part('members/single/notifications'); ?>
-                </div>
-            <?php elseif ($server_view === 'friends' && function_exists('bp_get_template_part')) : ?>
-                <div class="max-w-6xl mx-auto">
-                    <?php bp_get_template_part('members/single/friends'); ?>
-                </div>
-            <?php else : ?>
-                <!-- JS will inject content here -->
-            <?php endif; ?>
-        </div>
+	        >
+	            <?php if ($server_view === 'notifications' && function_exists('bp_get_template_part')) : ?>
+	                <div class="<?php echo esc_attr($pl_profile_content_container_class); ?>">
+	                    <?php bp_get_template_part('members/single/notifications'); ?>
+	                </div>
+	            <?php elseif ($server_view === 'friends' && function_exists('bp_get_template_part')) : ?>
+	                <div class="<?php echo esc_attr($pl_profile_content_container_class); ?>">
+	                    <?php bp_get_template_part('members/single/friends'); ?>
+	                </div>
+	            <?php else : ?>
+	                <!-- JS will inject content here -->
+	            <?php endif; ?>
+	        </div>
     </main>
 </div>
 
@@ -794,11 +817,12 @@ pl_template_open();
     (function() {
         // --- Data Layer ---
         const portfolioSettings = <?php echo json_encode($portfolio_settings); ?>;
-        const serverView = <?php echo json_encode($server_view); ?>;
-        const profileUrls = {
-            friends: <?php echo json_encode($friends_url); ?>,
-            notifications: <?php echo json_encode($notifications_url); ?>,
-        };
+	        const serverView = <?php echo json_encode($server_view); ?>;
+	        const profileContainerClass = <?php echo json_encode($pl_profile_content_container_class); ?>;
+	        const profileUrls = {
+	            friends: <?php echo json_encode($friends_url); ?>,
+	            notifications: <?php echo json_encode($notifications_url); ?>,
+	        };
         const userdata = {
             display_name: '<?php echo esc_js($display_name); ?>',
             description: '<?php echo esc_js(get_user_meta($user_id, 'description', true)); ?>'
@@ -916,10 +940,10 @@ pl_template_open();
                 return;
             }
 
-            container.innerHTML = '';
-            
-            const wrapper = document.createElement('div');
-            wrapper.className = 'max-w-6xl mx-auto card-transition';
+	            container.innerHTML = '';
+	            
+	            const wrapper = document.createElement('div');
+	            wrapper.className = `${profileContainerClass} card-transition`;
 
             switch (currentTab) {
                 case 'friends':

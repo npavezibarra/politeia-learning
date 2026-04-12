@@ -59,6 +59,16 @@ register_activation_hook(__FILE__, function () {
     if (!get_option('pl_learning_taxonomy_seed_v1')) {
         wp_schedule_single_event(time(), 'pl_seed_default_categories');
     }
+
+    // Ensure our custom rewrites exist before flushing (pure WP routes).
+    if (class_exists('PL_Member_Profile_Public_Route')) {
+        PL_Member_Profile_Public_Route::register_rewrites_for_flush();
+    }
+    flush_rewrite_rules(false);
+});
+
+register_deactivation_hook(__FILE__, function () {
+    flush_rewrite_rules(false);
 });
 
 // Unified taxonomy registration.
@@ -185,6 +195,7 @@ class PL_Module_Loader
         'quiz-control' => true,
         'woo' => true,
         'member-profile' => true,
+        'email-log' => true,
     ];
 
     /**

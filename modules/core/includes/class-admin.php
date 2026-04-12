@@ -123,8 +123,16 @@ class PL_Core_Admin
     public function render_profile_template_settings()
     {
         if (isset($_POST['pcg_profile_template_submitted']) && check_admin_referer('pcg_save_profile_template')) {
-            $profile_template = sanitize_text_field($_POST['pcg_profile_template'] ?? 'default');
+            $profile_template = sanitize_text_field($_POST['pcg_profile_template'] ?? 'politeia-profile');
             $operation_template = sanitize_text_field($_POST['pcg_operation_template'] ?? '/center');
+
+            $allowed_profile_templates = [
+                'politeia-profile',
+                'politeia-profile-fullwidth',
+            ];
+            if (!in_array($profile_template, $allowed_profile_templates, true)) {
+                $profile_template = 'politeia-profile';
+            }
             
             update_option('pcg_profile_template', $profile_template);
             update_option('pcg_operation_template', $operation_template);
@@ -135,7 +143,10 @@ class PL_Core_Admin
             echo '<div class="updated"><p>' . __('Settings saved.', 'politeia-learning') . '</p></div>';
         }
 
-        $current_template = get_option('pcg_profile_template', 'default');
+        $current_template = (string) get_option('pcg_profile_template', 'politeia-profile');
+        if ($current_template === 'default' || $current_template === '') {
+            $current_template = 'politeia-profile';
+        }
         $current_operation_template = get_option('pcg_operation_template', '/center');
 
         include PL_CORE_PATH . 'templates/profile-template-options.php';

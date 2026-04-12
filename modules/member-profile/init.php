@@ -26,6 +26,9 @@ spl_autoload_register(function ($class) {
  * Initialize Module
  */
 add_action('init', function () {
+    if (class_exists('PL_Member_Profile_Public_Route')) {
+        new PL_Member_Profile_Public_Route();
+    }
     if (class_exists('PL_Member_Profile_Template')) {
         new PL_Member_Profile_Template();
     }
