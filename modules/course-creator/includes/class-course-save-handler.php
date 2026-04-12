@@ -2541,7 +2541,9 @@ class PL_CC_Course_Save_Handler
         $data = [];
 
         foreach ($posts as $post) {
-            $thumbnail_url = get_the_post_thumbnail_url($post->ID, 'medium');
+            // Use a larger size for dashboard cards to avoid pixelation on retina/high-DPI screens.
+            // Theme/CSS can still scale it down as needed.
+            $thumbnail_url = get_the_post_thumbnail_url($post->ID, 'large');
             $data[] = [
                 'id' => $post->ID,
                 'title' => $post->post_title,
