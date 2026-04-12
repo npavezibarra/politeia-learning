@@ -323,6 +323,18 @@ pl_template_open();
 
 	<style>
 	    .material-symbols-outlined {
+	        font-family: 'Material Symbols Outlined' !important;
+	        font-weight: normal;
+	        font-style: normal;
+	        font-size: 24px;
+	        line-height: 1;
+	        letter-spacing: normal;
+	        text-transform: none;
+	        display: inline-block;
+	        white-space: nowrap;
+	        word-wrap: normal;
+	        direction: ltr;
+	        -webkit-font-smoothing: antialiased;
 	        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 	    }
 	    /* 
