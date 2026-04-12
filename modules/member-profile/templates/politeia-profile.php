@@ -819,7 +819,7 @@ pl_template_open();
 	                <?php endif; ?>
 	                <?php if (!$is_own_profile) : ?>
 	                    <?php if (!is_user_logged_in()) : ?>
-	                        <a href="<?php echo esc_url(wp_login_url(get_permalink())); ?>" class="hidden sm:inline-flex items-center px-3 py-1.5 text-xs font-semibold border border-neutral-200 rounded-[6px] text-neutral-700 hover:bg-neutral-50 no-underline">
+	                        <a href="<?php echo esc_url(wp_login_url(esc_url_raw(home_url((string) ($_SERVER['REQUEST_URI'] ?? '/'))))); ?>" class="hidden sm:inline-flex items-center px-3 py-1.5 text-xs font-semibold border border-neutral-200 rounded-[6px] text-neutral-700 hover:bg-neutral-50 no-underline">
 	                            <?php echo esc_html__('Inicia sesión', 'politeia-learning'); ?>
 	                        </a>
 	                    <?php elseif (class_exists('PL_Relationships') && $pl_access_level !== 'blocked') : ?>
