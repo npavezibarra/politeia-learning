@@ -104,6 +104,32 @@ $unread_notifications = ($is_own_profile && function_exists('bp_notifications_ge
     ? (int) bp_notifications_get_unread_notification_count($user_id)
     : 0;
 
+$pl_pending_follow_requests = [];
+$pl_relationship_respond_nonce = '';
+$pl_relationship_block_nonce = '';
+if ($is_own_profile && class_exists('PL_Relationships')) {
+    $pl_relationship_respond_nonce = (string) wp_create_nonce('pl_relationship_respond');
+    $pl_relationship_block_nonce = (string) wp_create_nonce('pl_relationship_block');
+    $pending = PL_Relationships::get_pending_requests_for_owner((int) $logged_in_user_id);
+    foreach ($pending as $req) {
+        if (($req['rel_type'] ?? '') !== PL_Relationships::TYPE_FOLLOW) {
+            continue;
+        }
+        $from_id = (int) ($req['from_user_id'] ?? 0);
+        if ($from_id <= 0) {
+            continue;
+        }
+        $u = get_userdata($from_id);
+        $name = ($u instanceof WP_User) ? ((string) ($u->display_name ?: $u->user_login)) : ('User #' . $from_id);
+        $pl_pending_follow_requests[] = [
+            'id' => (int) ($req['id'] ?? 0),
+            'from_user_id' => $from_id,
+            'from_name' => $name,
+            'created_at' => (string) ($req['created_at'] ?? ''),
+        ];
+    }
+}
+
 $is_notifications_view = function_exists('bp_is_user_notifications') ? (bool) bp_is_user_notifications() : false;
 $is_friends_view = function_exists('bp_is_user_friends') ? (bool) bp_is_user_friends() : false;
 
@@ -962,18 +988,19 @@ pl_template_open();
             description: '<?php echo esc_js(get_user_meta($user_id, 'description', true)); ?>'
         };
 
-        const allMenuItems = [
-            { id: 'main', label: 'Inicio', icon: 'home' },
-            { id: 'courses', label: 'Mis Cursos', icon: 'graduation-cap' },
-            { id: 'writings', label: 'Escritos', icon: 'book-open' },
-            { id: 'specializations', label: 'Especializaciones', icon: 'award' },
-            { id: 'thoughts', label: 'Feed de Pensamientos', icon: 'message-circle' },
-            { id: 'plans', label: 'Planes', icon: 'list-checks' },
-            { id: 'book', label: 'Libros', icon: 'book' },
-            <?php if ($is_own_profile) : ?>
-            { id: 'friends', label: 'Friends', icon: 'users' },
-            { id: 'notifications', label: 'Notifications', icon: 'bell' }
-            <?php endif; ?>
+	        const allMenuItems = [
+	            { id: 'main', label: 'Inicio', icon: 'home' },
+	            { id: 'courses', label: 'Mis Cursos', icon: 'graduation-cap' },
+	            { id: 'writings', label: 'Escritos', icon: 'book-open' },
+	            { id: 'specializations', label: 'Especializaciones', icon: 'award' },
+	            { id: 'thoughts', label: 'Feed de Pensamientos', icon: 'message-circle' },
+	            { id: 'plans', label: 'Planes', icon: 'list-checks' },
+	            { id: 'book', label: 'Libros', icon: 'book' },
+	            <?php if ($is_own_profile) : ?>
+	            { id: 'requests', label: <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Solicitudes' : 'Requests'); ?>, icon: 'inbox' },
+	            { id: 'friends', label: 'Friends', icon: 'users' },
+	            { id: 'notifications', label: 'Notifications', icon: 'bell' }
+	            <?php endif; ?>
 	        ];
 
 	        const allowedTabs = <?php echo json_encode($pl_allowed_tabs); ?>;
@@ -989,15 +1016,19 @@ pl_template_open();
 	            return true;
 	        });
 
-        const courses = <?php echo json_encode($user_courses); ?>;
-        const articles = <?php echo json_encode($user_writings); ?>;
-        const specializations = <?php echo json_encode($user_specs); ?>;
+	        const courses = <?php echo json_encode($user_courses); ?>;
+	        const articles = <?php echo json_encode($user_writings); ?>;
+	        const specializations = <?php echo json_encode($user_specs); ?>;
 
-        const thoughts = <?php echo json_encode($book_thoughts); ?>;
+	        const thoughts = <?php echo json_encode($book_thoughts); ?>;
+	        const followRequests = <?php echo json_encode($pl_pending_follow_requests); ?>;
+	        const respondNonce = <?php echo json_encode($pl_relationship_respond_nonce); ?>;
+	        const blockNonce = <?php echo json_encode($pl_relationship_block_nonce); ?>;
+	        const adminPostUrl = <?php echo json_encode(admin_url('admin-post.php')); ?>;
 
-        const books = [
-            { id: 1, title: 'The Architect\'s Mind', price: '$24.00', img: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80' },
-            { id: 2, title: 'Visual Poetry', price: '$32.50', img: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80' }
+	        const books = [
+	            { id: 1, title: 'The Architect\'s Mind', price: '$24.00', img: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80' },
+	            { id: 2, title: 'Visual Poetry', price: '$32.50', img: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80' }
         ];
 
         // --- Core Logic ---
@@ -1084,12 +1115,82 @@ pl_template_open();
 	            const wrapper = document.createElement('div');
 	            wrapper.className = `${profileContainerClass} card-transition`;
 
-            switch (currentTab) {
-                case 'friends':
-                    wrapper.innerHTML = `
-                        <div class="py-20 text-center p-8 bg-neutral-50 rounded-[6px] border border-neutral-200">
-                            <div class="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <i data-lucide="users" class="text-neutral-400" size="32"></i>
+	            switch (currentTab) {
+	                case 'requests': {
+	                    const title = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Solicitudes de Follow' : 'Follow Requests'); ?>;
+	                    const emptyText = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'No tienes solicitudes pendientes.' : 'No pending requests.'); ?>;
+	                    const acceptLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Aceptar' : 'Accept'); ?>;
+	                    const rejectLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Rechazar' : 'Reject'); ?>;
+	                    const blockLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Bloquear' : 'Block'); ?>;
+
+	                    if (!Array.isArray(followRequests) || followRequests.length === 0) {
+	                        wrapper.innerHTML = `
+	                            <div class="p-8 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
+	                                <h3 class="text-xl font-semibold text-neutral-900 mb-2">${title}</h3>
+	                                <p class="text-sm text-neutral-600">${emptyText}</p>
+	                            </div>
+	                        `;
+	                        break;
+	                    }
+
+	                    const itemsHtml = followRequests.map(req => {
+	                        const name = String(req.from_name || 'User');
+	                        const created = req.created_at ? `<span class="text-xs text-neutral-400">${String(req.created_at)}</span>` : '';
+	                        const reqId = Number(req.id) || 0;
+	                        const fromUserId = Number(req.from_user_id) || 0;
+	                        const nonceInput = respondNonce ? `<input type="hidden" name="_wpnonce" value="${respondNonce}">` : '';
+	                        const blockNonceInput = blockNonce ? `<input type="hidden" name="_wpnonce" value="${blockNonce}">` : '';
+	                        return `
+	                            <div class="flex items-center justify-between gap-4 p-4 border border-neutral-200 rounded-[6px] bg-neutral-50">
+	                                <div class="min-w-0">
+	                                    <div class="flex items-center gap-2">
+	                                        <p class="text-sm font-semibold text-neutral-900 truncate">${name}</p>
+	                                        ${created}
+	                                    </div>
+	                                    <p class="text-xs text-neutral-500">follow</p>
+	                                </div>
+	                                <div class="flex items-center gap-2 shrink-0">
+	                                    <form method="post" action="${adminPostUrl}" class="m-0">
+	                                        ${nonceInput}
+	                                        <input type="hidden" name="action" value="pl_relationship_respond">
+	                                        <input type="hidden" name="request_id" value="${reqId}">
+	                                        <input type="hidden" name="decision" value="accept">
+	                                        <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] bg-black text-white hover:bg-neutral-800">${acceptLabel}</button>
+	                                    </form>
+	                                    <form method="post" action="${adminPostUrl}" class="m-0">
+	                                        ${nonceInput}
+	                                        <input type="hidden" name="action" value="pl_relationship_respond">
+	                                        <input type="hidden" name="request_id" value="${reqId}">
+	                                        <input type="hidden" name="decision" value="reject">
+	                                        <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-neutral-200 text-neutral-700 hover:bg-white">${rejectLabel}</button>
+	                                    </form>
+	                                    <form method="post" action="${adminPostUrl}" class="m-0">
+	                                        ${blockNonceInput}
+	                                        <input type="hidden" name="action" value="pl_relationship_block">
+	                                        <input type="hidden" name="blocked_user_id" value="${fromUserId}">
+	                                        <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-red-200 text-red-600 hover:bg-white">${blockLabel}</button>
+	                                    </form>
+	                                </div>
+	                            </div>
+	                        `;
+	                    }).join('');
+
+	                    wrapper.innerHTML = `
+	                        <div class="space-y-4">
+	                            <div class="p-6 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
+	                                <h3 class="text-xl font-semibold text-neutral-900">${title}</h3>
+	                                <p class="text-sm text-neutral-500 mt-1">${followRequests.length} ${followRequests.length === 1 ? 'request' : 'requests'}</p>
+	                            </div>
+	                            <div class="space-y-3">${itemsHtml}</div>
+	                        </div>
+	                    `;
+	                    break;
+	                }
+	                case 'friends':
+	                    wrapper.innerHTML = `
+	                        <div class="py-20 text-center p-8 bg-neutral-50 rounded-[6px] border border-neutral-200">
+	                            <div class="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
+	                                <i data-lucide="users" class="text-neutral-400" size="32"></i>
                             </div>
                             <h3 class="text-xl font-semibold text-neutral-900 mb-2">Friends</h3>
                             <p class="text-neutral-500 mb-8 max-w-md mx-auto">Open your Friends page to see all your connections.</p>
