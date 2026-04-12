@@ -30,6 +30,56 @@
   let selectedUserId = null;
   let lastQuery = '';
   let timer = null;
+  let requestSeq = 0;
+
+  async function revokePartner(buttonEl) {
+    if (!cfg.revokePartnerUrl) return;
+    const objectType = (buttonEl && buttonEl.getAttribute) ? (buttonEl.getAttribute('data-object-type') || 'course') : 'course';
+    const objectId = Number(buttonEl && buttonEl.getAttribute ? buttonEl.getAttribute('data-object-id') : cfg.courseId) || Number(cfg.courseId) || 0;
+    const userId = Number(buttonEl && buttonEl.getAttribute ? buttonEl.getAttribute('data-user-id') : 0) || 0;
+
+    if (!objectId) return;
+
+    const msg = (cfg.i18n && cfg.i18n.confirmRemove) ? String(cfg.i18n.confirmRemove) : 'Remove partner?';
+    if (!window.confirm(msg)) return;
+
+    try {
+      const res = await fetch(cfg.revokePartnerUrl, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-WP-Nonce': cfg.nonce || '',
+        },
+        body: JSON.stringify({
+          object_type: objectType,
+          object_id: objectId,
+          user_id: userId,
+          role: 'partner',
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data || !data.success) {
+        const err = (cfg.i18n && cfg.i18n.removeFailed) ? String(cfg.i18n.removeFailed) : 'Could not remove partner.';
+        window.alert(err);
+        return;
+      }
+
+      window.location.reload();
+    } catch (e) {
+      const err = (cfg.i18n && cfg.i18n.removeFailed) ? String(cfg.i18n.removeFailed) : 'Could not remove partner.';
+      window.alert(err);
+    }
+  }
+
+  // Partner remove buttons (outside the modal).
+  document.addEventListener('click', (e) => {
+    const btn = e.target && e.target.closest ? e.target.closest('.pl-partner-remove') : null;
+    if (!btn) return;
+    e.preventDefault();
+    revokePartner(btn);
+  });
 
   function isValidEmail(s) {
     const v = String(s || '').trim();
@@ -62,11 +112,28 @@
     if (!memberResults) return;
     memberResults.innerHTML = '';
 
-    const items = Array.isArray(users) ? users : [];
+    const items = Array.isArray(users) ? users.slice(0, 3) : [];
     items.forEach((u) => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.textContent = u.name || '';
+
+      const avatarWrap = document.createElement('span');
+      avatarWrap.className = 'pl-partner-result-avatar';
+      if (u && u.avatar_url) {
+        const img = document.createElement('img');
+        img.alt = '';
+        img.loading = 'lazy';
+        img.src = String(u.avatar_url);
+        avatarWrap.appendChild(img);
+      }
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'pl-partner-result-name';
+      nameEl.textContent = u && u.name ? String(u.name) : '';
+
+      btn.appendChild(avatarWrap);
+      btn.appendChild(nameEl);
+
       btn.addEventListener('click', () => {
         memberInput.value = u.name || '';
         selectedUserId = Number(u.id) || null;
@@ -82,6 +149,7 @@
 
   async function searchFriends(q) {
     if (!cfg.friendsSearchUrl) return;
+    const seq = ++requestSeq;
 
     const url = new URL(cfg.friendsSearchUrl, window.location.origin);
     url.searchParams.set('q', q);
@@ -98,6 +166,12 @@
     }
 
     const data = await res.json();
+
+    // Ignore stale responses if the user typed something else (or cleared the field).
+    const current = String(memberInput ? memberInput.value : '').trim();
+    if (seq !== requestSeq || current.length < 2 || current !== q) {
+      return;
+    }
     renderResults(data);
   }
 
@@ -191,6 +265,8 @@
     setMemberError(false);
 
     if (q.length < 2) {
+      // Invalidate any in-flight request and hide suggestions immediately.
+      requestSeq++;
       clearResults();
       return;
     }
@@ -243,7 +319,7 @@
           return;
         }
 
-        const res = await fetch(cfg.addPartnerUrl, {
+        const res = await fetch(cfg.invitePartnerUrl, {
           method: 'POST',
           credentials: 'same-origin',
           headers: {
@@ -254,17 +330,19 @@
             object_type: 'course',
             object_id: Number(cfg.courseId),
             user_id: Number(selectedUserId),
+            // For member invites, server resolves email/name from the user.
+            email: '',
           }),
         });
 
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data || !data.success) {
-          setError('Could not add partner.');
+          setError('Could not send invitation.');
           if (submitBtn) submitBtn.disabled = false;
           return;
         }
 
-        successMsg.textContent = 'Partner assigned successfully';
+        successMsg.textContent = 'Invitation sent.';
       } else {
         const first_name = String(firstNameInput ? firstNameInput.value : '').trim();
         const last_name = String(lastNameInput ? lastNameInput.value : '').trim();

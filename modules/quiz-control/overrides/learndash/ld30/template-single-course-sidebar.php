@@ -897,7 +897,7 @@ $icon_cart = '<svg style="width:20px;height:20px;margin-right:8px;flex-shrink:0;
                     $partner = null;
                     if ($show_add_partner && class_exists('PL_Partnerships_Repository') && method_exists('PL_Partnerships_Repository', 'get_single_partner')) {
                         try {
-                            $partner = PL_Partnerships_Repository::get_single_partner('course', $course_id);
+                            $partner = PL_Partnerships_Repository::get_single_partner('course', $course_id, 'partner');
                             $has_partner = !empty($partner);
                         } catch (\Throwable $e) {
                             $has_partner = false;
@@ -910,12 +910,36 @@ $icon_cart = '<svg style="width:20px;height:20px;margin-right:8px;flex-shrink:0;
                         <?php if ($partner) : ?>
                             <div class="text-sm text-slate-600" style="margin-bottom:8px;">
                                 Partner:
-                                <strong>
-                                    <?php
-                                    $partner_user = !empty($partner['partner_user_id']) ? get_userdata((int) $partner['partner_user_id']) : null;
-                                    echo esc_html($partner_user ? (string) $partner_user->display_name : '');
-                                    ?>
-                                </strong>
+                                <?php
+                                $partner_user_id = !empty($partner['partner_user_id']) ? (int) $partner['partner_user_id'] : 0;
+                                $partner_user = $partner_user_id > 0 ? get_userdata($partner_user_id) : null;
+                                ?>
+                                <span style="display:inline-flex;align-items:center;gap:8px;">
+                                    <strong><?php echo esc_html($partner_user ? (string) $partner_user->display_name : ''); ?></strong>
+                                    <?php if ($partner_user_id > 0) : ?>
+                                        <button
+                                            type="button"
+                                            class="pl-partner-remove"
+                                            data-object-type="course"
+                                            data-object-id="<?php echo esc_attr((string) (int) $course_id); ?>"
+                                            data-user-id="<?php echo esc_attr((string) $partner_user_id); ?>"
+                                            aria-label="<?php echo esc_attr__('Eliminar partner', 'politeia-learning'); ?>"
+                                            title="<?php echo esc_attr__('Eliminar partner', 'politeia-learning'); ?>"
+                                            style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;color:#64748b;cursor:pointer;line-height:1;"
+                                        >×</button>
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php
+                        $pending_invite = function_exists('pl_get_pending_course_partner_invite') ? pl_get_pending_course_partner_invite((int) $course_id) : null;
+                        ?>
+                        <?php if (is_array($pending_invite) && !empty($pending_invite['label'])) : ?>
+                            <div class="text-sm text-amber-700" style="margin-bottom:8px;">
+                                <?php
+                                echo esc_html(sprintf(__('Esperando a %s', 'politeia-learning'), (string) $pending_invite['label']));
+                                ?>
                             </div>
                         <?php endif; ?>
 

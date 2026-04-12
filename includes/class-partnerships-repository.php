@@ -51,9 +51,58 @@ class PL_Partnerships_Repository
         return is_array($rows) ? $rows : [];
     }
 
-    public static function get_single_partner($object_type, $object_id)
+    /**
+     * Fetch active partnerships for an object filtered by role.
+     *
+     * @param string $object_type
+     * @param int    $object_id
+     * @param string $role
+     * @return array<int,array<string,mixed>>
+     */
+    public static function get_object_partners_by_role($object_type, $object_id, $role): array
     {
-        $partners = self::get_object_partners($object_type, $object_id);
+        global $wpdb;
+        if (!$wpdb) {
+            return [];
+        }
+
+        $object_type = is_string($object_type) ? trim($object_type) : '';
+        $role = is_string($role) ? trim($role) : '';
+        $object_id = (int) $object_id;
+
+        if ($object_type === '' || $role === '' || $object_id <= 0) {
+            return [];
+        }
+
+        $table = $wpdb->prefix . self::TABLE_SLUG;
+
+        $sql = $wpdb->prepare(
+            "SELECT *
+            FROM {$table}
+            WHERE object_type = %s
+              AND object_id = %d
+              AND role = %s
+              AND status = %s",
+            $object_type,
+            $object_id,
+            $role,
+            'active'
+        );
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $rows = $wpdb->get_results($sql, ARRAY_A);
+        return is_array($rows) ? $rows : [];
+    }
+
+    public static function get_single_partner($object_type, $object_id, $role = '')
+    {
+        $role = is_string($role) ? trim($role) : '';
+
+        if ($role !== '' && method_exists(__CLASS__, 'get_object_partners_by_role')) {
+            $partners = self::get_object_partners_by_role($object_type, $object_id, $role);
+        } else {
+            $partners = self::get_object_partners($object_type, $object_id);
+        }
         return !empty($partners) ? $partners[0] : null;
     }
 
@@ -86,8 +135,8 @@ class PL_Partnerships_Repository
 
         $table = $wpdb->prefix . self::TABLE_SLUG;
 
-        if ($object_type === 'course') {
-            // Remove existing partner (overwrite).
+        if ($object_type === 'course' && $role === 'partner') {
+            // Course "partner" is single-slot: revoke prior partner rows only.
             $wpdb->update(
                 $table,
                 [
@@ -97,6 +146,7 @@ class PL_Partnerships_Repository
                 [
                     'object_type' => $object_type,
                     'object_id' => $object_id,
+                    'role' => $role,
                     'status' => 'active',
                 ],
                 [
@@ -106,6 +156,7 @@ class PL_Partnerships_Repository
                 [
                     '%s',
                     '%d',
+                    '%s',
                     '%s',
                 ]
             );
@@ -185,5 +236,57 @@ class PL_Partnerships_Repository
         }
 
         return false;
+    }
+
+    /**
+     * Revoke partner relationships for an object.
+     *
+     * When $partner_user_id is 0, revokes all active rows for the role/object.
+     */
+    public static function revoke_partner($object_type, $object_id, $partner_user_id = 0, $role = 'partner'): bool
+    {
+        global $wpdb;
+        if (!$wpdb) {
+            return false;
+        }
+
+        $object_type = is_string($object_type) ? trim($object_type) : '';
+        $role = is_string($role) ? trim($role) : '';
+        $object_id = (int) $object_id;
+        $partner_user_id = (int) $partner_user_id;
+
+        if ($object_type === '' || $role === '' || $object_id <= 0) {
+            return false;
+        }
+
+        $table = $wpdb->prefix . self::TABLE_SLUG;
+        $now = current_time('mysql');
+
+        $where = [
+            'object_type' => $object_type,
+            'object_id' => $object_id,
+            'role' => $role,
+            'status' => 'active',
+        ];
+        $where_format = ['%s', '%d', '%s', '%s'];
+
+        if ($partner_user_id > 0) {
+            $where['partner_user_id'] = $partner_user_id;
+            $where_format[] = '%d';
+        }
+
+        $result = $wpdb->update(
+            $table,
+            [
+                'status' => 'revoked',
+                'revoked_at' => $now,
+                'updated_at' => $now,
+            ],
+            $where,
+            ['%s', '%s', '%s'],
+            $where_format
+        );
+
+        return $result !== false;
     }
 }

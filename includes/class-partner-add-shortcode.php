@@ -43,10 +43,20 @@ class PL_Partner_Add_Shortcode
             return '';
         }
 
-        if (class_exists('PL_Partnerships_Repository') && method_exists('PL_Partnerships_Repository', 'get_object_partners')) {
-            $partners = PL_Partnerships_Repository::get_object_partners('course', $course_id);
+        if (class_exists('PL_Partnerships_Repository') && method_exists('PL_Partnerships_Repository', 'get_object_partners_by_role')) {
+            $partners = PL_Partnerships_Repository::get_object_partners_by_role('course', $course_id, 'partner');
             if (!empty($partners)) {
                 return '';
+            }
+        } elseif (class_exists('PL_Partnerships_Repository') && method_exists('PL_Partnerships_Repository', 'get_object_partners')) {
+            $partners = PL_Partnerships_Repository::get_object_partners('course', $course_id);
+            foreach ((array) $partners as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                if (($row['role'] ?? '') === 'partner') {
+                    return '';
+                }
             }
         }
 

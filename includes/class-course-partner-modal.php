@@ -47,6 +47,7 @@ class PL_Course_Partner_Modal
             'friendsSearchUrl' => rest_url('politeia/v1/friends/search'),
             'addPartnerUrl' => rest_url('politeia/v1/partnerships/add'),
             'invitePartnerUrl' => rest_url('politeia/v1/partnerships/invite'),
+            'revokePartnerUrl' => rest_url('politeia/v1/partnerships/revoke'),
             'nonce' => wp_create_nonce('wp_rest'),
             'i18n' => self::i18n_strings(),
         ]);
@@ -57,13 +58,13 @@ class PL_Course_Partner_Modal
         $locale = function_exists('determine_locale') ? (string) determine_locale() : (string) get_locale();
         $is_es = str_starts_with(strtolower($locale), 'es');
 
-        $submit_members = __('Confirm partner', 'politeia-learning');
+        $submit_members = __('Send invitation', 'politeia-learning');
         $submit_invite = __('Send invitation', 'politeia-learning');
 
         // Fallbacks if translations are not configured.
         if ($is_es) {
-            if ($submit_members === 'Confirm partner') {
-                $submit_members = 'CONFIRMAR';
+            if ($submit_members === 'Send invitation') {
+                $submit_members = 'ENVIAR INVITACIÓN';
             }
             if ($submit_invite === 'Send invitation') {
                 $submit_invite = 'ENVIAR INVITACIÓN';
@@ -73,11 +74,16 @@ class PL_Course_Partner_Modal
             if ($submit_invite === 'Send invitation') {
                 $submit_invite = 'SEND INVITATION';
             }
+            if ($submit_members === 'Send invitation') {
+                $submit_members = 'SEND INVITATION';
+            }
         }
 
         return [
             'submitMembers' => $submit_members,
             'submitInvite' => $submit_invite,
+            'confirmRemove' => $is_es ? '¿Eliminar partner? Esto revocará su acceso al curso.' : 'Remove partner? This will revoke their access to the course.',
+            'removeFailed' => $is_es ? 'No se pudo eliminar el partner.' : 'Could not remove partner.',
         ];
     }
 
@@ -119,12 +125,12 @@ class PL_Course_Partner_Modal
 
                     <form id="plPartnerForm" class="pl-partner-form">
                         <div class="pl-partner-field" data-mode="members">
-                            <label class="pl-partner-label" for="plPartnerMemberInput"><?php echo esc_html__('Search friend', 'politeia-learning'); ?></label>
+                            <label class="pl-partner-label" for="plPartnerMemberInput"><?php echo esc_html__('Search name', 'politeia-learning'); ?></label>
                             <input id="plPartnerMemberInput" class="pl-partner-input" type="text" autocomplete="off"
                                 placeholder="<?php echo esc_attr__('Start typing…', 'politeia-learning'); ?>" />
                             <div id="plPartnerMemberResults" class="pl-partner-results" aria-live="polite"></div>
                             <div id="plPartnerMemberError" class="pl-partner-error" hidden>
-                                <?php echo esc_html__('Select a friend from the list.', 'politeia-learning'); ?>
+                                <?php echo esc_html__('Select a member from the list.', 'politeia-learning'); ?>
                             </div>
                         </div>
 

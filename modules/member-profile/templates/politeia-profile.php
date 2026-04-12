@@ -140,6 +140,31 @@ if ($is_own_profile && class_exists('PL_Relationships')) {
 $is_notifications_view = function_exists('bp_is_user_notifications') ? (bool) bp_is_user_notifications() : false;
 $is_friends_view = function_exists('bp_is_user_friends') ? (bool) bp_is_user_friends() : false;
 
+$pl_subscribe_error_code = isset($_GET['pl_subscribe_error']) ? sanitize_key((string) wp_unslash($_GET['pl_subscribe_error'])) : '';
+$pl_subscribe_error_message = '';
+if ($pl_subscribe_error_code !== '') {
+    $pl_subscribe_error_message = __('No se pudo iniciar la suscripción. Revisa el registro (debug.log) para más detalles.', 'politeia-learning');
+    if ($pl_subscribe_error_code === 'tier_not_found') {
+        $pl_subscribe_error_message = __('Este creador aún no tiene membresía mensual configurada.', 'politeia-learning');
+    } elseif ($pl_subscribe_error_code === 'mp_policy_blocked') {
+        $pl_subscribe_error_message = __('Mercado Pago (sandbox) bloqueó la creación del plan de suscripción (PolicyAgent 403). En MLC esto puede pasar por políticas del sandbox. Solución: probar en LIVE o cambiar a Direct.', 'politeia-learning');
+    } elseif ($pl_subscribe_error_code === 'mp_back_url_required') {
+        $pl_subscribe_error_message = __('Mercado Pago exige "back_url" para crear el plan de suscripción. Configura "Success URL" en Pagos o reintenta (el sistema usa Home por defecto).', 'politeia-learning');
+    } elseif ($pl_subscribe_error_code === 'mp_card_token_required') {
+        $pl_subscribe_error_message = __('Mercado Pago exige "card_token_id" para crear la suscripción en este flujo. Cambia Subscription Flow a Direct (tokenización de tarjeta) o usa credenciales/flujo que habiliten checkout hosted.', 'politeia-learning');
+    } elseif ($pl_subscribe_error_code === 'mp_payer_collector_mismatch') {
+        $pl_subscribe_error_message = __('Mercado Pago exige que payer y collector sean ambos usuarios reales o ambos de prueba. Para Hosted, inicia sesión en el checkout con un comprador de prueba (o usa Direct).', 'politeia-learning');
+    } elseif ($pl_subscribe_error_code === 'mp_payer_email_required') {
+        $pl_subscribe_error_message = __('Mercado Pago exige "payer_email" para crear la suscripción. Configura "Payer Email Override" (si estás usando compradores de prueba) o asegúrate que el usuario tenga email válido.', 'politeia-learning');
+    } elseif ($pl_subscribe_error_code === 'mp_missing_sandbox_init_point') {
+        $pl_subscribe_error_message = __('Mercado Pago no entregó URL de sandbox para el checkout. En MLC el sandbox puede fallar; prueba en LIVE o usa Direct.', 'politeia-learning');
+    } elseif ($pl_subscribe_error_code === 'collector_mismatch') {
+        $pl_subscribe_error_message = __('Las credenciales de Mercado Pago no corresponden al seller esperado. Revisa los tokens/configuración.', 'politeia-learning');
+    } elseif ($pl_subscribe_error_code === 'mp_api_error') {
+        $pl_subscribe_error_message = __('Mercado Pago rechazó la solicitud o el sandbox no respondió. Revisa debug.log.', 'politeia-learning');
+    }
+}
+
 $server_view = $is_notifications_view ? 'notifications' : ($is_friends_view ? 'friends' : '');
 $initial_tab = $server_view !== '' ? $server_view : 'main';
 $initial_label = $server_view === 'notifications' ? 'Notifications' : ($server_view === 'friends' ? 'Friends' : 'Main');
@@ -319,7 +344,6 @@ pl_template_open();
 <script src="https://unpkg.com/lucide@latest"></script>
 	<!-- Fonts -->
 	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&family=Inter:wght@400;500;600;700;900&family=Newsreader:opsz,wght@6..72,300&display=swap" rel="stylesheet">
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=space_dashboard,diversity_3" />
 
 	<style>
 	    .material-symbols-outlined {
@@ -972,6 +996,12 @@ pl_template_open();
 	                </div>
 	            </div>
 	        </header>
+
+            <?php if ($pl_subscribe_error_message !== '') : ?>
+                <div class="px-5 py-3 border-b border-neutral-200 bg-red-50 text-red-800 text-xs">
+                    <?php echo esc_html($pl_subscribe_error_message); ?>
+                </div>
+            <?php endif; ?>
 
 	        <!-- Dynamic Content Container -->
 	        <div id="pcg-content-area"

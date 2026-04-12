@@ -157,3 +157,71 @@ function pl_filter_get_avatar_url(string $url, $id_or_email, array $args): strin
 }
 
 add_filter('get_avatar_url', 'pl_filter_get_avatar_url', 10, 3);
+
+function pl_get_politeia_logo_url(): string
+{
+    return defined('PL_URL') ? (string) PL_URL . 'assets/images/politeia-logo.png' : '';
+}
+
+/**
+ * Return the most recent pending partner invite for a course.
+ *
+ * @return array{label:string,email:string,user_id:int}|null
+ */
+function pl_get_pending_course_partner_invite(int $course_id): ?array
+{
+    global $wpdb;
+
+    if ($course_id <= 0 || !$wpdb) {
+        return null;
+    }
+
+    $table = $wpdb->prefix . 'politeia_plan_participant_invites';
+    $table_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table);
+    if (!$table_exists) {
+        return null;
+    }
+
+    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+    $row = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT invitee_email, invitee_user_id
+             FROM {$table}
+             WHERE object_type = %s
+               AND object_id = %d
+               AND role = %s
+               AND status = %s
+             ORDER BY id DESC
+             LIMIT 1",
+            'course',
+            $course_id,
+            'partner',
+            'pending'
+        ),
+        ARRAY_A
+    );
+
+    if (!is_array($row) || empty($row['invitee_email'])) {
+        return null;
+    }
+
+    $email = sanitize_email((string) ($row['invitee_email'] ?? ''));
+    if ($email === '') {
+        return null;
+    }
+
+    $invitee_user_id = isset($row['invitee_user_id']) ? absint($row['invitee_user_id']) : 0;
+    $label = $email;
+    if ($invitee_user_id > 0) {
+        $u = get_userdata($invitee_user_id);
+        if ($u instanceof WP_User && !empty($u->display_name)) {
+            $label = (string) $u->display_name;
+        }
+    }
+
+    return [
+        'label' => $label,
+        'email' => $email,
+        'user_id' => $invitee_user_id,
+    ];
+}

@@ -27,6 +27,11 @@ class PL_Email
             return '';
         }
 
+        // If Email Log module is enabled, store the template path for better attribution.
+        if (class_exists('PL_Email_Log_Manager')) {
+            PL_Email_Log_Manager::set_last_template_file($path);
+        }
+
         if (!empty($vars)) {
             // phpcs:ignore WordPress.PHP.DontExtract.extract_extract
             extract($vars, EXTR_SKIP);

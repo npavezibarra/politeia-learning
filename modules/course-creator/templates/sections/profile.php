@@ -12,6 +12,24 @@ $last_name = get_user_meta($user->ID, 'last_name', true);
 $avatar_url = get_avatar_url($user->ID, ['size' => 128]);
 $portfolio_manager = PL_Member_Profile_Portfolio_Manager::get_instance();
 $portfolio_settings = $portfolio_manager->get_settings($user->ID);
+
+$pl_membership_amount = 0;
+$pl_membership_currency = 'CLP';
+if (class_exists('Politeia_PPS_Subscription_Engine') && method_exists('Politeia_PPS_Subscription_Engine', 'get_creator_tier_by_slug')) {
+    $tier = Politeia_PPS_Subscription_Engine::get_creator_tier_by_slug($user->ID, 'monthly');
+    if (is_array($tier)) {
+        $pl_membership_amount = (int) ($tier['amount_minor'] ?? 0);
+        $pl_membership_currency = strtoupper((string) ($tier['currency'] ?? 'CLP'));
+    }
+} else {
+    $pl_membership_amount = (int) get_user_meta($user->ID, 'politeia_membership_monthly_amount', true);
+}
+
+$pl_membership_amount_display = $pl_membership_amount > 0 ? number_format($pl_membership_amount, 0, ',', '.') : '';
+$pl_membership_notice = isset($_GET['pl_membership_notice']) ? sanitize_text_field(wp_unslash($_GET['pl_membership_notice'])) : '';
+$pl_membership_error = isset($_GET['pl_membership_error']) ? sanitize_text_field(wp_unslash($_GET['pl_membership_error'])) : '';
+
+$pl_membership_label = (strpos(get_locale(), 'es') !== false) ? __('Membresía', 'politeia-learning') : __('Membership', 'politeia-learning');
 ?>
 
 <style>
@@ -479,6 +497,9 @@ $portfolio_settings = $portfolio_manager->get_settings($user->ID);
                 <div class="pcg-segment" data-profile-tab="portfolio">
                     <?php _e('Portfolio', 'politeia-learning'); ?>
                 </div>
+                <div class="pcg-segment" data-profile-tab="membership">
+                    <?php echo esc_html($pl_membership_label); ?>
+                </div>
                 <div class="pcg-segment" data-profile-tab="interests">
                     <?php _e('My Interest', 'politeia-learning'); ?>
                 </div>
@@ -737,6 +758,65 @@ $portfolio_settings = $portfolio_manager->get_settings($user->ID);
         </div>
     </div>
 
+    <!-- Membership Panel -->
+    <div data-profile-panel="membership" class="pcg-profile-view" style="display:none;">
+        <div class="pcg-profile-inner">
+            <div class="form-card p-8">
+                <h2 class="section-title mb-6">
+                    <i class="fa-solid fa-coins icon-gold"></i>
+                    <?php echo esc_html($pl_membership_label); ?>
+                </h2>
+
+                <p class="mb-8" style="color: #737373; font-size: 0.9rem;">
+                    <?php _e('Define el monto mensual para que otros usuarios puedan suscribirse a tu contenido exclusivo. Por ahora solo existe un tier mensual.', 'politeia-learning'); ?>
+                </p>
+
+                <?php if ($pl_membership_notice === 'saved') : ?>
+                    <div style="padding:12px 14px;border-radius:6px;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;margin-bottom:16px;font-size:13px;">
+                        <?php _e('Guardado.', 'politeia-learning'); ?>
+                    </div>
+                <?php endif; ?>
+                <?php if ($pl_membership_error !== '') : ?>
+                    <div style="padding:12px 14px;border-radius:6px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;margin-bottom:16px;font-size:13px;">
+                        <?php echo esc_html($pl_membership_error); ?>
+                    </div>
+                <?php endif; ?>
+
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="space-y-8">
+                    <input type="hidden" name="action" value="pl_cc_save_membership_tier" />
+                    <input type="hidden" name="user_slug" value="<?php echo esc_attr($user_slug); ?>" />
+                    <?php wp_nonce_field('pl_cc_membership_tier', 'pl_cc_membership_tier_nonce'); ?>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2" style="display:grid; gap:32px;">
+                        <div class="flex flex-col">
+                            <div class="flex items-center" style="height: 20px;">
+                                <span class="label-text"><?php _e('Monto mensual', 'politeia-learning'); ?> (<?php echo esc_html($pl_membership_currency); ?>)</span>
+                            </div>
+                            <div class="flex-1">
+                                <input
+                                    type="text"
+                                    name="monthly_amount"
+                                    value="<?php echo esc_attr($pl_membership_amount_display); ?>"
+                                    class="input-field"
+                                    inputmode="numeric"
+                                    placeholder="5000"
+                                    autocomplete="off"
+                                />
+                                <div style="margin-top:10px;color:#a1a1aa;font-size:12px;">
+                                    <?php _e('Periodo: mensual (fijo).', 'politeia-learning'); ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-6 pt-6">
+                        <button type="submit" class="gold-cta"><?php _e('Guardar', 'politeia-learning'); ?></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Interests Panel -->
     <div data-profile-panel="interests" class="pcg-profile-view" style="display:none;">
         <div class="pcg-profile-inner">
@@ -965,6 +1045,17 @@ $portfolio_settings = $portfolio_manager->get_settings($user->ID);
             // Global event if needed
             window.dispatchEvent(new CustomEvent('pcg:profile-tab-changed', { detail: { tab } }));
         });
+
+        // Open tab from URL (?profile_tab=membership)
+        try {
+            const initialTab = new URLSearchParams(window.location.search).get('profile_tab');
+            if (initialTab) {
+                const $initial = $(`#pcg-profile-tabs .pcg-segment[data-profile-tab="${initialTab}"]`);
+                if ($initial.length) {
+                    $initial.trigger('click');
+                }
+            }
+        } catch (e) {}
 
         // Portfolio Logic
         const portfolioNonce = '<?php echo wp_create_nonce("pl_portfolio_nonce"); ?>';

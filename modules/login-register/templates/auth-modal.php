@@ -375,6 +375,65 @@ $register_url = PL_Auth_Login_Register::build_modal_url('register', $redirect_to
     var notice = overlay.getAttribute('data-notice') || '';
     var error = overlay.getAttribute('data-error') || '';
     var autoOpen = overlay.getAttribute('data-auto-open') === '1';
+    var emailField = document.getElementById('pl-auth-email');
+    var emailConfirmField = document.getElementById('pl-auth-email-confirm');
+    var firstNameField = document.getElementById('pl-auth-first-name');
+    var lastNameField = document.getElementById('pl-auth-last-name');
+
+    function prefillFromQuery() {
+        try {
+            var params = new URLSearchParams(window.location.search || '');
+
+            var emailKeys = ['invite_email', 'signup_email', 'email'];
+            var firstNameKeys = ['invite_first_name', 'signup_first_name', 'first_name'];
+            var lastNameKeys = ['invite_last_name', 'signup_last_name', 'last_name'];
+
+            var prefillEmail = '';
+            emailKeys.some(function (key) {
+                var v = (params.get(key) || '').trim();
+                if (v) {
+                    prefillEmail = v;
+                    return true;
+                }
+                return false;
+            });
+
+            if (prefillEmail && emailField && !emailField.value) {
+                emailField.value = prefillEmail;
+            }
+            if (prefillEmail && emailConfirmField && !emailConfirmField.value) {
+                emailConfirmField.value = prefillEmail;
+            }
+
+            var prefillFirst = '';
+            firstNameKeys.some(function (key) {
+                var v = (params.get(key) || '').trim();
+                if (v) {
+                    prefillFirst = v;
+                    return true;
+                }
+                return false;
+            });
+            if (prefillFirst && firstNameField && !firstNameField.value) {
+                firstNameField.value = prefillFirst;
+            }
+
+            var prefillLast = '';
+            lastNameKeys.some(function (key) {
+                var v = (params.get(key) || '').trim();
+                if (v) {
+                    prefillLast = v;
+                    return true;
+                }
+                return false;
+            });
+            if (prefillLast && lastNameField && !lastNameField.value) {
+                lastNameField.value = prefillLast;
+            }
+        } catch (e) {
+            // ignore
+        }
+    }
 
     function setMessage(type, text) {
         if (!message) {
@@ -451,6 +510,8 @@ $register_url = PL_Auth_Login_Register::build_modal_url('register', $redirect_to
     window.PLAuthCloseModal = function () {
         overlay.classList.remove('is-open');
     };
+
+    prefillFromQuery();
 
     tabs.forEach(function (tab) {
         tab.addEventListener('click', function () {

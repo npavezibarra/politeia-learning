@@ -36,3 +36,24 @@ add_action('init', function () {
         PL_Member_Profile_Portfolio_Manager::get_instance();
     }
 }, 0);
+
+/**
+ * Assets for the public profile route.
+ *
+ * IMPORTANT: load assets via wp_enqueue_* so they are printed in wp_head() and
+ * not injected late inside templates (which can break font/icon loading).
+ */
+add_action('wp_enqueue_scripts', function (): void {
+    $username = (string) get_query_var(PL_Member_Profile_Public_Route::USERNAME_VAR, '');
+    if ($username === '') {
+        return;
+    }
+
+    // Google Material Symbols (icons). Load the full set to avoid "missing icon" fallbacks.
+    wp_enqueue_style(
+        'politeia-material-symbols-outlined',
+        'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap',
+        [],
+        null
+    );
+}, 5);

@@ -1,0 +1,118 @@
+.politeia-pps {
+	background: #fff;
+	border: 1px solid rgba(0, 0, 0, 0.08);
+	border-radius: 12px;
+	padding: 16px;
+}
+
+.politeia-pps__muted,
+.politeia-pps__hint {
+	color: rgba(0, 0, 0, 0.6);
+	font-size: 0.95em;
+}
+
+.politeia-pps__list {
+	margin: 12px 0 0;
+	padding-left: 18px;
+}
+
+.politeia-pps__table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-top: 12px;
+}
+
+.politeia-pps__table th,
+.politeia-pps__table td {
+	text-align: left;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+	padding: 8px 6px;
+}
+
+.politeia-pps__actions {
+	margin: 12px 0;
+}
+
+.politeia-pps__btn {
+	display: inline-block;
+	border: 1px solid rgba(0, 0, 0, 0.2);
+	background: #f7f7f7;
+	padding: 8px 12px;
+	border-radius: 10px;
+	cursor: pointer;
+}
+
+.politeia-pps__btn--primary {
+	background: #1d4ed8;
+	color: #fff;
+	border-color: rgba(0, 0, 0, 0.12);
+}
+
+.politeia-pps__dropdown {
+	margin-top: 10px;
+	padding: 12px;
+	border: 1px solid rgba(0, 0, 0, 0.08);
+	border-radius: 12px;
+	background: rgba(0, 0, 0, 0.02);
+}
+
+.politeia-pps__notice {
+	margin: 10px 0;
+	padding: 10px 12px;
+	border-radius: 12px;
+	background: rgba(22, 163, 74, 0.12);
+	border: 1px solid rgba(22, 163, 74, 0.22);
+}
+
+.politeia-pps__error {
+	margin: 10px 0;
+	padding: 10px 12px;
+	border-radius: 12px;
+	background: rgba(220, 38, 38, 0.12);
+	border: 1px solid rgba(220, 38, 38, 0.22);
+}
+
+.politeia-pps__card-form {
+	margin: 16px 0 20px;
+	padding: 14px;
+	border: 1px solid rgba(0, 0, 0, 0.08);
+	border-radius: 12px;
+	background: rgba(0, 0, 0, 0.02);
+	max-width: 820px;
+}
+
+.politeia-pps__card-form h3 {
+	margin: 0 0 10px;
+}
+
+.politeia-pps__grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px 14px;
+}
+
+.politeia-pps__grid label {
+	display: block;
+	font-size: 12px;
+	color: rgba(0, 0, 0, 0.78);
+	margin-bottom: 4px;
+}
+
+.politeia-pps__grid input,
+.politeia-pps__grid select {
+	width: 100%;
+	padding: 8px 10px;
+	border: 1px solid rgba(0, 0, 0, 0.2);
+	border-radius: 10px;
+	background: #fff;
+}
+
+.politeia-pps__grid .politeia-pps__full {
+	grid-column: 1 / -1;
+}
+
+.politeia-pps__hint {
+	margin-top: 10px;
+	font-size: 12px;
+	color: rgba(0, 0, 0, 0.62);
+}

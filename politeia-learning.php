@@ -205,6 +205,7 @@ class PL_Module_Loader
         'quiz-control' => true,
         'woo' => true,
         'member-profile' => true,
+        'payments-subscriptions' => true,
         'email-log' => true,
     ];
 

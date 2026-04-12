@@ -20,6 +20,7 @@ class PL_CC_Creator_Dashboard
         add_action('wp_enqueue_scripts', [$this, 'enqueue_assets']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_escrito_frontend_assets'], 999);
         add_action('bp_setup_nav', [$this, 'add_bp_nav_item'], 100);
+        add_action('admin_post_pl_cc_save_membership_tier', [$this, 'handle_save_membership_tier']);
 
         // Shortcode as fallback or alternative
         add_shortcode('pcg_course_creator_dashboard', [$this, 'render_dashboard_shortcode']);
@@ -28,6 +29,74 @@ class PL_CC_Creator_Dashboard
         add_filter('the_content', [$this, 'wrap_escrito_content']);
 
         add_filter('body_class', [$this, 'add_dashboard_body_classes']);
+    }
+
+    /**
+     * Save the creator's monthly paid membership tier amount from Center-2 > Perfil.
+     */
+    public function handle_save_membership_tier(): void
+    {
+        if (!is_user_logged_in()) {
+            wp_safe_redirect(wp_login_url());
+            exit;
+        }
+
+        check_admin_referer('pl_cc_membership_tier', 'pl_cc_membership_tier_nonce');
+
+        $creator_user_id = (int) get_current_user_id();
+        $user_slug = sanitize_key((string) ($_POST['user_slug'] ?? ''));
+
+        $user = $user_slug !== '' ? get_user_by('slug', $user_slug) : null;
+        if (!$user || (int) $user->ID !== $creator_user_id) {
+            wp_die(__('No autorizado.', 'politeia-learning'), 403);
+        }
+
+        $amount_raw = (string) ($_POST['monthly_amount'] ?? '');
+        $amount_minor = absint(preg_replace('/[^0-9]/', '', $amount_raw));
+        if ($amount_minor <= 0) {
+            $this->redirect_membership_settings(__('Ingresa un monto válido.', 'politeia-learning'));
+        }
+
+        $error = '';
+
+        if (class_exists('Politeia_PPS_Subscription_Engine')) {
+            $res = Politeia_PPS_Subscription_Engine::upsert_creator_monthly_tier($creator_user_id, $amount_minor, 'CLP');
+            if (is_wp_error($res)) {
+                $error = $res->get_error_message();
+            }
+        } else {
+            update_user_meta($creator_user_id, 'politeia_membership_monthly_amount', $amount_minor);
+        }
+
+        if ($error !== '') {
+            $this->redirect_membership_settings($error);
+        }
+
+        $this->redirect_membership_settings('');
+    }
+
+    private function redirect_membership_settings(string $error_message): void
+    {
+        $ref = wp_get_referer();
+        if (!is_string($ref) || $ref === '') {
+            $ref = home_url('/');
+        }
+
+        $ref = remove_query_arg(['pl_membership_notice', 'pl_membership_error'], $ref);
+
+        $args = [
+            'section' => 'profile',
+            'profile_tab' => 'membership',
+        ];
+
+        if ($error_message !== '') {
+            $args['pl_membership_error'] = $error_message;
+        } else {
+            $args['pl_membership_notice'] = 'saved';
+        }
+
+        wp_safe_redirect(add_query_arg($args, $ref));
+        exit;
     }
 
     /**
