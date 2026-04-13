@@ -20,6 +20,8 @@ final class PL_Learni_Frontend_Templates
         add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_assets'], 20);
         add_filter('render_block', [__CLASS__, 'filter_theme_blocks'], 10, 2);
         add_filter('body_class', [__CLASS__, 'filter_body_class'], 20);
+        add_action('admin_post_pl_learni_enroll_course', [__CLASS__, 'handle_enroll_course']);
+        add_action('admin_post_nopriv_pl_learni_enroll_course', [__CLASS__, 'handle_enroll_course_nopriv']);
         add_action('admin_post_pl_learni_mark_lesson_complete', [__CLASS__, 'handle_mark_lesson_complete']);
         add_action('admin_post_nopriv_pl_learni_mark_lesson_complete', [__CLASS__, 'handle_mark_lesson_complete_nopriv']);
 
@@ -117,6 +119,24 @@ final class PL_Learni_Frontend_Templates
             defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0'
         );
 
+        if (is_singular('learni_course')) {
+            wp_enqueue_script(
+                'pl-learni-quiz',
+                PL_LEARNI_URL . 'assets/learner-quiz.js',
+                [],
+                defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0',
+                true
+            );
+            wp_add_inline_script(
+                'pl-learni-quiz',
+                'window.Learni = Object.assign({}, window.Learni || {}, ' . wp_json_encode([
+                    'restUrl' => esc_url_raw(rest_url()),
+                    'restNonce' => wp_create_nonce('wp_rest'),
+                ]) . ');',
+                'before'
+            );
+        }
+
         if (is_singular('learni_lesson')) {
             wp_enqueue_script(
                 'pl-learni-lesson-outline',
@@ -204,6 +224,7 @@ final class PL_Learni_Frontend_Templates
         $progress_text = sprintf(__('COMPLETADO %1$d DE %2$d LECCIONES', 'politeia-learning'), $done, $total);
         $price = (float) get_post_meta($course_id, 'learni_price', true);
         $price_label = $price > 0 ? '$' . number_format((float) $price, 0, '.', ',') : __('FREE', 'politeia-learning');
+        $is_free = $price <= 0;
         $thumb_url = (string) get_the_post_thumbnail_url($course_id, 'large');
         $certificate_attachment_id = class_exists('\\Learni\\PostTypes\\Course') ? (int) get_post_meta($course_id, \Learni\PostTypes\Course::META_CERTIFICATE_ATTACHMENT_ID, true) : 0;
         $certificate_url = $certificate_attachment_id > 0 ? (string) wp_get_attachment_url($certificate_attachment_id) : '';
@@ -254,7 +275,80 @@ final class PL_Learni_Frontend_Templates
         }
         $html .= '</div>';
         $html .= '<div class="learni-course-card-actions">';
-        $html .= '<button type="button" class="learni-btn" disabled>' . esc_html__('START COURSE', 'politeia-learning') . '</button>';
+
+        // Binomial quiz aside controls (ported subset).
+        $binomial = self::binomial_course_state($course_id, $user_id, $percent);
+        $binomial_quiz_id = (int) ($binomial['quizId'] ?? 0);
+        if ($binomial_quiz_id > 0) {
+            if (is_array($binomial['initial'] ?? null)) {
+                $ip = (int) ($binomial['initial']['percent'] ?? 0);
+                $html .= '<div class="learni-eval">';
+                $html .= '<div class="learni-eval-head"><span class="learni-eval-title">' . esc_html__('EVALUACIÓN INICIAL', 'politeia-learning') . '</span><span class="learni-eval-percent">' . esc_html((string) $ip) . '%</span></div>';
+                $html .= '<div class="learni-eval-track"><div class="learni-eval-bar" style="width:' . esc_attr((string) $ip) . '%"></div></div>';
+                $html .= '</div>';
+            }
+            if (is_array($binomial['final'] ?? null)) {
+                $fp = (int) ($binomial['final']['percent'] ?? 0);
+                $html .= '<div class="learni-eval">';
+                $html .= '<div class="learni-eval-head"><span class="learni-eval-title">' . esc_html__('EVALUACIÓN FINAL', 'politeia-learning') . '</span><span class="learni-eval-percent">' . esc_html((string) $fp) . '%</span></div>';
+                $html .= '<div class="learni-eval-track"><div class="learni-eval-bar" style="width:' . esc_attr((string) $fp) . '%"></div></div>';
+                $html .= '</div>';
+            }
+
+            if (!empty($binomial['needsInitial'])) {
+                $html .= '<button id="learni-course-first-quiz" class="learni-btn learni-btn-quiz" type="button" data-course-id="' . esc_attr((string) $course_id) . '" data-phase="initial">' . esc_html__('TAKE FIRST QUIZ', 'politeia-learning') . '</button>';
+            }
+            if (!empty($binomial['needsFinal']) && $percent >= 100 && empty($binomial['final'])) {
+                $disabled = !empty($binomial['canTakeFinal']) ? '' : ' disabled';
+                $html .= '<button id="learni-course-final-quiz" class="learni-btn learni-btn-quiz" type="button" data-course-id="' . esc_attr((string) $course_id) . '" data-phase="final"' . $disabled . '>' . esc_html__('TAKE FINAL QUIZ', 'politeia-learning') . '</button>';
+            }
+        }
+
+        $is_enrolled = class_exists('\\Learni\\Database\\Enrollments') ? \Learni\Database\Enrollments::user_has_active($user_id, $course_id) : false;
+        $course_permalink = (string) get_permalink($course_id);
+        $first_lesson_url = '';
+        if (!empty($lesson_ids)) {
+            $first_slug = (string) get_post_field('post_name', (int) $lesson_ids[0]);
+            $first_lesson_url = $first_slug !== '' ? home_url('/?learni_lesson=' . rawurlencode($first_slug)) : '';
+        }
+
+        $continue_lesson_url = $first_lesson_url;
+        if (!empty($lesson_ids)) {
+            if ($linear_order) {
+                $continue_id = ($max_unlocked >= 0 && isset($lesson_ids[$max_unlocked])) ? (int) $lesson_ids[$max_unlocked] : (int) $lesson_ids[0];
+                $continue_slug = (string) get_post_field('post_name', $continue_id);
+                $continue_lesson_url = $continue_slug !== '' ? home_url('/?learni_lesson=' . rawurlencode($continue_slug)) : $first_lesson_url;
+            } else {
+                $continue_id = 0;
+                foreach ($lesson_ids as $lid) {
+                    $lid = (int) $lid;
+                    if ($lid > 0 && !isset($completed[$lid])) {
+                        $continue_id = $lid;
+                        break;
+                    }
+                }
+                if ($continue_id <= 0) {
+                    $continue_id = (int) $lesson_ids[0];
+                }
+                $continue_slug = (string) get_post_field('post_name', $continue_id);
+                $continue_lesson_url = $continue_slug !== '' ? home_url('/?learni_lesson=' . rawurlencode($continue_slug)) : $first_lesson_url;
+            }
+        }
+
+        if ($is_free && !$is_enrolled) {
+            $redirect_to = $first_lesson_url !== '' ? $first_lesson_url : $course_permalink;
+            $html .= '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+            $html .= '<input type="hidden" name="action" value="pl_learni_enroll_course">';
+            $html .= '<input type="hidden" name="course_id" value="' . esc_attr((string) $course_id) . '">';
+            $html .= '<input type="hidden" name="redirect_to" value="' . esc_attr($redirect_to) . '">';
+            $html .= wp_nonce_field('pl_learni_enroll_course_' . $course_id, '_wpnonce', true, false);
+            $html .= '<button type="submit" class="learni-btn">' . esc_html__('START COURSE', 'politeia-learning') . '</button>';
+            $html .= '</form>';
+        } elseif ($continue_lesson_url !== '') {
+            $html .= '<a class="learni-btn" href="' . esc_url($continue_lesson_url) . '">' . esc_html__($is_enrolled ? 'CONTINUE' : 'START COURSE', 'politeia-learning') . '</a>';
+        } else {
+            $html .= '<button type="button" class="learni-btn" disabled>' . esc_html__('START COURSE', 'politeia-learning') . '</button>';
+        }
         $html .= '</div>';
         $html .= '<div class="learni-course-includes">';
         $html .= '<div class="learni-course-includes-title">' . esc_html__('CURSO INCLUYE', 'politeia-learning') . '</div>';
@@ -609,6 +703,60 @@ final class PL_Learni_Frontend_Templates
         exit;
     }
 
+    public static function handle_enroll_course_nopriv(): void
+    {
+        $redirect = isset($_POST['redirect_to']) ? (string) wp_unslash($_POST['redirect_to']) : '';
+        if ($redirect === '') {
+            $redirect = home_url('/');
+        }
+        wp_safe_redirect(wp_login_url($redirect));
+        exit;
+    }
+
+    public static function handle_enroll_course(): void
+    {
+        $user_id = (int) get_current_user_id();
+        $course_id = isset($_POST['course_id']) ? (int) $_POST['course_id'] : 0;
+        $redirect = isset($_POST['redirect_to']) ? (string) wp_unslash($_POST['redirect_to']) : '';
+
+        if ($redirect === '') {
+            $redirect = wp_get_referer() ?: home_url('/');
+        }
+
+        if ($user_id <= 0) {
+            wp_safe_redirect(wp_login_url($redirect));
+            exit;
+        }
+
+        if ($course_id <= 0) {
+            wp_safe_redirect($redirect);
+            exit;
+        }
+
+        check_admin_referer('pl_learni_enroll_course_' . $course_id);
+
+        $price = (float) get_post_meta($course_id, 'learni_price', true);
+        if ($price > 0) {
+            // Paid enrollments are handled via WooCommerce for now.
+            wp_safe_redirect($redirect);
+            exit;
+        }
+
+        if (class_exists('\\Learni\\Database\\Enrollments')) {
+            \Learni\Database\Enrollments::upsert(
+                $user_id,
+                $course_id,
+                [
+                    'status' => \Learni\Database\Enrollments::STATUS_ACTIVE,
+                    'source' => \Learni\Database\Enrollments::SOURCE_DIRECT,
+                ]
+            );
+        }
+
+        wp_safe_redirect($redirect);
+        exit;
+    }
+
     public static function handle_mark_lesson_complete(): void
     {
         $user_id = (int) get_current_user_id();
@@ -767,5 +915,146 @@ final class PL_Learni_Frontend_Templates
         }
 
         return $template;
+    }
+
+    private static function binomial_course_state(int $course_id, int $user_id, int $lesson_percent): array
+    {
+        if ($course_id <= 0 || $user_id <= 0 || !class_exists('\\Learni\\Database\\Progress')) {
+            return [
+                'quizId' => 0,
+                'needsInitial' => false,
+                'needsFinal' => false,
+                'canTakeFinal' => false,
+                'initial' => null,
+                'final' => null,
+            ];
+        }
+
+        global $wpdb;
+
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, lesson_post_id, settings_json
+                 FROM {$wpdb->prefix}learni_quizzes
+                 WHERE course_post_id = %d
+                 ORDER BY id ASC",
+                $course_id
+            ),
+            ARRAY_A
+        );
+
+        $quiz_id = 0;
+        $fallback_id = 0;
+        $fallback_count = 0;
+        foreach ($rows as $row) {
+            $settings = [];
+            if (!empty($row['settings_json'])) {
+                $decoded = json_decode((string) $row['settings_json'], true);
+                if (is_array($decoded)) {
+                    $settings = $decoded;
+                }
+            }
+            if (isset($settings['role']) && (string) $settings['role'] === 'binomial') {
+                $quiz_id = (int) ($row['id'] ?? 0);
+                break;
+            }
+            if (empty($row['lesson_post_id'])) {
+                $fallback_id = (int) ($row['id'] ?? 0);
+                $fallback_count++;
+            }
+        }
+        if ($quiz_id <= 0 && $fallback_count === 1) {
+            $quiz_id = $fallback_id;
+        }
+
+        if ($quiz_id <= 0) {
+            return [
+                'quizId' => 0,
+                'needsInitial' => false,
+                'needsFinal' => false,
+                'canTakeFinal' => false,
+                'initial' => null,
+                'final' => null,
+            ];
+        }
+
+        $attempts_table = $wpdb->prefix . 'learni_quiz_attempts';
+        $submitted_count = (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*)
+                 FROM {$attempts_table}
+                 WHERE quiz_id = %d AND user_id = %d AND status = %s",
+                $quiz_id,
+                $user_id,
+                'submitted'
+            )
+        );
+
+        $last_two = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, score, submitted_at, answers_json
+                 FROM {$attempts_table}
+                 WHERE quiz_id = %d AND user_id = %d AND status = %s
+                 ORDER BY submitted_at DESC, id DESC
+                 LIMIT 2",
+                $quiz_id,
+                $user_id,
+                'submitted'
+            ),
+            ARRAY_A
+        );
+
+        $initial = null;
+        $final = null;
+        if ($submitted_count % 2 === 1) {
+            $last = isset($last_two[0]) ? $last_two[0] : null;
+            if (is_array($last)) {
+                $initial = self::attempt_public_payload($last);
+            }
+        } elseif ($submitted_count >= 2) {
+            $last_final = isset($last_two[0]) ? $last_two[0] : null;
+            $last_initial = isset($last_two[1]) ? $last_two[1] : null;
+            if (is_array($last_initial)) {
+                $initial = self::attempt_public_payload($last_initial);
+            }
+            if (is_array($last_final)) {
+                $final = self::attempt_public_payload($last_final);
+            }
+        }
+
+        $needs_initial = $submitted_count === 0 || ($submitted_count % 2 === 0 && $lesson_percent < 100);
+        $needs_final = $submitted_count % 2 === 1;
+        $can_take_final = $needs_final && $lesson_percent >= 100 && class_exists('\\Learni\\Access\\Access') && \Learni\Access\Access::user_can_access_course($user_id, $course_id);
+
+        return [
+            'quizId' => $quiz_id,
+            'submittedCount' => $submitted_count,
+            'needsInitial' => $needs_initial,
+            'needsFinal' => $needs_final,
+            'canTakeFinal' => $can_take_final,
+            'initial' => $initial,
+            'final' => $final,
+        ];
+    }
+
+    private static function attempt_public_payload(array $row): array
+    {
+        $payload = [];
+        if (!empty($row['answers_json'])) {
+            $decoded = json_decode((string) $row['answers_json'], true);
+            if (is_array($decoded)) {
+                $payload = $decoded;
+            }
+        }
+        $total = isset($payload['total']) ? (int) $payload['total'] : 0;
+        $score = isset($row['score']) ? (int) $row['score'] : 0;
+        $percent = isset($payload['percent']) ? (int) $payload['percent'] : ($total > 0 ? (int) round(($score / $total) * 100) : 0);
+        return [
+            'attemptId' => (int) ($row['id'] ?? 0),
+            'score' => $score,
+            'total' => $total,
+            'percent' => $percent,
+            'submittedAt' => (string) ($row['submitted_at'] ?? ''),
+        ];
     }
 }
