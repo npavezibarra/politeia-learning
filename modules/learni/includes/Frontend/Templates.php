@@ -1087,7 +1087,7 @@ final class PL_Learni_Frontend_Templates
             if (is_array($last)) {
                 $initial = self::attempt_public_payload($last);
             }
-        } elseif ($submitted_count >= 2) {
+        } elseif ($submitted_count >= 2 && $lesson_percent >= 100) {
             $last_final = isset($last_two[0]) ? $last_two[0] : null;
             $last_initial = isset($last_two[1]) ? $last_two[1] : null;
             if (is_array($last_initial)) {
