@@ -676,7 +676,10 @@ button.learni-btn {
 }
 
 .learni-quiz-modal.is-open {
-	display: block;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 12px;
 }
 
 .learni-quiz-modal__backdrop {
@@ -687,9 +690,8 @@ button.learni-btn {
 
 .learni-quiz-modal__panel {
 	position: relative;
-	margin: 8vh auto 0;
 	width: min(720px, calc(100vw - 24px));
-	max-height: 84vh;
+	max-height: calc(100vh - 24px);
 	overflow: auto;
 	border-radius: 14px;
 	background: #fff;
