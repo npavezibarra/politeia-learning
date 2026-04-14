@@ -119,7 +119,7 @@ final class PL_Learni_Frontend_Templates
             defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0'
         );
 
-        if (is_singular('learni_course')) {
+        if (is_singular('learni_course') || is_singular('learni_lesson')) {
             wp_enqueue_script(
                 'pl-learni-quiz',
                 PL_LEARNI_URL . 'assets/learner-quiz.js',
@@ -494,8 +494,17 @@ final class PL_Learni_Frontend_Templates
 
         $video_url = (string) get_post_meta($lesson_id, \Learni\PostTypes\Lesson::META_VIDEO_URL, true);
         $video_html = '';
+        $video_provider = '';
+        $youtube_id = '';
         if ($video_url !== '') {
-            $video_html = (string) wp_oembed_get($video_url);
+            $youtube_id = self::parse_youtube_id($video_url);
+            if ($youtube_id !== '') {
+                $video_provider = 'youtube';
+                $embed_url = self::youtube_embed_url($youtube_id);
+                $video_html = $embed_url !== '' ? '<iframe id="learni-youtube-player" src="' . esc_url($embed_url) . '" title="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>' : '';
+            } else {
+                $video_html = (string) wp_oembed_get($video_url);
+            }
         }
 
         $course_url = $course_id > 0 ? (string) get_permalink($course_id) : '';
@@ -510,7 +519,7 @@ final class PL_Learni_Frontend_Templates
             $video_html = '';
         }
 
-        $html = '<div class="learni-learner learni-lesson-layout alignwide">';
+        $html = '<div class="learni-learner learni-lesson-layout alignwide" data-learni-course-id="' . esc_attr((string) $course_id) . '">';
         $html .= '<div class="learni-lesson-shell">';
 
         $html .= '<aside class="learni-lesson-aside" aria-label="' . esc_attr__('Course navigation', 'politeia-learning') . '">';
@@ -518,7 +527,7 @@ final class PL_Learni_Frontend_Templates
             $html .= '<a class="learni-lesson-back" href="' . esc_url($course_url) . '"><span class="learni-lesson-back-label">' . esc_html__('VOLVER A CURSO', 'politeia-learning') . '</span></a>';
         }
         if ($course_title !== '') {
-            $html .= '<h2 class="learni-lesson-course-title">' . esc_html($course_title) . '</h2>';
+            $html .= '<h2 id="learni-lesson-course-title" class="learni-lesson-course-title">' . esc_html($course_title) . '</h2>';
         }
         if ($course_id > 0) {
             $html .= '<div class="learni-lesson-course-progress" aria-label="' . esc_attr__('Course progress', 'politeia-learning') . '">';
@@ -590,13 +599,14 @@ final class PL_Learni_Frontend_Templates
         $html .= '<div class="learni-lesson-top-actions">';
 
         $btn_label = $is_complete ? __('FINALIZADO', 'politeia-learning') : __('FINALIZAR', 'politeia-learning');
-        $btn_disabled = ($user_id <= 0) || $is_complete || ($course_id <= 0) || $is_locked;
+        $requires_video_gate = (!$is_complete && !$is_locked && $video_provider === 'youtube' && $video_html !== '');
+        $btn_disabled = ($user_id <= 0) || $is_complete || ($course_id <= 0) || $is_locked || $requires_video_gate;
         $html .= '<form class="learni-lesson-complete-form" method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         $html .= '<input type="hidden" name="action" value="pl_learni_mark_lesson_complete">';
         $html .= '<input type="hidden" name="lesson_id" value="' . esc_attr((string) $lesson_id) . '">';
         $html .= '<input type="hidden" name="redirect_to" value="' . esc_attr((string) (wp_get_raw_referer() ?: '')) . '">';
         $html .= wp_nonce_field('pl_learni_complete_lesson_' . $lesson_id, '_wpnonce', true, false);
-        $html .= '<button type="submit" class="learni-lesson-complete-btn' . ($is_complete ? ' is-complete' : '') . '"' . ($btn_disabled ? ' disabled' : '') . '>';
+        $html .= '<button type="submit" class="learni-lesson-complete-btn' . ($is_complete ? ' is-complete' : '') . '"' . ($requires_video_gate ? ' data-learni-requires-video="1"' : '') . ($btn_disabled ? ' disabled' : '') . '>';
         $html .= '<span class="learni-lesson-complete-icon" aria-hidden="true"></span>';
         $html .= '<span class="learni-lesson-complete-text">' . esc_html($btn_label) . '</span>';
         $html .= '</button>';
@@ -613,7 +623,7 @@ final class PL_Learni_Frontend_Templates
         $html .= '<h1 class="learni-lesson-title">' . esc_html(get_the_title($lesson_id)) . '</h1>';
         $html .= '<div class="learni-lesson-body">';
         if ($video_html !== '') {
-            $html .= '<div class="learni-lesson-video">' . $video_html . '</div>';
+            $html .= '<div id="learni-lesson-video" class="learni-lesson-video"' . ($video_provider !== '' ? ' data-learni-video-provider="' . esc_attr($video_provider) . '"' : '') . ($video_provider === 'youtube' && $youtube_id !== '' ? ' data-learni-youtube-id="' . esc_attr($youtube_id) . '"' : '') . '>' . $video_html . '</div>';
         }
         $html .= $processed;
         $html .= '</div>';
@@ -891,6 +901,70 @@ final class PL_Learni_Frontend_Templates
             $i++;
         }
         return min($i, $n - 1);
+    }
+
+    private static function parse_youtube_id(string $url): string
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+
+        $parts = wp_parse_url($url);
+        if (!is_array($parts)) {
+            return '';
+        }
+
+        $host = isset($parts['host']) ? strtolower((string) $parts['host']) : '';
+        $path = isset($parts['path']) ? (string) $parts['path'] : '';
+        $query = [];
+        if (isset($parts['query'])) {
+            wp_parse_str((string) $parts['query'], $query);
+        }
+
+        if (str_contains($host, 'youtube.com')) {
+            $id = isset($query['v']) ? (string) $query['v'] : '';
+            $id = preg_replace('/[^a-zA-Z0-9_-]/', '', $id);
+            return $id ?: '';
+        }
+
+        if ($host === 'youtu.be') {
+            $id = trim($path, '/');
+            $id = preg_replace('/[^a-zA-Z0-9_-]/', '', $id);
+            return $id ?: '';
+        }
+
+        return '';
+    }
+
+    private static function youtube_embed_url(string $video_id): string
+    {
+        $video_id = preg_replace('/[^a-zA-Z0-9_-]/', '', $video_id);
+        if ($video_id === '') {
+            return '';
+        }
+
+        $origin_parts = wp_parse_url(home_url('/'));
+        $origin = '';
+        if (is_array($origin_parts)) {
+            $scheme = isset($origin_parts['scheme']) ? (string) $origin_parts['scheme'] : 'https';
+            $host = isset($origin_parts['host']) ? (string) $origin_parts['host'] : '';
+            $port = isset($origin_parts['port']) ? (int) $origin_parts['port'] : 0;
+            if ($host !== '') {
+                $origin = $scheme . '://' . $host . ($port ? ':' . $port : '');
+            }
+        }
+
+        $args = [
+            'enablejsapi' => '1',
+            'rel' => '0',
+            'modestbranding' => '1',
+        ];
+        if ($origin !== '') {
+            $args['origin'] = $origin;
+        }
+
+        return (string) add_query_arg($args, 'https://www.youtube.com/embed/' . $video_id);
     }
 
     public static function template_include(string $template): string

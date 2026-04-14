@@ -1,4 +1,7 @@
 (function () {
+  // Expose a tiny public API for lesson overlays.
+  window.LearniQuiz = window.LearniQuiz || {};
+
   function getConfig() {
     return window.Learni || {};
   }
@@ -290,10 +293,12 @@
     setupBinomialQuiz();
   }
 
+  window.LearniQuiz.apiFetch = apiFetch;
+  window.LearniQuiz.startBinomialQuiz = startBinomialQuiz;
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {
     init();
   }
 })();
-

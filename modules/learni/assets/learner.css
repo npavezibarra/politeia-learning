@@ -796,6 +796,71 @@ button.learni-btn {
 	color: rgba(17, 24, 39, 0.8);
 }
 
+.learni-final-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 9999;
+	display: none;
+}
+
+.learni-final-overlay.is-open {
+	display: block;
+}
+
+.learni-final-overlay__backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.55);
+}
+
+.learni-final-overlay__panel {
+	position: relative;
+	margin: 10vh auto 0;
+	width: min(620px, calc(100vw - 24px));
+	border-radius: 16px;
+	background: #fff;
+	box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+.learni-final-overlay__body {
+	padding: 18px;
+}
+
+.learni-final-overlay__title {
+	font-size: 14px;
+	font-weight: 900;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: rgba(17, 24, 39, 0.9);
+	margin-bottom: 10px;
+}
+
+.learni-final-overlay__text {
+	font-size: 14px;
+	color: rgba(17, 24, 39, 0.75);
+	line-height: 1.5;
+	margin-bottom: 14px;
+}
+
+.learni-final-overlay__actions {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.learni-final-overlay__later {
+	appearance: none;
+	border: 0;
+	background: transparent;
+	cursor: pointer;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: rgba(17, 24, 39, 0.55);
+	padding: 10px 6px;
+}
+
 .learni-course-content {
 	margin-bottom: 18px;
 }
