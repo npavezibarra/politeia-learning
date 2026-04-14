@@ -65,6 +65,18 @@ final class Routes
                 ],
             ]
         );
+
+        register_rest_route(
+            self::REST_NAMESPACE,
+            '/courses/(?P<id>\\d+)/restart',
+            [
+                'methods' => 'POST',
+                'permission_callback' => static function () {
+                    return is_user_logged_in();
+                },
+                'callback' => [__CLASS__, 'post_course_restart'],
+            ]
+        );
     }
 
     public static function get_course_binomial_status(WP_REST_Request $request)
@@ -496,6 +508,61 @@ final class Routes
         ];
     }
 
+    public static function post_course_restart(WP_REST_Request $request)
+    {
+        global $wpdb;
+
+        $course_id = (int) $request['id'];
+        if ($course_id <= 0 || get_post_type($course_id) !== Course::POST_TYPE) {
+            return new WP_Error('learni_invalid_course', 'Invalid course.', ['status' => 404]);
+        }
+
+        $user_id = (int) get_current_user_id();
+        if ($user_id <= 0) {
+            return new WP_Error('learni_login_required', 'Login required.', ['status' => 401]);
+        }
+
+        if (!Access::user_can_access_course($user_id, $course_id)) {
+            return new WP_Error('learni_forbidden', 'No access.', ['status' => 403]);
+        }
+
+        $quiz = self::binomial_quiz_for_course($course_id);
+        $quiz_id = (int) ($quiz['id'] ?? 0);
+        if ($quiz_id <= 0) {
+            return new WP_Error('learni_no_binomial', 'No binomial quiz configured for this course.', ['status' => 404]);
+        }
+
+        $summary = Progress::course_summary($user_id, $course_id);
+        $lesson_percent = isset($summary['percent']) ? (int) $summary['percent'] : 0;
+
+        $attempts_table = $wpdb->prefix . 'learni_quiz_attempts';
+        $submitted_count = (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*)
+                 FROM {$attempts_table}
+                 WHERE quiz_id = %d AND user_id = %d AND status = %s",
+                $quiz_id,
+                $user_id,
+                'submitted'
+            )
+        );
+
+        $can_restart = $submitted_count > 0 && $submitted_count % 2 === 0 && $lesson_percent >= 100;
+        if (!$can_restart) {
+            return new WP_Error('learni_restart_unavailable', 'Restart is only available after completing the course and finishing the final quiz.', ['status' => 400]);
+        }
+
+        $ok = Progress::reset_course($user_id, $course_id);
+        if (!$ok) {
+            return new WP_Error('learni_restart_failed', 'Failed to restart course.', ['status' => 500]);
+        }
+
+        return [
+            'ok' => true,
+            'courseId' => $course_id,
+        ];
+    }
+
     private static function quiz_passing_score(int $quiz_id): int
     {
         global $wpdb;
@@ -715,4 +782,3 @@ final class Routes
         ];
     }
 }
-

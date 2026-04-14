@@ -267,6 +267,7 @@
   function setupBinomialQuiz() {
     var firstBtn = document.getElementById("learni-course-first-quiz");
     var finalBtn = document.getElementById("learni-course-final-quiz");
+    var restartBtn = document.getElementById("learni-course-restart");
 
     function onStartClick(btn) {
       if (!btn || btn.disabled) return;
@@ -285,6 +286,32 @@
     if (finalBtn) {
       finalBtn.addEventListener("click", function () {
         onStartClick(finalBtn);
+      });
+    }
+
+    if (restartBtn) {
+      restartBtn.addEventListener("click", function () {
+        var courseId = restartBtn.getAttribute("data-course-id") || "";
+        if (!courseId) return;
+        if (!window.confirm("¿Reiniciar curso? Esto reiniciará tu progreso de lecciones.")) return;
+        restartBtn.disabled = true;
+        apiFetch("/learni/v1/courses/" + courseId + "/restart", { method: "POST", body: JSON.stringify({}) })
+          .then(function (res) {
+            return res.json().then(function (data) {
+              if (!res.ok) {
+                var msg = (data && data.message) || "Failed to restart course";
+                throw new Error(msg);
+              }
+              return data;
+            });
+          })
+          .then(function () {
+            window.location.reload();
+          })
+          .catch(function (err) {
+            restartBtn.disabled = false;
+            alert((err && err.message) || "Failed to restart course");
+          });
       });
     }
   }

@@ -58,5 +58,17 @@ final class Progress
             'percent' => $percent,
         ];
     }
-}
 
+    public static function reset_course(int $user_id, int $course_post_id): bool
+    {
+        if ($user_id <= 0 || $course_post_id <= 0) {
+            return false;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'learni_progress';
+
+        $ok = $wpdb->delete($table, ['user_id' => $user_id, 'course_post_id' => $course_post_id], ['%d', '%d']);
+        return $ok !== false;
+    }
+}

@@ -335,19 +335,21 @@ final class PL_Learni_Frontend_Templates
             }
         }
 
-        if ($is_free && !$is_enrolled) {
+        if (!empty($binomial['canRestart'])) {
+            $html .= '<button id="learni-course-restart" class="learni-btn learni-course-primary-btn" type="button" data-course-id="' . esc_attr((string) $course_id) . '">' . esc_html__('REINICIAR CURSO', 'politeia-learning') . '</button>';
+        } elseif ($is_free && !$is_enrolled) {
             $redirect_to = $first_lesson_url !== '' ? $first_lesson_url : $course_permalink;
             $html .= '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
             $html .= '<input type="hidden" name="action" value="pl_learni_enroll_course">';
             $html .= '<input type="hidden" name="course_id" value="' . esc_attr((string) $course_id) . '">';
             $html .= '<input type="hidden" name="redirect_to" value="' . esc_attr($redirect_to) . '">';
             $html .= wp_nonce_field('pl_learni_enroll_course_' . $course_id, '_wpnonce', true, false);
-            $html .= '<button type="submit" class="learni-btn">' . esc_html__('START COURSE', 'politeia-learning') . '</button>';
+            $html .= '<button type="submit" class="learni-btn learni-course-primary-btn">' . esc_html__('START COURSE', 'politeia-learning') . '</button>';
             $html .= '</form>';
         } elseif ($continue_lesson_url !== '') {
-            $html .= '<a class="learni-btn" href="' . esc_url($continue_lesson_url) . '">' . esc_html__($is_enrolled ? 'CONTINUE' : 'START COURSE', 'politeia-learning') . '</a>';
+            $html .= '<a class="learni-btn learni-course-primary-btn" href="' . esc_url($continue_lesson_url) . '">' . esc_html__($is_enrolled ? 'CONTINUE' : 'START COURSE', 'politeia-learning') . '</a>';
         } else {
-            $html .= '<button type="button" class="learni-btn" disabled>' . esc_html__('START COURSE', 'politeia-learning') . '</button>';
+            $html .= '<button type="button" class="learni-btn learni-course-primary-btn" disabled>' . esc_html__('START COURSE', 'politeia-learning') . '</button>';
         }
         $html .= '</div>';
         $html .= '<div class="learni-course-includes">';
@@ -1106,6 +1108,7 @@ final class PL_Learni_Frontend_Templates
             'needsInitial' => $needs_initial,
             'needsFinal' => $needs_final,
             'canTakeFinal' => $can_take_final,
+            'canRestart' => $submitted_count > 0 && $submitted_count % 2 === 0 && $lesson_percent >= 100 && class_exists('\\Learni\\Access\\Access') && \Learni\Access\Access::user_can_access_course($user_id, $course_id),
             'initial' => $initial,
             'final' => $final,
         ];

@@ -334,6 +334,18 @@ section.learni-course-content {
 	border-color: #000;
 }
 
+#learni-course-buy,
+#learni-course-restart {
+	margin-top: 0;
+}
+
+.learni-course-primary-btn {
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+}
+
 .learni-btn[disabled] {
 	opacity: 0.6;
 	cursor: not-allowed;
