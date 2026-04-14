@@ -112,7 +112,7 @@ class PL_Woo_Order_Split_Snapshot
         $courses = get_post_meta($product_id, '_related_course', true);
         if (is_array($courses) && !empty($courses)) {
             $cid = (int) ($courses[0] ?? 0);
-            if ($cid > 0 && get_post_type($cid) === 'sfwd-courses') {
+            if ($cid > 0 && in_array(get_post_type($cid), ['sfwd-courses', 'learni_course'], true)) {
                 return ['course', $cid];
             }
         }

@@ -66,10 +66,6 @@ class PL_QC_Module
 
     public function init_components()
     {
-        if (!defined('LEARNDASH_VERSION')) {
-            return;
-        }
-
         // Initialize components
         PQC_Shortcode::get_instance();
         PQC_Ajax_Handler::get_instance();

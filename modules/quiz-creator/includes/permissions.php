@@ -79,8 +79,11 @@ function pqc_can_access_quiz_creator(int $course_id = 0, int $quiz_id = 0): bool
 
     $user_id = get_current_user_id();
 
-    if ($quiz_id > 0 && pqc_user_owns_post($quiz_id, $user_id)) {
-        return true;
+    if ($quiz_id > 0 && class_exists('PQC_Quiz_Creator') && method_exists('PQC_Quiz_Creator', 'get_course_id_by_quiz_id')) {
+        $resolved_course_id = (int) PQC_Quiz_Creator::get_course_id_by_quiz_id($quiz_id);
+        if ($resolved_course_id > 0) {
+            $course_id = $course_id > 0 ? $course_id : $resolved_course_id;
+        }
     }
 
     if ($course_id > 0) {

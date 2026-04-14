@@ -230,17 +230,25 @@ echo '<div class="learni-lesson-top-actions">';
 
 $btn_label = $is_complete ? __('FINALIZADO', 'politeia-learning') : __('FINALIZAR', 'politeia-learning');
 $btn_disabled = ($user_id <= 0) || $is_complete || ($course_id <= 0) || $is_locked;
-$requires_video_gate = (!$is_complete && !$is_locked && $video_provider === 'youtube' && $video_html !== '');
+$requires_video_gate = (!$btn_disabled && $video_provider === 'youtube' && $video_html !== '');
 $btn_disabled = $btn_disabled || $requires_video_gate;
+$complete_redirect = ($next_url !== '' && !$is_locked) ? $next_url : (wp_get_raw_referer() ?: '');
 echo '<form class="learni-lesson-complete-form" method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
 echo '<input type="hidden" name="action" value="pl_learni_mark_lesson_complete">';
 echo '<input type="hidden" name="lesson_id" value="' . esc_attr((string) $lesson_id) . '">';
-echo '<input type="hidden" name="redirect_to" value="' . esc_attr((string) (wp_get_raw_referer() ?: '')) . '">';
+echo '<input type="hidden" name="redirect_to" value="' . esc_attr((string) $complete_redirect) . '">';
 wp_nonce_field('pl_learni_complete_lesson_' . $lesson_id);
+if ($requires_video_gate) {
+    echo '<span class="learni-lesson-complete-wrap" data-learni-tooltip="' . esc_attr__('Finaliza el video para declarar la lección como finalizada.', 'politeia-learning') . '">';
+}
 echo '<button type="submit" class="learni-lesson-complete-btn' . ($is_complete ? ' is-complete' : '') . '"' . ($requires_video_gate ? ' data-learni-requires-video="1"' : '') . ($btn_disabled ? ' disabled' : '') . '>';
 echo '<span class="learni-lesson-complete-icon" aria-hidden="true"></span>';
 echo '<span class="learni-lesson-complete-text">' . esc_html($btn_label) . '</span>';
 echo '</button>';
+if ($requires_video_gate) {
+    echo '<span class="learni-tooltip" role="tooltip">' . esc_html__('Finaliza el video para declarar la lección como finalizada.', 'politeia-learning') . '</span>';
+    echo '</span>';
+}
 echo '</form>';
 
 if ($next_url !== '' && !$is_locked && (!$linear_order || $is_complete)) {

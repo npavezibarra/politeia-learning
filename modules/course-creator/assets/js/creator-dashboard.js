@@ -359,6 +359,12 @@ jQuery(document).ready(function ($) {
                 syncStackHeight();
                 syncDrawerTop();
                 updateFooterAction();
+                // Keep course actions in the right place when switching between narrow/wide layouts.
+                const $courseForm = $('#pcg-course-form-section');
+                if ($courseForm.length && $courseForm.is(':visible')) {
+                    const mode = $courseForm.find('.pcg-segment.active').data('value') || 'curso';
+                    placeCourseActions(mode);
+                }
             }, 0);
         });
 
@@ -2520,10 +2526,14 @@ jQuery(document).ready(function ($) {
     })();
 
 
-    let currentCourseId = 0;
-    let thumbnailId = 0;
-    let coverPhotoId = 0; // Added for cover photo
-    let currentCoursePermalink = '';
+	    let currentCourseId = 0;
+	    let thumbnailId = 0;
+	    let coverPhotoId = 0; // Added for cover photo
+	    let certificateAttachmentId = 0;
+		    let certificateLogoAttachmentId = 0;
+		    let certificateSignatureAttachmentId = 0;
+		    let currentCoursePermalink = '';
+		    let currentCourseStatus = 'publish';
 
     const $list = $('#pcg-lessons-list');
     const $teachersList = $('#pcg-teachers-list');
@@ -2567,21 +2577,38 @@ jQuery(document).ready(function ($) {
         updateWordCount('#pcg-course-excerpt', '#pcg-excerpt-word-count', 50);
     });
 
-    function resetForm() {
-        currentCourseId = 0;
-        $('#pcg-current-course-id').val(0);
-        thumbnailId = 0;
-        coverPhotoId = 0; // Reset cover photo ID
-        $('#pcg-course-title').val('');
-        $('#pcg-course-description').val('');
-        $('#pcg-course-excerpt').val('');
+		    function resetForm() {
+		        currentCourseId = 0;
+		        currentCourseStatus = 'publish';
+		        $('#pcg-current-course-id').val(0);
+	        thumbnailId = 0;
+	        coverPhotoId = 0; // Reset cover photo ID
+	        certificateAttachmentId = 0;
+	        certificateLogoAttachmentId = 0;
+	        certificateSignatureAttachmentId = 0;
+	        $('#pcg-course-title').val('');
+	        $('#pcg-course-description').val('');
+	        $('#pcg-course-excerpt').val('');
         updateWordCount('#pcg-course-description', '#pcg-desc-word-count', 700);
         updateWordCount('#pcg-course-excerpt', '#pcg-excerpt-word-count', 50);
-        $('#pcg-course-price').val('');
-        $('#pcg-course-price-eval').val('');
-        $('#pcg-course-price-lessons').val('');
-        $('#pcg-thumbnail-preview').hide().find('img').attr('src', '');
-        $('#pcg-cover-preview').hide().find('img').attr('src', ''); // Reset cover preview
+	        $('#pcg-course-price').val('');
+	        $('#pcg-course-price-eval').val('');
+	        $('#pcg-course-price-lessons').val('');
+	        $('#pcg-course-price-meta').val('');
+	        $('#pcg-course-price-cert').val('');
+	        $('#pcg-thumbnail-preview').hide().find('img').attr('src', '');
+	        $('#pcg-cover-preview').hide().find('img').attr('src', ''); // Reset cover preview
+	        // Certificate template upload removed from UI.
+	        $('#pcg-certificate-logo-preview').hide().find('img').attr('src', '');
+	        $('#pcg-certificate-signature-preview').hide().find('img').attr('src', '');
+
+	        $('#pcg-certificate-title').val('');
+	        $('#pcg-certificate-congrats').val('');
+	        // Claims removed from UI.
+		        $('#pcg-cert-signature-label').val('');
+		        updateWordCount('#pcg-certificate-congrats', '#pcg-cert-word-count', 50);
+		        updateCertificatePreview();
+		        updatePublishButton();
 
         $list.empty();
         $('#pcg-course-progression').prop('checked', false);
@@ -2589,9 +2616,11 @@ jQuery(document).ready(function ($) {
         $courseLabel.text('').hide();
         currentCoursePermalink = '';
         $previewBtn.hide();
-        $('#pcg-price-free-indicator').hide();
-        $('#pcg-price-free-indicator-eval').hide();
-        $('#pcg-price-free-indicator-lessons').hide();
+		        $('#pcg-price-free-indicator').hide();
+		        $('#pcg-price-free-indicator-eval').hide();
+		        $('#pcg-price-free-indicator-lessons').hide();
+		        $('#pcg-price-free-indicator-meta').hide();
+		        $('#pcg-price-free-indicator-cert').hide();
 
         resetTeachersList($teachersList);
 
@@ -2646,40 +2675,62 @@ jQuery(document).ready(function ($) {
         }
     });
 
-    // Show/hide "Gratis" indicator based on price
-    $('#pcg-course-price').on('input change', function () {
-        const price = parseFloat($(this).val()) || 0;
-        const $freeIndicator = $('#pcg-price-free-indicator');
-        const $evalPrice = $('#pcg-course-price-eval');
-        const $evalIndicator = $('#pcg-price-free-indicator-eval');
-        const $lessonsPrice = $('#pcg-course-price-lessons');
-        const $lessonsIndicator = $('#pcg-price-free-indicator-lessons');
+	    // Show/hide "Gratis" indicator based on price
+	    $('#pcg-course-price').on('input change', function () {
+	        const price = parseFloat($(this).val()) || 0;
+	        const $freeIndicator = $('#pcg-price-free-indicator');
+	        const $evalPrice = $('#pcg-course-price-eval');
+	        const $evalIndicator = $('#pcg-price-free-indicator-eval');
+	        const $lessonsPrice = $('#pcg-course-price-lessons');
+	        const $lessonsIndicator = $('#pcg-price-free-indicator-lessons');
+	        const $metaPrice = $('#pcg-course-price-meta');
+	        const $metaIndicator = $('#pcg-price-free-indicator-meta');
+	        const $certPrice = $('#pcg-course-price-cert');
+	        const $certIndicator = $('#pcg-price-free-indicator-cert');
 
-        if ($evalPrice.length && $evalPrice.val() !== $(this).val()) {
-            $evalPrice.val($(this).val());
-        }
-        if ($lessonsPrice.length && $lessonsPrice.val() !== $(this).val()) {
-            $lessonsPrice.val($(this).val());
-        }
+	        if ($evalPrice.length && $evalPrice.val() !== $(this).val()) {
+	            $evalPrice.val($(this).val());
+	        }
+	        if ($lessonsPrice.length && $lessonsPrice.val() !== $(this).val()) {
+	            $lessonsPrice.val($(this).val());
+	        }
+	        if ($metaPrice.length && $metaPrice.val() !== $(this).val()) {
+	            $metaPrice.val($(this).val());
+	        }
+	        if ($certPrice.length && $certPrice.val() !== $(this).val()) {
+	            $certPrice.val($(this).val());
+	        }
 
-        if (price === 0) {
-            $freeIndicator.fadeIn(200);
-            if ($evalIndicator.length) {
-                $evalIndicator.fadeIn(200);
-            }
-            if ($lessonsIndicator.length) {
-                $lessonsIndicator.fadeIn(200);
-            }
-        } else {
-            $freeIndicator.fadeOut(200);
-            if ($evalIndicator.length) {
-                $evalIndicator.fadeOut(200);
-            }
-            if ($lessonsIndicator.length) {
-                $lessonsIndicator.fadeOut(200);
-            }
-        }
-    });
+	        if (price === 0) {
+	            $freeIndicator.fadeIn(200);
+	            if ($evalIndicator.length) {
+	                $evalIndicator.fadeIn(200);
+	            }
+	            if ($lessonsIndicator.length) {
+	                $lessonsIndicator.fadeIn(200);
+	            }
+	            if ($metaIndicator.length) {
+	                $metaIndicator.fadeIn(200);
+	            }
+	            if ($certIndicator.length) {
+	                $certIndicator.fadeIn(200);
+	            }
+	        } else {
+	            $freeIndicator.fadeOut(200);
+	            if ($evalIndicator.length) {
+	                $evalIndicator.fadeOut(200);
+	            }
+	            if ($lessonsIndicator.length) {
+	                $lessonsIndicator.fadeOut(200);
+	            }
+	            if ($metaIndicator.length) {
+	                $metaIndicator.fadeOut(200);
+	            }
+	            if ($certIndicator.length) {
+	                $certIndicator.fadeOut(200);
+	            }
+	        }
+	    });
 
     // Mirror price input inside Evaluación aside to the main course price field
     $(document).on('input change', '#pcg-course-price-eval', function () {
@@ -2690,14 +2741,32 @@ jQuery(document).ready(function ($) {
         }
     });
 
-    // Mirror price input inside Lecciones aside to the main course price field
-    $(document).on('input change', '#pcg-course-price-lessons', function () {
-        const val = $(this).val();
-        const $main = $('#pcg-course-price');
-        if ($main.length && $main.val() !== val) {
-            $main.val(val).trigger('input');
-        }
-    });
+	    // Mirror price input inside Lecciones aside to the main course price field
+	    $(document).on('input change', '#pcg-course-price-lessons', function () {
+	        const val = $(this).val();
+	        const $main = $('#pcg-course-price');
+	        if ($main.length && $main.val() !== val) {
+	            $main.val(val).trigger('input');
+	        }
+	    });
+
+	    // Mirror price input inside Meta aside to the main course price field
+	    $(document).on('input change', '#pcg-course-price-meta', function () {
+	        const val = $(this).val();
+	        const $main = $('#pcg-course-price');
+	        if ($main.length && $main.val() !== val) {
+	            $main.val(val).trigger('input');
+	        }
+	    });
+
+	    // Mirror price input inside Certificado aside to the main course price field
+	    $(document).on('input change', '#pcg-course-price-cert', function () {
+	        const val = $(this).val();
+	        const $main = $('#pcg-course-price');
+	        if ($main.length && $main.val() !== val) {
+	            $main.val(val).trigger('input');
+	        }
+	    });
 
     function syncEvalPriceFromMain() {
         const $eval = $('#pcg-course-price-eval');
@@ -2706,21 +2775,36 @@ jQuery(document).ready(function ($) {
         $eval.val($main.val());
     }
 
-    function syncLessonsPriceFromMain() {
-        const $lessons = $('#pcg-course-price-lessons');
-        const $main = $('#pcg-course-price');
-        if (!$lessons.length || !$main.length) return;
-        $lessons.val($main.val());
-    }
+	    function syncLessonsPriceFromMain() {
+	        const $lessons = $('#pcg-course-price-lessons');
+	        const $main = $('#pcg-course-price');
+	        if (!$lessons.length || !$main.length) return;
+	        $lessons.val($main.val());
+	    }
 
-    function placeCourseActions(mode) {
-        const $actions = $('#pcg-course-actions');
-        if (!$actions.length) return;
+	    function syncMetaPriceFromMain() {
+	        const $meta = $('#pcg-course-price-meta');
+	        const $main = $('#pcg-course-price');
+	        if (!$meta.length || !$main.length) return;
+	        $meta.val($main.val());
+	    }
 
-        const $courseSidecardSection = $('#pcg-mode-curso .pcg-sidecard__section');
-        const $evalSlot = $('#pcg-mode-evaluacion .pcg-sidecard__actions-slot');
-        const $lessonsSlot = $('#pcg-mode-lecciones .pcg-sidecard__actions-slot');
-        const $metaSlot = $('#pcg-mode-meta .pcg-sidecard__actions-slot');
+	    function syncCertPriceFromMain() {
+	        const $cert = $('#pcg-course-price-cert');
+	        const $main = $('#pcg-course-price');
+	        if (!$cert.length || !$main.length) return;
+	        $cert.val($main.val());
+	    }
+
+	    function placeCourseActions(mode) {
+	        const $actions = $('#pcg-course-actions');
+	        if (!$actions.length) return;
+
+	        const $courseSidecardSection = $('#pcg-mode-curso .pcg-sidecard__section');
+	        const $evalSlot = $('#pcg-mode-evaluacion .pcg-sidecard__actions-slot');
+	        const $lessonsSlot = $('#pcg-mode-lecciones .pcg-sidecard__actions-slot');
+	        const $metaSlot = $('#pcg-mode-meta .pcg-sidecard__actions-slot');
+	        const $certSlot = $('#pcg-mode-certificado .pcg-sidecard__actions-slot');
 
         if (mode === 'evaluacion' && $evalSlot.length) {
             $evalSlot.append($actions);
@@ -2732,24 +2816,30 @@ jQuery(document).ready(function ($) {
             return;
         }
 
-        if (mode === 'meta' && $metaSlot.length) {
-            $metaSlot.append($actions);
-            return;
-        }
+	        if (mode === 'meta' && $metaSlot.length) {
+	            $metaSlot.append($actions);
+	            return;
+	        }
 
-        if ($courseSidecardSection.length) {
-            $courseSidecardSection.append($actions);
-        }
-    }
+	        if (mode === 'certificado' && $certSlot.length) {
+	            $certSlot.append($actions);
+	            return;
+	        }
 
-    function placeCourseChecklist(mode) {
-        const $checklist = $('#pcg-course-checklist');
-        if (!$checklist.length) return;
+		        if ($courseSidecardSection.length) {
+		            $courseSidecardSection.prepend($actions);
+		        }
+		    }
 
-        const $courseAside = $('#pcg-mode-curso .pcg-course-editor__right');
-        const $evalSlot = $('#pcg-mode-evaluacion .pcg-checklist-slot');
-        const $lessonsSlot = $('#pcg-mode-lecciones .pcg-checklist-slot');
-        const $metaSlot = $('#pcg-mode-meta .pcg-checklist-slot');
+	    function placeCourseChecklist(mode) {
+	        const $checklist = $('#pcg-course-checklist');
+	        if (!$checklist.length) return;
+
+	        const $courseAside = $('#pcg-mode-curso .pcg-course-editor__right');
+	        const $evalSlot = $('#pcg-mode-evaluacion .pcg-checklist-slot');
+	        const $lessonsSlot = $('#pcg-mode-lecciones .pcg-checklist-slot');
+	        const $metaSlot = $('#pcg-mode-meta .pcg-checklist-slot');
+	        const $certSlot = $('#pcg-mode-certificado .pcg-checklist-slot');
 
         if (mode === 'evaluacion' && $evalSlot.length) {
             $evalSlot.append($checklist);
@@ -2761,15 +2851,20 @@ jQuery(document).ready(function ($) {
             return;
         }
 
-        if (mode === 'meta' && $metaSlot.length) {
-            $metaSlot.append($checklist);
-            return;
-        }
+	        if (mode === 'meta' && $metaSlot.length) {
+	            $metaSlot.append($checklist);
+	            return;
+	        }
 
-        if ($courseAside.length) {
-            $courseAside.append($checklist);
-        }
-    }
+	        if (mode === 'certificado' && $certSlot.length) {
+	            $certSlot.append($checklist);
+	            return;
+	        }
+
+	        if ($courseAside.length) {
+	            $courseAside.append($checklist);
+	        }
+	    }
 
     function placeCourseSidebar(mode) {
         placeCourseActions(mode);
@@ -2916,25 +3011,30 @@ jQuery(document).ready(function ($) {
             }
             placeCourseSidebar('evaluacion');
             $('#pcg-mode-evaluacion').fadeIn(300);
-        } else if (mode === 'meta') {
-            $('#pcg-mode-meta').fadeIn(300);
-            placeCourseSidebar('meta');
-            plLearningMeta.render('course');
-        }
-    });
+	        } else if (mode === 'meta') {
+	            $('#pcg-mode-meta').fadeIn(300);
+	            placeCourseSidebar('meta');
+	            plLearningMeta.render('course');
+	        } else if (mode === 'certificado') {
+	            $('#pcg-mode-certificado').fadeIn(300);
+	            placeCourseSidebar('certificado');
+	        }
+	    });
 
     // Ensure actions start in the correct aside on initial render
     const initialMode = $('#pcg-course-form-section .pcg-segment.active').data('value') || 'curso';
     placeCourseSidebar(initialMode);
-    if (initialMode === 'lecciones') {
-        syncLessonsPriceFromMain();
-        $('#pcg-course-price').trigger('input');
-    } else if (initialMode === 'evaluacion') {
-        syncEvalPriceFromMain();
-        $('#pcg-course-price').trigger('input');
-    } else if (initialMode === 'meta') {
-        plLearningMeta.render('course');
-    }
+	    if (initialMode === 'lecciones') {
+	        syncLessonsPriceFromMain();
+	        $('#pcg-course-price').trigger('input');
+	    } else if (initialMode === 'evaluacion') {
+	        syncEvalPriceFromMain();
+	        $('#pcg-course-price').trigger('input');
+	    } else if (initialMode === 'meta') {
+	        plLearningMeta.render('course');
+	    } else if (initialMode === 'certificado') {
+	        placeCourseSidebar('certificado');
+	    }
     initChecklistObservers();
     $(document).on('input change', '#pcg-course-title, #pcg-course-price, #pcg-course-description, #pcg-course-excerpt, #pcg-course-price-eval, #pcg-course-price-lessons', updateCourseChecklist);
     updateCourseChecklist();
@@ -3473,32 +3573,59 @@ jQuery(document).ready(function ($) {
         });
     }
 
-    function openCoverUploader() {
-        PL_Cropper.open({
-            title: t('coverPhoto'),
-            width: 1024,
-            height: 768,
-            onSave: function (dataUrl) {
-                saveCroppedImage(dataUrl, 'cover');
-            }
-        });
-    }
+	    function openCoverUploader() {
+	        PL_Cropper.open({
+	            title: t('coverPhoto'),
+	            width: 1024,
+	            height: 768,
+	            onSave: function (dataUrl) {
+	                saveCroppedImage(dataUrl, 'cover');
+	            }
+	        });
+	    }
 
-    // Media Uploader: click empty placeholders
-    $(document).on('click', '#pcg-mode-curso .pcg-media-card__empty', function (e) {
-        e.preventDefault();
-        const type = $(this).attr('data-upload') || '';
-        if (type === 'thumbnail') openThumbnailUploader();
-        if (type === 'cover') openCoverUploader();
-    });
+	    function openCertificateUploader() {}
 
-    // Keyboard support for empty placeholders (Enter / Space)
-    $(document).on('keydown', '#pcg-mode-curso .pcg-media-card__empty[role="button"]', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            $(this).trigger('click');
-        }
-    });
+	    function openCertificateLogoUploader() {
+	        PL_Cropper.open({
+	            title: 'Logo',
+	            width: 600,
+	            height: 200,
+	            onSave: function (dataUrl) {
+	                saveCroppedImage(dataUrl, 'certificate_logo');
+	            }
+	        });
+	    }
+
+	    function openCertificateSignatureUploader() {
+	        PL_Cropper.open({
+	            title: 'Firma',
+	            width: 600,
+	            height: 200,
+	            onSave: function (dataUrl) {
+	                saveCroppedImage(dataUrl, 'certificate_signature');
+	            }
+	        });
+	    }
+
+	    // Media Uploader: click empty placeholders
+	    $(document).on('click', '#pcg-course-form-section .pcg-media-card__empty', function (e) {
+	        e.preventDefault();
+	        const type = $(this).attr('data-upload') || '';
+	        if (type === 'thumbnail') openThumbnailUploader();
+	        if (type === 'cover') openCoverUploader();
+	        // Certificate template upload removed from UI.
+	        if (type === 'certificate_logo') openCertificateLogoUploader();
+	        if (type === 'certificate_signature') openCertificateSignatureUploader();
+	    });
+
+	    // Keyboard support for empty placeholders (Enter / Space)
+	    $(document).on('keydown', '#pcg-course-form-section .pcg-media-card__empty[role="button"]', function (e) {
+	        if (e.key === 'Enter' || e.key === ' ') {
+	            e.preventDefault();
+	            $(this).trigger('click');
+	        }
+	    });
 
     function saveCroppedImage(dataUrl, type) {
         $.ajax({
@@ -3510,22 +3637,32 @@ jQuery(document).ready(function ($) {
                 image_data: dataUrl,
                 type: type
             },
-            success: function (response) {
-                if (response.success) {
-                    const attachment = response.data;
-                    if (type === 'thumbnail') {
-                        thumbnailId = attachment.id;
-                        $('#pcg-thumbnail-preview img').attr('src', attachment.url);
-                        $('#pcg-thumbnail-preview').fadeIn();
-                    } else {
-                        coverPhotoId = attachment.id;
-                        $('#pcg-cover-preview img').attr('src', attachment.url);
-                        $('#pcg-cover-preview').fadeIn();
-                    }
-                } else {
-                    alert(t('errorPrefix') + response.data.message);
-                }
-            },
+	            success: function (response) {
+	                if (response.success) {
+	                    const attachment = response.data;
+	                    if (type === 'thumbnail') {
+	                        thumbnailId = attachment.id;
+	                        $('#pcg-thumbnail-preview img').attr('src', attachment.url);
+	                        $('#pcg-thumbnail-preview').fadeIn();
+	                    } else if (type === 'cover') {
+	                        coverPhotoId = attachment.id;
+	                        $('#pcg-cover-preview img').attr('src', attachment.url);
+	                        $('#pcg-cover-preview').fadeIn();
+	                    } else if (type === 'certificate_logo') {
+	                        certificateLogoAttachmentId = attachment.id;
+	                        $('#pcg-certificate-logo-preview img').attr('src', attachment.url);
+	                        $('#pcg-certificate-logo-preview').fadeIn();
+	                        updateCertificatePreview();
+	                    } else if (type === 'certificate_signature') {
+	                        certificateSignatureAttachmentId = attachment.id;
+	                        $('#pcg-certificate-signature-preview img').attr('src', attachment.url);
+	                        $('#pcg-certificate-signature-preview').fadeIn();
+	                        updateCertificatePreview();
+	                    }
+	                } else {
+	                    alert(t('errorPrefix') + response.data.message);
+	                }
+	            },
             error: function () {
                 alert(t('errorUploadingImage'));
             }
@@ -3537,15 +3674,60 @@ jQuery(document).ready(function ($) {
         $('#pcg-thumbnail-preview').fadeOut();
     });
 
-    $('#pcg-remove-cover').on('click', function () {
-        coverPhotoId = 0;
-        $('#pcg-cover-preview').fadeOut();
-    });
+	    $('#pcg-remove-cover').on('click', function () {
+	        coverPhotoId = 0;
+	        $('#pcg-cover-preview').fadeOut();
+	    });
 
-    // Handle Enter key on inputs to "save" (blur)
-    $(document).on('keypress', '.pcg-item-input', function (e) {
-        if (e.which === 13) {
-            $(this).blur();
+	    // Certificate template upload removed from UI.
+
+	    $('#pcg-remove-certificate-logo').on('click', function () {
+	        certificateLogoAttachmentId = 0;
+	        $('#pcg-certificate-logo-preview').fadeOut();
+	        updateCertificatePreview();
+	    });
+
+	    $('#pcg-remove-certificate-signature').on('click', function () {
+	        certificateSignatureAttachmentId = 0;
+	        $('#pcg-certificate-signature-preview').fadeOut();
+	        updateCertificatePreview();
+	    });
+
+		    function escapeText(s) {
+		        return (s || '').toString();
+		    }
+
+		    function updateCertificatePreview() {}
+
+		    function updatePublishButton() {
+		        const $btn = $('#pcg-btn-toggle-publish-course');
+		        if (!$btn.length) return;
+		        const isPublished = currentCourseStatus === 'publish';
+		        $btn.attr('data-status', currentCourseStatus);
+		        $btn.toggleClass('is-unpublish', isPublished);
+		        $btn.text(isPublished ? 'UNPUBLISH' : 'PUBLISH');
+		    }
+
+		    $(document).on('click', '#pcg-btn-toggle-publish-course', function () {
+		        if (!currentCourseId) return;
+		        currentCourseStatus = currentCourseStatus === 'publish' ? 'draft' : 'publish';
+		        updatePublishButton();
+		        $('.pcg-btn-save-course').trigger('click');
+		    });
+
+		    updatePublishButton();
+
+	    $(document).on('input', '#pcg-certificate-title, #pcg-certificate-congrats, #pcg-cert-signature-label', function () {
+	        if (this.id === 'pcg-certificate-congrats') {
+	            updateWordCount('#pcg-certificate-congrats', '#pcg-cert-word-count', 50);
+	        }
+	        updateCertificatePreview();
+	    });
+
+	    // Handle Enter key on inputs to "save" (blur)
+	    $(document).on('keypress', '.pcg-item-input', function (e) {
+	        if (e.which === 13) {
+	            $(this).blur();
         }
     });
 
@@ -3556,21 +3738,28 @@ jQuery(document).ready(function ($) {
 
         const $btn = $(this);
 
-        const meta = plLearningMeta.getPayload('course');
-        const courseData = {
-            id: currentCourseId,
-            title: $('#pcg-course-title').val(),
-            description: $('#pcg-course-description').val(),
-            excerpt: $('#pcg-course-excerpt').val(),
-            price: $('#pcg-course-price').val(),
-            thumbnail_id: thumbnailId,
-            cover_photo_id: coverPhotoId,
-            progression: $('#pcg-course-progression').is(':checked') ? 'on' : '',
-            teachers: [],
-            content: [],
-            category_ids: meta.category_ids,
-            tag_ids: meta.tag_ids,
-        };
+	        const meta = plLearningMeta.getPayload('course');
+			        const courseData = {
+			            id: currentCourseId,
+			            status: currentCourseStatus,
+			            title: $('#pcg-course-title').val(),
+			            description: $('#pcg-course-description').val(),
+			            excerpt: $('#pcg-course-excerpt').val(),
+			            price: $('#pcg-course-price').val(),
+		            thumbnail_id: thumbnailId,
+		            cover_photo_id: coverPhotoId,
+		            certificate_attachment_id: certificateAttachmentId,
+			            certificate_title: $('#pcg-certificate-title').val(),
+			            certificate_congrats: $('#pcg-certificate-congrats').val(),
+			            certificate_logo_attachment_id: certificateLogoAttachmentId,
+			            certificate_signature_attachment_id: certificateSignatureAttachmentId,
+			            certificate_signature_label: $('#pcg-cert-signature-label').val(),
+			            progression: $('#pcg-course-progression').is(':checked') ? 'on' : '',
+	            teachers: [],
+	            content: [],
+	            category_ids: meta.category_ids,
+	            tag_ids: meta.tag_ids,
+	        };
 
         courseData.teachers = collectTeachers($('#pcg-teachers-list'));
 
@@ -3598,12 +3787,16 @@ jQuery(document).ready(function ($) {
                 nonce: pcgCreatorData.nonce,
                 course_data: courseData
             },
-            success: function (response) {
-                $btn.removeClass('loading');
-                if (response.success) {
-                    currentCourseId = response.data.course_id;
-                    $('#pcg-current-course-id').val(currentCourseId);
-                    $btn.addClass('success');
+	            success: function (response) {
+	                $btn.removeClass('loading');
+	                if (response.success) {
+	                    currentCourseId = response.data.course_id;
+	                    if (response.data && response.data.status) {
+	                        currentCourseStatus = response.data.status;
+	                        updatePublishButton();
+	                    }
+	                    $('#pcg-current-course-id').val(currentCourseId);
+	                    $btn.addClass('success');
                     refreshActiveList();
                     setTimeout(() => {
                         $btn.prop('disabled', false).removeClass('success');
@@ -4072,11 +4265,15 @@ jQuery(document).ready(function ($) {
                     $('#pcg-course-excerpt').val(data.excerpt || '');
                     updateWordCount('#pcg-course-description', '#pcg-desc-word-count', 700);
                     updateWordCount('#pcg-course-excerpt', '#pcg-excerpt-word-count', 50);
-                    $('#pcg-course-price').val(data.price);
-                    $('#pcg-course-price').trigger('input');
-                    syncLessonsPriceFromMain();
-                    syncEvalPriceFromMain();
-                    thumbnailId = data.thumbnail_id;
+	                    $('#pcg-course-price').val(data.price);
+	                    $('#pcg-course-price').trigger('input');
+	                    syncLessonsPriceFromMain();
+	                    syncEvalPriceFromMain();
+	                    syncMetaPriceFromMain();
+	                    syncCertPriceFromMain();
+	                    currentCourseStatus = data.status || 'publish';
+	                    updatePublishButton();
+	                    thumbnailId = data.thumbnail_id;
                     if (data.thumbnail_url) {
                         $('#pcg-thumbnail-preview img').attr('src', data.thumbnail_url);
                         $('#pcg-thumbnail-preview').show();
@@ -4084,13 +4281,39 @@ jQuery(document).ready(function ($) {
                         $('#pcg-thumbnail-preview').hide();
                     }
 
-                    coverPhotoId = data.cover_photo_id;
-                    if (data.cover_photo_url) {
-                        $('#pcg-cover-preview img').attr('src', data.cover_photo_url);
-                        $('#pcg-cover-preview').show();
-                    } else {
-                        $('#pcg-cover-preview').hide();
-                    }
+	                    coverPhotoId = data.cover_photo_id;
+	                    if (data.cover_photo_url) {
+	                        $('#pcg-cover-preview img').attr('src', data.cover_photo_url);
+	                        $('#pcg-cover-preview').show();
+	                    } else {
+	                        $('#pcg-cover-preview').hide();
+	                    }
+
+	                    certificateAttachmentId = Number(data.certificate_attachment_id || 0) || 0;
+
+	                    $('#pcg-certificate-title').val(data.certificate_title || '');
+		                    $('#pcg-certificate-congrats').val(data.certificate_congrats || '');
+		                    updateWordCount('#pcg-certificate-congrats', '#pcg-cert-word-count', 50);
+		                    // Claims removed from UI.
+		                    $('#pcg-cert-signature-label').val(data.certificate_signature_label || '');
+
+	                    certificateLogoAttachmentId = Number(data.certificate_logo_attachment_id || 0) || 0;
+	                    if (data.certificate_logo_url) {
+	                        $('#pcg-certificate-logo-preview img').attr('src', data.certificate_logo_url);
+	                        $('#pcg-certificate-logo-preview').show();
+	                    } else {
+	                        $('#pcg-certificate-logo-preview').hide();
+	                    }
+
+	                    certificateSignatureAttachmentId = Number(data.certificate_signature_attachment_id || 0) || 0;
+	                    if (data.certificate_signature_url) {
+	                        $('#pcg-certificate-signature-preview img').attr('src', data.certificate_signature_url);
+	                        $('#pcg-certificate-signature-preview').show();
+	                    } else {
+	                        $('#pcg-certificate-signature-preview').hide();
+	                    }
+
+	                    updateCertificatePreview();
 
                     if (data.permalink) {
                         currentCoursePermalink = data.permalink;

@@ -65,6 +65,15 @@ register_activation_hook(__FILE__, function () {
     // Run database installation
     PL_Installer::install();
 
+    // Install/upgrade Learni internal module schema.
+    $learni_bootstrap = PL_PATH . 'modules/learni/init.php';
+    if (file_exists($learni_bootstrap)) {
+        require_once $learni_bootstrap;
+    }
+    if (class_exists('PL_Learni_Module')) {
+        PL_Learni_Module::activate();
+    }
+
     // Schedule background taxonomy seeding
     if (!get_option('pl_learning_taxonomy_seed_v1')) {
         wp_schedule_single_event(time(), 'pl_seed_default_categories');
@@ -113,7 +122,7 @@ function pl_get_user_full_name_or_display_name(int $user_id, string $fallback = 
 }
 
 add_filter('get_the_author_display_name', function ($display_name, $user_id) {
-    if (!is_singular('sfwd-courses')) {
+    if (!is_singular('sfwd-courses') && !is_singular('learni_course')) {
         return $display_name;
     }
 
@@ -122,7 +131,7 @@ add_filter('get_the_author_display_name', function ($display_name, $user_id) {
 
 // BuddyBoss/BuddyPress display name (if used by the theme on course pages).
 add_filter('bp_core_get_user_displayname', function ($display_name, $user_id) {
-    if (!is_singular('sfwd-courses')) {
+    if (!is_singular('sfwd-courses') && !is_singular('learni_course')) {
         return $display_name;
     }
 
@@ -131,7 +140,7 @@ add_filter('bp_core_get_user_displayname', function ($display_name, $user_id) {
 
 // Enforce Poppins typography across LearnDash course and lesson pages.
 add_action('wp_enqueue_scripts', function () {
-    if (!is_singular('sfwd-courses') && !is_singular('sfwd-lessons')) {
+    if (!is_singular('sfwd-courses') && !is_singular('sfwd-lessons') && !is_singular('learni_course') && !is_singular('learni_lesson')) {
         return;
     }
 
@@ -145,6 +154,7 @@ add_action('wp_enqueue_scripts', function () {
     wp_add_inline_style(
         'pl-course-poppins',
         'body.single-sfwd-courses,body.single-sfwd-lessons{font-family:"Poppins",sans-serif!important;}' .
+        'body.single-learni_course,body.single-learni_lesson{font-family:"Poppins",sans-serif!important;}' .
         'body.single-sfwd-courses button,' .
         'body.single-sfwd-courses input,' .
         'body.single-sfwd-courses select,' .
@@ -194,6 +204,7 @@ class PL_Module_Loader
      * In the future, this could be managed via an admin UI or settings.
      */
     private static $modules = [
+        'learni' => true,
         'core' => true,
         'menu-management' => true,
         'blog-post' => true,

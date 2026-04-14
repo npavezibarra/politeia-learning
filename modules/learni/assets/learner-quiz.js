@@ -80,6 +80,181 @@
     if (node) node.innerHTML = html || "";
   }
 
+  function ensureCourseCompleteOverlay() {
+    var existing = document.getElementById("learni-course-complete-overlay");
+    if (existing) return existing;
+
+    var el = document.createElement("div");
+    el.id = "learni-course-complete-overlay";
+    el.className = "learni-final-overlay";
+    el.innerHTML =
+      '<div class="learni-final-overlay__backdrop" data-learni-course-complete-close="1"></div>' +
+      '<div class="learni-final-overlay__panel" role="dialog" aria-modal="true" aria-label="Course completed">' +
+      '<div class="learni-final-overlay__body" id="learni-course-complete-overlay-body"></div>' +
+      "</div>";
+    document.body.appendChild(el);
+
+    el.addEventListener("click", function (e) {
+      var close =
+        e.target &&
+        e.target.getAttribute &&
+        e.target.getAttribute("data-learni-course-complete-close");
+      if (close) hideCourseCompleteOverlay(true);
+    });
+
+    return el;
+  }
+
+  function showCourseCompleteOverlay(html) {
+    var o = ensureCourseCompleteOverlay();
+    var body = document.getElementById("learni-course-complete-overlay-body");
+    if (body) body.innerHTML = html || "";
+    o.classList.add("is-open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function hideCourseCompleteOverlay(reload) {
+    var o = ensureCourseCompleteOverlay();
+    o.classList.remove("is-open");
+    document.body.style.overflow = "";
+    try {
+      var body = document.getElementById("learni-course-complete-overlay-body");
+      if (body) body.innerHTML = "";
+    } catch (e) {}
+
+    if (reload) {
+      try {
+        window.location.reload();
+      } catch (e) {}
+    }
+  }
+
+  function labelDelta(delta) {
+    var d = Number(delta || 0);
+    if (!isFinite(d)) d = 0;
+    d = Math.round(d);
+    if (d > 0) return "Mejoraste en " + d + " puntos porcentuales.";
+    if (d < 0) return "Bajaste en " + Math.abs(d) + " puntos porcentuales.";
+    return "Tu desempeño se mantuvo igual.";
+  }
+
+  function ringChartSvg(percent, gradientId, svgClassName) {
+    var pct = Number(percent || 0);
+    if (!isFinite(pct)) pct = 0;
+    pct = Math.max(0, Math.min(100, Math.round(pct)));
+
+    var r = 50;
+    var circumference = 2 * Math.PI * r;
+    var offset = circumference * (1 - pct / 100);
+
+    return (
+      '<svg class="' +
+      escapeHtml(svgClassName || "") +
+      '" viewBox="0 0 120 120" aria-hidden="true" focusable="false">' +
+      "<defs>" +
+      '<linearGradient id="' +
+      escapeHtml(gradientId) +
+      '" x1="0%" y1="0%" x2="100%" y2="100%">' +
+      '<stop offset="0%" stop-color="#8A6B1E" />' +
+      '<stop offset="50%" stop-color="#C79F32" />' +
+      '<stop offset="100%" stop-color="#E9D18A" />' +
+      "</linearGradient>" +
+      "</defs>" +
+      '<circle cx="60" cy="60" r="' +
+      r +
+      '" class="learni-final-overlay__chart-track" />' +
+      '<circle cx="60" cy="60" r="' +
+      r +
+      '" class="learni-final-overlay__chart-progress" stroke="url(#' +
+      escapeHtml(gradientId) +
+      ')" stroke-dasharray="' +
+      circumference.toFixed(3) +
+      '" stroke-dashoffset="' +
+      offset.toFixed(3) +
+      '" />' +
+      '<text x="50%" y="50%" text-anchor="middle" dy=".3em" class="learni-final-overlay__chart-text">' +
+      pct +
+      "%</text>" +
+      "</svg>"
+    );
+  }
+
+  function progressChart(title, percent, gradientId) {
+    return (
+      '<div class="learni-final-overlay__chart">' +
+      ringChartSvg(percent, gradientId, "learni-final-overlay__chart-svg") +
+      '<div class="learni-final-overlay__chart-label">' +
+      escapeHtml(title) +
+      "</div>" +
+      "</div>"
+    );
+  }
+
+  function showFinalQuizCompletion(courseId) {
+    showCourseCompleteOverlay('<div class="learni-quiz-modal__loading">Loading…</div>');
+
+    apiFetch("/learni/v1/courses/" + courseId + "/binomial", { method: "GET" })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          if (!res.ok) {
+            var msg = (data && data.message) || "Failed to load results";
+            throw new Error(msg);
+          }
+          return data;
+        });
+      })
+      .then(function (data) {
+        var attempts = (data && data.attempts) || {};
+        var initial = attempts && attempts.initial ? attempts.initial : null;
+        var final = attempts && attempts.final ? attempts.final : null;
+
+        var iPct = initial && typeof initial.percent === "number" ? initial.percent : null;
+        var fPct = final && typeof final.percent === "number" ? final.percent : null;
+        if (iPct === null || !isFinite(iPct)) iPct = 0;
+        if (fPct === null || !isFinite(fPct)) fPct = 0;
+        iPct = Math.max(0, Math.min(100, Math.round(iPct)));
+        fPct = Math.max(0, Math.min(100, Math.round(fPct)));
+
+        var delta = fPct - iPct;
+        var certificateUrl = data && data.certificateUrl ? String(data.certificateUrl) : "";
+
+        var certBlock = "";
+        if (certificateUrl) {
+          certBlock =
+            '<div class="learni-final-overlay__cert">Has obtenido el certificado de este curso.</div>' +
+            '<a class="learni-btn learni-course-primary-btn" href="' +
+            escapeHtml(certificateUrl) +
+            '" target="_blank" rel="noopener">VER CERTIFICADO</a>';
+        }
+
+        var html =
+          '<div class="learni-final-overlay__title">Felicitaciones 🎉</div>' +
+          '<div class="learni-final-overlay__text">Terminaste el curso. Estos fueron tus resultados:</div>' +
+          '<div class="learni-final-overlay__charts" aria-label="Resultados">' +
+          progressChart("Evaluación inicial", iPct, "learniGoldGradientInitial") +
+          progressChart("Evaluación final", fPct, "learniGoldGradientFinal") +
+          "</div>" +
+          '<div class="learni-final-overlay__variation">' +
+          escapeHtml(labelDelta(delta)) +
+          "</div>" +
+          (certBlock ? '<div class="learni-final-overlay__certwrap">' + certBlock + "</div>" : "") +
+          '<div class="learni-final-overlay__actions">' +
+          '<button type="button" class="learni-btn secondary learni-course-primary-btn" data-learni-course-complete-close="1">CERRAR</button>' +
+          "</div>";
+
+        showCourseCompleteOverlay(html);
+      })
+      .catch(function () {
+        var html =
+          '<div class="learni-final-overlay__title">Felicitaciones 🎉</div>' +
+          '<div class="learni-final-overlay__text">Terminaste el curso. Tu evaluación final fue registrada correctamente.</div>' +
+          '<div class="learni-final-overlay__actions">' +
+          '<button type="button" class="learni-btn secondary learni-course-primary-btn" data-learni-course-complete-close="1">CERRAR</button>' +
+          "</div>";
+        showCourseCompleteOverlay(html);
+      });
+  }
+
   function startBinomialQuiz(courseId, phase) {
     showQuizModal();
     setQuizModalTitle(phase === "final" ? "Final Quiz" : "First Quiz");
@@ -249,7 +424,7 @@
               .then(function (data) {
                 if (state.phase === "final") {
                   hideQuizModal();
-                  window.location.reload();
+                  showFinalQuizCompletion(courseId);
                   return;
                 }
 
@@ -267,9 +442,9 @@
                 var html =
                   '<div class="learni-quiz-results">' +
                   '<div class="learni-quiz-results__kicker">Evaluación inicial</div>' +
-                  '<div class="learni-quiz-results__score">' +
-                  percent +
-                  "%</div>" +
+                  '<div class="learni-quiz-results__chart">' +
+                  ringChartSvg(percent, "learniGoldGradientResults", "learni-quiz-results__chart-svg") +
+                  "</div>" +
                   '<div class="learni-quiz-results__meta">' +
                   score +
                   " de " +
@@ -359,8 +534,174 @@
     }
   }
 
+  function ensureCertModal() {
+    return document.getElementById("learni-cert-modal");
+  }
+
+  function showCertModal() {
+    var modal = ensureCertModal();
+    if (!modal) return;
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  }
+
+  function hideCertModal() {
+    var modal = ensureCertModal();
+    if (!modal) return;
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  }
+
+  function certPrintStyles() {
+    return (
+      "@page{size:letter landscape;margin:0.5in;}html,body{padding:0;margin:0;background:#fff;}" +
+      ".wrap{padding:0.2in;}" +
+      ".sheet{width:11in;height:8.5in;aspect-ratio:auto;box-shadow:none;border:0;border-radius:0;}" +
+      ".sheet .actions{display:none;}"
+    );
+  }
+
+  function printCertificate() {
+    // We add a temporary class to the body to handle print visibility in CSS.
+    // This avoids popup blockers entirely by printing the current page with a dedicated print stylesheet.
+    document.body.classList.add("is-printing-cert");
+    
+    // We need to ensure the scaling is removed during print so it uses the full 11in width.
+    // The CSS @media print will handle this, but calling window.print() here is the trigger.
+    window.print();
+    
+    // Remote the class after the print dialog closes.
+    // Most browsers pause execution while the dialog is open.
+    setTimeout(function() {
+      document.body.classList.remove("is-printing-cert");
+    }, 500);
+  }
+
+  function setupCertificates() {
+    function sheetPxSize() {
+      // Standard Letter Landscape is 11in x 8.5in. CSS uses 96px/in.
+      return { w: 11 * 96, h: 8.5 * 96 };
+    }
+
+    function ensureStage(sheetEl) {
+      if (!sheetEl) return null;
+      var parent = sheetEl.parentNode;
+      if (parent && parent.classList && parent.classList.contains("learni-cert-stage")) return parent;
+
+      var stage = document.createElement("div");
+      stage.className = "learni-cert-stage";
+      if (parent) {
+        parent.insertBefore(stage, sheetEl);
+        stage.appendChild(sheetEl);
+      }
+      return stage;
+    }
+
+    function applyScale(containerEl, sheetEl) {
+      if (!containerEl || !sheetEl) return;
+      var sz = sheetPxSize();
+      var pad = 48; // modal body padding
+      var rect = null;
+      try {
+        rect = containerEl.getBoundingClientRect ? containerEl.getBoundingClientRect() : null;
+      } catch (e) {}
+      var cw = rect && rect.width ? rect.width : containerEl.clientWidth || 0;
+      var ch = rect && rect.height ? rect.height : containerEl.clientHeight || 0;
+
+      if (cw < 100 || ch < 100) return;
+
+      var availW = Math.max(100, cw - pad);
+      var availH = Math.max(100, ch - pad);
+      
+      // Restore dual-axis scaling to ensure the certificate fits both width and height
+      // and remains centered without overflowing the viewport.
+      var scale = Math.min(availW / sz.w, availH / sz.h, 1);
+      
+      scale = Math.max(0.1, Math.round(scale * 100) / 100);
+
+      var stage = ensureStage(sheetEl);
+      if (!stage) return;
+      stage.style.width = String(sz.w * scale) + "px";
+      stage.style.height = String(sz.h * scale) + "px";
+      sheetEl.style.setProperty("--learni-cert-scale", String(scale));
+
+      try {
+        var modalRoot = containerEl.closest ? containerEl.closest(".learni-cert-modal") : null;
+        if (modalRoot && modalRoot.style) {
+          modalRoot.style.setProperty("--learni-cert-stage-w", String(sz.w * scale) + "px");
+          modalRoot.style.setProperty("--learni-cert-stage-h", String(sz.h * scale) + "px");
+        }
+      } catch (e) {}
+    }
+
+    function scheduleScale(containerEl, sheetEl) {
+      try {
+        requestAnimationFrame(function () {
+          applyScale(containerEl, sheetEl);
+          requestAnimationFrame(function () {
+            applyScale(containerEl, sheetEl);
+          });
+        });
+      } catch (e) {}
+      setTimeout(function () { applyScale(containerEl, sheetEl); }, 100);
+      setTimeout(function () { applyScale(containerEl, sheetEl); }, 400);
+    }
+
+    // Intercept trigger clicks
+    document.addEventListener("click", function (e) {
+      var trigger = e.target && e.target.closest && e.target.closest(".learni-course-cert-trigger");
+      if (!trigger) return;
+
+      var modal = ensureCertModal();
+      if (!modal) return; // Fallback to normal server-side link (target=_blank)
+
+      e.preventDefault();
+      showCertModal();
+
+      var body = modal.querySelector(".learni-cert-modal__body");
+      var sheet = modal.querySelector("[data-learni-cert-sheet]");
+      if (body && sheet) scheduleScale(body, sheet);
+    });
+
+    var modal = ensureCertModal();
+    if (modal) {
+      // Move modal to body to ensure full-screen backdrop coverage (escapes sidebar/content containers)
+      document.body.appendChild(modal);
+
+      var bodyEl = modal.querySelector(".learni-cert-modal__body");
+      var sheetEl = modal.querySelector("[data-learni-cert-sheet]");
+
+      if (bodyEl && sheetEl) {
+        window.addEventListener("resize", function () {
+          scheduleScale(bodyEl, sheetEl);
+        });
+      }
+
+      modal.addEventListener("click", function (e) {
+        var t = e && e.target ? e.target : null;
+        if (!t || !t.getAttribute) return;
+
+        if (t.getAttribute("data-learni-cert-close") || t.closest("[data-learni-cert-close]")) {
+          hideCertModal();
+          return;
+        }
+
+        if (t.getAttribute("data-learni-cert-download") || t.closest("[data-learni-cert-download]")) {
+          printCertificate();
+        }
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e && e.key === "Escape") hideCertModal();
+      });
+    }
+  }
+
   function init() {
     setupBinomialQuiz();
+    setupCertificates();
   }
 
   window.LearniQuiz.apiFetch = apiFetch;

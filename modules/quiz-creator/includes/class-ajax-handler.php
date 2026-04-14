@@ -56,59 +56,9 @@ class PQC_Ajax_Handler
             wp_send_json_error(__('You do not have permission to edit quizzes.', 'politeia-quiz-creator'));
         }
 
-        // Update Quiz Title
-        if (!empty($quiz_data['title'])) {
-            wp_update_post([
-                'ID' => $quiz_id,
-                'post_title' => sanitize_text_field($quiz_data['title'])
-            ]);
-        }
-
-        global $wpdb;
-
-        // Update Questions
-        if (!empty($quiz_data['questions']) && is_array($quiz_data['questions'])) {
-            // Load LD Classes if needed
-            if (!class_exists('WpProQuiz_Model_AnswerTypes') && defined('WPPROQUIZ_PATH')) {
-                require_once WPPROQUIZ_PATH . '/lib/model/WpProQuiz_Model_AnswerTypes.php';
-            }
-
-            foreach ($quiz_data['questions'] as $q_data) {
-                $q_post_id = intval($q_data['id']);
-                $q_pro_id = intval($q_data['pro_id']);
-
-                // Update Question Post Title
-                wp_update_post([
-                    'ID' => $q_post_id,
-                    'post_title' => sanitize_text_field($q_data['title'])
-                ]);
-
-                // Prepare Answer Objects for LD
-                $answer_objects = [];
-                if (class_exists('WpProQuiz_Model_AnswerTypes')) {
-                    foreach ($q_data['answers'] as $a_data) {
-                        $ans_obj = new WpProQuiz_Model_AnswerTypes();
-                        $ans_obj->setAnswer($a_data['text']);
-                        $ans_obj->setCorrect($a_data['correct'] ? 1 : 0);
-                        $ans_obj->setPoints(intval($a_data['points']));
-                        $ans_obj->setHtml(true);
-                        $answer_objects[] = $ans_obj;
-                    }
-
-                    // Update ProQuiz Table
-                    $wpdb->update(
-                        "{$wpdb->prefix}learndash_pro_quiz_question",
-                        [
-                            'title' => sanitize_text_field($q_data['title']),
-                            'question' => wp_kses_post($q_data['question_text']),
-                            'answer_data' => serialize($answer_objects)
-                        ],
-                        ['id' => $q_pro_id],
-                        ['%s', '%s', '%s'],
-                        ['%d']
-                    );
-                }
-            }
+        $ok = PQC_Quiz_Creator::save_quiz_changes($quiz_data);
+        if (!$ok) {
+            wp_send_json_error(__('Failed to save quiz changes.', 'politeia-quiz-creator'));
         }
 
         wp_send_json_success([

@@ -67,7 +67,7 @@ class PQC_Shortcode
         }
 
         ob_start();
-        if ($quiz_id && get_post_type($quiz_id) === 'sfwd-quiz') {
+        if ($quiz_id && class_exists('PQC_Quiz_Creator') && PQC_Quiz_Creator::quiz_exists((int) $quiz_id)) {
             include PQC_PLUGIN_DIR . 'templates/quiz-editor.php';
         } else {
             // Default quiz title to course title if available

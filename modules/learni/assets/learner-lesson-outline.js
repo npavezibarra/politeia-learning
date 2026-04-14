@@ -125,8 +125,8 @@
 					escapeHtml(courseTitle) +
 					'</strong>. Para obtener el certificado de finalización tienes que tomar el Final Quiz.</div>' +
 					'<div class="learni-final-overlay__actions">' +
-					'<button type="button" class="learni-btn learni-btn-quiz" id="learni-final-overlay-take">Take Final Quiz</button>' +
-					'<button type="button" class="learni-final-overlay__later" data-learni-final-close="1">OTRO DÍA</button>' +
+					'<button type="button" class="learni-btn learni-course-primary-btn" id="learni-final-overlay-take">TAKE FINAL QUIZ</button>' +
+					'<button type="button" class="learni-btn secondary learni-course-primary-btn" data-learni-final-close="1">OTRO DÍA</button>' +
 					'</div>';
 
 				showFinalOverlay(html);
@@ -202,7 +202,7 @@
 					},
 				});
 			})
-			.catch(() => unlock());
+			.catch(() => {});
 	};
 
 	// Run on load: if lessons are 100% and final quiz is pending, show overlay.

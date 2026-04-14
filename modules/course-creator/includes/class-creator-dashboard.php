@@ -300,7 +300,12 @@ class PL_CC_Creator_Dashboard
                 null
             );
 
-            wp_enqueue_style('pcg-creator-css', PL_CC_URL . 'assets/css/creator-dashboard.css', [], '1.0.19');
+            $creator_css_path = PL_CC_PATH . 'assets/css/creator-dashboard.css';
+            $creator_js_path = PL_CC_PATH . 'assets/js/creator-dashboard.js';
+            $creator_css_ver = file_exists($creator_css_path) ? (string) filemtime($creator_css_path) : '1.0.19';
+            $creator_js_ver = file_exists($creator_js_path) ? (string) filemtime($creator_js_path) : '1.0.15';
+
+            wp_enqueue_style('pcg-creator-css', PL_CC_URL . 'assets/css/creator-dashboard.css', [], $creator_css_ver);
             wp_enqueue_style('pcg-cropper-css', PL_CC_URL . 'assets/css/pcg-cropper.css', ['cropperjs'], '1.0.0');
 
 
@@ -317,7 +322,7 @@ class PL_CC_Creator_Dashboard
             wp_add_inline_style('pcg-creator-css', $custom_css);
 
             wp_enqueue_script('pcg-cropper-js', PL_CC_URL . 'assets/js/pcg-course-cropper.js', ['jquery', 'cropperjs'], '1.0.0', true);
-            wp_enqueue_script('pcg-creator-js', PL_CC_URL . 'assets/js/creator-dashboard.js', ['jquery', 'jquery-ui-sortable', 'pcg-cropper-js'], '1.0.15', true);
+            wp_enqueue_script('pcg-creator-js', PL_CC_URL . 'assets/js/creator-dashboard.js', ['jquery', 'jquery-ui-sortable', 'pcg-cropper-js'], $creator_js_ver, true);
             wp_enqueue_script('pcg-chartjs', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', [], '4.4.1', true);
             wp_enqueue_script('pcg-sales-dashboard', PL_CC_URL . 'assets/js/pcg-sales-dashboard.js', ['pcg-chartjs'], '1.0.0', true);
             wp_enqueue_script('pcg-sales-list', PL_CC_URL . 'assets/js/pcg-sales-list.js', [], '1.0.2', true);

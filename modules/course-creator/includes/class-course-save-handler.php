@@ -498,28 +498,42 @@ class PL_CC_Course_Save_Handler
         }
 
         $course_id = intval($data['id'] ?? 0);
+        $status = sanitize_text_field((string) ($data['status'] ?? 'publish'));
+        if (!in_array($status, ['draft', 'publish'], true)) {
+            $status = 'publish';
+        }
         $title = sanitize_text_field($data['title']);
         $description = wp_kses_post($data['description']);
         $excerpt = wp_kses_post($data['excerpt'] ?? '');
         $price = sanitize_text_field($data['price']);
         $thumbnail_id = intval($data['thumbnail_id'] ?? 0);
         $progression = sanitize_text_field($data['progression'] ?? '');
+        $certificate_attachment_id = intval($data['certificate_attachment_id'] ?? 0);
+        $certificate_title = sanitize_text_field((string) ($data['certificate_title'] ?? ''));
+        $certificate_congrats = wp_kses_post((string) ($data['certificate_congrats'] ?? ''));
+        $certificate_logo_attachment_id = intval($data['certificate_logo_attachment_id'] ?? 0);
+        $certificate_signature_attachment_id = intval($data['certificate_signature_attachment_id'] ?? 0);
+        $certificate_signature_label = sanitize_text_field((string) ($data['certificate_signature_label'] ?? ''));
         $content_list = $data['content'] ?? [];
         $teacher_ids = $data['teachers'] ?? [];
         $category_ids = $data['category_ids'] ?? [];
         $tag_ids = $data['tag_ids'] ?? [];
 
-        // 1. Create or Update Course
+        // 1. Create or Update Course (Learni internal CPT)
         $post_data = [
             'post_title' => $title,
             'post_content' => $description,
             'post_excerpt' => $excerpt,
-            'post_status' => 'publish',
-            'post_type' => 'sfwd-courses',
+            'post_status' => $status,
+            'post_type' => 'learni_course',
             'post_author' => get_current_user_id()
         ];
 
         if ($course_id > 0) {
+            $existing = get_post($course_id);
+            if (!$existing || $existing->post_type !== 'learni_course' || (int) $existing->post_author !== (int) get_current_user_id()) {
+                wp_send_json_error(['message' => __('No autorizado.', 'politeia-learning')], 403);
+            }
             $post_data['ID'] = $course_id;
             $course_id = wp_update_post($post_data);
         } else {
@@ -537,13 +551,83 @@ class PL_CC_Course_Save_Handler
             delete_post_thumbnail($course_id);
         }
 
-        // 2b. Set Cover Photo (BuddyBoss MultiPostThumbnails)
+        // 2b. Set Cover Photo (Politeia meta on Learni courses)
         $cover_photo_id = intval($data['cover_photo_id'] ?? 0);
-        $cover_meta_key = 'sfwd-courses_course-cover-image_thumbnail_id';
+        $cover_meta_key = class_exists('\\Learni\\PostTypes\\Course') ? \Learni\PostTypes\Course::META_COVER_PHOTO_ID : 'pl_cover_photo_id';
         if ($cover_photo_id > 0) {
             update_post_meta($course_id, $cover_meta_key, $cover_photo_id);
         } else {
             delete_post_meta($course_id, $cover_meta_key);
+        }
+
+        // 2d. Certificate template (attachment id).
+        $cert_meta_key = class_exists('\\Learni\\PostTypes\\Course') ? \Learni\PostTypes\Course::META_CERTIFICATE_ATTACHMENT_ID : 'learni_certificate_attachment_id';
+        if ($certificate_attachment_id > 0) {
+            update_post_meta($course_id, $cert_meta_key, $certificate_attachment_id);
+        } else {
+            delete_post_meta($course_id, $cert_meta_key);
+        }
+
+        // 2e. Certificate configuration (title, paragraph, claims, logo, signature).
+        $meta_keys = class_exists('\\Learni\\PostTypes\\Course')
+            ? [
+                'title' => \Learni\PostTypes\Course::META_CERTIFICATE_TITLE,
+                'congrats' => \Learni\PostTypes\Course::META_CERTIFICATE_CONGRATS,
+                'claim_first' => \Learni\PostTypes\Course::META_CERTIFICATE_CLAIM_FIRST,
+                'claim_final' => \Learni\PostTypes\Course::META_CERTIFICATE_CLAIM_FINAL,
+                'claim_variation' => \Learni\PostTypes\Course::META_CERTIFICATE_CLAIM_VARIATION,
+                'logo_id' => \Learni\PostTypes\Course::META_CERTIFICATE_LOGO_ATTACHMENT_ID,
+                'logo_align' => \Learni\PostTypes\Course::META_CERTIFICATE_LOGO_ALIGN,
+                'signature_id' => \Learni\PostTypes\Course::META_CERTIFICATE_SIGNATURE_ATTACHMENT_ID,
+                'signature_label' => \Learni\PostTypes\Course::META_CERTIFICATE_SIGNATURE_LABEL,
+            ]
+            : [
+                'title' => 'pl_certificate_title',
+                'congrats' => 'pl_certificate_congrats',
+                'claim_first' => 'pl_certificate_claim_first',
+                'claim_final' => 'pl_certificate_claim_final',
+                'claim_variation' => 'pl_certificate_claim_variation',
+                'logo_id' => 'pl_certificate_logo_attachment_id',
+                'logo_align' => 'pl_certificate_logo_align',
+                'signature_id' => 'pl_certificate_signature_attachment_id',
+                'signature_label' => 'pl_certificate_signature_label',
+            ];
+
+        if ($certificate_title !== '') {
+            update_post_meta($course_id, $meta_keys['title'], $certificate_title);
+        } else {
+            delete_post_meta($course_id, $meta_keys['title']);
+        }
+
+        if ($certificate_congrats !== '') {
+            update_post_meta($course_id, $meta_keys['congrats'], $certificate_congrats);
+        } else {
+            delete_post_meta($course_id, $meta_keys['congrats']);
+        }
+
+        // Claims are always shown on the certificate (first/final/variation).
+        update_post_meta($course_id, $meta_keys['claim_first'], 1);
+        update_post_meta($course_id, $meta_keys['claim_final'], 1);
+        update_post_meta($course_id, $meta_keys['claim_variation'], 1);
+
+        if ($certificate_logo_attachment_id > 0) {
+            update_post_meta($course_id, $meta_keys['logo_id'], $certificate_logo_attachment_id);
+        } else {
+            delete_post_meta($course_id, $meta_keys['logo_id']);
+        }
+        // Logo alignment is always left (no UI toggle).
+        update_post_meta($course_id, $meta_keys['logo_align'], 'left');
+
+        if ($certificate_signature_attachment_id > 0) {
+            update_post_meta($course_id, $meta_keys['signature_id'], $certificate_signature_attachment_id);
+        } else {
+            delete_post_meta($course_id, $meta_keys['signature_id']);
+        }
+
+        if ($certificate_signature_label !== '') {
+            update_post_meta($course_id, $meta_keys['signature_label'], $certificate_signature_label);
+        } else {
+            delete_post_meta($course_id, $meta_keys['signature_label']);
         }
 
         // 2c. Set Additional Teachers (Legacy Meta + New Table)
@@ -568,45 +652,33 @@ class PL_CC_Course_Save_Handler
             }
         }
 
-        // 3. Save Course Settings (Price etc)
-        $formatted_price = '0';
+        // 3. Save Learni course settings (price + order/progression)
         $price_type = 'free';
-
+        $numeric_price = 0;
         if (!empty($price)) {
             $price_type = 'closed';
-            // Clean input and format: 10000 -> $10,000
-            $numeric_price = intval(preg_replace('/[^0-9]/', '', $price));
-            $formatted_price = '$' . number_format($numeric_price, 0, '.', ',');
+            $numeric_price = intval(preg_replace('/[^0-9]/', '', (string) $price));
         }
+        update_post_meta($course_id, 'learni_price', (float) $numeric_price);
 
-        $course_settings = [
-            'sfwd-courses_course_price_type' => $price_type,
-            'sfwd-courses_course_price' => $formatted_price,
-            'sfwd-courses_custom_button_url' => '',
-            'sfwd-courses_course_materials' => '',
-            'sfwd-courses_course_disable_lesson_progression' => $progression,
-        ];
-        update_post_meta($course_id, '_sfwd-courses', $course_settings);
+        // UI: "FLUJO LIBRE" checked => progression disabled => Learni linear order false.
+        $linear = ($progression === 'on') ? false : true;
+        update_post_meta($course_id, 'learni_linear_order', $linear ? 1 : 0);
 
         // 3. Handle Lessons and Sections
         $this->process_course_content($course_id, $content_list);
 
         // 4. Sync with WooCommerce
-        $product_url = $this->sync_course_to_woo_product($course_id, $data, $price_type);
+        $product_url = $this->sync_course_to_woo_product($course_id, $data, $price_type, $status);
 
-        // 5. Update Course with Product URL if applicable
-        if ($price_type === 'closed' && !empty($product_url)) {
-            $course_settings['sfwd-courses_custom_button_url'] = $product_url;
-            update_post_meta($course_id, '_sfwd-courses', $course_settings);
-        }
-
-        // 6. Save learning categories/tags.
+        // 5. Save learning categories/tags.
         $this->assign_learning_terms((int) $course_id, $category_ids, $tag_ids);
 
         wp_send_json_success([
             'course_id' => $course_id,
             'product_url' => $product_url,
             'permalink' => get_permalink($course_id),
+            'status' => get_post_status($course_id),
             'message' => __('Curso guardado y sincronizado con la tienda exitosamente.', 'politeia-learning')
         ]);
     }
@@ -614,7 +686,7 @@ class PL_CC_Course_Save_Handler
     /**
      * Creates or updates a WooCommerce product linked to the course.
      */
-    private function sync_course_to_woo_product($course_id, $data, $price_type)
+    private function sync_course_to_woo_product($course_id, $data, $price_type, string $status = 'publish')
     {
         if (!class_exists('WooCommerce')) {
             return '';
@@ -636,11 +708,15 @@ class PL_CC_Course_Save_Handler
             return '';
         }
 
+        if (!in_array($status, ['draft', 'publish'], true)) {
+            $status = 'publish';
+        }
+
         $post_data = [
             'post_title' => $title,
             'post_content' => $description,
             'post_excerpt' => $excerpt,
-            'post_status' => 'publish',
+            'post_status' => $status,
             'post_type' => 'product',
         ];
 
@@ -675,9 +751,11 @@ class PL_CC_Course_Save_Handler
             update_post_meta($product_id, 'product_owner', $author_id);
         }
 
-        // Link to LearnDash Course (Addon meta key discovered: _related_course)
-        // Store as array to match expected serialized format a:1:{i:0;i:XX;}
+        // Link product -> course (compat for legacy Politeia modules + Learni native meta).
+        // Store as array to match expected serialized format a:1:{i:0;i:XX;} used by older code.
         update_post_meta($product_id, '_related_course', [$course_id]);
+        update_post_meta($product_id, '_learni_course_id', $course_id);
+        update_post_meta($course_id, 'learni_wc_product_id', $product_id);
 
         return get_permalink($product_id);
     }
@@ -979,6 +1057,12 @@ class PL_CC_Course_Save_Handler
 
     private function process_course_content($course_id, $content_list)
     {
+        $post_type = $course_id > 0 ? (string) get_post_type($course_id) : '';
+        if ($post_type === 'learni_course') {
+            $this->process_learni_course_content((int) $course_id, (array) $content_list);
+            return;
+        }
+
         // Cleanup existing lessons to avoid duplicates on every save
         $existing_lessons = get_posts([
             'post_type' => 'sfwd-lessons',
@@ -1070,13 +1154,112 @@ class PL_CC_Course_Save_Handler
         update_post_meta($course_id, 'ld_course_steps', $course_steps);
     }
 
+    private function process_learni_course_content(int $course_id, array $content_list): void
+    {
+        if ($course_id <= 0) {
+            return;
+        }
+
+        global $wpdb;
+        if (!$wpdb) {
+            return;
+        }
+
+        // Delete existing outline + linked lessons (Center editor rewrites the outline wholesale).
+        $items_table = $wpdb->prefix . 'learni_course_items';
+        $existing_lesson_ids = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT item_ref_id FROM {$items_table} WHERE course_post_id = %d AND item_type = %s",
+                $course_id,
+                'lesson'
+            )
+        );
+        foreach (array_values(array_unique(array_map('absint', (array) $existing_lesson_ids))) as $lesson_id) {
+            if ($lesson_id > 0 && get_post_type($lesson_id) === 'learni_lesson') {
+                wp_delete_post($lesson_id, true);
+            }
+        }
+        $wpdb->delete($items_table, ['course_post_id' => $course_id], ['%d']);
+
+        $sort = 0;
+        foreach ($content_list as $item) {
+            $type = isset($item['type']) ? (string) $item['type'] : '';
+            $title = isset($item['title']) ? sanitize_text_field((string) $item['title']) : '';
+            if ($type === '' || $title === '') {
+                $sort++;
+                continue;
+            }
+
+            if ($type === 'section') {
+                $wpdb->insert(
+                    $items_table,
+                    [
+                        'course_post_id' => $course_id,
+                        'item_type' => 'header',
+                        'item_ref_id' => 0,
+                        'label' => $title,
+                        'sort_order' => $sort,
+                        'is_preview' => 0,
+                        'created_at' => current_time('mysql'),
+                    ],
+                    ['%d', '%s', '%d', '%s', '%d', '%d', '%s']
+                );
+                $sort++;
+                continue;
+            }
+
+            if ($type !== 'lesson') {
+                $sort++;
+                continue;
+            }
+
+            $video_url = isset($item['video_url']) ? esc_url_raw((string) $item['video_url']) : '';
+            $available_date = isset($item['available_date']) ? sanitize_text_field((string) $item['available_date']) : '';
+
+            $lesson_id = wp_insert_post(
+                [
+                    'post_title' => $title,
+                    'post_status' => 'publish',
+                    'post_type' => 'learni_lesson',
+                    'post_author' => get_current_user_id(),
+                    'menu_order' => $sort,
+                ],
+                true
+            );
+
+            if (is_wp_error($lesson_id) || (int) $lesson_id <= 0) {
+                $sort++;
+                continue;
+            }
+
+            update_post_meta((int) $lesson_id, 'learni_video_url', $video_url);
+            update_post_meta((int) $lesson_id, 'learni_available_at', $available_date);
+
+            $wpdb->insert(
+                $items_table,
+                [
+                    'course_post_id' => $course_id,
+                    'item_type' => 'lesson',
+                    'item_ref_id' => (int) $lesson_id,
+                    'label' => '',
+                    'sort_order' => $sort,
+                    'is_preview' => 0,
+                    'created_at' => current_time('mysql'),
+                ],
+                ['%d', '%s', '%d', '%s', '%d', '%d', '%s']
+            );
+
+            $sort++;
+        }
+    }
+
     public function handle_get_my_courses()
     {
         check_ajax_referer('pcg_creator_nonce', 'nonce');
 
         $args = [
-            'post_type' => 'sfwd-courses',
-            'post_status' => 'publish',
+            'post_type' => 'learni_course',
+            'post_status' => ['publish', 'draft'],
             'author' => get_current_user_id(),
             'posts_per_page' => -1,
             'orderby' => 'date',
@@ -1088,30 +1271,29 @@ class PL_CC_Course_Save_Handler
 
         foreach ($courses as $post) {
             $thumbnail_url = get_the_post_thumbnail_url($post->ID, 'medium');
-            $price_settings = get_post_meta($post->ID, '_sfwd-courses', true);
-            $price = $price_settings['sfwd-courses_course_price'] ?? '0';
+            $numeric_price = (int) (float) get_post_meta($post->ID, 'learni_price', true);
+            $price = $numeric_price > 0 ? ('$' . number_format($numeric_price, 0, '.', ',')) : __('Gratis', 'politeia-learning');
 
-            // Clean display if price is 0 or empty
-            $numeric_price = intval(preg_replace('/[^0-9]/', '', $price));
-            if ($numeric_price === 0) {
-                $price = __('Gratis', 'politeia-learning');
+            // Count lessons using Learni outline table.
+            global $wpdb;
+            $lesson_count = 0;
+            if ($wpdb) {
+                $lesson_count = (int) $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT COUNT(*) FROM {$wpdb->prefix}learni_course_items WHERE course_post_id = %d AND item_type = %s",
+                        (int) $post->ID,
+                        'lesson'
+                    )
+                );
             }
-
-            // Count lessons using LD relationship
-            $lessons = get_posts([
-                'post_type' => 'sfwd-lessons',
-                'meta_key' => 'course_id',
-                'meta_value' => $post->ID,
-                'posts_per_page' => -1,
-                'fields' => 'ids'
-            ]);
 
             $data[] = [
                 'id' => $post->ID,
                 'title' => $post->post_title,
                 'thumbnail_url' => $thumbnail_url ? $thumbnail_url : '',
                 'price' => $price,
-                'lesson_count' => count($lessons)
+                'lesson_count' => $lesson_count,
+                'status' => $post->post_status,
             ];
         }
 
@@ -2332,20 +2514,31 @@ class PL_CC_Course_Save_Handler
         check_ajax_referer('pcg_creator_nonce', 'nonce');
         $course_id = intval($_POST['course_id'] ?? 0);
 
-        if ($course_id <= 0 || get_post_field('post_author', $course_id) != get_current_user_id()) {
+        if (
+            $course_id <= 0
+            || get_post_type($course_id) !== 'learni_course'
+            || get_post_field('post_author', $course_id) != get_current_user_id()
+        ) {
             wp_send_json_error(['message' => __('No autorizado.', 'politeia-learning')]);
         }
 
-        // 1. Delete associated lessons
-        $lessons = get_posts([
-            'post_type' => 'sfwd-lessons',
-            'meta_key' => 'course_id',
-            'meta_value' => $course_id,
-            'posts_per_page' => -1
-        ]);
-
-        foreach ($lessons as $lesson) {
-            wp_delete_post($lesson->ID, true);
+        // 1. Delete associated lessons + outline entries.
+        global $wpdb;
+        if ($wpdb) {
+            $items_table = $wpdb->prefix . 'learni_course_items';
+            $lesson_ids = $wpdb->get_col(
+                $wpdb->prepare(
+                    "SELECT item_ref_id FROM {$items_table} WHERE course_post_id = %d AND item_type = %s",
+                    $course_id,
+                    'lesson'
+                )
+            );
+            foreach (array_values(array_unique(array_map('absint', (array) $lesson_ids))) as $lesson_id) {
+                if ($lesson_id > 0 && get_post_type($lesson_id) === 'learni_lesson') {
+                    wp_delete_post($lesson_id, true);
+                }
+            }
+            $wpdb->delete($items_table, ['course_post_id' => $course_id], ['%d']);
         }
 
         // 2. Delete the course
@@ -2355,7 +2548,6 @@ class PL_CC_Course_Save_Handler
         }
 
         // Delete roles entries for this course.
-        global $wpdb;
         $roles_table = $wpdb->prefix . 'politeia_course_roles';
         $wpdb->delete($roles_table, ['object_type' => 'course', 'object_id' => $course_id], ['%s', '%d']);
 
@@ -2369,18 +2561,51 @@ class PL_CC_Course_Save_Handler
         check_ajax_referer('pcg_creator_nonce', 'nonce');
         $course_id = intval($_POST['course_id'] ?? 0);
 
-        if ($course_id <= 0 || get_post_field('post_author', $course_id) != get_current_user_id()) {
+        if (
+            $course_id <= 0
+            || get_post_type($course_id) !== 'learni_course'
+            || get_post_field('post_author', $course_id) != get_current_user_id()
+        ) {
             wp_send_json_error(['message' => __('No autorizado.', 'politeia-learning')]);
         }
 
         $post = get_post($course_id);
-        $price_settings = get_post_meta($course_id, '_sfwd-courses', true);
+        $numeric_price = (int) (float) get_post_meta($course_id, 'learni_price', true);
         $thumbnail_id = get_post_thumbnail_id($course_id);
         $thumbnail_url = wp_get_attachment_url($thumbnail_id);
 
-        $cover_meta_key = 'sfwd-courses_course-cover-image_thumbnail_id';
+        $cover_meta_key = class_exists('\\Learni\\PostTypes\\Course') ? \Learni\PostTypes\Course::META_COVER_PHOTO_ID : 'pl_cover_photo_id';
         $cover_photo_id = get_post_meta($course_id, $cover_meta_key, true);
         $cover_photo_url = wp_get_attachment_url($cover_photo_id);
+
+        $cert_meta_key = class_exists('\\Learni\\PostTypes\\Course') ? \Learni\PostTypes\Course::META_CERTIFICATE_ATTACHMENT_ID : 'learni_certificate_attachment_id';
+        $certificate_attachment_id = (int) get_post_meta($course_id, $cert_meta_key, true);
+        $certificate_url = $certificate_attachment_id > 0 ? wp_get_attachment_url($certificate_attachment_id) : '';
+
+        $cert_title_key = class_exists('\\Learni\\PostTypes\\Course') ? \Learni\PostTypes\Course::META_CERTIFICATE_TITLE : 'pl_certificate_title';
+        $cert_congrats_key = class_exists('\\Learni\\PostTypes\\Course') ? \Learni\PostTypes\Course::META_CERTIFICATE_CONGRATS : 'pl_certificate_congrats';
+        $cert_claim_first_key = class_exists('\\Learni\\PostTypes\\Course') ? \Learni\PostTypes\Course::META_CERTIFICATE_CLAIM_FIRST : 'pl_certificate_claim_first';
+        $cert_claim_final_key = class_exists('\\Learni\\PostTypes\\Course') ? \Learni\PostTypes\Course::META_CERTIFICATE_CLAIM_FINAL : 'pl_certificate_claim_final';
+        $cert_claim_variation_key = class_exists('\\Learni\\PostTypes\\Course') ? \Learni\PostTypes\Course::META_CERTIFICATE_CLAIM_VARIATION : 'pl_certificate_claim_variation';
+        $cert_logo_id_key = class_exists('\\Learni\\PostTypes\\Course') ? \Learni\PostTypes\Course::META_CERTIFICATE_LOGO_ATTACHMENT_ID : 'pl_certificate_logo_attachment_id';
+        $cert_logo_align_key = class_exists('\\Learni\\PostTypes\\Course') ? \Learni\PostTypes\Course::META_CERTIFICATE_LOGO_ALIGN : 'pl_certificate_logo_align';
+        $cert_signature_id_key = class_exists('\\Learni\\PostTypes\\Course') ? \Learni\PostTypes\Course::META_CERTIFICATE_SIGNATURE_ATTACHMENT_ID : 'pl_certificate_signature_attachment_id';
+        $cert_signature_label_key = class_exists('\\Learni\\PostTypes\\Course') ? \Learni\PostTypes\Course::META_CERTIFICATE_SIGNATURE_LABEL : 'pl_certificate_signature_label';
+
+        $certificate_title = (string) get_post_meta($course_id, $cert_title_key, true);
+        $certificate_congrats = (string) get_post_meta($course_id, $cert_congrats_key, true);
+        // Claims are always shown on certificates.
+        $certificate_claim_first = true;
+        $certificate_claim_final = true;
+        $certificate_claim_variation = true;
+
+        $certificate_logo_attachment_id = (int) get_post_meta($course_id, $cert_logo_id_key, true);
+        $certificate_logo_url = $certificate_logo_attachment_id > 0 ? wp_get_attachment_url($certificate_logo_attachment_id) : '';
+        $certificate_logo_align = 'left';
+
+        $certificate_signature_attachment_id = (int) get_post_meta($course_id, $cert_signature_id_key, true);
+        $certificate_signature_url = $certificate_signature_attachment_id > 0 ? wp_get_attachment_url($certificate_signature_attachment_id) : '';
+        $certificate_signature_label = (string) get_post_meta($course_id, $cert_signature_label_key, true);
 
         $roles = $this->get_course_roles_for_object('course', (int) $course_id);
         $teachers_data = [];
@@ -2404,39 +2629,46 @@ class PL_CC_Course_Save_Handler
             }
         }
 
-        // Get content structure (lessons/sections) from ld_course_steps
-        $steps = get_post_meta($course_id, 'ld_course_steps', true);
         $content = [];
+        global $wpdb;
+        if ($wpdb) {
+            $rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT item_type, item_ref_id, label
+                     FROM {$wpdb->prefix}learni_course_items
+                     WHERE course_post_id = %d
+                     ORDER BY sort_order ASC, id ASC",
+                    $course_id
+                ),
+                ARRAY_A
+            );
 
-        if (!empty($steps['steps']['h'])) {
-            $h = $steps['steps']['h'];
-
-            // This is a simplified reconstruction of the flat list from the LD hierarchy
-            // In a real LD steps array, it's more complex, but for our app, we'll try to reconstruct the order
-            foreach ($h as $key => $val) {
-                if (is_array($val) && isset($val['type']) && $val['type'] === 'section') {
+            foreach ((array) $rows as $row) {
+                $type = isset($row['item_type']) ? (string) $row['item_type'] : '';
+                if ($type === 'header') {
                     $content[] = [
                         'type' => 'section',
-                        'title' => $val['title']
+                        'title' => (string) ($row['label'] ?? ''),
                     ];
-                } else if ($key === 'sfwd-lessons') {
-                    foreach ($val as $lesson_id => $sub) {
-                        $l_settings = get_post_meta($lesson_id, '_sfwd-lessons', true);
-                        $v_url = $l_settings['sfwd-lessons_lesson_video_url'] ?? '';
-                        $a_date = '';
-                        if (isset($l_settings['sfwd-lessons_visible_after_specific_date']) && $l_settings['sfwd-lessons_visible_after_specific_date'] > 0) {
-                            $a_date = date('Y-m-d', $l_settings['sfwd-lessons_visible_after_specific_date']);
-                        }
-
-                        $content[] = [
-                            'type' => 'lesson',
-                            'id' => $lesson_id,
-                            'title' => get_the_title($lesson_id),
-                            'video_url' => $v_url,
-                            'available_date' => $a_date
-                        ];
-                    }
+                    continue;
                 }
+
+                if ($type !== 'lesson') {
+                    continue;
+                }
+
+                $lesson_id = isset($row['item_ref_id']) ? (int) $row['item_ref_id'] : 0;
+                if ($lesson_id <= 0 || get_post_type($lesson_id) !== 'learni_lesson') {
+                    continue;
+                }
+
+                $content[] = [
+                    'type' => 'lesson',
+                    'id' => $lesson_id,
+                    'title' => get_the_title($lesson_id),
+                    'video_url' => (string) get_post_meta($lesson_id, 'learni_video_url', true),
+                    'available_date' => (string) get_post_meta($lesson_id, 'learni_available_at', true),
+                ];
             }
         }
 
@@ -2447,7 +2679,8 @@ class PL_CC_Course_Save_Handler
             'title' => $post->post_title,
             'description' => $post->post_content,
             'excerpt' => $post->post_excerpt,
-            'price' => preg_replace('/[^0-9]/', '', $price_settings['sfwd-courses_course_price'] ?? '0'),
+            'status' => $post->post_status,
+            'price' => (string) $numeric_price,
             'category_ids' => $meta_terms['category_ids'],
             'tag_ids' => $meta_terms['tag_ids'],
             'tags' => $meta_terms['tags'],
@@ -2455,8 +2688,21 @@ class PL_CC_Course_Save_Handler
             'thumbnail_url' => $thumbnail_url,
             'cover_photo_id' => $cover_photo_id,
             'cover_photo_url' => $cover_photo_url,
+            'certificate_attachment_id' => $certificate_attachment_id,
+            'certificate_url' => $certificate_url,
+            'certificate_title' => $certificate_title,
+            'certificate_congrats' => $certificate_congrats,
+            'certificate_claim_first' => $certificate_claim_first,
+            'certificate_claim_final' => $certificate_claim_final,
+            'certificate_claim_variation' => $certificate_claim_variation,
+            'certificate_logo_attachment_id' => $certificate_logo_attachment_id,
+            'certificate_logo_url' => $certificate_logo_url,
+            'certificate_logo_align' => $certificate_logo_align,
+            'certificate_signature_attachment_id' => $certificate_signature_attachment_id,
+            'certificate_signature_url' => $certificate_signature_url,
+            'certificate_signature_label' => $certificate_signature_label,
             'permalink' => get_permalink($course_id),
-            'progression' => $price_settings['sfwd-courses_course_disable_lesson_progression'] ?? '',
+            'progression' => get_post_meta($course_id, 'learni_linear_order', true) ? '' : 'on',
             'content' => $content,
             'teachers' => $teachers_data,
             'author_id' => $post->post_author,

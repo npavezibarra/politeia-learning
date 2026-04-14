@@ -354,10 +354,10 @@ section.learni-course-content {
 .learni-progress-bar {
 	height: 24px;
 	border-radius: 999px;
-	background: #111827;
+	background: rgba(255, 255, 255, 0.12);
 	overflow: hidden;
 	padding: 6px;
-	border: 1px solid rgba(255, 255, 255, 0.3);
+	border: 1px solid rgba(255, 255, 255, 0.22);
 	box-sizing: border-box;
 	width: 100%;
 	max-width: 320px;
@@ -367,7 +367,7 @@ section.learni-course-content {
 	display: block;
 	height: 100%;
 	border-radius: 999px;
-	background: linear-gradient(90deg, #ffffff 0%, #e5e7eb 50%, #9ca3af 100%);
+	background: linear-gradient(135deg, #8a6b1e 0%, #c79f32 50%, #e9d18a 100%);
 	position: relative;
 	transition: width 1000ms ease-out;
 	overflow: hidden;
@@ -664,7 +664,7 @@ button.learni-btn {
 .learni-eval-bar {
 	height: 100%;
 	border-radius: 999px;
-	background: linear-gradient(90deg, #111827 0%, #4b5563 100%);
+	background: linear-gradient(135deg, #8a6b1e 0%, #c79f32 50%, #e9d18a 100%);
 	width: 0%;
 }
 
@@ -779,6 +779,22 @@ button.learni-btn {
 	color: rgba(17, 24, 39, 0.45);
 }
 
+.learni-quiz-results__chart {
+	display: flex;
+	justify-content: center;
+	margin-top: 12px;
+}
+
+.learni-quiz-results__chart-svg {
+	width: 190px;
+	height: 190px;
+	display: block;
+}
+
+.learni-quiz-results .learni-final-overlay__chart-text {
+	font-size: 22px;
+}
+
 .learni-quiz-results__score {
 	margin-top: 10px;
 	font-size: 42px;
@@ -860,7 +876,10 @@ button.learni-btn {
 }
 
 .learni-final-overlay.is-open {
-	display: block;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
 }
 
 .learni-final-overlay__backdrop {
@@ -871,20 +890,21 @@ button.learni-btn {
 
 .learni-final-overlay__panel {
 	position: relative;
-	margin: 10vh auto 0;
-	width: min(620px, calc(100vw - 24px));
+	width: min(480px, calc(100vw - 48px));
 	border-radius: 16px;
 	background: #fff;
 	box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+	font-family: 'Poppins';
 }
 
 .learni-final-overlay__body {
-	padding: 18px;
+	padding: 50px 40px 50px;
+	text-align: center;
 }
 
 .learni-final-overlay__title {
-	font-size: 14px;
-	font-weight: 900;
+	font-size: 24px;
+	font-weight: 800;
 	letter-spacing: 0.14em;
 	text-transform: uppercase;
 	color: rgba(17, 24, 39, 0.9);
@@ -892,29 +912,109 @@ button.learni-btn {
 }
 
 .learni-final-overlay__text {
-	font-size: 14px;
+	font-size: 18px;
 	color: rgba(17, 24, 39, 0.75);
 	line-height: 1.5;
-	margin-bottom: 14px;
+	margin-bottom: 24px;
 }
 
 .learni-final-overlay__actions {
-	display: flex;
+	display: grid;
 	gap: 10px;
-	flex-wrap: wrap;
-	align-items: center;
+	justify-items: center;
 }
 
-.learni-final-overlay__later {
-	appearance: none;
-	border: 0;
-	background: transparent;
-	cursor: pointer;
+.learni-final-overlay__actions .learni-btn {
+	width: min(220px, 100%);
+	margin: 0 auto;
+}
+
+.learni-final-overlay__charts {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 18px;
+	justify-items: center;
+	align-items: start;
+	margin: 0 auto 18px;
+	width: min(440px, 100%);
+}
+
+.learni-final-overlay__chart {
+	display: grid;
+	justify-items: center;
+	gap: 10px;
+	background: rgba(17, 24, 39, 0.02);
+	border: 1px solid rgba(17, 24, 39, 0.08);
+	border-radius: 18px;
+	padding: 14px 12px 16px;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.learni-final-overlay__chart-svg {
+	width: 160px;
+	height: 160px;
+	display: block;
+}
+
+.learni-final-overlay__chart-track {
+	stroke: #e5e7eb;
+	stroke-width: 10;
+	fill: transparent;
+}
+
+.learni-final-overlay__chart-progress {
+	stroke-width: 10;
+	fill: transparent;
+	stroke-linecap: round;
+	transform: rotate(-90deg);
+	transform-origin: 50% 50%;
+	transition: stroke-dashoffset 0.8s ease-in-out;
+}
+
+.learni-final-overlay__chart-text {
+	fill: rgba(17, 24, 39, 0.92);
+	font-size: 18px;
+	font-weight: 800;
+}
+
+.learni-final-overlay__chart-label {
+	font-size: 11px;
 	font-weight: 800;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
-	color: rgba(17, 24, 39, 0.55);
-	padding: 10px 6px;
+	color: rgba(17, 24, 39, 0.65);
+}
+
+.learni-final-overlay__variation {
+	font-size: 14px;
+	font-weight: 700;
+	color: rgba(17, 24, 39, 0.8);
+	margin-bottom: 18px;
+}
+
+.learni-final-overlay__certwrap {
+	display: grid;
+	gap: 10px;
+	justify-items: center;
+	margin-bottom: 10px;
+}
+
+.learni-final-overlay__cert {
+	font-size: 13px;
+	color: rgba(17, 24, 39, 0.75);
+}
+
+@media (max-width: 520px) {
+	.learni-final-overlay__charts {
+		grid-template-columns: 1fr;
+		width: min(320px, 100%);
+	}
+
+	.learni-final-overlay__chart-svg {
+		width: 150px;
+		height: 150px;
+	}
 }
 
 .learni-course-content {
@@ -1280,6 +1380,12 @@ button.learni-btn {
 	margin: 0;
 }
 
+.learni-lesson-complete-wrap {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+}
+
 .learni-lesson-complete-btn {
 	display: inline-flex;
 	align-items: center;
@@ -1300,9 +1406,58 @@ button.learni-btn {
 	line-height: 1;
 }
 
+.learni-lesson-complete-btn[data-learni-requires-video='1']:not(:disabled):not(.is-complete) {
+	background: #0b0b0d;
+	border-color: rgba(11, 11, 13, 0.55);
+}
+
 .learni-lesson-complete-btn:disabled {
 	opacity: 0.8;
 	cursor: default;
+}
+
+.learni-tooltip {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 10px);
+	min-width: 240px;
+	max-width: 320px;
+	padding: 10px 12px;
+	border-radius: 8px;
+	background: rgba(17, 24, 39, 0.96);
+	color: #fff;
+	font-size: 12px;
+	font-weight: 500;
+	letter-spacing: 0.01em;
+	line-height: 1.35;
+	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+	opacity: 0;
+	transform: translateY(-2px);
+	pointer-events: none;
+	transition: opacity 140ms ease, transform 140ms ease;
+	z-index: 30;
+	text-transform: none;
+}
+
+.learni-lesson-complete-btn:not(:disabled) + .learni-tooltip {
+	display: none;
+}
+
+.learni-tooltip::before {
+	content: '';
+	position: absolute;
+	top: -6px;
+	right: 16px;
+	width: 0;
+	height: 0;
+	border-left: 6px solid transparent;
+	border-right: 6px solid transparent;
+	border-bottom: 6px solid rgba(17, 24, 39, 0.96);
+}
+
+.learni-lesson-complete-wrap:hover .learni-lesson-complete-btn:disabled + .learni-tooltip {
+	opacity: 1;
+	transform: translateY(0);
 }
 
 .learni-lesson-complete-icon {
@@ -1505,4 +1660,272 @@ body.pl-learni-lesson .wp-block-template-part.wp-block-template-part--footer {
 	.learni-outline-overlay {
 		display: block;
 	}
+}
+
+/* Certificate Overlay */
+.learni-cert-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    z-index: 100000;
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+}
+
+.learni-cert-modal.is-open {
+    display: block;
+}
+
+.learni-cert-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(4px);
+    transition: opacity 0.3s ease;
+}
+
+.learni-cert-modal__panel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.learni-cert-modal__head {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: rgba(17, 24, 39, 0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.learni-cert-modal__title {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.9;
+}
+
+.learni-cert-modal__actions {
+    display: flex;
+    gap: 12px;
+}
+
+.learni-cert-modal__body {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: center; /* Perfect vertical centering */
+    justify-content: center;
+    padding: 24px;
+    background: transparent;
+}
+
+.learni-cert-stage {
+    position: relative;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.learni-cert-stage .sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: top left;
+    transform: scale(var(--learni-cert-scale, 1));
+    margin: 0 !important;
+    width: 11in !important;
+    height: 8.5in !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Re-use and override .sheet styles from Templates.php to ensure consistency but adapted for modal */
+.learni-cert-modal .sheet {
+    background: #fff;
+    padding: 50px 70px;
+    box-sizing: border-box;
+}
+
+.learni-cert-modal .sheet .top {
+    display: flex;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.learni-cert-modal .sheet .logo {
+    max-height: 72px;
+    max-width: 280px;
+    object-fit: contain;
+}
+
+.learni-cert-modal .sheet .title {
+    margin: 0 0 16px;
+    font-size: 42px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: #111827;
+}
+
+.learni-cert-modal .sheet .kicker {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(17, 24, 39, 0.5);
+    margin: 12px 0;
+}
+
+.learni-cert-modal .sheet .name {
+    font-size: 48px;
+    font-weight: 800;
+    color: #111827;
+    margin: 8px 0;
+}
+
+.learni-cert-modal .sheet .course {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    margin: 8px 0;
+}
+
+.learni-cert-modal .sheet .paragraph {
+    margin-top: 24px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: rgba(17, 24, 39, 0.8);
+    max-width: 800px;
+}
+
+.learni-cert-modal .sheet .bottom {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-top: 40px;
+}
+
+.learni-cert-modal .sheet .actions {
+    display: none; /* Hidden in modal, actions are in modal head */
+}
+
+.learni-cert-modal .sheet .sig {
+    text-align: right;
+    display: grid;
+    justify-items: end;
+    gap: 8px;
+}
+
+.learni-cert-modal .sheet .sigimg {
+    max-height: 80px;
+    max-width: 240px;
+    object-fit: contain;
+}
+
+.learni-cert-modal .sheet .sigline {
+    width: 240px;
+    height: 1px;
+    background: rgba(17, 24, 39, 0.15);
+}
+
+.learni-cert-modal .sheet .siglabel {
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(17, 24, 39, 0.6);
+}
+
+/* Animations */
+@keyframes learniFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.learni-cert-modal.is-open .learni-cert-modal__backdrop {
+    animation: learniFadeIn 0.3s ease forwards;
+}
+
+@keyframes learniZoomIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.learni-cert-modal.is-open .learni-cert-stage {
+    animation: learniZoomIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Print Handling for Certificate (Current Window) */
+@media print {
+    @page {
+        size: landscape;
+        margin: 0; /* Removes browser headers/footers */
+    }
+
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        height: auto !important;
+    }
+    
+    body.is-printing-cert > *:not(#learni-cert-modal) {
+        display: none !important;
+    }
+    
+    body.is-printing-cert #learni-cert-modal {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        display: block !important;
+        background: #fff !important;
+        z-index: 1 !important;
+    }
+    
+    body.is-printing-cert #learni-cert-modal .learni-cert-modal__backdrop,
+    body.is-printing-cert #learni-cert-modal .learni-cert-modal__head {
+        display: none !important;
+    }
+    
+    body.is-printing-cert #learni-cert-modal .learni-cert-modal__body {
+        padding: 0 !important;
+        margin: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        overflow: visible !important;
+    }
+    
+    body.is-printing-cert .learni-cert-stage {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        transform: none !important;
+        margin: 0 !important;
+        page-break-inside: avoid;
+    }
+    
+    body.is-printing-cert .learni-cert-stage .sheet {
+        position: static !important;
+        transform: none !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 5% 7% !important; /* Adjust padding for better page fit */
+    }
 }

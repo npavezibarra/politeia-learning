@@ -99,10 +99,22 @@ final class Routes
         $summary = Progress::course_summary($user_id, $course_id);
         $lesson_percent = isset($summary['percent']) ? (int) $summary['percent'] : 0;
 
+        $certificate_url = '';
+        if ($lesson_percent >= 100 && Access::user_can_access_course($user_id, $course_id) && self::certificate_template_exists($course_id)) {
+            $certificate_url = (string) add_query_arg(
+                [
+                    'action' => 'pl_learni_view_certificate',
+                    'course_id' => (string) $course_id,
+                ],
+                admin_url('admin-post.php')
+            );
+        }
+
         if ($quiz_id <= 0) {
             return [
                 'courseId' => $course_id,
                 'quizId' => 0,
+                'certificateUrl' => $certificate_url,
                 'progress' => [
                     'lessonsPercent' => $lesson_percent,
                 ],
@@ -173,6 +185,7 @@ final class Routes
         return [
             'courseId' => $course_id,
             'quizId' => $quiz_id,
+            'certificateUrl' => $certificate_url,
             'progress' => [
                 'lessonsPercent' => $lesson_percent,
             ],
@@ -780,5 +793,22 @@ final class Routes
             'percent' => $percent,
             'submittedAt' => (string) ($row['submitted_at'] ?? ''),
         ];
+    }
+
+    private static function certificate_template_exists(int $course_id): bool
+    {
+        if ($course_id <= 0) {
+            return false;
+        }
+
+        $title = (string) get_post_meta($course_id, Course::META_CERTIFICATE_TITLE, true);
+        $paragraph = (string) get_post_meta($course_id, Course::META_CERTIFICATE_CONGRATS, true);
+        $logo_id = (int) get_post_meta($course_id, Course::META_CERTIFICATE_LOGO_ATTACHMENT_ID, true);
+        $sig_id = (int) get_post_meta($course_id, Course::META_CERTIFICATE_SIGNATURE_ATTACHMENT_ID, true);
+        $show_first = (bool) get_post_meta($course_id, Course::META_CERTIFICATE_CLAIM_FIRST, true);
+        $show_final = (bool) get_post_meta($course_id, Course::META_CERTIFICATE_CLAIM_FINAL, true);
+        $show_variation = (bool) get_post_meta($course_id, Course::META_CERTIFICATE_CLAIM_VARIATION, true);
+
+        return ($title !== '') || ($paragraph !== '') || ($logo_id > 0) || ($sig_id > 0) || $show_first || $show_final || $show_variation;
     }
 }

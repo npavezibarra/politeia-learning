@@ -1,7 +1,11 @@
 <?php
 /**
- * Quiz Creator Class
- * Handles the creation of LearnDash quizzes from structured data
+ * Quiz Creator Class (Learni-backed)
+ *
+ * Stores quizzes/questions/answers in Learni tables:
+ * - {$wpdb->prefix}learni_quizzes
+ * - {$wpdb->prefix}learni_quiz_questions
+ * - {$wpdb->prefix}learni_quiz_answers
  */
 
 if (!defined('ABSPATH')) {
@@ -10,747 +14,572 @@ if (!defined('ABSPATH')) {
 
 class PQC_Quiz_Creator
 {
+    private const TABLE_QUIZZES = 'learni_quizzes';
+    private const TABLE_QUESTIONS = 'learni_quiz_questions';
+    private const TABLE_ANSWERS = 'learni_quiz_answers';
+
+    public static function get_quiz_id_by_course(int $course_id): int
+    {
+        if ($course_id <= 0) {
+            return 0;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . self::TABLE_QUIZZES;
+
+        return (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT id FROM {$table} WHERE course_post_id = %d AND (lesson_post_id IS NULL OR lesson_post_id = 0) ORDER BY id DESC LIMIT 1",
+                $course_id
+            )
+        );
+    }
+
+    public static function get_course_id_by_quiz_id(int $quiz_id): int
+    {
+        if ($quiz_id <= 0) {
+            return 0;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . self::TABLE_QUIZZES;
+
+        return (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT course_post_id FROM {$table} WHERE id = %d LIMIT 1",
+                $quiz_id
+            )
+        );
+    }
+
+    public static function quiz_exists(int $quiz_id): bool
+    {
+        return self::get_course_id_by_quiz_id($quiz_id) > 0;
+    }
+
     /**
-     * Append a default question at the end of an existing quiz.
-     *
-     * @param int $quiz_post_id
-     * @param array $opts
+     * @param array{title:string,settings:array,questions:array} $quiz_data
      * @return array|WP_Error
      */
-    public static function insert_default_question($quiz_post_id, $insert_after_index = -1, $opts = [])
+    public static function create_quiz(array $quiz_data)
     {
         global $wpdb;
-
-        $quiz_post_id = intval($quiz_post_id);
-        if (!$quiz_post_id || get_post_type($quiz_post_id) !== 'sfwd-quiz') {
-            return new WP_Error('invalid_quiz', __('Invalid quiz.', 'politeia-quiz-creator'));
+        if (!$wpdb) {
+            return new WP_Error('db_missing', __('Database unavailable.', 'politeia-quiz-creator'));
         }
 
-        // Ensure ProQuiz classes exist (LearnDash)
-        if (!class_exists('WpProQuiz_Model_AnswerTypes') && defined('WPPROQUIZ_PATH')) {
-            require_once WPPROQUIZ_PATH . '/lib/model/WpProQuiz_Model_AnswerTypes.php';
-        }
-        if (!class_exists('WpProQuiz_Model_AnswerTypes')) {
-            return new WP_Error('missing_ld', __('LearnDash ProQuiz classes not available.', 'politeia-quiz-creator'));
-        }
-
-        $answers_per_question = intval($opts['answers_per_question'] ?? 4);
-        if ($answers_per_question < 2) $answers_per_question = 2;
-        if ($answers_per_question > 8) $answers_per_question = 8;
-
-        $quiz_pro_id = intval(get_post_meta($quiz_post_id, 'quiz_pro_id', true));
-        if (!$quiz_pro_id) {
-            $sfwd = get_post_meta($quiz_post_id, '_sfwd-quiz', true);
-            if (is_array($sfwd) && !empty($sfwd['sfwd-quiz_quiz_pro'])) {
-                $quiz_pro_id = intval($sfwd['sfwd-quiz_quiz_pro']);
-            }
-        }
-        if (!$quiz_pro_id) {
-            return new WP_Error('missing_quiz_pro_id', __('Quiz Pro ID not found.', 'politeia-quiz-creator'));
+        $title = sanitize_text_field((string) ($quiz_data['title'] ?? ''));
+        $settings = isset($quiz_data['settings']) && is_array($quiz_data['settings']) ? $quiz_data['settings'] : [];
+        $course_id = (int) ($settings['course_id'] ?? 0);
+        if ($title === '' || $course_id <= 0) {
+            return new WP_Error('invalid_data', __('Quiz title and course are required.', 'politeia-quiz-creator'));
         }
 
-        $quiz_questions = get_post_meta($quiz_post_id, 'ld_quiz_questions', true);
-        if (!is_array($quiz_questions)) {
-            $quiz_questions = [];
+        if (get_post_type($course_id) !== 'learni_course') {
+            return new WP_Error('invalid_course', __('Invalid course.', 'politeia-quiz-creator'));
         }
-        $current_count = count($quiz_questions);
-        $insert_after_index = intval($insert_after_index);
-        $insert_pos = $insert_after_index + 1; // insert right after current (0-based)
-        if ($insert_pos < 0) $insert_pos = 0;
-        if ($insert_pos > $current_count) $insert_pos = $current_count;
-        $sort_order = $insert_pos + 1; // ProQuiz sort is 1-based
 
-        // Shift existing ProQuiz question sort orders to make room
-        $wpdb->query(
+        $questions = isset($quiz_data['questions']) && is_array($quiz_data['questions']) ? $quiz_data['questions'] : [];
+        $normalized = self::normalize_questions_payload($questions);
+        if (is_wp_error($normalized)) {
+            return $normalized;
+        }
+
+        $quizzes_table = $wpdb->prefix . self::TABLE_QUIZZES;
+
+        // One evaluation quiz per course (overwrite existing).
+        $existing_id = (int) $wpdb->get_var(
             $wpdb->prepare(
-                "UPDATE {$wpdb->prefix}learndash_pro_quiz_question SET sort = sort + 1 WHERE quiz_id = %d AND sort >= %d",
-                $quiz_pro_id,
-                $sort_order
+                "SELECT id FROM {$quizzes_table} WHERE course_post_id = %d AND (lesson_post_id IS NULL OR lesson_post_id = 0) LIMIT 1",
+                $course_id
             )
         );
 
-        $answers = [];
-        for ($i = 0; $i < $answers_per_question; $i++) {
-            $letter = chr(ord('A') + $i);
-            $answers[] = [
-                'text' => sprintf('Opción %s', $letter),
-                'correct' => $i === 0,
-                'points' => $i === 0 ? 1 : 0,
+        $settings_json = wp_json_encode(
+            [
+                'random_questions' => (int) ($settings['random_questions'] ?? 0),
+                'random_answers' => (int) ($settings['random_answers'] ?? 0),
+                'run_once' => (int) ($settings['run_once'] ?? 0),
+                'force_solve' => (int) ($settings['force_solve'] ?? 0),
+                'show_points' => (int) ($settings['show_points'] ?? 0),
+            ]
+        );
+
+        $passing = (int) ($settings['passing_percentage'] ?? 80);
+        $time_limit = (int) ($settings['time_limit'] ?? 0);
+
+        if ($existing_id > 0) {
+            $wpdb->update(
+                $quizzes_table,
+                [
+                    'title' => $title,
+                    'passing_score' => $passing,
+                    'time_limit_seconds' => $time_limit,
+                    'settings_json' => $settings_json,
+                ],
+                ['id' => $existing_id],
+                ['%s', '%d', '%d', '%s'],
+                ['%d']
+            );
+            self::delete_quiz_children($existing_id);
+            $quiz_id = $existing_id;
+        } else {
+            // Omit lesson_post_id so it remains NULL for course-level quizzes.
+            $ok = $wpdb->insert(
+                $quizzes_table,
+                [
+                    'course_post_id' => $course_id,
+                    'title' => $title,
+                    'passing_score' => $passing,
+                    'time_limit_seconds' => $time_limit,
+                    'settings_json' => $settings_json,
+                    'created_at' => current_time('mysql'),
+                ],
+                ['%d', '%s', '%d', '%d', '%s', '%s']
+            );
+            if (!$ok) {
+                return new WP_Error('db_insert_failed', __('Failed to create quiz.', 'politeia-quiz-creator'));
+            }
+            $quiz_id = (int) $wpdb->insert_id;
+        }
+
+        $insert_results = self::insert_questions($quiz_id, $normalized);
+
+        return [
+            'quiz_post_id' => $quiz_id,
+            'quiz_url' => '',
+            'edit_url' => '',
+            'questions' => $insert_results,
+        ];
+    }
+
+    /**
+     * Used by the editor template.
+     *
+     * @return array{id:int,questions:array}|null
+     */
+    public static function get_quiz_data(int $quiz_id): ?array
+    {
+        if ($quiz_id <= 0) {
+            return null;
+        }
+
+        global $wpdb;
+        $quiz_table = $wpdb->prefix . self::TABLE_QUIZZES;
+        $question_table = $wpdb->prefix . self::TABLE_QUESTIONS;
+        $answer_table = $wpdb->prefix . self::TABLE_ANSWERS;
+
+        $quiz = $wpdb->get_row(
+            $wpdb->prepare("SELECT id, title FROM {$quiz_table} WHERE id = %d LIMIT 1", $quiz_id),
+            ARRAY_A
+        );
+        if (!is_array($quiz)) {
+            return null;
+        }
+
+        $questions = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, prompt, sort_order, meta_json
+                 FROM {$question_table}
+                 WHERE quiz_id = %d
+                 ORDER BY sort_order ASC, id ASC",
+                $quiz_id
+            ),
+            ARRAY_A
+        );
+
+        $out_questions = [];
+        foreach ((array) $questions as $q) {
+            $qid = (int) ($q['id'] ?? 0);
+            if ($qid <= 0) {
+                continue;
+            }
+
+            $meta = [];
+            if (!empty($q['meta_json'])) {
+                $decoded = json_decode((string) $q['meta_json'], true);
+                if (is_array($decoded)) {
+                    $meta = $decoded;
+                }
+            }
+
+            $answers = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT answer_text, is_correct, sort_order
+                     FROM {$answer_table}
+                     WHERE question_id = %d
+                     ORDER BY sort_order ASC, id ASC",
+                    $qid
+                ),
+                ARRAY_A
+            );
+
+            $out_answers = [];
+            foreach ((array) $answers as $a) {
+                $out_answers[] = [
+                    'text' => (string) ($a['answer_text'] ?? ''),
+                    'correct' => !empty($a['is_correct']),
+                    'points' => 0,
+                ];
+            }
+
+            $out_questions[] = [
+                'id' => $qid,
+                'pro_id' => 0,
+                'title' => (string) ($meta['title'] ?? ''),
+                'question_text' => (string) ($q['prompt'] ?? ''),
+                'answers' => $out_answers,
             ];
         }
 
-        $question_data = [
-            'title' => sprintf('Pregunta %d', $sort_order),
-            'question_text' => '',
-            'answer_type' => 'single',
-            'points' => 1,
-            'answers' => $answers,
-        ];
-
-        $result = self::add_question_to_quiz(
-            ['quiz_post_id' => $quiz_post_id, 'quiz_pro_id' => $quiz_pro_id],
-            $question_data,
-            $sort_order
-        );
-
-        if (is_wp_error($result)) {
-            return $result;
-        }
-
-        // Reorder ld_quiz_questions meta to place the new question at the desired position
-        $quiz_questions = get_post_meta($quiz_post_id, 'ld_quiz_questions', true);
-        if (!is_array($quiz_questions)) {
-            $quiz_questions = [];
-        }
-
-        $new_q_post_id = $result['question_post_id'];
-        $new_q_pro_id = $result['question_pro_id'];
-
-        $existing = $quiz_questions;
-        unset($existing[$new_q_post_id]);
-
-        $reordered = [];
-        $idx = 0;
-        foreach ($existing as $q_post_id => $q_pro_id) {
-            if ($idx === $insert_pos) {
-                $reordered[$new_q_post_id] = $new_q_pro_id;
-            }
-            $reordered[$q_post_id] = $q_pro_id;
-            $idx++;
-        }
-        if ($insert_pos >= count($existing)) {
-            $reordered[$new_q_post_id] = $new_q_pro_id;
-        }
-        update_post_meta($quiz_post_id, 'ld_quiz_questions', $reordered);
-
-        // Keep LD builder/steps in sync
-        $count = count($reordered);
-        update_post_meta($quiz_post_id, '_ld_course_steps_count', $count);
-        update_post_meta($quiz_post_id, 'ld_quiz_questions_dirty', $quiz_post_id);
-
-        $ld_steps = get_post_meta($quiz_post_id, 'ld_course_steps', true);
-        if (is_array($ld_steps)) {
-            $ld_steps['steps_count'] = $count;
-            update_post_meta($quiz_post_id, 'ld_course_steps', $ld_steps);
-        }
-
         return [
-            'question_post_id' => $result['question_post_id'],
-            'question_pro_id' => $result['question_pro_id'],
-            'total_questions' => $count,
+            'id' => (int) ($quiz['id'] ?? 0),
+            'title' => (string) ($quiz['title'] ?? ''),
+            'questions' => $out_questions,
         ];
     }
 
     /**
-     * Create a LearnDash quiz from structured data
-     * 
-     * @param array $quiz_data Structured quiz data
-     * @return array|WP_Error Result with quiz IDs or error
+     * Persist editor changes.
+     *
+     * @param array{quiz_id:int,questions:array} $payload
      */
-    public static function create_quiz($quiz_data)
+    public static function save_quiz_changes(array $payload): bool
     {
         global $wpdb;
-
-        // Validate data
-        $validation = self::validate_quiz_data($quiz_data);
-        if (is_wp_error($validation)) {
-            return $validation;
-        }
-
-        // Create WordPress post
-        $quiz_post_id = wp_insert_post([
-            'post_type' => 'sfwd-quiz',
-            'post_title' => sanitize_text_field($quiz_data['title']),
-            'post_status' => 'publish',
-            'post_content' => '',
-            'post_author' => get_current_user_id(),
-        ]);
-
-        if (is_wp_error($quiz_post_id)) {
-            return $quiz_post_id;
-        }
-
-        // Prepare quiz settings with defaults
-        $settings = wp_parse_args($quiz_data['settings'] ?? [], [
-            'time_limit' => 0,
-            'random_questions' => 0,
-            'random_answers' => 0,
-            'run_once' => 0,
-            'run_once_type' => 0,
-            'show_points' => 0,
-            'force_solve' => 0,
-            'description' => '',
-        ]);
-
-        // Create pro quiz master entry
-        $wpdb->insert(
-            $wpdb->prefix . 'learndash_pro_quiz_master',
-            [
-                'name' => sanitize_text_field($quiz_data['title']),
-                'text' => wp_kses_post($settings['description']),
-                'result_text' => serialize([
-                    'text' => [''],
-                    'prozent' => [0],
-                    'activ' => [1]
-                ]),
-                'result_grade_enabled' => 1,
-                'title_hidden' => 1,
-                'btn_restart_quiz_hidden' => 0,
-                'btn_view_question_hidden' => 0,
-                'question_random' => intval($settings['random_questions']),
-                'answer_random' => intval($settings['random_answers']),
-                'time_limit' => intval($settings['time_limit']),
-                'statistics_on' => 1,
-                'statistics_ip_lock' => 0,
-                'show_points' => intval($settings['show_points']),
-                'quiz_run_once' => intval($settings['run_once']),
-                'quiz_run_once_type' => intval($settings['run_once_type']),
-                'quiz_run_once_cookie' => 0,
-                'quiz_run_once_time' => 0,
-                'numbered_answer' => 0,
-                'hide_answer_message_box' => 0,
-                'disabled_answer_mark' => 0,
-                'show_max_question' => 0,
-                'show_max_question_value' => 0,
-                'show_max_question_percent' => 0,
-                'toplist_activated' => 0,
-                'toplist_data' => serialize([
-                    'toplistDataAddPermissions' => 1,
-                    'toplistDataSort' => 1,
-                    'toplistDataAddMultiple' => false,
-                    'toplistDataCaptcha' => false,
-                    'toplistDataAddAutomatic' => false,
-                    'toplistDataShowLimit' => 0,
-                    'toplistDataShowIn' => 0,
-                    'toplistDataDateFormat' => 'Y/m/d g:i A'
-                ]),
-                'show_average_result' => 0,
-                'prerequisite' => 0,
-                'quiz_modus' => 0,
-                'show_review_question' => 0,
-                'quiz_summary_hide' => 1,
-                'skip_question_disabled' => 1,
-                'email_notification' => 0,
-                'user_email_notification' => 0,
-                'show_category_score' => 0,
-                'hide_result_correct_question' => 0,
-                'hide_result_quiz_time' => 0,
-                'hide_result_points' => 0,
-                'autostart' => 0,
-                'forcing_question_solve' => intval($settings['force_solve']),
-                'hide_question_position_overview' => 1,
-                'hide_question_numbering' => 1,
-                'form_activated' => 0,
-                'form_show_position' => 0,
-                'start_only_registered_user' => 0,
-                'questions_per_page' => 0,
-                'sort_categories' => 0,
-                'show_category' => 0,
-            ]
-        );
-
-        $quiz_pro_id = $wpdb->insert_id;
-
-        if (!$quiz_pro_id) {
-            wp_delete_post($quiz_post_id, true);
-            return new WP_Error('quiz_creation_failed', __('Failed to create quiz in database.', 'politeia-quiz-creator'));
-        }
-
-        // Link them with postmeta
-        update_post_meta($quiz_post_id, 'quiz_pro_id', $quiz_pro_id);
-        update_post_meta($quiz_post_id, 'quiz_pro_id_' . $quiz_pro_id, $quiz_pro_id);
-        update_post_meta($quiz_post_id, 'quiz_pro_primary_' . $quiz_pro_id, 1);
-        update_post_meta($quiz_post_id, 'ld_quiz_questions', []);
-        update_post_meta($quiz_post_id, '_timeLimitCookie', 0);
-        update_post_meta($quiz_post_id, '_viewProfileStatistics', 1);
-        update_post_meta($quiz_post_id, '_ld_certificate', '');
-        update_post_meta($quiz_post_id, '_ld_certificate_threshold', '');
-        update_post_meta($quiz_post_id, '_ld_course_steps_count', 0);
-
-
-
-        // Create _sfwd-quiz settings
-        $sfwd_settings = self::create_sfwd_quiz_settings($quiz_data, $quiz_pro_id);
-        update_post_meta($quiz_post_id, '_sfwd-quiz', $sfwd_settings);
-
-        // Link quiz to course if course_id is provided
-        $course_id = intval($settings['course_id'] ?? 0);
-        if ($course_id > 0) {
-            update_post_meta($course_id, '_first_quiz_id', $quiz_post_id);
-            update_post_meta($course_id, '_final_quiz_id', $quiz_post_id);
-            // Also update the quiz-course association in LD meta if needed (already handled in create_sfwd_quiz_settings)
-        }
-
-        // Add questions
-        $question_results = [];
-        $builder_questions = [];
-        if (!empty($quiz_data['questions']) && is_array($quiz_data['questions'])) {
-            foreach ($quiz_data['questions'] as $index => $question_data) {
-                $result = self::add_question_to_quiz(
-                    ['quiz_post_id' => $quiz_post_id, 'quiz_pro_id' => $quiz_pro_id],
-                    $question_data,
-                    $index + 1
-                );
-
-                if (is_wp_error($result)) {
-                    $question_results[] = [
-                        'success' => false,
-                        'error' => $result->get_error_message()
-                    ];
-                } else {
-                    $q_id = $result['question_post_id'];
-                    $q_pro_id = $result['question_pro_id'];
-                    $question_results[] = [
-                        'success' => true,
-                        'question_id' => $q_id
-                    ];
-                    $builder_questions[$q_id] = $q_pro_id;
-                }
-            }
-        }
-
-        // Update course steps for the Builder to show the correct questions
-        if (!empty($builder_questions)) {
-            update_post_meta($quiz_post_id, 'ld_course_steps', [
-                'steps' => [
-                    'h' => [
-                        'sfwd-lessons' => [],
-                        'sfwd-quiz' => [],
-                    ]
-                ],
-                'course_id' => $quiz_post_id,
-                'version' => '4.23.0',
-                'empty' => false,
-                'course_builder_enabled' => true,
-                'course_shared_steps_enabled' => true,
-                'steps_count' => count($builder_questions),
-            ]);
-            update_post_meta($quiz_post_id, '_ld_course_steps_count', count($builder_questions));
-        }
-
-        // Set dirty flag to force LD Builder to re-sync
-        update_post_meta($quiz_post_id, 'ld_quiz_questions_dirty', $quiz_post_id);
-        update_post_meta($quiz_post_id, 'quiz_pro_primary_' . $quiz_pro_id, 1);
-
-        return [
-            'success' => true,
-            'quiz_post_id' => $quiz_post_id,
-            'quiz_pro_id' => $quiz_pro_id,
-            'quiz_url' => get_permalink($quiz_post_id),
-            'edit_url' => get_edit_post_link($quiz_post_id, 'raw'),
-            'questions' => $question_results,
-        ];
-    }
-
-    /**
-     * Add a question to a quiz
-     */
-    private static function add_question_to_quiz($quiz_ids, $question_data, $sort_order)
-    {
-        global $wpdb;
-
-        $quiz_post_id = $quiz_ids['quiz_post_id'];
-        $quiz_pro_id = $quiz_ids['quiz_pro_id'];
-
-        // Create question post
-        $question_post_id = wp_insert_post([
-            'post_type' => 'sfwd-question',
-            'post_title' => sanitize_text_field($question_data['title']),
-            'post_status' => 'publish',
-            'post_content' => '',
-            'post_author' => get_current_user_id(),
-            'post_parent' => $quiz_post_id, // Link question to quiz
-        ]);
-
-        if (is_wp_error($question_post_id)) {
-            return $question_post_id;
-        }
-
-        // Prepare answers
-        $answers = [];
-        if (!empty($question_data['answers']) && is_array($question_data['answers'])) {
-            foreach ($question_data['answers'] as $answer) {
-                $answer_obj = new WpProQuiz_Model_AnswerTypes();
-                $answer_obj->setAnswer(sanitize_text_field($answer['text']));
-                $answer_obj->setCorrect(!empty($answer['correct']));
-                $answer_obj->setPoints(intval($answer['points'] ?? 0));
-                $answers[] = $answer_obj;
-            }
-        }
-
-        // Create pro question entry
-        $wpdb->insert(
-            $wpdb->prefix . 'learndash_pro_quiz_question',
-            [
-                'quiz_id' => $quiz_pro_id,
-                'online' => 1,
-                'previous_id' => 0,
-                'sort' => $sort_order,
-                'title' => sanitize_text_field($question_data['title']),
-                'points' => intval($question_data['points'] ?? 5),
-                'question' => '<p>' . wp_kses_post($question_data['question_text']) . '</p>',
-                'correct_msg' => '',
-                'incorrect_msg' => '',
-                'correct_same_text' => 0,
-                'tip_enabled' => 0,
-                'tip_msg' => '',
-                'answer_type' => sanitize_text_field($question_data['answer_type'] ?? 'single'),
-                'show_points_in_box' => 0,
-                'answer_points_activated' => 0,
-                'answer_data' => serialize($answers),
-                'category_id' => 0,
-                'answer_points_diff_modus_activated' => 0,
-                'disable_correct' => 0,
-                'matrix_sort_answer_criteria_width' => 20,
-            ]
-        );
-
-        $question_pro_id = $wpdb->insert_id;
-
-        if (!$question_pro_id) {
-            wp_delete_post($question_post_id, true);
-            return new WP_Error('question_creation_failed', __('Failed to create question in database.', 'politeia-quiz-creator'));
-        }
-
-        // Link question to quiz in postmeta
-        update_post_meta($question_post_id, 'quiz_id', $quiz_post_id);
-        update_post_meta($question_post_id, 'course_id', $quiz_post_id); // Add this
-        update_post_meta($question_post_id, 'question_pro_id', $question_pro_id);
-        update_post_meta($question_post_id, 'question_type', sanitize_text_field($question_data['answer_type'] ?? 'single'));
-        update_post_meta($question_post_id, 'question_points', intval($question_data['points'] ?? 5));
-        update_post_meta($question_post_id, 'question_pro_category', 0);
-
-        // Add sfwd-question settings (important: include index 0 for LD compatibility)
-        update_post_meta($question_post_id, '_sfwd-question', [
-            0 => '',
-            'sfwd-question_quiz' => $quiz_post_id
-        ]);
-
-        // Update quiz's question list
-        $quiz_questions = get_post_meta($quiz_post_id, 'ld_quiz_questions', true);
-        if (!is_array($quiz_questions)) {
-            $quiz_questions = [];
-        }
-        $quiz_questions[$question_post_id] = $question_pro_id;
-        update_post_meta($quiz_post_id, 'ld_quiz_questions', $quiz_questions);
-
-        return [
-            'question_post_id' => $question_post_id,
-            'question_pro_id' => $question_pro_id
-        ];
-    }
-
-    /**
-     * Create _sfwd-quiz settings array
-     */
-    private static function create_sfwd_quiz_settings($quiz_data, $quiz_pro_id)
-    {
-        $settings = $quiz_data['settings'] ?? [];
-
-        return [
-            0 => '',
-            'sfwd-quiz_quiz_pro' => $quiz_pro_id,
-            'sfwd-quiz_course_short_description' => '',
-            'sfwd-quiz_lesson_schedule' => '',
-            'sfwd-quiz_visible_after' => '',
-            'sfwd-quiz_visible_after_specific_date' => '',
-            'sfwd-quiz_course' => $settings['course_id'] ?? '',
-            'sfwd-quiz_lesson' => $settings['lesson_id'] ?? '',
-            'sfwd-quiz_certificate' => '',
-            'sfwd-quiz_threshold' => '',
-            'sfwd-quiz_passingpercentage' => intval($settings['passing_percentage'] ?? 80),
-            'sfwd-quiz_quiz_materials' => '',
-            'sfwd-quiz_repeats' => '',
-            'sfwd-quiz_quiz_materials_enabled' => 'off',
-        ];
-    }
-
-    /**
-     * Validate quiz data structure
-     */
-    private static function validate_quiz_data($data)
-    {
-        if (empty($data['title'])) {
-            return new WP_Error('missing_title', __('Quiz title is required.', 'politeia-quiz-creator'));
-        }
-
-        if (empty($data['questions']) || !is_array($data['questions'])) {
-            return new WP_Error('missing_questions', __('Quiz must have at least one question.', 'politeia-quiz-creator'));
-        }
-
-        foreach ($data['questions'] as $index => $question) {
-            if (empty($question['title'])) {
-                return new WP_Error('missing_question_title', sprintf(__('Question #%d is missing a title.', 'politeia-quiz-creator'), $index + 1));
-            }
-
-            if (empty($question['answers']) || !is_array($question['answers'])) {
-                return new WP_Error('missing_answers', sprintf(__('Question #%d must have at least one answer.', 'politeia-quiz-creator'), $index + 1));
-            }
-
-            // Check if at least one answer is marked as correct
-            $has_correct = false;
-            foreach ($question['answers'] as $answer) {
-                if (!empty($answer['correct'])) {
-                    $has_correct = true;
-                    break;
-                }
-            }
-
-            if (!$has_correct) {
-                return new WP_Error('no_correct_answer', sprintf(__('Question #%d must have at least one correct answer.', 'politeia-quiz-creator'), $index + 1));
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Get quiz data for editor
-     */
-    public static function get_quiz_data($quiz_id)
-    {
-        global $wpdb;
-
-        $quiz_post = get_post($quiz_id);
-        if (!$quiz_post)
-            return null;
-
-        $quiz_questions_meta = get_post_meta($quiz_id, 'ld_quiz_questions', true);
-        if (!is_array($quiz_questions_meta)) {
-            // Fallback to post_parent if meta is missing
-            $question_posts = get_posts([
-                'post_type' => 'sfwd-question',
-                'post_parent' => $quiz_id,
-                'posts_per_page' => -1,
-                'orderby' => 'ID',
-                'order' => 'ASC'
-            ]);
-            $quiz_questions_meta = [];
-            foreach ($question_posts as $q_post) {
-                $pro_id = get_post_meta($q_post->ID, 'question_pro_id', true);
-                $quiz_questions_meta[$q_post->ID] = $pro_id;
-            }
-        }
-
-        $questions = [];
-        foreach ($quiz_questions_meta as $q_post_id => $q_pro_id) {
-            $q_post = get_post($q_post_id);
-            if (!$q_post)
-                continue;
-
-            $pro_data = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}learndash_pro_quiz_question WHERE id = %d",
-                $q_pro_id
-            ), ARRAY_A);
-
-            if ($pro_data) {
-                // Ensure the ProQuiz classes are loaded if possible
-                if (!class_exists('WpProQuiz_Model_AnswerTypes') && defined('WPPROQUIZ_PATH')) {
-                    require_once WPPROQUIZ_PATH . '/lib/model/WpProQuiz_Model_AnswerTypes.php';
-                }
-
-                $answer_data = unserialize($pro_data['answer_data']);
-                $answers = [];
-                if (is_array($answer_data)) {
-                    foreach ($answer_data as $ans) {
-                        if (is_object($ans)) {
-                            $answers[] = [
-                                'text' => method_exists($ans, 'getAnswer') ? $ans->getAnswer() : (isset($ans->_answer) ? $ans->_answer : ''),
-                                'correct' => method_exists($ans, 'isCorrect') ? $ans->isCorrect() : (isset($ans->_correct) ? $ans->_correct : false),
-                                'points' => method_exists($ans, 'getPoints') ? $ans->getPoints() : (isset($ans->_points) ? $ans->_points : 0)
-                            ];
-                        } else if (is_array($ans)) {
-                            $answers[] = $ans;
-                        }
-                    }
-                }
-
-                $questions[] = [
-                    'id' => $q_post_id,
-                    'pro_id' => $q_pro_id,
-                    'title' => $q_post->post_title,
-                    'question_text' => wp_kses_post($pro_data['question']),
-                    'answer_type' => $pro_data['answer_type'],
-                    'points' => $pro_data['points'],
-                    'answers' => $answers
-                ];
-            }
-        }
-
-        return [
-            'id' => $quiz_id,
-            'title' => $quiz_post->post_title,
-            'questions' => $questions
-        ];
-    }
-
-    /**
-     * Get the quiz ID linked to a course
-     */
-    public static function get_quiz_id_by_course($course_id)
-    {
-        if (!$course_id)
-            return 0;
-
-        // Check LearnDash standard meta first
-        $quiz_id = get_post_meta($course_id, '_final_quiz_id', true);
-        if ($quiz_id && get_post_type($quiz_id) === 'sfwd-quiz') {
-            return intval($quiz_id);
-        }
-
-        // Alternative check: quizzes belonging to this course
-        $quizzes = get_posts([
-            'post_type' => 'sfwd-quiz',
-            'meta_query' => [
-                [
-                    'key' => 'course_id',
-                    'value' => $course_id
-                ]
-            ],
-            'posts_per_page' => 1,
-            'fields' => 'ids'
-        ]);
-
-        if (!empty($quizzes)) {
-            return intval($quizzes[0]);
-        }
-
-        // Try LD core meta
-        $sfwd_quizzes = get_posts([
-            'post_type' => 'sfwd-quiz',
-            'posts_per_page' => -1,
-            'fields' => 'ids'
-        ]);
-
-        foreach ($sfwd_quizzes as $sq_id) {
-            $meta = get_post_meta($sq_id, '_sfwd-quiz', true);
-            if (isset($meta['sfwd-quiz_course']) && intval($meta['sfwd-quiz_course']) === intval($course_id)) {
-                return intval($sq_id);
-            }
-        }
-
-        return 0;
-    }
-
-    /**
-     * Delete a quiz and its questions
-     */
-    public static function delete_quiz($quiz_id)
-    {
-        if (get_post_type($quiz_id) !== 'sfwd-quiz')
+        if (!$wpdb) {
             return false;
+        }
 
-        // Get and delete questions
-        $questions = get_post_meta($quiz_id, 'ld_quiz_questions', true);
-        if (is_array($questions)) {
-            foreach ($questions as $q_post_id => $q_pro_id) {
-                // Delete from DB ProQuiz table directly is handled by LD usually, 
-                // but we should delete the post at least
-                wp_delete_post($q_post_id, true);
+        $quiz_id = (int) ($payload['quiz_id'] ?? 0);
+        if ($quiz_id <= 0) {
+            return false;
+        }
+
+        $question_table = $wpdb->prefix . self::TABLE_QUESTIONS;
+        $answer_table = $wpdb->prefix . self::TABLE_ANSWERS;
+        $quiz_table = $wpdb->prefix . self::TABLE_QUIZZES;
+
+        $questions = isset($payload['questions']) && is_array($payload['questions']) ? $payload['questions'] : [];
+
+        // Update sort order based on current UI order.
+        foreach (array_values($questions) as $index => $q) {
+            $qid = (int) ($q['id'] ?? 0);
+            if ($qid <= 0) {
+                continue;
+            }
+
+            $title = sanitize_text_field((string) ($q['title'] ?? ''));
+            $prompt = wp_kses_post((string) ($q['question_text'] ?? ''));
+
+            $wpdb->update(
+                $question_table,
+                [
+                    'prompt' => $prompt,
+                    'sort_order' => (int) $index,
+                    'meta_json' => wp_json_encode(['title' => $title]),
+                ],
+                ['id' => $qid, 'quiz_id' => $quiz_id],
+                ['%s', '%d', '%s'],
+                ['%d', '%d']
+            );
+
+            // Replace answers wholesale (simple + robust for now).
+            $wpdb->delete($answer_table, ['question_id' => $qid], ['%d']);
+            $answers = isset($q['answers']) && is_array($q['answers']) ? $q['answers'] : [];
+            foreach (array_values($answers) as $a_index => $a) {
+                $wpdb->insert(
+                    $answer_table,
+                    [
+                        'question_id' => $qid,
+                        'answer_text' => sanitize_text_field((string) ($a['text'] ?? '')),
+                        'is_correct' => !empty($a['correct']) ? 1 : 0,
+                        'sort_order' => (int) $a_index,
+                        'meta_json' => null,
+                    ],
+                    ['%d', '%s', '%d', '%d', '%s']
+                );
             }
         }
 
-        // Delete from ProQuiz Master table
-        global $wpdb;
-        $pro_id = get_post_meta($quiz_id, 'quiz_pro_id', true);
-        if ($pro_id) {
-            $wpdb->delete($wpdb->prefix . 'learndash_pro_quiz_master', ['id' => $pro_id]);
-            $wpdb->delete($wpdb->prefix . 'learndash_pro_quiz_question', ['quiz_id' => $pro_id]);
-        }
-
-        // Clear associations in courses
-        $courses = get_posts([
-            'post_type' => 'sfwd-courses',
-            'meta_query' => [
-                'relation' => 'OR',
-                [
-                    'key' => '_first_quiz_id',
-                    'value' => $quiz_id
-                ],
-                [
-                    'key' => '_final_quiz_id',
-                    'value' => $quiz_id
-                ]
-            ],
-            'posts_per_page' => -1,
-            'fields' => 'ids'
-        ]);
-
-        foreach ($courses as $c_id) {
-            delete_post_meta($c_id, '_first_quiz_id');
-            delete_post_meta($c_id, '_final_quiz_id');
-        }
-
-        // Finally delete the quiz post
-        wp_delete_post($quiz_id, true);
-
-        return true;
-    }
-
-    /**
-     * Delete a single question from a quiz
-     * 
-     * @param int $quiz_post_id
-     * @param int $question_post_id
-     * @return bool|WP_Error
-     */
-    public static function delete_question($quiz_post_id, $question_post_id)
-    {
-        global $wpdb;
-
-        $quiz_post_id = intval($quiz_post_id);
-        $question_post_id = intval($question_post_id);
-
-        if (!$quiz_post_id || get_post_type($quiz_post_id) !== 'sfwd-quiz') {
-            return new WP_Error('invalid_quiz', __('Invalid quiz.', 'politeia-quiz-creator'));
-        }
-
-        $quiz_questions = get_post_meta($quiz_post_id, 'ld_quiz_questions', true);
-        if (!is_array($quiz_questions) || !isset($quiz_questions[$question_post_id])) {
-            return new WP_Error('invalid_question', __('Question not found in quiz.', 'politeia-quiz-creator'));
-        }
-
-        $question_pro_id = intval($quiz_questions[$question_post_id]);
-        $quiz_pro_id = intval(get_post_meta($quiz_post_id, 'quiz_pro_id', true));
-
-        // Get the sort order of the question to be deleted
-        $sort_order = $wpdb->get_var($wpdb->prepare(
-            "SELECT sort FROM {$wpdb->prefix}learndash_pro_quiz_question WHERE id = %d",
-            $question_pro_id
-        ));
-
-        // Delete from ProQuiz Question table
-        $wpdb->delete($wpdb->prefix . 'learndash_pro_quiz_question', ['id' => $question_pro_id]);
-
-        // Shift remaining ProQuiz question sort orders
-        if ($sort_order) {
-            $wpdb->query(
-                $wpdb->prepare(
-                    "UPDATE {$wpdb->prefix}learndash_pro_quiz_question SET sort = sort - 1 WHERE quiz_id = %d AND sort > %d",
-                    $quiz_pro_id,
-                    $sort_order
-                )
+        // Update quiz title if provided.
+        if (!empty($payload['title'])) {
+            $wpdb->update(
+                $quiz_table,
+                ['title' => sanitize_text_field((string) $payload['title'])],
+                ['id' => $quiz_id],
+                ['%s'],
+                ['%d']
             );
         }
 
-        // Delete the question post
-        wp_delete_post($question_post_id, true);
+        return true;
+    }
 
-        // Update quiz questions meta
-        unset($quiz_questions[$question_post_id]);
-        update_post_meta($quiz_post_id, 'ld_quiz_questions', $quiz_questions);
+    /**
+     * Append a default question at the end of an existing quiz.
+     *
+     * @return array|WP_Error
+     */
+    public static function insert_default_question($quiz_id, $insert_after_index = -1, $opts = [])
+    {
+        global $wpdb;
 
-        // Update step counts
-        $count = count($quiz_questions);
-        update_post_meta($quiz_post_id, '_ld_course_steps_count', $count);
-        update_post_meta($quiz_post_id, 'ld_quiz_questions_dirty', $quiz_post_id);
-
-        $ld_steps = get_post_meta($quiz_post_id, 'ld_course_steps', true);
-        if (is_array($ld_steps)) {
-            $ld_steps['steps_count'] = $count;
-            update_post_meta($quiz_post_id, 'ld_course_steps', $ld_steps);
+        $quiz_id = (int) $quiz_id;
+        if ($quiz_id <= 0) {
+            return new WP_Error('invalid_quiz', __('Invalid quiz.', 'politeia-quiz-creator'));
         }
 
+        $answers_per_question = (int) ($opts['answers_per_question'] ?? 4);
+        if ($answers_per_question < 2) {
+            $answers_per_question = 2;
+        }
+        if ($answers_per_question > 8) {
+            $answers_per_question = 8;
+        }
+
+        $question_table = $wpdb->prefix . self::TABLE_QUESTIONS;
+        $answer_table = $wpdb->prefix . self::TABLE_ANSWERS;
+
+        $count = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$question_table} WHERE quiz_id = %d", $quiz_id));
+        $insert_after_index = (int) $insert_after_index;
+        $insert_pos = $insert_after_index + 1;
+        if ($insert_pos < 0) {
+            $insert_pos = 0;
+        }
+        if ($insert_pos > $count) {
+            $insert_pos = $count;
+        }
+
+        // Shift existing sort orders to make room.
+        $wpdb->query(
+            $wpdb->prepare(
+                "UPDATE {$question_table} SET sort_order = sort_order + 1 WHERE quiz_id = %d AND sort_order >= %d",
+                $quiz_id,
+                $insert_pos
+            )
+        );
+
+        $ok = $wpdb->insert(
+            $question_table,
+            [
+                'quiz_id' => $quiz_id,
+                'type' => 'single',
+                'prompt' => '',
+                'explanation' => null,
+                'points' => 1,
+                'sort_order' => $insert_pos,
+                'meta_json' => wp_json_encode(['title' => sprintf('Pregunta %d', $insert_pos + 1)]),
+            ],
+            ['%d', '%s', '%s', '%s', '%d', '%d', '%s']
+        );
+        if (!$ok) {
+            return new WP_Error('db_insert_failed', __('Failed to add question.', 'politeia-quiz-creator'));
+        }
+
+        $question_id = (int) $wpdb->insert_id;
+
+        for ($i = 0; $i < $answers_per_question; $i++) {
+            $letter = chr(ord('A') + $i);
+            $wpdb->insert(
+                $answer_table,
+                [
+                    'question_id' => $question_id,
+                    'answer_text' => sprintf('Opción %s', $letter),
+                    'is_correct' => $i === 0 ? 1 : 0,
+                    'sort_order' => $i,
+                    'meta_json' => null,
+                ],
+                ['%d', '%s', '%d', '%d', '%s']
+            );
+        }
+
+        return [
+            'question_post_id' => $question_id,
+            'question_pro_id' => 0,
+            'total_questions' => $count + 1,
+        ];
+    }
+
+    public static function delete_question(int $quiz_id, int $question_id)
+    {
+        global $wpdb;
+        if (!$wpdb) {
+            return new WP_Error('db_missing', __('Database unavailable.', 'politeia-quiz-creator'));
+        }
+
+        $quiz_id = (int) $quiz_id;
+        $question_id = (int) $question_id;
+        if ($quiz_id <= 0 || $question_id <= 0) {
+            return new WP_Error('invalid_data', __('Invalid request.', 'politeia-quiz-creator'));
+        }
+
+        $question_table = $wpdb->prefix . self::TABLE_QUESTIONS;
+        $answer_table = $wpdb->prefix . self::TABLE_ANSWERS;
+
+        $wpdb->delete($answer_table, ['question_id' => $question_id], ['%d']);
+        $wpdb->delete($question_table, ['id' => $question_id, 'quiz_id' => $quiz_id], ['%d', '%d']);
+
         return true;
+    }
+
+    public static function delete_quiz(int $quiz_id): bool
+    {
+        global $wpdb;
+        if (!$wpdb) {
+            return false;
+        }
+
+        $quiz_id = (int) $quiz_id;
+        if ($quiz_id <= 0) {
+            return false;
+        }
+
+        self::delete_quiz_children($quiz_id);
+
+        $quiz_table = $wpdb->prefix . self::TABLE_QUIZZES;
+        $wpdb->delete($quiz_table, ['id' => $quiz_id], ['%d']);
+
+        return true;
+    }
+
+    private static function delete_quiz_children(int $quiz_id): void
+    {
+        global $wpdb;
+        $question_table = $wpdb->prefix . self::TABLE_QUESTIONS;
+        $answer_table = $wpdb->prefix . self::TABLE_ANSWERS;
+
+        $question_ids = $wpdb->get_col(
+            $wpdb->prepare("SELECT id FROM {$question_table} WHERE quiz_id = %d", $quiz_id)
+        );
+
+        foreach ((array) $question_ids as $qid) {
+            $qid = (int) $qid;
+            if ($qid <= 0) {
+                continue;
+            }
+            $wpdb->delete($answer_table, ['question_id' => $qid], ['%d']);
+        }
+
+        $wpdb->delete($question_table, ['quiz_id' => $quiz_id], ['%d']);
+    }
+
+    /**
+     * Normalize the payload produced by the file parser/manual UI.
+     *
+     * @param array $questions
+     * @return array|WP_Error
+     */
+    private static function normalize_questions_payload(array $questions)
+    {
+        $out = [];
+        $i = 0;
+
+        foreach ($questions as $q) {
+            if (!is_array($q)) {
+                continue;
+            }
+
+            $title = sanitize_text_field((string) ($q['title'] ?? ('Pregunta ' . ($i + 1))));
+            $question_text = (string) ($q['question_text'] ?? ($q['text'] ?? ''));
+            $question_text = wp_kses_post($question_text);
+            if (trim(wp_strip_all_tags($question_text)) === '') {
+                $question_text = '';
+            }
+
+            $answers = isset($q['answers']) && is_array($q['answers']) ? $q['answers'] : [];
+            $norm_answers = [];
+            $has_correct = false;
+            foreach ($answers as $a) {
+                if (!is_array($a)) {
+                    continue;
+                }
+                $text = sanitize_text_field((string) ($a['text'] ?? ''));
+                if ($text === '') {
+                    continue;
+                }
+                $correct = !empty($a['correct']);
+                if ($correct) {
+                    $has_correct = true;
+                }
+                $norm_answers[] = ['text' => $text, 'correct' => $correct];
+            }
+
+            if (count($norm_answers) < 2) {
+                return new WP_Error('invalid_answers', __('Each question must have at least 2 answers.', 'politeia-quiz-creator'));
+            }
+            if (!$has_correct) {
+                // Default first as correct.
+                $norm_answers[0]['correct'] = true;
+            }
+
+            $out[] = [
+                'title' => $title,
+                'prompt' => $question_text,
+                'answers' => $norm_answers,
+            ];
+            $i++;
+        }
+
+        if (empty($out)) {
+            return new WP_Error('empty_quiz', __('No questions provided.', 'politeia-quiz-creator'));
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param int $quiz_id
+     * @param array<int,array{title:string,prompt:string,answers:array<int,array{text:string,correct:bool}>}> $questions
+     * @return array<int,array{success:bool,question_id:int}>
+     */
+    private static function insert_questions(int $quiz_id, array $questions): array
+    {
+        global $wpdb;
+        $question_table = $wpdb->prefix . self::TABLE_QUESTIONS;
+        $answer_table = $wpdb->prefix . self::TABLE_ANSWERS;
+
+        $results = [];
+        foreach (array_values($questions) as $index => $q) {
+            $ok = $wpdb->insert(
+                $question_table,
+                [
+                    'quiz_id' => $quiz_id,
+                    'type' => 'single',
+                    'prompt' => (string) $q['prompt'],
+                    'explanation' => null,
+                    'points' => 1,
+                    'sort_order' => (int) $index,
+                    'meta_json' => wp_json_encode(['title' => (string) $q['title']]),
+                ],
+                ['%d', '%s', '%s', '%s', '%d', '%d', '%s']
+            );
+
+            if (!$ok) {
+                $results[] = ['success' => false, 'question_id' => 0];
+                continue;
+            }
+
+            $question_id = (int) $wpdb->insert_id;
+            $a_index = 0;
+            foreach ((array) $q['answers'] as $a) {
+                $wpdb->insert(
+                    $answer_table,
+                    [
+                        'question_id' => $question_id,
+                        'answer_text' => (string) $a['text'],
+                        'is_correct' => !empty($a['correct']) ? 1 : 0,
+                        'sort_order' => $a_index,
+                        'meta_json' => null,
+                    ],
+                    ['%d', '%s', '%d', '%d', '%s']
+                );
+                $a_index++;
+            }
+
+            $results[] = ['success' => true, 'question_id' => $question_id];
+        }
+
+        return $results;
     }
 }

@@ -51,8 +51,14 @@ if (!Access::user_can_access_course($user_id, $course_id)) {
 $items = Outline::get_items($course_id);
 $completed = array_flip(Progress::completed_lesson_ids($user_id, $course_id));
 $summary = Progress::course_summary($user_id, $course_id);
-$certificate_attachment_id = (int) get_post_meta($course_id, \Learni\PostTypes\Course::META_CERTIFICATE_ATTACHMENT_ID, true);
-$certificate_url = $certificate_attachment_id > 0 ? (string) wp_get_attachment_url($certificate_attachment_id) : '';
+$certificate_template_title = (string) get_post_meta($course_id, \Learni\PostTypes\Course::META_CERTIFICATE_TITLE, true);
+$certificate_template_paragraph = (string) get_post_meta($course_id, \Learni\PostTypes\Course::META_CERTIFICATE_CONGRATS, true);
+$certificate_logo_id = (int) get_post_meta($course_id, \Learni\PostTypes\Course::META_CERTIFICATE_LOGO_ATTACHMENT_ID, true);
+$certificate_sig_id = (int) get_post_meta($course_id, \Learni\PostTypes\Course::META_CERTIFICATE_SIGNATURE_ATTACHMENT_ID, true);
+$certificate_has_template = ($certificate_template_title !== '') || ($certificate_template_paragraph !== '') || ($certificate_logo_id > 0) || ($certificate_sig_id > 0);
+$certificate_url = ($certificate_has_template && (int) ($summary['percent'] ?? 0) >= 100)
+    ? (string) add_query_arg(['action' => 'pl_learni_view_certificate', 'course_id' => (string) $course_id], admin_url('admin-post.php'))
+    : '';
 
 echo '<div class="learni-progress">';
 echo '<span>' . esc_html(sprintf(__('%1$d/%2$d complete', 'politeia-learning'), (int) $summary['completed'], (int) $summary['total'])) . '</span>';
@@ -115,5 +121,9 @@ if (empty($items)) {
 
 echo '</section>';
 echo '</main>';
+
+if ($certificate_url !== '') {
+    echo \PL_Learni_Frontend_Templates::render_certificate_modal_html($course_id, $user_id);
+}
 
 get_footer();
