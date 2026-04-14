@@ -89,5 +89,45 @@ final class Enrollments
         $ok = $wpdb->insert($table, $row);
         return (bool) $ok;
     }
+
+    /**
+     * @return array<int, array{id:int, courseId:int, title:string, status:string, startedAt:string}>
+     */
+    public static function get_for_user(int $user_id): array
+    {
+        if ($user_id <= 0) {
+            return [];
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'learni_enrollments';
+
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT e.id, e.course_post_id as courseId, p.post_title as title, e.status, e.started_at as startedAt
+                 FROM {$table} e
+                 INNER JOIN {$wpdb->posts} p ON e.course_post_id = p.ID
+                 WHERE e.user_id = %d
+                 ORDER BY e.created_at DESC",
+                $user_id
+            ),
+            ARRAY_A
+        );
+
+        return is_array($rows) ? $rows : [];
+    }
+
+    public static function delete(int $user_id, int $course_post_id): bool
+    {
+        if ($user_id <= 0 || $course_post_id <= 0) {
+            return false;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'learni_enrollments';
+
+        $ok = $wpdb->delete($table, ['user_id' => $user_id, 'course_post_id' => $course_post_id]);
+        return $ok !== false;
+    }
 }
 

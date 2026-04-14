@@ -126,26 +126,18 @@ class PL_Relationship_Policies_UI
                             <td><?php echo esc_html($type); ?></td>
                             <td><?php echo esc_html($created); ?></td>
                             <td>
-                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;">
-                                    <?php wp_nonce_field('pl_relationship_respond'); ?>
-                                    <input type="hidden" name="action" value="pl_relationship_respond" />
-                                    <input type="hidden" name="request_id" value="<?php echo esc_attr((string) ($req['id'] ?? 0)); ?>" />
-                                    <input type="hidden" name="decision" value="accept" />
-                                    <input type="submit" class="button button-primary" value="<?php echo esc_attr__('Aceptar', 'politeia-learning'); ?>" />
-                                </form>
-                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;margin-left:6px;">
-                                    <?php wp_nonce_field('pl_relationship_respond'); ?>
-                                    <input type="hidden" name="action" value="pl_relationship_respond" />
-                                    <input type="hidden" name="request_id" value="<?php echo esc_attr((string) ($req['id'] ?? 0)); ?>" />
-                                    <input type="hidden" name="decision" value="reject" />
-                                    <input type="submit" class="button" value="<?php echo esc_attr__('Rechazar', 'politeia-learning'); ?>" />
-                                </form>
-                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;margin-left:6px;">
-                                    <?php wp_nonce_field('pl_relationship_block'); ?>
-                                    <input type="hidden" name="action" value="pl_relationship_block" />
-                                    <input type="hidden" name="blocked_user_id" value="<?php echo esc_attr((string) $from_id); ?>" />
-                                    <input type="submit" class="button button-secondary" value="<?php echo esc_attr__('Bloquear', 'politeia-learning'); ?>" />
-                                </form>
+                                <?php
+                                $base_url = admin_url('admin-post.php');
+                                $request_id = (string) ($req['id'] ?? 0);
+                                $from_id = (string) $from_id;
+                                
+                                $accept_url = wp_nonce_url(add_query_arg(['action' => 'pl_relationship_respond', 'request_id' => $request_id, 'decision' => 'accept'], $base_url), 'pl_relationship_respond');
+                                $reject_url = wp_nonce_url(add_query_arg(['action' => 'pl_relationship_respond', 'request_id' => $request_id, 'decision' => 'reject'], $base_url), 'pl_relationship_respond');
+                                $block_url = wp_nonce_url(add_query_arg(['action' => 'pl_relationship_block', 'blocked_user_id' => $from_id], $base_url), 'pl_relationship_block');
+                                ?>
+                                <a href="<?php echo esc_url($accept_url); ?>" class="button button-primary"><?php echo esc_html__('Aceptar', 'politeia-learning'); ?></a>
+                                <a href="<?php echo esc_url($reject_url); ?>" class="button" style="margin-left:6px;"><?php echo esc_html__('Rechazar', 'politeia-learning'); ?></a>
+                                <a href="<?php echo esc_url($block_url); ?>" class="button button-secondary" style="margin-left:6px;"><?php echo esc_html__('Bloquear', 'politeia-learning'); ?></a>
                             </td>
                         </tr>
                     <?php endforeach; ?>

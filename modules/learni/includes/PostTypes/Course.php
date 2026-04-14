@@ -24,6 +24,7 @@ final class Course
     public const META_CERTIFICATE_SIGNATURE_LABEL = 'pl_certificate_signature_label';
 
     private static bool $did_register_meta = false;
+    private static bool $did_register_hooks = false;
 
     public static function register(): void
     {
@@ -48,6 +49,11 @@ final class Course
         if (!self::$did_register_meta) {
             self::register_meta();
             self::$did_register_meta = true;
+        }
+
+        if (!self::$did_register_hooks) {
+            add_action('save_post_' . self::POST_TYPE, [__CLASS__, 'maybe_sync_woocommerce_product'], 20, 3);
+            self::$did_register_hooks = true;
         }
     }
 
@@ -299,5 +305,50 @@ final class Course
                 },
             ]
         );
+    }
+
+    /**
+     * @param int      $post_id
+     * @param \WP_Post $post
+     * @param bool     $update
+     */
+    public static function maybe_sync_woocommerce_product(int $post_id, \WP_Post $post, bool $update): void
+    {
+        if ($post_id <= 0) {
+            return;
+        }
+
+        if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
+            return;
+        }
+
+        if (!class_exists('WooCommerce')) {
+            return;
+        }
+
+        // Only sync when course is published.
+        if ($post->post_status !== 'publish') {
+            return;
+        }
+
+        // Sync price if it exists.
+        $price = (float) get_post_meta($post_id, self::META_PRICE, true);
+        if ($price <= 0) {
+            return;
+        }
+
+        $mode = (string) get_post_meta($post_id, self::META_PAYMENT_MODE, true);
+        $mode = $mode !== '' ? $mode : 'woocommerce';
+        if ($mode !== 'woocommerce') {
+            return;
+        }
+
+        if (!current_user_can('edit_post', $post_id)) {
+            return;
+        }
+
+        if (class_exists('\\Learni\\WooCommerce\\ProductSync')) {
+            \Learni\WooCommerce\ProductSync::ensure_for_course($post_id);
+        }
     }
 }

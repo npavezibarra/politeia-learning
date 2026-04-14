@@ -36,9 +36,11 @@ require_once PL_LEARNI_PATH . 'includes/Access/Access.php';
 require_once PL_LEARNI_PATH . 'includes/PostTypes/Course.php';
 require_once PL_LEARNI_PATH . 'includes/PostTypes/Lesson.php';
 require_once PL_LEARNI_PATH . 'includes/Frontend/Templates.php';
+require_once PL_LEARNI_PATH . 'includes/Certificates/CertificateCode.php';
 require_once PL_LEARNI_PATH . 'includes/Rest/Routes.php';
 require_once PL_LEARNI_PATH . 'includes/WooCommerce/Integration.php';
 require_once PL_LEARNI_PATH . 'includes/WooCommerce/ProductSync.php';
+require_once PL_LEARNI_PATH . 'includes/Admin/UserProfile.php';
 
 final class PL_Learni_Module
 {
@@ -58,6 +60,10 @@ final class PL_Learni_Module
         add_action('init', [__CLASS__, 'register_frontend_templates'], 1);
         add_action('rest_api_init', ['\\Learni\\Rest\\Routes', 'register'], 5);
         add_action('plugins_loaded', [__CLASS__, 'maybe_init_woocommerce'], 20);
+
+        if (is_admin()) {
+            \Learni\Admin\UserProfile::init();
+        }
     }
 
     public static function maybe_upgrade(): void
