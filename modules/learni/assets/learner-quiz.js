@@ -246,9 +246,52 @@
                   return data;
                 });
               })
-              .then(function () {
-                hideQuizModal();
-                window.location.reload();
+              .then(function (data) {
+                if (state.phase === "final") {
+                  hideQuizModal();
+                  window.location.reload();
+                  return;
+                }
+
+                var percent = data && typeof data.percent === "number" ? data.percent : null;
+                if (percent === null || !isFinite(percent)) percent = 0;
+                percent = Math.max(0, Math.min(100, Math.round(percent)));
+
+                var score = data && typeof data.score === "number" ? data.score : 0;
+                var total = data && typeof data.total === "number" ? data.total : state.questions.length;
+                if (!isFinite(score) || score < 0) score = 0;
+                if (!isFinite(total) || total <= 0) total = state.questions.length;
+
+                setQuizModalTitle("Resultados");
+
+                var html =
+                  '<div class="learni-quiz-results">' +
+                  '<div class="learni-quiz-results__kicker">Evaluación inicial</div>' +
+                  '<div class="learni-quiz-results__score">' +
+                  percent +
+                  "%</div>" +
+                  '<div class="learni-quiz-results__meta">' +
+                  score +
+                  " de " +
+                  total +
+                  " correctas</div>" +
+                  '<div class="learni-quiz-results__text">Felicitaciones: obtuviste <strong>' +
+                  percent +
+                  '%</strong> de respuestas correctas en la Evaluación Inicial. Ahora completa todas las lecciones de este curso. Al finalizar, podrás rendir la Evaluación Final y compararemos tu resultado inicial con el final para ver tu progreso.</div>' +
+                  '<div class="learni-quiz-actions">' +
+                  '<button type="button" class="learni-btn" id="learni-quiz-results-continue">Continuar</button>' +
+                  "</div>" +
+                  "</div>";
+
+                setQuizModalBody(html);
+
+                var cont = document.getElementById("learni-quiz-results-continue");
+                if (cont) {
+                  cont.addEventListener("click", function () {
+                    hideQuizModal();
+                    window.location.reload();
+                  });
+                }
               })
               .catch(function (err) {
                 if (submitBtn) submitBtn.disabled = false;
