@@ -158,7 +158,11 @@ if ($video_url !== '') {
 }
 
 // Lesson body: either the lesson's own content, or a referenced Escrito (WP post).
-$lesson_body_html = apply_filters('the_content', (string) ($post->post_content ?? ''));
+// Some plugins/shortcodes may echo during `the_content` filters, so we capture output.
+ob_start();
+$lesson_body_filtered = apply_filters('the_content', (string) ($post->post_content ?? ''));
+$lesson_body_echoed = ob_get_clean();
+$lesson_body_html = $lesson_body_echoed . (is_string($lesson_body_filtered) ? $lesson_body_filtered : '');
 $src_post_id = ($lesson_id > 0 && class_exists('\\Learni\\PostTypes\\Lesson'))
     ? (int) get_post_meta($lesson_id, \Learni\PostTypes\Lesson::META_SOURCE_POST_ID, true)
     : 0;
@@ -184,7 +188,10 @@ if ($src_post_id > 0) {
             $orig_post = $post;
             $post = $escrito_post;
             setup_postdata($post);
-            $lesson_body_html = '<div class="pcg-escrito-content-editor">' . apply_filters('the_content', (string) ($escrito_post->post_content ?? '')) . '</div>';
+            ob_start();
+            $escrito_filtered = apply_filters('the_content', (string) ($escrito_post->post_content ?? ''));
+            $escrito_echoed = ob_get_clean();
+            $lesson_body_html = '<div class="pcg-escrito-content-editor">' . $escrito_echoed . (is_string($escrito_filtered) ? $escrito_filtered : '') . '</div>';
             wp_reset_postdata();
             $post = $orig_post;
         }
