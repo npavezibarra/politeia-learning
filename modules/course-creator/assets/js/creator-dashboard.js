@@ -4052,22 +4052,26 @@ jQuery(document).ready(function ($) {
             title: t('courseCover'),
             width: 360,
             height: 238,
+            outputMaxWidth: 1600,
+            quality: 0.92,
             onSave: function (dataUrl) {
                 saveCroppedImage(dataUrl, 'thumbnail');
             }
         });
     }
 
-	    function openCoverUploader() {
-	        PL_Cropper.open({
-	            title: t('coverPhoto'),
-	            width: 1024,
-	            height: 768,
-	            onSave: function (dataUrl) {
-	                saveCroppedImage(dataUrl, 'cover');
-	            }
-	        });
-	    }
+		    function openCoverUploader() {
+		        PL_Cropper.open({
+		            title: t('coverPhoto'),
+		            width: 1024,
+		            height: 768,
+		            outputMaxWidth: 2400,
+		            quality: 0.9,
+		            onSave: function (dataUrl) {
+		                saveCroppedImage(dataUrl, 'cover');
+		            }
+		        });
+		    }
 
 	    function openCertificateUploader() {}
 

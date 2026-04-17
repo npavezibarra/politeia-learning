@@ -21,11 +21,11 @@
     });
   }
 
-  function relocateHeroCard(root) {
-    if (!root) return;
+	  function relocateHeroCard(root) {
+	    if (!root) return;
 
-    var card = qs(root, ".learni-course-hero-card");
-    if (!card) return;
+	    var card = qs(root, ".learni-course-hero-card");
+	    if (!card) return;
 
     var heroInner = qs(root, ".learni-course-hero-inner");
     var body = qs(root, ".learni-course-body");
@@ -43,16 +43,42 @@
       card.__learniOriginalParent = heroInner;
     }
 
-    if (isMobile) {
-      if (card.parentNode !== body) {
-        body.appendChild(card);
-      }
-    } else {
-      if (card.parentNode !== card.__learniOriginalParent) {
-        card.__learniOriginalParent.appendChild(card);
-      }
-    }
-  }
+	    if (isMobile) {
+	      if (card.parentNode !== body) {
+	        body.appendChild(card);
+	      }
+	      // Restore default positioning on mobile (card is rendered in-flow).
+	      card.style.position = "";
+	      card.style.top = "";
+	      card.style.left = "";
+	      card.style.right = "";
+	      card.style.bottom = "";
+	      card.style.width = "";
+	    } else {
+	      if (card.parentNode !== card.__learniOriginalParent) {
+	        card.__learniOriginalParent.appendChild(card);
+	      }
+	      // Desktop: keep the card visually fixed in the exact same spot while the page scrolls.
+	      // We compute its current viewport position (from the absolute layout) and then pin it.
+	      // This avoids guessing header heights or container offsets.
+	      card.style.position = "";
+	      card.style.top = "";
+	      card.style.left = "";
+	      card.style.right = "";
+	      card.style.bottom = "";
+	      card.style.width = "";
+
+	      try {
+	        var rect = card.getBoundingClientRect();
+	        card.style.position = "fixed";
+	        card.style.top = rect.top + "px";
+	        card.style.left = rect.left + "px";
+	        card.style.right = "auto";
+	        card.style.bottom = "auto";
+	        card.style.width = rect.width + "px";
+	      } catch (e) {}
+	    }
+	  }
 
   function init() {
     qsa(document, ".learni-tabs").forEach(function (tabs) {

@@ -107,10 +107,39 @@ body.single-learni_lesson .wp-block-group:has(> nav[aria-label="Navegación de e
 	margin-right: calc(50% - 50vw);
 	width: 100vw;
 	background: #000;
+	background-color: #000;
 	color: #fff;
 	margin-bottom: 18px;
 	overflow: visible;
 	z-index: 2;
+}
+
+.learni-course-hero.has-cover::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background-image: var(--learni-hero-image);
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+	filter: blur(2px);
+	/* Expand slightly so blur doesn't reveal edges, but hard-clip to keep the bottom edge crisp. */
+	transform: scale(1.03);
+	transform-origin: center;
+	clip-path: inset(0);
+	will-change: filter;
+	pointer-events: none;
+	z-index: 0;
+}
+
+.learni-course-hero.has-cover::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.5);
+	pointer-events: none;
+	clip-path: inset(0);
+	z-index: 1;
 }
 
 .learni-course-hero-content {
@@ -118,6 +147,8 @@ body.single-learni_lesson .wp-block-group:has(> nav[aria-label="Navegación de e
 	padding-left: var(--wp--style--root--padding-left, 16px);
 	padding-right: var(--wp--style--root--padding-right, 16px);
 	box-sizing: border-box;
+	position: relative;
+	z-index: 2;
 }
 
 .learni-course-hero-inner {
@@ -167,7 +198,7 @@ h1#learni-course-title {
 .learni-course-card-thumbnail-wrap {
 	width: 100%;
 	background: #f3f4f6;
-	height: 240px;
+	height: 260px;
 }
 
 .learni-course-card-thumbnail {
@@ -402,6 +433,9 @@ section.learni-course-content {
 	font-weight: 700;
 	letter-spacing: 0.14em;
 	text-transform: uppercase;
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
 }
 
 .learni-course-partner {

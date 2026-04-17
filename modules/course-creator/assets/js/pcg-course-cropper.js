@@ -21,6 +21,15 @@ var PL_Cropper = (function ($) {
     const defaults = {
         width: 360,
         height: 238,
+        // Multiply export resolution (keeps aspect ratio). Use >1 for retina/sharp thumbnails.
+        // If `outputMaxWidth/Height` are provided, they take precedence.
+        outputScale: 1,
+        // Optional caps for export resolution. Useful to avoid storing tiny thumbnails (blurred),
+        // while keeping file sizes under control.
+        outputMaxWidth: 0,
+        outputMaxHeight: 0,
+        // JPEG quality for export (0..1). Higher = less artifacts.
+        quality: 0.9,
         freeCrop: false,
         circleMask: false,
         title: '',
@@ -45,6 +54,20 @@ var PL_Cropper = (function ($) {
         $('.pcg-cropper-modal').remove();
 
         const circleClass = currentOptions.circleMask ? 'pcg-cropper-circle-mask' : '';
+
+        const baseW = Number(currentOptions.width || 0) || 0;
+        const baseH = Number(currentOptions.height || 0) || 0;
+        const maxW = Number(currentOptions.outputMaxWidth || 0) || 0;
+        const maxH = Number(currentOptions.outputMaxHeight || 0) || 0;
+        let scale = Number(currentOptions.outputScale || 1) || 1;
+        if (!currentOptions.freeCrop && baseW > 0 && baseH > 0 && (maxW > 0 || maxH > 0)) {
+            const sW = maxW > 0 ? (maxW / baseW) : Infinity;
+            const sH = maxH > 0 ? (maxH / baseH) : Infinity;
+            scale = Math.min(sW, sH);
+        }
+        if (!isFinite(scale) || scale <= 0) scale = 1;
+        const outW = currentOptions.freeCrop ? 0 : Math.max(1, Math.round(baseW * scale));
+        const outH = currentOptions.freeCrop ? 0 : Math.max(1, Math.round(baseH * scale));
 
         const html = `
             <div class="pcg-cropper-modal ${circleClass}">
@@ -71,7 +94,7 @@ var PL_Cropper = (function ($) {
                         <input type="file" id="pcg-cropper-file-input" class="pcg-hidden-input" accept="image/jpeg,image/png">
                     </div>
                     <div class="pcg-cropper-footer">
-                        <span class="pcg-cropper-status">${currentOptions.freeCrop ? t('freeCrop', 'Free crop size') : t('recommendedSize', 'Recommended size:') + ' ' + currentOptions.width + 'x' + currentOptions.height + 'px'}</span>
+                        <span class="pcg-cropper-status">${currentOptions.freeCrop ? t('freeCrop', 'Free crop size') : t('recommendedSize', 'Recommended size:') + ' ' + outW + 'x' + outH + 'px'}</span>
                         <div class="pcg-cropper-actions">
                             <button type="button" class="pcg-btn-cropper pcg-btn-cropper-cancel">${t('cancel', 'Cancel')}</button>
                             <button type="button" class="pcg-btn-cropper pcg-btn-cropper-save" disabled>${t('saveImage', 'Save Image')}</button>
@@ -130,13 +153,25 @@ var PL_Cropper = (function ($) {
                 imageSmoothingQuality: 'high',
             };
             if (!currentOptions.freeCrop) {
-                canvasOptions.width = currentOptions.width;
-                canvasOptions.height = currentOptions.height;
+                const baseW = Number(currentOptions.width || 0) || 0;
+                const baseH = Number(currentOptions.height || 0) || 0;
+                const maxW = Number(currentOptions.outputMaxWidth || 0) || 0;
+                const maxH = Number(currentOptions.outputMaxHeight || 0) || 0;
+                let scale = Number(currentOptions.outputScale || 1) || 1;
+                if (baseW > 0 && baseH > 0 && (maxW > 0 || maxH > 0)) {
+                    const sW = maxW > 0 ? (maxW / baseW) : Infinity;
+                    const sH = maxH > 0 ? (maxH / baseH) : Infinity;
+                    scale = Math.min(sW, sH);
+                }
+                if (!isFinite(scale) || scale <= 0) scale = 1;
+                canvasOptions.width = Math.max(1, Math.round(baseW * scale));
+                canvasOptions.height = Math.max(1, Math.round(baseH * scale));
             }
 
             const canvas = cropper.getCroppedCanvas(canvasOptions);
 
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            const q = Math.min(1, Math.max(0.5, Number(currentOptions.quality || 0.9) || 0.9));
+            const dataUrl = canvas.toDataURL('image/jpeg', q);
 
             if (typeof currentOptions.onSave === 'function') {
                 currentOptions.onSave(dataUrl);

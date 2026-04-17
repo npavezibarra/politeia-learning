@@ -676,7 +676,8 @@ final class PL_Learni_Frontend_Templates
         $product_id = (int) get_post_meta($course_id, 'learni_wc_product_id', true);
         $price_label = $price > 0 ? '$' . number_format((float) $price, 0, '.', ',') : __('FREE', 'politeia-learning');
         $is_free = $price <= 0 && $product_id <= 0;
-	        $thumb_url = (string) get_the_post_thumbnail_url($course_id, 'large');
+	        $thumb_id = (int) get_post_thumbnail_id($course_id);
+	        $thumb_url = $thumb_id > 0 ? (string) wp_get_attachment_image_url($thumb_id, 'large') : '';
 	        // Only show the certificate CTA once the course is complete.
 	        $certificate_available = $has_access && ($percent >= 100) && self::certificate_template_exists($course_id);
         $has_course_partner = false;
@@ -715,12 +716,20 @@ final class PL_Learni_Frontend_Templates
             $author_avatar = (string) get_avatar_url($author_id, ['size' => 72]);
         }
 
-        // Match Learni structure: the main wrapper is both `#learni-course` and `.learni-learner`
-        // (needed for full-bleed hero math + consistent alignment with the site header).
-        $html = '<div id="learni-course" class="learni-learner alignwide" data-course-id="' . esc_attr((string) $course_id) . '">';
+	        // Match Learni structure: the main wrapper is both `#learni-course` and `.learni-learner`
+	        // (needed for full-bleed hero math + consistent alignment with the site header).
+	        $html = '<div id="learni-course" class="learni-learner alignwide" data-course-id="' . esc_attr((string) $course_id) . '">';
 
-        // Hero (banner + aside card).
-        $html .= '<section class="learni-course-hero"><div class="learni-course-hero-content"><div class="learni-course-hero-inner">';
+	        $cover_meta_key = class_exists('\\Learni\\PostTypes\\Course')
+	            ? \Learni\PostTypes\Course::META_COVER_PHOTO_ID
+	            : 'pl_cover_photo_id';
+	        $cover_photo_id = (int) get_post_meta($course_id, $cover_meta_key, true);
+	        $cover_photo_url = $cover_photo_id > 0 ? (string) wp_get_attachment_image_url($cover_photo_id, 'full') : '';
+	        $hero_class = 'learni-course-hero' . ($cover_photo_url !== '' ? ' has-cover' : '');
+	        $hero_style = $cover_photo_url !== '' ? ' style="--learni-hero-image:url(' . esc_url($cover_photo_url) . ');"' : '';
+
+	        // Hero (banner + aside card).
+	        $html .= '<section class="' . esc_attr($hero_class) . '"' . $hero_style . '><div class="learni-course-hero-content"><div class="learni-course-hero-inner">';
         $html .= '<div class="learni-course-hero-left">';
         $html .= '<h1 id="learni-course-title">' . esc_html($title) . '</h1>';
         if ($excerpt !== '') {
@@ -767,9 +776,27 @@ final class PL_Learni_Frontend_Templates
         $html .= '</div>'; // left
 
         $html .= '<aside class="learni-course-hero-card" aria-label="' . esc_attr__('Course details', 'politeia-learning') . '">';
-        if ($thumb_url !== '') {
-            $html .= '<div class="learni-course-card-thumbnail-wrap"><img class="learni-course-card-thumbnail" src="' . esc_url($thumb_url) . '" alt=""></div>';
-        }
+	        if ($thumb_id > 0) {
+	            $thumb_img = wp_get_attachment_image(
+	                $thumb_id,
+	                // Use full + srcset so retina screens can pick a higher-res candidate.
+	                'full',
+	                false,
+	                [
+	                    'class' => 'learni-course-card-thumbnail',
+	                    // The card is at most 420px wide on desktop.
+	                    'sizes' => '(min-width: 971px) 420px, 100vw',
+	                    'loading' => 'lazy',
+	                    'decoding' => 'async',
+	                ]
+	            );
+	            if (is_string($thumb_img) && $thumb_img !== '') {
+	                $html .= '<div class="learni-course-card-thumbnail-wrap">' . $thumb_img . '</div>';
+	            }
+	        } elseif ($thumb_url !== '') {
+	            // Fallback (should be rare): keep old behavior if attachment lookup fails.
+	            $html .= '<div class="learni-course-card-thumbnail-wrap"><img class="learni-course-card-thumbnail" src="' . esc_url($thumb_url) . '" alt=""></div>';
+	        }
         $html .= '<div class="learni-course-hero-card-body">';
         $html .= '<div class="learni-course-price-row">';
         $html .= '<div class="learni-course-price">' . esc_html($price_label) . '</div>';
