@@ -1456,17 +1456,46 @@ button#learni-quiz-begin {
 }
 
 .learni-lesson-shell {
-	display: grid;
-	grid-template-columns: 320px minmax(0, 1fr);
+	/* Full-height shell with independent scrolling panes. */
+	height: 100vh;
+	height: 100dvh;
+	overflow: hidden;
+	display: flex;
+	flex-direction: row;
 	width: 100%;
 	box-sizing: border-box;
 }
 
 .learni-lesson-aside {
+	flex: 0 0 320px;
+	height: 100%;
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
 	background: #fafafa;
 	border-right: 1px solid rgba(17, 24, 39, 0.08);
 	padding: 16px 0;
 	box-sizing: border-box;
+}
+
+/* Main scroll pane */
+.learni-lesson-main {
+	flex: 1 1 auto;
+	height: 100%;
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+	padding: 22px 40px 48px;
+	box-sizing: border-box;
+}
+
+/* Disable global scroll on lesson pages for desktop so only panes scroll. */
+@media (min-width: 901px) {
+	body.single-learni_lesson {
+		overflow-y: hidden;
+	}
 }
 
 @media (max-width: 970px) {
@@ -1654,11 +1683,6 @@ button#learni-quiz-begin {
 	font-size: 14px;
 	font-weight: 700;
 	color: rgba(17, 24, 39, 0.9);
-}
-
-.learni-lesson-main {
-	padding: 22px 40px 48px;
-	box-sizing: border-box;
 }
 
 .learni-lesson-top {
@@ -1853,10 +1877,14 @@ button#learni-quiz-begin {
 
 @media (max-width: 900px) {
 	.learni-lesson-shell {
-		grid-template-columns: 1fr;
+		height: auto;
+		overflow: visible;
+		flex-direction: column;
 	}
 
 	.learni-lesson-aside {
+		height: auto;
+		overflow: visible;
 		border-right: 0;
 		/* border-bottom: 1px solid rgba(17, 24, 39, 0.08); */
 	}
@@ -1867,6 +1895,8 @@ button#learni-quiz-begin {
 	}
 
 	.learni-lesson-main {
+		height: auto;
+		overflow: visible;
 		padding: 20px 22px 40px;
 	}
 }
