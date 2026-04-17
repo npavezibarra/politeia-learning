@@ -7,6 +7,7 @@ final class Lesson
     public const POST_TYPE = 'learni_lesson';
     public const META_VIDEO_URL = 'learni_video_url';
     public const META_AVAILABLE_AT = 'learni_available_at'; // YYYY-MM-DD or empty
+    public const META_SOURCE_POST_ID = 'learni_source_post_id'; // WP `post` ID (Escrito) or 0
 
     private static bool $did_register_meta = false;
 
@@ -68,6 +69,21 @@ final class Lesson
                     $value = is_string($value) ? trim($value) : '';
                     return $value;
                 },
+                'auth_callback' => static function ($allowed, $meta_key, $post_id) {
+                    return current_user_can('edit_post', (int) $post_id);
+                },
+            ]
+        );
+
+        register_post_meta(
+            self::POST_TYPE,
+            self::META_SOURCE_POST_ID,
+            [
+                'type' => 'integer',
+                'single' => true,
+                'show_in_rest' => true,
+                'default' => 0,
+                'sanitize_callback' => 'absint',
                 'auth_callback' => static function ($allowed, $meta_key, $post_id) {
                     return current_user_can('edit_post', (int) $post_id);
                 },

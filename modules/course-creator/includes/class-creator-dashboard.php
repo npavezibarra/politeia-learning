@@ -421,7 +421,7 @@ class PL_CC_Creator_Dashboard
                     'remove' => __('Quitar', 'politeia-learning'),
                     'delete' => __('Eliminar', 'politeia-learning'),
                     'removeItem' => __('Remove', 'politeia-learning'),
-                    'addText' => __('Add Text', 'politeia-learning'),
+                    'addText' => __('AGREGAR TEXTO', 'politeia-learning'),
                     'createTag' => __('Crear etiqueta', 'politeia-learning'),
                     'noCategories' => __('No hay categorías.', 'politeia-learning'),
                     'unknownError' => __('Error desconocido', 'politeia-learning'),

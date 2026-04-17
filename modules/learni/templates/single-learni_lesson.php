@@ -64,8 +64,23 @@ $percent = (int) ($summary['percent'] ?? 0);
 $course_url = $course_id > 0 ? (string) get_permalink($course_id) : '';
 $course_title = $course_id > 0 ? (string) get_the_title($course_id) : '';
 
-$linear_raw = ($course_id > 0 && class_exists('\\Learni\\PostTypes\\Course')) ? get_post_meta($course_id, \Learni\PostTypes\Course::META_LINEAR_ORDER, true) : '';
-$linear_order = $linear_raw === '' ? true : (bool) (int) $linear_raw;
+$linear_order = true;
+if ($course_id > 0 && class_exists('\\Learni\\PostTypes\\Course')) {
+    $meta_key = \Learni\PostTypes\Course::META_LINEAR_ORDER;
+    $exists = metadata_exists('post', $course_id, $meta_key);
+    $raw = get_post_meta($course_id, $meta_key, true);
+
+    // Default: if the course never set this meta, keep linear order enabled.
+    // When the meta exists but is stored as an empty string, treat it as `false`
+    // (WordPress boolean meta can persist `false` as '').
+    if ($exists) {
+        if ($raw === '' || $raw === false || $raw === 0 || $raw === '0') {
+            $linear_order = false;
+        } else {
+            $linear_order = (bool) (int) $raw;
+        }
+    }
+}
 $max_unlocked = -1;
 if (!empty($lesson_ids)) {
     if (!$linear_order) {
@@ -139,6 +154,40 @@ if ($video_url !== '') {
         $video_html = '<iframe id="learni-youtube-player" src="' . esc_url($embed_url) . '" title="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>';
     } else {
         $video_html = (string) wp_oembed_get($video_url);
+    }
+}
+
+// Lesson body: either the lesson's own content, or a referenced Escrito (WP post).
+$lesson_body_html = apply_filters('the_content', (string) ($post->post_content ?? ''));
+$src_post_id = ($lesson_id > 0 && class_exists('\\Learni\\PostTypes\\Lesson'))
+    ? (int) get_post_meta($lesson_id, \Learni\PostTypes\Lesson::META_SOURCE_POST_ID, true)
+    : 0;
+
+if ($src_post_id > 0) {
+    $is_enrolled = ($user_id > 0 && $course_id > 0 && class_exists('\\Learni\\Database\\Enrollments'))
+        ? \Learni\Database\Enrollments::user_has_active($user_id, $course_id)
+        : false;
+    $course_author_id = $course_id > 0 ? (int) get_post_field('post_author', $course_id) : 0;
+    $can_view_src = ($user_id > 0) && ($is_enrolled || current_user_can('manage_options') || ($course_author_id > 0 && $course_author_id === $user_id));
+
+    if (!$can_view_src) {
+        $lesson_body_html = '<p>' . esc_html__('Este texto está disponible solo para usuarios inscritos en el curso.', 'politeia-learning') . '</p>';
+    } else {
+        $escrito_post = get_post($src_post_id);
+        $valid_type = ($escrito_post instanceof \WP_Post) && $escrito_post->post_type === 'post';
+        $valid_author = $valid_type && ($course_author_id <= 0 || (int) $escrito_post->post_author === $course_author_id);
+        $valid_status = $valid_type && in_array((string) $escrito_post->post_status, ['publish', 'draft'], true);
+
+        if (!$valid_type || !$valid_status || !$valid_author) {
+            $lesson_body_html = '<p>' . esc_html__('El texto vinculado no está disponible.', 'politeia-learning') . '</p>';
+        } else {
+            $orig_post = $post;
+            $post = $escrito_post;
+            setup_postdata($post);
+            $lesson_body_html = '<div class="pcg-escrito-content-editor">' . apply_filters('the_content', (string) ($escrito_post->post_content ?? '')) . '</div>';
+            wp_reset_postdata();
+            $post = $orig_post;
+        }
     }
 }
 
@@ -262,7 +311,7 @@ echo '<div class="learni-lesson-body">';
 if ($video_html !== '') {
     echo '<div id="learni-lesson-video" class="learni-lesson-video"' . ($video_provider !== '' ? ' data-learni-video-provider="' . esc_attr($video_provider) . '"' : '') . ($video_provider === 'youtube' && $youtube_id !== '' ? ' data-learni-youtube-id="' . esc_attr($youtube_id) . '"' : '') . '>' . $video_html . '</div>';
 }
-echo apply_filters('the_content', (string) ($post->post_content ?? ''));
+echo $lesson_body_html;
 echo '</div>';
 echo '</section>';
 

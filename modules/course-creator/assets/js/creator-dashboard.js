@@ -3754,6 +3754,8 @@ jQuery(document).ready(function ($) {
         const title = typeof data === 'string' ? data : (data.title || '');
         const videoUrl = data.video_url || '';
         const availableDate = data.available_date || '';
+        const escritoId = Number(data.escrito_id || 0) || 0;
+        const escritoTitle = String(data.escrito_title || '').trim();
 
         let expandHtml = '';
         let detailsHtml = '';
@@ -3777,7 +3779,13 @@ jQuery(document).ready(function ($) {
 	                        </div>
 	                    </div>
 	                    <div class="pcg-detail-actions">
+                            <input type="hidden" class="pcg-lesson-escrito-id" value="${escritoId ? String(escritoId) : ''}">
+                            <div class="pcg-lesson-escrito-selected" ${escritoId ? '' : 'style="display:none;"'}>
+                                <span class="pcg-lesson-escrito-selected__label">TEXTO</span>
+                                <span class="pcg-lesson-escrito-selected__title">${escritoTitle ? escritoTitle : ''}</span>
+                            </div>
 	                        <button type="button" class="pcg-btn-add-text">${t('addText')}</button>
+	                        <button type="button" class="pcg-btn-remove-text" ${escritoId ? '' : 'style="display:none;"'}>${t('remove')}</button>
 	                    </div>
 	                </div>
 	            `;
@@ -3831,6 +3839,212 @@ jQuery(document).ready(function ($) {
                 $('.pcg-empty-lessons-state').fadeIn(300);
             }
         });
+    });
+
+    // ───────────────────────────────────────────────────────────
+    // Lecciones: link "texto" desde Mis Escritos (posts)
+    // ───────────────────────────────────────────────────────────
+    let pcgEscritoPickerState = {
+        $overlay: null,
+        $list: null,
+        $search: null,
+        $accept: null,
+        $close: null,
+        currentLessonItem: null,
+        escritosCache: null,
+        inFlight: null,
+    };
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+	    function ensureEscritoPicker() {
+	        if (pcgEscritoPickerState.$overlay) return pcgEscritoPickerState;
+
+	        pcgEscritoPickerState.$overlay = $('#pcg-escrito-picker-overlay');
+	        // Ensure the overlay isn't trapped inside a lower stacking context
+	        // (e.g. transformed containers). Keeping it under <body> makes it
+	        // cover the entire viewport and stay above the site header.
+	        if (pcgEscritoPickerState.$overlay.length && !pcgEscritoPickerState.$overlay.parent().is('body')) {
+	            pcgEscritoPickerState.$overlay.appendTo(document.body);
+	        }
+	        pcgEscritoPickerState.$list = pcgEscritoPickerState.$overlay.find('[data-pcg-escrito-picker-list]');
+	        pcgEscritoPickerState.$search = $('#pcg-escrito-picker-search');
+	        pcgEscritoPickerState.$accept = pcgEscritoPickerState.$overlay.find('[data-pcg-escrito-picker-accept]');
+	        pcgEscritoPickerState.$close = pcgEscritoPickerState.$overlay.find('[data-pcg-escrito-picker-close]');
+
+        pcgEscritoPickerState.$close.on('click', closeEscritoPicker);
+        pcgEscritoPickerState.$overlay.on('keydown', function (e) {
+            if (e.key === 'Escape') closeEscritoPicker();
+        });
+
+        pcgEscritoPickerState.$accept.on('click', function () {
+            const state = ensureEscritoPicker();
+            if (!state.currentLessonItem) return;
+            const chosen = state.$list.find('input[name="pcg_escrito_pick"]:checked').val();
+            const escritoId = Number(chosen || 0) || 0;
+            const $lesson = $(state.currentLessonItem);
+            const $hidden = $lesson.find('.pcg-lesson-escrito-id');
+            const $selected = $lesson.find('.pcg-lesson-escrito-selected');
+            const $titleEl = $lesson.find('.pcg-lesson-escrito-selected__title');
+            const $removeBtn = $lesson.find('.pcg-btn-remove-text');
+
+            if (escritoId > 0 && Array.isArray(state.escritosCache)) {
+                const match = state.escritosCache.find(p => Number(p.id || 0) === escritoId);
+                const title = match ? String(match.title || '').trim() : '';
+                $hidden.val(String(escritoId));
+                $titleEl.text(title);
+                $selected.show();
+                $removeBtn.show();
+            } else {
+                $hidden.val('');
+                $titleEl.text('');
+                $selected.hide();
+                $removeBtn.hide();
+            }
+
+            closeEscritoPicker();
+        });
+
+        pcgEscritoPickerState.$search.on('input', function () {
+            const q = String($(this).val() || '').toLowerCase().trim();
+            pcgEscritoPickerState.$list.find('[data-pcg-escrito-title]').each(function () {
+                const title = String($(this).attr('data-pcg-escrito-title') || '').toLowerCase();
+                $(this).toggle(q === '' || title.includes(q));
+            });
+        });
+
+        return pcgEscritoPickerState;
+    }
+
+    function openEscritoPicker($lessonItem) {
+        const state = ensureEscritoPicker();
+        state.currentLessonItem = $lessonItem && $lessonItem.length ? $lessonItem.get(0) : null;
+        if (!state.$overlay.length) return;
+
+        const currentId = state.currentLessonItem
+            ? (Number($(state.currentLessonItem).find('.pcg-lesson-escrito-id').val() || 0) || 0)
+            : 0;
+
+        state.$overlay.removeClass('pcg-escrito-picker-overlay--hidden').attr('aria-hidden', 'false');
+        $('body').addClass('pcg-modal-open');
+        if (state.$search.length) state.$search.val('').trigger('input').focus();
+
+        renderEscritoPickerList(state, state.escritosCache, currentId, true);
+
+        if (state.inFlight && state.inFlight.abort) {
+            try { state.inFlight.abort(); } catch (_) {}
+        }
+
+        state.inFlight = $.ajax({
+            url: pcgCreatorData.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'pcg_get_my_escritos',
+                nonce: pcgCreatorData.nonce
+            },
+            success: function (response) {
+                if (!response || !response.success) {
+                    renderEscritoPickerList(state, [], currentId, false);
+                    return;
+                }
+                state.escritosCache = Array.isArray(response.data) ? response.data : [];
+                renderEscritoPickerList(state, state.escritosCache, currentId, false);
+            },
+            error: function () {
+                renderEscritoPickerList(state, [], currentId, false);
+            }
+        });
+    }
+
+    function closeEscritoPicker() {
+        const state = ensureEscritoPicker();
+        if (!state.$overlay || !state.$overlay.length) return;
+        state.$overlay.addClass('pcg-escrito-picker-overlay--hidden').attr('aria-hidden', 'true');
+        $('body').removeClass('pcg-modal-open');
+        state.currentLessonItem = null;
+        state.$accept.prop('disabled', true);
+    }
+
+    function renderEscritoPickerList(state, escritos, selectedId, isLoading) {
+        const list = Array.isArray(escritos) ? escritos : [];
+        const current = Number(selectedId || 0) || 0;
+
+        state.$list.empty();
+
+        if (isLoading) {
+            state.$list.append(`<div class="pcg-empty-msg" style="padding:14px;">${escapeHtml(t('loadingEscritos'))}</div>`);
+            state.$accept.prop('disabled', true);
+            return;
+        }
+
+        if (!list || list.length === 0) {
+            state.$list.append(`<div class="pcg-empty-msg" style="padding:14px;">${escapeHtml(t('noEscritosYet'))}</div>`);
+            state.$accept.prop('disabled', true);
+            return;
+        }
+
+        // Option to clear selection.
+        state.$list.append(`
+            <label class="pcg-escrito-picker-item" data-pcg-escrito-title="">
+                <input type="radio" name="pcg_escrito_pick" value="0" ${current === 0 ? 'checked' : ''}>
+                <span class="pcg-escrito-picker-item__meta">
+                    <span class="pcg-escrito-picker-item__title">(Sin texto)</span>
+                </span>
+            </label>
+        `);
+
+        list.forEach(function (escrito) {
+            const id = Number(escrito && escrito.id ? escrito.id : 0) || 0;
+            const title = String(escrito && escrito.title ? escrito.title : '').trim();
+            const status = String(escrito && escrito.status ? escrito.status : '').trim();
+            const date = String(escrito && escrito.date ? escrito.date : '').trim();
+            const isDraft = status === 'draft';
+            const badge = isDraft ? `<span class="pcg-escrito-picker-badge pcg-escrito-picker-badge--draft">BORRADOR</span>` : '';
+
+            state.$list.append(`
+                <label class="pcg-escrito-picker-item" data-pcg-escrito-title="${escapeHtml(title)}">
+                    <input type="radio" name="pcg_escrito_pick" value="${id}" ${id === current ? 'checked' : ''}>
+                    <span class="pcg-escrito-picker-item__meta">
+                        <span class="pcg-escrito-picker-item__title">${escapeHtml(title || '(Sin título)')}</span>
+                        <span class="pcg-escrito-picker-item__sub">
+                            ${badge}
+                            ${date ? `<span>${escapeHtml(date)}</span>` : ''}
+                        </span>
+                    </span>
+                </label>
+            `);
+        });
+
+        state.$accept.prop('disabled', false);
+    }
+
+    $(document).on('change', '#pcg-escrito-picker-overlay input[name="pcg_escrito_pick"]', function () {
+        const state = ensureEscritoPicker();
+        state.$accept.prop('disabled', false);
+    });
+
+    $(document).on('click', '.pcg-btn-add-text', function (e) {
+        e.preventDefault();
+        const $lessonItem = $(this).closest('.pcg-content-item.item-lesson');
+        if (!$lessonItem.length) return;
+        openEscritoPicker($lessonItem);
+    });
+
+    $(document).on('click', '.pcg-btn-remove-text', function (e) {
+        e.preventDefault();
+        const $lesson = $(this).closest('.pcg-content-item.item-lesson');
+        if (!$lesson.length) return;
+        $lesson.find('.pcg-lesson-escrito-id').val('');
+        $lesson.find('.pcg-lesson-escrito-selected__title').text('');
+        $lesson.find('.pcg-lesson-escrito-selected').hide();
+        $(this).hide();
     });
 
     function openThumbnailUploader() {
@@ -4048,11 +4262,13 @@ jQuery(document).ready(function ($) {
         courseData.teachers = collectTeachers($('#pcg-teachers-list'));
 
         $('#pcg-lessons-list .pcg-content-item').each(function () {
+            const $escrito = $(this).find('.pcg-lesson-escrito-id');
             courseData.content.push({
                 type: $(this).data('type'),
                 title: $(this).find('.pcg-item-input').val(),
                 video_url: $(this).find('.pcg-lesson-video-url').val() || '',
-                available_date: $(this).find('.pcg-lesson-available-date').val() || ''
+                available_date: $(this).find('.pcg-lesson-available-date').val() || '',
+                escrito_id: $escrito.length ? (Number($escrito.val() || 0) || 0) : 0
             });
         });
 

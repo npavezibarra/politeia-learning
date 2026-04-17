@@ -1215,6 +1215,7 @@ class PL_CC_Course_Save_Handler
 
             $video_url = isset($item['video_url']) ? esc_url_raw((string) $item['video_url']) : '';
             $available_date = isset($item['available_date']) ? sanitize_text_field((string) $item['available_date']) : '';
+            $escrito_id = isset($item['escrito_id']) ? absint($item['escrito_id']) : 0;
 
             $lesson_id = wp_insert_post(
                 [
@@ -1234,6 +1235,20 @@ class PL_CC_Course_Save_Handler
 
             update_post_meta((int) $lesson_id, 'learni_video_url', $video_url);
             update_post_meta((int) $lesson_id, 'learni_available_at', $available_date);
+
+            if ($escrito_id > 0) {
+                $escrito = get_post($escrito_id);
+                if (!$escrito || $escrito->post_type !== 'post' || (int) $escrito->post_author !== (int) get_current_user_id()) {
+                    $escrito_id = 0;
+                }
+            }
+            if (class_exists('\\Learni\\PostTypes\\Lesson')) {
+                if ($escrito_id > 0) {
+                    update_post_meta((int) $lesson_id, \Learni\PostTypes\Lesson::META_SOURCE_POST_ID, $escrito_id);
+                } else {
+                    delete_post_meta((int) $lesson_id, \Learni\PostTypes\Lesson::META_SOURCE_POST_ID);
+                }
+            }
 
             $wpdb->insert(
                 $items_table,
@@ -2662,12 +2677,18 @@ class PL_CC_Course_Save_Handler
                     continue;
                 }
 
+                $src_post_id = class_exists('\\Learni\\PostTypes\\Lesson')
+                    ? (int) get_post_meta($lesson_id, \Learni\PostTypes\Lesson::META_SOURCE_POST_ID, true)
+                    : 0;
+
                 $content[] = [
                     'type' => 'lesson',
                     'id' => $lesson_id,
                     'title' => get_the_title($lesson_id),
                     'video_url' => (string) get_post_meta($lesson_id, 'learni_video_url', true),
                     'available_date' => (string) get_post_meta($lesson_id, 'learni_available_at', true),
+                    'escrito_id' => $src_post_id,
+                    'escrito_title' => $src_post_id > 0 ? (string) get_the_title($src_post_id) : '',
                 ];
             }
         }

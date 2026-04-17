@@ -538,6 +538,18 @@ final class PL_Learni_Frontend_Templates
             defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0'
         );
 
+        // When a lesson reuses an Escrito (WP post) as its body, reuse the same frontend CSS
+        // so typography/images match the blog rendering.
+        if (is_singular('learni_lesson') && defined('PL_CC_URL') && defined('PL_CC_PATH') && class_exists('\\Learni\\PostTypes\\Lesson')) {
+            $lesson_id = (int) get_queried_object_id();
+            $src_post_id = $lesson_id > 0 ? (int) get_post_meta($lesson_id, \Learni\PostTypes\Lesson::META_SOURCE_POST_ID, true) : 0;
+            if ($src_post_id > 0) {
+                $frontend_css_path = PL_CC_PATH . 'assets/css/escrito-frontend.css';
+                $frontend_css_ver = file_exists($frontend_css_path) ? (string) filemtime($frontend_css_path) : '1.0.0';
+                wp_enqueue_style('pcg-escrito-frontend-css', PL_CC_URL . 'assets/css/escrito-frontend.css', [], $frontend_css_ver);
+            }
+        }
+
 	        if (is_singular('learni_course') || is_singular('learni_lesson')) {
 	            wp_enqueue_script(
 	                'pl-learni-quiz',
@@ -1549,9 +1561,20 @@ final class PL_Learni_Frontend_Templates
         if ($course_id <= 0 || !class_exists('\\Learni\\PostTypes\\Course')) {
             return true;
         }
-        $raw = get_post_meta($course_id, \Learni\PostTypes\Course::META_LINEAR_ORDER, true);
-        if ($raw === '') {
+        $meta_key = \Learni\PostTypes\Course::META_LINEAR_ORDER;
+        $exists = metadata_exists('post', $course_id, $meta_key);
+        $raw = get_post_meta($course_id, $meta_key, true);
+
+        // Default behavior: if the meta was never set, enforce linear order.
+        // Note: for registered boolean meta, WordPress may store `false` as an empty string.
+        if (!$exists) {
             return true;
+        }
+        if ($raw === '' || $raw === false || $raw === 0 || $raw === '0') {
+            return false;
+        }
+        if (is_bool($raw)) {
+            return $raw;
         }
         return (bool) (int) $raw;
     }
