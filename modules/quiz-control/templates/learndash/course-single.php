@@ -228,17 +228,23 @@ if ( have_posts() ) :
 			}
 		}
 
-		$show_add_partner = false;
-		if ( $user_id > 0 ) {
-			if ( current_user_can( 'manage_options' ) ) {
-				$show_add_partner = true;
-			} else {
-				$course_author_id = (int) get_post_field( 'post_author', $course_id );
-				$teacher_ids = get_post_meta( $course_id, '_pcg_course_teachers', false );
-				$teacher_ids = array_map( 'absint', (array) $teacher_ids );
-				$show_add_partner = ( $course_author_id === $user_id ) || in_array( $user_id, $teacher_ids, true );
+			$show_add_partner = false;
+			if ( $user_id > 0 ) {
+				if ( current_user_can( 'manage_options' ) ) {
+					$show_add_partner = true;
+				} else {
+					// Match Learni: allow enrolled learners to manage their course partner.
+					$show_add_partner = (bool) $enrolled;
+
+					// Also allow course author/teachers (instructor/admin UX).
+					if ( ! $show_add_partner ) {
+						$course_author_id = (int) get_post_field( 'post_author', $course_id );
+						$teacher_ids = get_post_meta( $course_id, '_pcg_course_teachers', false );
+						$teacher_ids = array_map( 'absint', (array) $teacher_ids );
+						$show_add_partner = ( $course_author_id === $user_id ) || in_array( $user_id, $teacher_ids, true );
+					}
+				}
 			}
-		}
 
 		$partner = null;
 		if ( $show_add_partner && class_exists( 'PL_Partnerships_Repository' ) && method_exists( 'PL_Partnerships_Repository', 'get_single_partner' ) ) {

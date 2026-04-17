@@ -123,7 +123,9 @@ class PL_CC_Creator_Dashboard
     public function enqueue_escrito_frontend_assets(): void
     {
         if (is_single() && get_post_type() === 'post') {
-            wp_enqueue_style('pcg-escrito-frontend-css', PL_CC_URL . 'assets/css/escrito-frontend.css', [], '1.0.9');
+            $frontend_css_path = PL_CC_PATH . 'assets/css/escrito-frontend.css';
+            $frontend_css_ver = file_exists($frontend_css_path) ? (string) filemtime($frontend_css_path) : '1.0.10';
+            wp_enqueue_style('pcg-escrito-frontend-css', PL_CC_URL . 'assets/css/escrito-frontend.css', [], $frontend_css_ver);
         }
     }
 

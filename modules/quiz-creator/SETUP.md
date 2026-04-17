@@ -138,7 +138,7 @@ politeia-quiz-creator/
 |---------|-------------|---------|
 | `time_limit` | Time in seconds (0 = no limit) | 0 |
 | `random_questions` | Randomize question order | 0 |
-| `random_answers` | Randomize answer order | 0 |
+| `random_answers` | Answers are always shuffled (not configurable) | 1 |
 | `run_once` | Limit quiz attempts | 0 |
 | `run_once_type` | 0=user, 1=cookie, 2=IP | 0 |
 | `force_solve` | Must answer before next | 0 |
@@ -195,7 +195,7 @@ Create a quiz in JSON format with the following structure:
   "settings": {
     "time_limit": 300,
     "random_questions": 0,
-    "random_answers": 0,
+    "random_answers": 1,
     "run_once": 0,
     "force_solve": 0,
     "passing_percentage": 80

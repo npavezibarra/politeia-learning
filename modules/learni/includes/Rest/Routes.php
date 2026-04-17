@@ -77,6 +77,18 @@ final class Routes
                 'callback' => [__CLASS__, 'post_course_restart'],
             ]
         );
+
+        register_rest_route(
+            self::REST_NAMESPACE,
+            '/courses/(?P<id>\\d+)/certificate',
+            [
+                'methods' => 'GET',
+                'permission_callback' => static function () {
+                    return is_user_logged_in();
+                },
+                'callback' => [__CLASS__, 'get_course_certificate'],
+            ]
+        );
     }
 
     public static function get_course_binomial_status(WP_REST_Request $request)
@@ -99,22 +111,13 @@ final class Routes
         $summary = Progress::course_summary($user_id, $course_id);
         $lesson_percent = isset($summary['percent']) ? (int) $summary['percent'] : 0;
 
-        $certificate_url = '';
-        if ($lesson_percent >= 100 && Access::user_can_access_course($user_id, $course_id) && self::certificate_template_exists($course_id)) {
-            $certificate_url = (string) add_query_arg(
-                [
-                    'action' => 'pl_learni_view_certificate',
-                    'course_id' => (string) $course_id,
-                ],
-                admin_url('admin-post.php')
-            );
-        }
+        $certificate_available = (Access::user_can_access_course($user_id, $course_id) && self::certificate_template_exists($course_id));
 
         if ($quiz_id <= 0) {
             return [
                 'courseId' => $course_id,
                 'quizId' => 0,
-                'certificateUrl' => $certificate_url,
+                'certificateAvailable' => $certificate_available,
                 'progress' => [
                     'lessonsPercent' => $lesson_percent,
                 ],
@@ -185,7 +188,7 @@ final class Routes
         return [
             'courseId' => $course_id,
             'quizId' => $quiz_id,
-            'certificateUrl' => $certificate_url,
+            'certificateAvailable' => $certificate_available,
             'progress' => [
                 'lessonsPercent' => $lesson_percent,
             ],
@@ -200,6 +203,187 @@ final class Routes
                 'canTakeFinal' => $can_take_final,
                 'canRestart' => $can_restart,
             ],
+        ];
+    }
+
+    public static function get_course_certificate(WP_REST_Request $request)
+    {
+        $course_id = (int) $request['id'];
+        if ($course_id <= 0 || get_post_type($course_id) !== Course::POST_TYPE) {
+            return new WP_Error('learni_invalid_course', 'Invalid course.', ['status' => 404]);
+        }
+
+        $user_id = (int) get_current_user_id();
+        if ($user_id <= 0) {
+            return new WP_Error('learni_login_required', 'Login required.', ['status' => 401]);
+        }
+
+        if (!Access::user_can_access_course($user_id, $course_id)) {
+            return new WP_Error('learni_forbidden', 'No access.', ['status' => 403]);
+        }
+
+        if (!self::certificate_template_exists($course_id)) {
+            return new WP_Error('learni_no_certificate', 'No certificate template.', ['status' => 404]);
+        }
+
+        $summary = Progress::course_summary($user_id, $course_id);
+        $percent = isset($summary['percent']) ? (int) $summary['percent'] : 0;
+        $eligible = $percent >= 100;
+
+        $title = (string) get_post_meta($course_id, Course::META_CERTIFICATE_TITLE, true);
+        $title = $title !== '' ? $title : __('Certificado de Finalización', 'politeia-learning');
+
+        $paragraph = (string) get_post_meta($course_id, Course::META_CERTIFICATE_CONGRATS, true);
+        $issued_label = wp_date(get_option('date_format'));
+        $paragraph = self::certificate_paragraph_with_replacements($paragraph, $course_id, $user_id, $issued_label);
+
+        $logo_id = (int) get_post_meta($course_id, Course::META_CERTIFICATE_LOGO_ATTACHMENT_ID, true);
+        $logo_url = $logo_id > 0 ? (string) wp_get_attachment_image_url($logo_id, 'medium') : '';
+        $logo_align = (string) get_post_meta($course_id, Course::META_CERTIFICATE_LOGO_ALIGN, true);
+        $logo_align = in_array($logo_align, ['left', 'center', 'right'], true) ? $logo_align : 'left';
+
+        $sig_id = (int) get_post_meta($course_id, Course::META_CERTIFICATE_SIGNATURE_ATTACHMENT_ID, true);
+        $sig_url = $sig_id > 0 ? (string) wp_get_attachment_image_url($sig_id, 'medium') : '';
+        $sig_label = (string) get_post_meta($course_id, Course::META_CERTIFICATE_SIGNATURE_LABEL, true);
+        $sig_label = $sig_label !== '' ? $sig_label : __('Firma', 'politeia-learning');
+
+        $first_pct = null;
+        $final_pct = null;
+        $variation = null;
+
+        global $wpdb;
+        if ($wpdb) {
+            $quiz = self::binomial_quiz_for_course($course_id);
+            $quiz_id = (int) ($quiz['id'] ?? 0);
+            if ($quiz_id > 0) {
+                $attempts_table = $wpdb->prefix . 'learni_quiz_attempts';
+                $submitted_count = (int) $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT COUNT(*)
+                         FROM {$attempts_table}
+                         WHERE quiz_id = %d AND user_id = %d AND status = %s",
+                        $quiz_id,
+                        $user_id,
+                        'submitted'
+                    )
+                );
+
+                $last_two = $wpdb->get_results(
+                    $wpdb->prepare(
+                        "SELECT id, score, submitted_at, answers_json
+                         FROM {$attempts_table}
+                         WHERE quiz_id = %d AND user_id = %d AND status = %s
+                         ORDER BY submitted_at DESC, id DESC
+                         LIMIT 2",
+                        $quiz_id,
+                        $user_id,
+                        'submitted'
+                    ),
+                    ARRAY_A
+                );
+
+                $initial = null;
+                $final = null;
+                if ($submitted_count % 2 === 1) {
+                    $last = isset($last_two[0]) ? $last_two[0] : null;
+                    if (is_array($last)) {
+                        $initial = self::attempt_public_payload($last);
+                    }
+                } elseif ($submitted_count >= 2 && $percent >= 100) {
+                    $last_final = isset($last_two[0]) ? $last_two[0] : null;
+                    $last_initial = isset($last_two[1]) ? $last_two[1] : null;
+                    if (is_array($last_initial)) {
+                        $initial = self::attempt_public_payload($last_initial);
+                    }
+                    if (is_array($last_final)) {
+                        $final = self::attempt_public_payload($last_final);
+                    }
+                }
+
+                if (is_array($initial) && isset($initial['percent'])) {
+                    $first_pct = (int) $initial['percent'];
+                }
+                if (is_array($final) && isset($final['percent'])) {
+                    $final_pct = (int) $final['percent'];
+                }
+                if (is_int($first_pct) && is_int($final_pct)) {
+                    $variation = (int) $final_pct - (int) $first_pct;
+                }
+            }
+        }
+
+        $show_first = (bool) get_post_meta($course_id, Course::META_CERTIFICATE_CLAIM_FIRST, true);
+        $show_final = (bool) get_post_meta($course_id, Course::META_CERTIFICATE_CLAIM_FINAL, true);
+        $show_variation = (bool) get_post_meta($course_id, Course::META_CERTIFICATE_CLAIM_VARIATION, true);
+
+        $claims = [];
+        if ($show_first && is_int($first_pct)) {
+            $claims[] = esc_html(sprintf(__('First quiz score: %d%%', 'politeia-learning'), $first_pct));
+        }
+        if ($show_final && is_int($final_pct)) {
+            $claims[] = esc_html(sprintf(__('Final quiz score: %d%%', 'politeia-learning'), $final_pct));
+        }
+        if ($show_variation && is_int($variation)) {
+            $sign = $variation > 0 ? '+' : '';
+            $claims[] = esc_html(sprintf(__('Variation: %s%d%%', 'politeia-learning'), $sign, $variation));
+        }
+
+        $student_name = '';
+        if ($user_id > 0) {
+            $u = get_userdata($user_id);
+            if ($u) {
+                $student_name = (string) ($u->display_name ?? '');
+            }
+        }
+        $student_name = $student_name !== '' ? $student_name : __('Student', 'politeia-learning');
+        $course_title = (string) get_the_title($course_id);
+
+        $sheet = '<div class="learni-cert-stage">';
+        $sheet .= '<div class="learni-cert-sheet" data-learni-cert-sheet="1">';
+        $sheet .= '<div class="learni-cert-sheet__inner">';
+        $sheet .= '<div class="learni-cert-sheet__top learni-align-' . esc_attr($logo_align) . '">';
+        if ($logo_url !== '') {
+            $sheet .= '<img class="learni-cert-sheet__logo" src="' . esc_url($logo_url) . '" alt="" loading="lazy" />';
+        }
+        $sheet .= '</div>';
+        $sheet .= '<div class="learni-cert-sheet__title">' . esc_html($title) . '</div>';
+        $sheet .= '<div class="learni-cert-sheet__kicker">' . esc_html__('This certifies that', 'politeia-learning') . '</div>';
+        $sheet .= '<div class="learni-cert-sheet__name">' . esc_html($student_name) . '</div>';
+        $sheet .= '<div class="learni-cert-sheet__kicker">' . esc_html__('has successfully completed', 'politeia-learning') . '</div>';
+        $sheet .= '<div class="learni-cert-sheet__course">' . esc_html($course_title) . '</div>';
+        if ($paragraph !== '') {
+            $sheet .= '<div class="learni-cert-sheet__paragraph">' . wp_kses_post($paragraph) . '</div>';
+        }
+        if (!empty($claims)) {
+            $sheet .= '<div class="learni-cert-sheet__claims">';
+            $sheet .= '<div class="learni-cert-sheet__claims-title">' . esc_html__('Assessment claims', 'politeia-learning') . '</div>';
+            foreach ($claims as $c) {
+                $sheet .= '<div class="learni-cert-sheet__claim">' . $c . '</div>';
+            }
+            $sheet .= '</div>';
+        }
+
+        $sheet .= '<div class="learni-cert-sheet__bottom">';
+        $sheet .= '<div class="learni-cert-sheet__meta">';
+        $sheet .= '<div class="learni-cert-sheet__meta-row"><span class="learni-cert-sheet__meta-label">' . esc_html__('Issued', 'politeia-learning') . '</span><span class="learni-cert-sheet__meta-value">' . esc_html($issued_label) . '</span></div>';
+        $sheet .= '</div>';
+        $sheet .= '<div class="learni-cert-sheet__sig">';
+        if ($sig_url !== '') {
+            $sheet .= '<img class="learni-cert-sheet__sigimg" src="' . esc_url($sig_url) . '" alt="" loading="lazy" />';
+        }
+        $sheet .= '<div class="learni-cert-sheet__sigline"></div>';
+        $sheet .= '<div class="learni-cert-sheet__siglabel">' . esc_html($sig_label) . '</div>';
+        $sheet .= '</div>';
+        $sheet .= '</div>'; // bottom
+
+        $sheet .= '</div>'; // inner
+        $sheet .= '</div>'; // sheet
+        $sheet .= '</div>'; // stage
+
+        return [
+            'courseId' => $course_id,
+            'eligible' => $eligible,
+            'html' => $sheet,
         ];
     }
 
@@ -326,6 +510,16 @@ final class Routes
             }
 
             $question_ids = $ids;
+
+            // Subset selection: allow rendering only a portion of the total questions.
+            $per_attempt = isset($quiz_settings['questions_per_attempt']) ? (int) $quiz_settings['questions_per_attempt'] : 0;
+            $subset_random = !empty($quiz_settings['questions_subset_random']);
+            if ($per_attempt > 0 && $per_attempt < count($question_ids)) {
+                if ($subset_random && $order_mode !== 'random') {
+                    shuffle($question_ids);
+                }
+                $question_ids = array_slice($question_ids, 0, $per_attempt);
+            }
             if (empty($question_ids)) {
                 return new WP_Error('learni_quiz_empty', 'Quiz has no questions.', ['status' => 400]);
             }
@@ -351,7 +545,8 @@ final class Routes
                 $by_q[$qid][] = (int) $a['id'];
             }
 
-            $shuffle_answers = isset($quiz_settings['shuffleAnswers']) ? (bool) $quiz_settings['shuffleAnswers'] : !empty($quiz_settings['random_answers']);
+            // Answers are always shuffled (not configurable).
+            $shuffle_answers = true;
             foreach ($question_ids as $qid) {
                 $list = isset($by_q[$qid]) ? $by_q[$qid] : [];
                 if ($shuffle_answers) {
@@ -810,5 +1005,65 @@ final class Routes
         $show_variation = (bool) get_post_meta($course_id, Course::META_CERTIFICATE_CLAIM_VARIATION, true);
 
         return ($title !== '') || ($paragraph !== '') || ($logo_id > 0) || ($sig_id > 0) || $show_first || $show_final || $show_variation;
+    }
+
+    private static function certificate_paragraph_with_replacements(string $paragraph, int $course_id, int $user_id, string $issued_label): string
+    {
+        if ($paragraph === '') {
+            return '';
+        }
+
+        $student_name = '';
+        $first_name = '';
+        if ($user_id > 0) {
+            $u = get_userdata($user_id);
+            if ($u) {
+                $first_name = (string) ($u->first_name ?? '');
+                $student_name = (string) ($u->display_name ?? '');
+            }
+        }
+        if ($student_name === '') {
+            $student_name = __('Student', 'politeia-learning');
+        }
+        if ($first_name === '') {
+            $first_name = $student_name;
+        }
+
+        $course_title = $course_id > 0 ? (string) get_the_title($course_id) : '';
+        $date_start = '';
+        if ($course_id > 0 && $user_id > 0) {
+            global $wpdb;
+            if ($wpdb) {
+                $started_at = $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT started_at FROM {$wpdb->prefix}learni_enrollments WHERE user_id = %d AND course_post_id = %d LIMIT 1",
+                        $user_id,
+                        $course_id
+                    )
+                );
+                if (is_string($started_at) && $started_at !== '') {
+                    $date_start = wp_date(get_option('date_format'), strtotime($started_at));
+                }
+            }
+        }
+
+        $replacements = [
+            '[display_full_name]' => $student_name,
+            '[first_name]' => $first_name,
+            '[course_name]' => $course_title,
+            '[date_start]' => $date_start,
+            '[date_end]' => $issued_label,
+            '{{display_full_name}}' => $student_name,
+            '{{first_name}}' => $first_name,
+            '{{course_name}}' => $course_title,
+            '{{date_start}}' => $date_start,
+            '{{date_end}}' => $issued_label,
+        ];
+
+        foreach ($replacements as $key => $val) {
+            $paragraph = str_replace($key, (string) $val, $paragraph);
+        }
+
+        return $paragraph;
     }
 }

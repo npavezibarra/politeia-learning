@@ -321,7 +321,13 @@ $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
 	                    <p><?php _e('Antes de crear una evaluación, primero debes crear un curso.', 'politeia-learning'); ?></p>
 	                </div>
 	                <div id="pcg-quiz-creator-container">
-	                    <?php echo do_shortcode('[politeia_quiz_creator]'); ?>
+	                    <?php if ($pcg_is_editing_quiz): ?>
+	                        <?php echo do_shortcode('[politeia_quiz_creator]'); ?>
+	                    <?php else: ?>
+	                        <div class="pqc-container pqc-loading-state">
+	                            <p class="pqc-loading-state__text"><?php _e('Cargando evaluación…', 'politeia-learning'); ?></p>
+	                        </div>
+	                    <?php endif; ?>
 	                </div>
 	            </div>
 

@@ -876,10 +876,16 @@ $icon_cart = '<svg style="width:20px;height:20px;margin-right:8px;flex-shrink:0;
                     if (current_user_can('manage_options')) {
                         $show_add_partner = true;
                     } else {
-                        $author_id = (int) get_post_field('post_author', $course_id);
-                        $teacher_ids = get_post_meta($course_id, '_pcg_course_teachers', false);
-                        $teacher_ids = array_map('absint', (array) $teacher_ids);
-                        $show_add_partner = ($author_id === (int) $current_user_id) || in_array((int) $current_user_id, $teacher_ids, true);
+                        // Match Learni: allow enrolled learners to manage their course partner.
+                        $show_add_partner = (bool) $has_access;
+
+                        // Also allow course author/teachers (instructor/admin UX).
+                        if (!$show_add_partner) {
+                            $author_id = (int) get_post_field('post_author', $course_id);
+                            $teacher_ids = get_post_meta($course_id, '_pcg_course_teachers', false);
+                            $teacher_ids = array_map('absint', (array) $teacher_ids);
+                            $show_add_partner = ($author_id === (int) $current_user_id) || in_array((int) $current_user_id, $teacher_ids, true);
+                        }
                     }
                 }
                 ?>

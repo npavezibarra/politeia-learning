@@ -32,6 +32,88 @@ final class Enrollments
         return $status === self::STATUS_ACTIVE;
     }
 
+    /**
+     * @return array{id:int,status:string,source:string,payment_provider:?string,payment_reference:?string,woocommerce_order_id:?int}|null
+     */
+    public static function get_enrollment(int $user_id, int $course_post_id): ?array
+    {
+        if ($user_id <= 0 || $course_post_id <= 0) {
+            return null;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'learni_enrollments';
+
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT id, status, source, payment_provider, payment_reference, woocommerce_order_id
+                 FROM {$table}
+                 WHERE user_id = %d AND course_post_id = %d
+                 LIMIT 1",
+                $user_id,
+                $course_post_id
+            ),
+            ARRAY_A
+        );
+
+        if (!is_array($row) || empty($row['id'])) {
+            return null;
+        }
+
+        return [
+            'id' => (int) ($row['id'] ?? 0),
+            'status' => (string) ($row['status'] ?? ''),
+            'source' => (string) ($row['source'] ?? ''),
+            'payment_provider' => isset($row['payment_provider']) ? (string) $row['payment_provider'] : null,
+            'payment_reference' => isset($row['payment_reference']) ? (string) $row['payment_reference'] : null,
+            'woocommerce_order_id' => isset($row['woocommerce_order_id']) && $row['woocommerce_order_id'] !== null ? (int) $row['woocommerce_order_id'] : null,
+        ];
+    }
+
+    /**
+     * True when the user is the "owner" of the enrollment (purchaser/direct/manual), not a partner invite.
+     */
+    public static function user_is_owner(int $user_id, int $course_post_id): bool
+    {
+        $row = self::get_enrollment($user_id, $course_post_id);
+        if (!is_array($row) || ($row['status'] ?? '') !== self::STATUS_ACTIVE) {
+            return false;
+        }
+
+        $source = (string) ($row['source'] ?? '');
+        $provider = (string) ($row['payment_provider'] ?? '');
+
+        if ($source === self::SOURCE_WOOCOMMERCE || $source === self::SOURCE_DIRECT) {
+            return true;
+        }
+
+        // Manual enrollments are considered owner unless they were created by a course-partner invite.
+        if ($source === self::SOURCE_MANUAL && $provider !== 'partner_invite') {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Delete enrollment only if it was granted via course-partner invite.
+     */
+    public static function unenroll_if_partner_invite(int $user_id, int $course_post_id): bool
+    {
+        $row = self::get_enrollment($user_id, $course_post_id);
+        if (!is_array($row)) {
+            return false;
+        }
+
+        $source = (string) ($row['source'] ?? '');
+        $provider = (string) ($row['payment_provider'] ?? '');
+        if ($source === self::SOURCE_MANUAL && $provider === 'partner_invite') {
+            return self::delete($user_id, $course_post_id);
+        }
+
+        return false;
+    }
+
     public static function upsert(int $user_id, int $course_post_id, array $data): bool
     {
         if ($user_id <= 0 || $course_post_id <= 0) {
@@ -130,4 +212,3 @@ final class Enrollments
         return $ok !== false;
     }
 }
-

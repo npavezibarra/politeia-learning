@@ -176,6 +176,46 @@ function pl_get_pending_course_partner_invite(int $course_id): ?array
         return null;
     }
 
+    // Prefer unified partnerships table (Politeia Learning-owned) for pending course partner invites.
+    $table = $wpdb->prefix . 'politeia_user_object_partnerships';
+    $table_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table);
+    if ($table_exists) {
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT invitee_email
+                 FROM {$table}
+                 WHERE object_type = %s
+                   AND object_id = %d
+                   AND role = %s
+                   AND status = %s
+                 ORDER BY id DESC
+                 LIMIT 1",
+                'course',
+                $course_id,
+                'partner',
+                'pending'
+            ),
+            ARRAY_A
+        );
+
+        if (is_array($row) && !empty($row['invitee_email'])) {
+            $email = sanitize_email((string) ($row['invitee_email'] ?? ''));
+            if ($email !== '') {
+                $u = get_user_by('email', $email);
+                $invitee_user_id = ($u instanceof WP_User) ? (int) $u->ID : 0;
+                $label = ($u instanceof WP_User && !empty($u->display_name)) ? (string) $u->display_name : $email;
+
+                return [
+                    'label' => $label,
+                    'email' => $email,
+                    'user_id' => $invitee_user_id,
+                ];
+            }
+        }
+    }
+
+    // Legacy fallback: Bookshelf Reading Planner invites table.
     $table = $wpdb->prefix . 'politeia_plan_participant_invites';
     $table_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table);
     if (!$table_exists) {

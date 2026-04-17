@@ -14,6 +14,22 @@ final class PL_Learni_Frontend_Templates
 {
     private static bool $did_register_content_filter = false;
 
+    private static function strip_empty_course_padding_group(string $html): string
+    {
+        if ($html === '') {
+            return $html;
+        }
+
+        // Remove the empty padding-only block group that sometimes ends up in course content.
+        // Example:
+        // <div class="wp-block-group has-global-padding is-layout-constrained wp-block-group-is-layout-constrained" style="padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--60)">
+        // </div>
+        $pattern = '#<div\s+class="wp-block-group[^"]*has-global-padding[^"]*is-layout-constrained[^"]*wp-block-group-is-layout-constrained[^"]*"\s+style="[^"]*padding-top:var\(--wp--preset--spacing--60\)[^"]*padding-bottom:var\(--wp--preset--spacing--60\)[^"]*"\s*>\s*</div>#i';
+        $cleaned = preg_replace($pattern, '', $html);
+
+        return is_string($cleaned) ? $cleaned : $html;
+    }
+
     public static function init(): void
     {
         add_filter('template_include', [__CLASS__, 'template_include'], 50);
@@ -24,6 +40,8 @@ final class PL_Learni_Frontend_Templates
         add_action('admin_post_nopriv_pl_learni_enroll_course', [__CLASS__, 'handle_enroll_course_nopriv']);
         add_action('admin_post_pl_learni_mark_lesson_complete', [__CLASS__, 'handle_mark_lesson_complete']);
         add_action('admin_post_nopriv_pl_learni_mark_lesson_complete', [__CLASS__, 'handle_mark_lesson_complete_nopriv']);
+        add_action('admin_post_pl_learni_checkout_course', [__CLASS__, 'handle_checkout_course']);
+        add_action('admin_post_nopriv_pl_learni_checkout_course', [__CLASS__, 'handle_checkout_course_nopriv']);
         add_action('admin_post_pl_learni_view_certificate', [__CLASS__, 'handle_view_certificate']);
         add_action('admin_post_nopriv_pl_learni_view_certificate', [__CLASS__, 'handle_view_certificate_nopriv']);
 
@@ -64,6 +82,20 @@ final class PL_Learni_Frontend_Templates
         return (string) add_query_arg(
             [
                 'action' => 'pl_learni_view_certificate',
+                'course_id' => (string) $course_id,
+            ],
+            admin_url('admin-post.php')
+        );
+    }
+
+    private static function checkout_course_url(int $course_id): string
+    {
+        if ($course_id <= 0) {
+            return '';
+        }
+        return (string) add_query_arg(
+            [
+                'action' => 'pl_learni_checkout_course',
                 'course_id' => (string) $course_id,
             ],
             admin_url('admin-post.php')
@@ -131,6 +163,48 @@ final class PL_Learni_Frontend_Templates
         $course_id = isset($_GET['course_id']) ? (int) $_GET['course_id'] : 0;
         $redirect = $course_id > 0 ? (string) get_permalink($course_id) : home_url('/');
         wp_safe_redirect(wp_login_url($redirect));
+        exit;
+    }
+
+    public static function handle_checkout_course_nopriv(): void
+    {
+        $course_id = isset($_GET['course_id']) ? (int) $_GET['course_id'] : 0;
+        $redirect = $course_id > 0 ? self::checkout_course_url($course_id) : home_url('/');
+        wp_safe_redirect(wp_login_url($redirect));
+        exit;
+    }
+
+    public static function handle_checkout_course(): void
+    {
+        if (!is_user_logged_in()) {
+            self::handle_checkout_course_nopriv();
+        }
+
+        $course_id = isset($_GET['course_id']) ? (int) $_GET['course_id'] : 0;
+        if ($course_id <= 0 || get_post_type($course_id) !== \Learni\PostTypes\Course::POST_TYPE) {
+            wp_safe_redirect(home_url('/'));
+            exit;
+        }
+
+        $product_id = (int) get_post_meta($course_id, 'learni_wc_product_id', true);
+        if ($product_id <= 0 || !class_exists('WooCommerce') || !function_exists('wc_get_checkout_url')) {
+            wp_safe_redirect((string) get_permalink($course_id));
+            exit;
+        }
+
+        if (function_exists('wc_load_cart')) {
+            wc_load_cart();
+        }
+
+        if (function_exists('WC') && WC() && isset(WC()->cart) && WC()->cart) {
+            $cart_id = WC()->cart->generate_cart_id($product_id);
+            $existing_key = $cart_id ? WC()->cart->find_product_in_cart($cart_id) : '';
+            if (!$existing_key) {
+                WC()->cart->add_to_cart($product_id, 1);
+            }
+        }
+
+        wp_safe_redirect(wc_get_checkout_url());
         exit;
     }
 
@@ -347,22 +421,23 @@ final class PL_Learni_Frontend_Templates
 
     public static function render_certificate_modal_html(int $course_id, int $user_id): string
     {
-        $data = self::get_certificate_data($course_id, $user_id);
-        $sheet = self::render_certificate_sheet_html($data);
-
+        // The modal shell is rendered server-side so translations apply and we can reuse the
+        // same markup across templates. The actual certificate sheet is fetched/rendered
+        // client-side via the REST endpoint (see `assets/learner-quiz.js`) so it always
+        // matches the current certificate renderer/styling.
         $html = '<div id="learni-cert-modal" class="learni-cert-modal" aria-hidden="true">';
         $html .= '<div class="learni-cert-modal__backdrop" data-learni-cert-close="1"></div>';
         $html .= '<div class="learni-cert-modal__panel" role="dialog" aria-modal="true" aria-label="' . esc_attr__('Certificado', 'politeia-learning') . '">';
         $html .= '<div class="learni-cert-modal__head">';
         $html .= '<div class="learni-cert-modal__title">' . esc_html__('Certificado', 'politeia-learning') . '</div>';
         $html .= '<div class="learni-cert-modal__actions">';
-        if (!empty($data['eligible'])) {
-            $html .= '<button type="button" class="learni-btn secondary" data-learni-cert-download="1">' . esc_html__('Descargar PDF', 'politeia-learning') . '</button>';
-        }
+        // Hidden by default; JS toggles based on eligibility from the REST response.
+        $html .= '<button type="button" class="learni-btn secondary" data-learni-cert-download="1" style="display:none" disabled>' . esc_html__('Descargar PDF', 'politeia-learning') . '</button>';
         $html .= '<button type="button" class="learni-btn secondary" data-learni-cert-close="1">' . esc_html__('Cerrar', 'politeia-learning') . '</button>';
         $html .= '</div>';
         $html .= '</div>';
-        $html .= '<div class="learni-cert-modal__body">' . $sheet . '</div>';
+        $html .= '<div class="learni-cert-modal__notice" id="learni-cert-modal-notice" style="display:none"></div>';
+        $html .= '<div class="learni-cert-modal__body" id="learni-cert-modal-body"></div>';
         $html .= '</div>';
         $html .= '</div>';
 
@@ -408,12 +483,19 @@ final class PL_Learni_Frontend_Templates
             }
         }
 
-        if ($name === 'core/group') {
-            // Spanish pattern from the active theme: "Escrito por {author} en {date}".
-            if (preg_match('/<p>\\s*Escrito\\s+por\\s*<\\/p>/i', $block_content) && preg_match('/<p>\\s*en\\s*<\\/p>/i', $block_content)) {
-                return '';
-            }
-        }
+	        if ($name === 'core/group') {
+	            // Remove an empty padding-only group that some block themes insert around the content area.
+	            // This is purely spacing markup and becomes a blank gap on Learni screens.
+	            $maybe_stripped = self::strip_empty_course_padding_group($block_content);
+	            if ($maybe_stripped !== $block_content) {
+	                return $maybe_stripped;
+	            }
+
+	            // Spanish pattern from the active theme: "Escrito por {author} en {date}".
+	            if (preg_match('/<p>\\s*Escrito\\s+por\\s*<\\/p>/i', $block_content) && preg_match('/<p>\\s*en\\s*<\\/p>/i', $block_content)) {
+	                return '';
+	            }
+	        }
 
         return $block_content;
     }
@@ -443,7 +525,8 @@ final class PL_Learni_Frontend_Templates
         // Keep this self-contained (no dependency on separate Learni plugin).
         wp_enqueue_style(
             'pl-learni-material-symbols',
-            'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=auto_stories&display=swap',
+            // Use the full font (no `icon_names` subsetting) to avoid glyph fallback showing text like "PERSON_ADD".
+            'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap',
             [],
             null
         );
@@ -455,23 +538,45 @@ final class PL_Learni_Frontend_Templates
             defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0'
         );
 
-        if (is_singular('learni_course') || is_singular('learni_lesson')) {
-            wp_enqueue_script(
-                'pl-learni-quiz',
-                PL_LEARNI_URL . 'assets/learner-quiz.js',
-                [],
-                defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0',
-                true
-            );
-            wp_add_inline_script(
-                'pl-learni-quiz',
-                'window.Learni = Object.assign({}, window.Learni || {}, ' . wp_json_encode([
-                    'restUrl' => esc_url_raw(rest_url()),
-                    'restNonce' => wp_create_nonce('wp_rest'),
-                ]) . ');',
-                'before'
-            );
-        }
+	        if (is_singular('learni_course') || is_singular('learni_lesson')) {
+	            wp_enqueue_script(
+	                'pl-learni-quiz',
+	                PL_LEARNI_URL . 'assets/learner-quiz.js',
+	                [],
+	                defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0',
+	                true
+	            );
+	            wp_add_inline_script(
+	                'pl-learni-quiz',
+	                'window.Learni = Object.assign({}, window.Learni || {}, ' . wp_json_encode([
+	                    'restUrl' => esc_url_raw(rest_url()),
+	                    'restNonce' => wp_create_nonce('wp_rest'),
+	                    'authBaseUrl' => esc_url_raw(home_url('/')),
+	                    'isLoggedIn' => is_user_logged_in(),
+	                    'loginUrl' => function_exists('wc_get_page_permalink') ? (string) wc_get_page_permalink('myaccount') : wp_login_url(),
+	                    'i18n' => [
+	                        'certTitle' => __('Certificado', 'politeia-learning'),
+	                        'downloadPdf' => __('Descargar PDF', 'politeia-learning'),
+	                        'close' => __('Cerrar', 'politeia-learning'),
+	                        'loading' => __('Cargando…', 'politeia-learning'),
+	                        'ineligible' => __('Completa el curso para desbloquear tu certificado.', 'politeia-learning'),
+	                        'quizInitialKicker' => __('Evaluación inicial', 'politeia-learning'),
+	                        'quizFinalKicker' => __('Evaluación final', 'politeia-learning'),
+	                        'quizBegin' => __('Comenzar', 'politeia-learning'),
+	                        'quizCancel' => __('Cancelar', 'politeia-learning'),
+	                        'quizPrepInitial' => __("Vas a comenzar la evaluación de “{course}”. Responderás {count} preguntas.\n\nResponde con sinceridad: así podremos medir tu progreso.", 'politeia-learning'),
+	                        'quizPrepFinal' => __("Estás por iniciar la evaluación final de “{course}”. En la evaluación inicial obtuviste {score}%.\n\nResponde basándote en lo que aprendiste en el curso. Al final verás una comparación entre Inicial y Final para medir tu progreso.\n\nResponderás {count} preguntas.", 'politeia-learning'),
+	                        'quizQuestionOf' => __('Pregunta {current} de {total}', 'politeia-learning'),
+	                        'quizNext' => __('Siguiente', 'politeia-learning'),
+	                        'quizSubmit' => __('Enviar', 'politeia-learning'),
+	                        'quizBack' => __('Atrás', 'politeia-learning'),
+	                        'quizChooseAnswer' => __('Por favor elige una respuesta.', 'politeia-learning'),
+	                        'quizAnswerAll' => __('Por favor responde todas las preguntas.', 'politeia-learning'),
+	                    ],
+	                ]) . ');',
+	                'before'
+	            );
+	        }
 
         if (is_singular('learni_lesson')) {
             wp_enqueue_script(
@@ -531,6 +636,8 @@ final class PL_Learni_Frontend_Templates
         }
 
         $user_id = (int) get_current_user_id();
+        $is_logged_in = $user_id > 0;
+        $has_access = $is_logged_in && class_exists('\\Learni\\Access\\Access') && \Learni\Access\Access::user_can_access_course($user_id, $course_id);
 
         $title = (string) get_the_title($course_id);
         $excerpt = (string) get_post_field('post_excerpt', $course_id);
@@ -538,18 +645,10 @@ final class PL_Learni_Frontend_Templates
             $excerpt = wp_trim_words(wp_strip_all_tags((string) get_post_field('post_content', $course_id)), 40, '…');
         }
 
-        if ($user_id <= 0) {
-            return '<div class="learni-learner"><p>' . esc_html__('Please log in to view this course.', 'politeia-learning') . '</p></div>';
-        }
-
-        if (class_exists('\\Learni\\Access\\Access') && !\Learni\Access\Access::user_can_access_course($user_id, $course_id)) {
-            return '<div class="learni-learner"><p>' . esc_html__('You do not have access to this course.', 'politeia-learning') . '</p></div>';
-        }
-
         $items = class_exists('\\Learni\\Courses\\Outline') ? \Learni\Courses\Outline::get_items($course_id) : [];
         $lesson_ids = class_exists('\\Learni\\Courses\\Outline') ? \Learni\Courses\Outline::lesson_ids($course_id) : [];
-        $summary = class_exists('\\Learni\\Database\\Progress') ? \Learni\Database\Progress::course_summary($user_id, $course_id) : ['total' => 0, 'completed' => 0, 'percent' => 0];
-        $completed = class_exists('\\Learni\\Database\\Progress') ? array_flip(\Learni\Database\Progress::completed_lesson_ids($user_id, $course_id)) : [];
+        $summary = ($is_logged_in && class_exists('\\Learni\\Database\\Progress')) ? \Learni\Database\Progress::course_summary($user_id, $course_id) : ['total' => count($lesson_ids), 'completed' => 0, 'percent' => 0];
+        $completed = ($has_access && class_exists('\\Learni\\Database\\Progress')) ? array_flip(\Learni\Database\Progress::completed_lesson_ids($user_id, $course_id)) : [];
         $linear_order = self::course_linear_order_enabled($course_id);
         $lesson_index = self::lesson_index_map($lesson_ids);
         $max_unlocked = self::max_unlocked_lesson_index($lesson_ids, $completed, $linear_order);
@@ -562,19 +661,48 @@ final class PL_Learni_Frontend_Templates
         $product_id = (int) get_post_meta($course_id, 'learni_wc_product_id', true);
         $price_label = $price > 0 ? '$' . number_format((float) $price, 0, '.', ',') : __('FREE', 'politeia-learning');
         $is_free = $price <= 0 && $product_id <= 0;
-        $thumb_url = (string) get_the_post_thumbnail_url($course_id, 'large');
-        $certificate_url = ($percent >= 100 && self::certificate_template_exists($course_id)) ? self::certificate_view_url($course_id) : '';
+	        $thumb_url = (string) get_the_post_thumbnail_url($course_id, 'large');
+	        // Only show the certificate CTA once the course is complete.
+	        $certificate_available = $has_access && ($percent >= 100) && self::certificate_template_exists($course_id);
+        $has_course_partner = false;
+        if (class_exists('PL_Partnerships_Repository') && method_exists('PL_Partnerships_Repository', 'get_single_partner')) {
+            try {
+                $p = PL_Partnerships_Repository::get_single_partner('course', $course_id, 'partner');
+                $has_course_partner = is_array($p) && !empty($p['partner_user_id']);
+            } catch (\Throwable $e) {
+                $has_course_partner = false;
+            }
+        }
 
         $author_id = (int) get_post_field('post_author', $course_id);
         $author = $author_id > 0 ? get_userdata($author_id) : null;
-        $author_name = $author ? (string) ($author->display_name ?? '') : '';
-        if ($author_name === '') {
-            $author_name = (string) $author_id;
+        $author_first = ($author instanceof \WP_User) ? trim((string) ($author->first_name ?? '')) : '';
+        $author_last = ($author instanceof \WP_User) ? trim((string) ($author->last_name ?? '')) : '';
+        $author_full_name = trim($author_first . ' ' . $author_last);
+        if ($author_full_name === '' && $author instanceof \WP_User) {
+            $author_full_name = trim((string) ($author->display_name ?? ''));
+        }
+        if ($author_full_name === '') {
+            $author_full_name = (string) $author_id;
+        }
+        $author_slug = ($author instanceof \WP_User) ? (string) ($author->user_nicename ?? '') : '';
+        if ($author_slug === '' && $author instanceof \WP_User) {
+            $author_slug = (string) ($author->user_login ?? '');
+        }
+        $author_profile_url = $author_slug !== '' ? home_url('/profile/' . rawurlencode($author_slug) . '/') : '';
+        if ($author_profile_url === '' && $author_id > 0 && function_exists('get_author_posts_url')) {
+            $author_profile_url = (string) get_author_posts_url($author_id);
+        }
+        $author_avatar = ($author_id > 0 && function_exists('pl_get_user_profile_avatar_custom_url'))
+            ? (string) pl_get_user_profile_avatar_custom_url($author_id, 72)
+            : '';
+        if ($author_avatar === '' && $author_id > 0 && function_exists('get_avatar_url')) {
+            $author_avatar = (string) get_avatar_url($author_id, ['size' => 72]);
         }
 
         // Match Learni structure: the main wrapper is both `#learni-course` and `.learni-learner`
         // (needed for full-bleed hero math + consistent alignment with the site header).
-        $html = '<div id="learni-course" class="learni-learner alignwide">';
+        $html = '<div id="learni-course" class="learni-learner alignwide" data-course-id="' . esc_attr((string) $course_id) . '">';
 
         // Hero (banner + aside card).
         $html .= '<section class="learni-course-hero"><div class="learni-course-hero-content"><div class="learni-course-hero-inner">';
@@ -583,19 +711,44 @@ final class PL_Learni_Frontend_Templates
         if ($excerpt !== '') {
             $html .= '<p class="learni-course-description">' . esc_html($excerpt) . '</p>';
         }
-        $html .= '<p class="learni-course-author">' . esc_html(sprintf(__('Written by %s', 'politeia-learning'), $author_name)) . '</p>';
+        $html .= '<div class="learni-course-author">';
+        if ($author_avatar !== '') {
+            if ($author_profile_url !== '') {
+                $html .= '<a class="learni-course-author-avatar-link" href="' . esc_url($author_profile_url) . '">';
+                $html .= '<img class="learni-course-author-avatar" src="' . esc_url($author_avatar) . '" alt="">';
+                $html .= '</a>';
+            } else {
+                $html .= '<div class="learni-course-author-avatar-link" aria-hidden="true">';
+                $html .= '<img class="learni-course-author-avatar" src="' . esc_url($author_avatar) . '" alt="">';
+                $html .= '</div>';
+            }
+        }
+        $html .= '<div class="learni-course-author-meta">';
+        $html .= '<div class="learni-course-author-label">' . esc_html__('Profesor', 'politeia-learning') . '</div>';
+        if ($author_profile_url !== '') {
+            $html .= '<a class="learni-course-author-name learni-course-author-name-link" href="' . esc_url($author_profile_url) . '">';
+            $html .= esc_html($author_full_name);
+            $html .= '</a>';
+        } else {
+            $html .= '<div class="learni-course-author-name">' . esc_html($author_full_name) . '</div>';
+        }
+        $html .= '</div>';
+        $html .= '</div>';
 
-        $html .= '<div class="learni-progress">';
-        $html .= '<div class="learni-progress-head">';
-        $html .= '<span class="learni-progress-text">' . esc_html($progress_text) . '</span>';
-        $html .= '<span class="learni-progress-percent">' . esc_html((string) $percent) . '%</span>';
-        $html .= '</div>';
-        $html .= '<div class="learni-progress-bar" role="progressbar" aria-valuenow="' . esc_attr((string) $percent) . '" aria-valuemin="0" aria-valuemax="100">';
-        $html .= '<div class="learni-progress-bar-fill" style="width:' . esc_attr((string) $percent) . '%">';
-        $html .= '<div class="learni-progress-shimmer" aria-hidden="true"></div>';
-        $html .= '</div>';
-        $html .= '</div>';
-        $html .= '</div>';
+        // Hide the main hero progress when a course partner is accepted; the competitive comparison lives in the aside.
+        if (!$has_course_partner) {
+            $html .= '<div class="learni-progress">';
+            $html .= '<div class="learni-progress-head">';
+            $html .= '<span class="learni-progress-text">' . esc_html($progress_text) . '</span>';
+            $html .= '<span class="learni-progress-percent">' . esc_html((string) $percent) . '%</span>';
+            $html .= '</div>';
+            $html .= '<div class="learni-progress-bar" role="progressbar" aria-valuenow="' . esc_attr((string) $percent) . '" aria-valuemin="0" aria-valuemax="100">';
+            $html .= '<div class="learni-progress-bar-fill" style="width:' . esc_attr((string) $percent) . '%">';
+            $html .= '<div class="learni-progress-shimmer" aria-hidden="true"></div>';
+            $html .= '</div>';
+            $html .= '</div>';
+            $html .= '</div>';
+        }
         $html .= '</div>'; // left
 
         $html .= '<aside class="learni-course-hero-card" aria-label="' . esc_attr__('Course details', 'politeia-learning') . '">';
@@ -605,49 +758,81 @@ final class PL_Learni_Frontend_Templates
         $html .= '<div class="learni-course-hero-card-body">';
         $html .= '<div class="learni-course-price-row">';
         $html .= '<div class="learni-course-price">' . esc_html($price_label) . '</div>';
-        if ($certificate_url !== '' && $percent >= 100) {
-            $html .= '<a class="learni-course-cert-trigger" href="' . esc_url($certificate_url) . '" target="_blank" rel="noopener">';
-            $html .= '<span class="learni-course-cert-icon" aria-hidden="true"></span>';
+        if ($certificate_available) {
+            $html .= '<button id="learni-course-cert-trigger" class="learni-course-cert-trigger" type="button" aria-label="' . esc_attr__('View certificate', 'politeia-learning') . '" data-learni-cert-open="1" data-course-id="' . esc_attr((string) $course_id) . '">';
+            $html .= '<span class="material-symbols-outlined learni-ms-icon learni-course-cert-icon" aria-hidden="true">history_edu</span>';
             $html .= '<span class="learni-course-cert-text">' . esc_html__('CERTIFICADO', 'politeia-learning') . '</span>';
-            $html .= '</a>';
+            $html .= '</button>';
         }
         $html .= '</div>';
         $html .= '<div class="learni-course-card-actions">';
 
         // Binomial quiz aside controls (ported subset).
-        $binomial = self::binomial_course_state($course_id, $user_id, $percent);
+        $binomial = $is_logged_in ? self::binomial_course_state($course_id, $user_id, $percent) : [];
         $binomial_quiz_id = (int) ($binomial['quizId'] ?? 0);
+        if ($binomial_quiz_id <= 0) {
+            $binomial_quiz_id = self::binomial_quiz_id_for_course($course_id);
+        }
         if ($binomial_quiz_id > 0) {
             if (is_array($binomial['initial'] ?? null)) {
                 $ip = (int) ($binomial['initial']['percent'] ?? 0);
-                $html .= '<div class="learni-eval">';
+                $html .= '<div class="learni-eval" data-learni-eval="initial">';
                 $html .= '<div class="learni-eval-head"><span class="learni-eval-title">' . esc_html__('EVALUACIÓN INICIAL', 'politeia-learning') . '</span><span class="learni-eval-percent">' . esc_html((string) $ip) . '%</span></div>';
                 $html .= '<div class="learni-eval-track"><div class="learni-eval-bar" style="width:' . esc_attr((string) $ip) . '%"></div></div>';
                 $html .= '</div>';
             }
             if (is_array($binomial['final'] ?? null)) {
                 $fp = (int) ($binomial['final']['percent'] ?? 0);
-                $html .= '<div class="learni-eval">';
+                $html .= '<div class="learni-eval" data-learni-eval="final">';
                 $html .= '<div class="learni-eval-head"><span class="learni-eval-title">' . esc_html__('EVALUACIÓN FINAL', 'politeia-learning') . '</span><span class="learni-eval-percent">' . esc_html((string) $fp) . '%</span></div>';
                 $html .= '<div class="learni-eval-track"><div class="learni-eval-bar" style="width:' . esc_attr((string) $fp) . '%"></div></div>';
                 $html .= '</div>';
             }
 
-            if (!empty($binomial['needsInitial'])) {
-                if ($user_id > 0) {
-                    $html .= '<button id="learni-course-first-quiz" class="learni-btn learni-btn-quiz" type="button" data-course-id="' . esc_attr((string) $course_id) . '" data-phase="initial">' . esc_html__('TAKE FIRST QUIZ', 'politeia-learning') . '</button>';
-                } else {
-                    $html .= '<a href="' . esc_url(wp_login_url(get_permalink($course_id))) . '" class="learni-btn learni-btn-quiz">' . esc_html__('INICIA SESIÓN PARA COMENZAR', 'politeia-learning') . '</a>';
+            $submitted_count = null;
+            if (isset($binomial['submittedCount'])) {
+                $submitted_count = (int) $binomial['submittedCount'];
+            } elseif ($is_logged_in && $binomial_quiz_id > 0) {
+                // Fallback: if binomial_course_state() didn't return submittedCount for any reason,
+                // query attempts directly so partners still see the correct CTA.
+                global $wpdb;
+                if ($wpdb) {
+                    $attempts_table = $wpdb->prefix . 'learni_quiz_attempts';
+                    $submitted_count = (int) $wpdb->get_var(
+                        $wpdb->prepare(
+                            "SELECT COUNT(*)
+                             FROM {$attempts_table}
+                             WHERE quiz_id = %d AND user_id = %d AND status = %s",
+                            $binomial_quiz_id,
+                            $user_id,
+                            'submitted'
+                        )
+                    );
                 }
             }
-            if (!empty($binomial['needsFinal']) && $percent >= 100 && empty($binomial['final'])) {
+
+            $show_first = false;
+            if (!$is_logged_in) {
+                $show_first = true;
+            } elseif ($has_access) {
+                if ($submitted_count !== null && $submitted_count === 0) {
+                    $show_first = true;
+                } elseif (!empty($binomial['needsInitial'])) {
+                    $show_first = true;
+                }
+            }
+
+            if ($show_first) {
+                $html .= '<button id="learni-course-first-quiz" class="learni-btn learni-btn-quiz" type="button" data-course-id="' . esc_attr((string) $course_id) . '" data-phase="initial">' . esc_html__('TAKE FIRST QUIZ', 'politeia-learning') . '</button>';
+            }
+            if ($is_logged_in && !empty($binomial['needsFinal']) && $percent >= 100 && empty($binomial['final'])) {
                 $is_enrolled = class_exists('\\Learni\\Database\\Enrollments') ? \Learni\Database\Enrollments::user_has_active($user_id, $course_id) : false;
                 $disabled = (!empty($binomial['canTakeFinal']) && $is_enrolled) ? '' : ' disabled';
                 $html .= '<button id="learni-course-final-quiz" class="learni-btn learni-btn-quiz" type="button" data-course-id="' . esc_attr((string) $course_id) . '" data-phase="final"' . $disabled . '>' . esc_html__('TAKE FINAL QUIZ', 'politeia-learning') . '</button>';
             }
         }
 
-        $is_enrolled = class_exists('\\Learni\\Database\\Enrollments') ? \Learni\Database\Enrollments::user_has_active($user_id, $course_id) : false;
+        $is_enrolled = $has_access && class_exists('\\Learni\\Database\\Enrollments') ? \Learni\Database\Enrollments::user_has_active($user_id, $course_id) : false;
         $course_permalink = (string) get_permalink($course_id);
         $first_lesson_url = '';
         if (!empty($lesson_ids)) {
@@ -678,10 +863,14 @@ final class PL_Learni_Frontend_Templates
             }
         }
 
-        if (!empty($binomial['canRestart'])) {
+        if ($has_access && !empty($binomial['canRestart'])) {
             $html .= '<button id="learni-course-restart" class="learni-btn learni-course-primary-btn" type="button" data-course-id="' . esc_attr((string) $course_id) . '">' . esc_html__('REINICIAR CURSO', 'politeia-learning') . '</button>';
         } elseif (!$is_enrolled && !$is_free) {
-            $product_url = $product_id > 0 ? get_permalink($product_id) : '#';
+            $checkout_url = $product_id > 0 ? self::checkout_course_url($course_id) : '#';
+            $product_url = ($user_id <= 0 && $checkout_url !== '#') ? wp_login_url($checkout_url) : $checkout_url;
+            if ($product_url === '' || $product_url === '#') {
+                $product_url = $course_permalink;
+            }
             $html .= '<a class="learni-btn learni-course-primary-btn" href="' . esc_url($product_url) . '">' . esc_html__('COMPRAR CURSO', 'politeia-learning') . '</a>';
         } elseif ($is_free && !$is_enrolled) {
             $redirect_to = $first_lesson_url !== '' ? $first_lesson_url : $course_permalink;
@@ -692,11 +881,145 @@ final class PL_Learni_Frontend_Templates
             $html .= wp_nonce_field('pl_learni_enroll_course_' . $course_id, '_wpnonce', true, false);
             $html .= '<button type="submit" class="learni-btn learni-course-primary-btn">' . esc_html__('START COURSE', 'politeia-learning') . '</button>';
             $html .= '</form>';
-        } elseif ($continue_lesson_url !== '') {
+        } elseif ($has_access && $continue_lesson_url !== '') {
             $html .= '<a class="learni-btn learni-course-primary-btn" href="' . esc_url($continue_lesson_url) . '">' . esc_html__($is_enrolled ? 'CONTINUE' : 'START COURSE', 'politeia-learning') . '</a>';
         } else {
             $html .= '<button type="button" class="learni-btn learni-course-primary-btn" disabled>' . esc_html__('START COURSE', 'politeia-learning') . '</button>';
         }
+
+        // Course partner UI (after primary action).
+        // - Show info to enrolled users (including the invited partner).
+        // - Only the purchaser/owner (or admin) can add/replace/remove partners.
+        $show_partner_section = $is_logged_in && $has_access;
+        $can_manage_partner = $is_logged_in && (current_user_can('manage_options') || (class_exists('\\Learni\\Database\\Enrollments') && method_exists('\\Learni\\Database\\Enrollments', 'user_is_owner') && \Learni\Database\Enrollments::user_is_owner($user_id, $course_id)));
+
+        if ($show_partner_section) {
+            $partner = null;
+            if (class_exists('PL_Partnerships_Repository') && method_exists('PL_Partnerships_Repository', 'get_single_partner')) {
+                try {
+                    $partner = PL_Partnerships_Repository::get_single_partner('course', $course_id, 'partner');
+                } catch (\Throwable $e) {
+                    $partner = null;
+                }
+            }
+
+            $partner_user_id = (is_array($partner) && !empty($partner['partner_user_id'])) ? (int) $partner['partner_user_id'] : 0;
+            $partner_user = $partner_user_id > 0 ? get_userdata($partner_user_id) : null;
+            $partner_name = ($partner_user instanceof \WP_User) ? (string) $partner_user->display_name : '';
+            $is_current_partner = $partner_user_id > 0 && $partner_user_id === $user_id;
+            if ($is_current_partner) {
+                $can_manage_partner = false;
+            }
+            $owner_user_id = (is_array($partner) && !empty($partner['owner_user_id'])) ? (int) $partner['owner_user_id'] : 0;
+
+            // Fallback: attempt to infer the purchaser/owner from active enrollments.
+            if ($owner_user_id <= 0 && $partner_user_id > 0) {
+                global $wpdb;
+                if ($wpdb) {
+                    $enroll_table = $wpdb->prefix . 'learni_enrollments';
+                    $rows = $wpdb->get_results(
+                        $wpdb->prepare(
+                            "SELECT user_id, source, payment_provider
+                             FROM {$enroll_table}
+                             WHERE course_post_id = %d AND status = %s
+                             ORDER BY created_at ASC
+                             LIMIT 10",
+                            $course_id,
+                            \Learni\Database\Enrollments::STATUS_ACTIVE
+                        ),
+                        ARRAY_A
+                    );
+                    foreach ((array) $rows as $r) {
+                        if (!is_array($r)) {
+                            continue;
+                        }
+                        $candidate_id = (int) ($r['user_id'] ?? 0);
+                        if ($candidate_id <= 0) {
+                            continue;
+                        }
+                        $src = (string) ($r['source'] ?? '');
+                        $prov = (string) ($r['payment_provider'] ?? '');
+                        $is_owner_row = ($src === \Learni\Database\Enrollments::SOURCE_WOOCOMMERCE)
+                            || ($src === \Learni\Database\Enrollments::SOURCE_DIRECT)
+                            || ($src === \Learni\Database\Enrollments::SOURCE_MANUAL && $prov !== 'partner_invite');
+                        if ($is_owner_row) {
+                            $owner_user_id = $candidate_id;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            $other_user_id = 0;
+            if ($partner_user_id > 0) {
+                $other_user_id = ($partner_user_id === $user_id) ? $owner_user_id : $partner_user_id;
+            }
+
+            $html .= '<div class="learni-course-partner">';
+            $html .= '<div class="learni-course-partner-title-row">';
+            $html .= '<div class="learni-course-partner-title">' . esc_html__('Partner', 'politeia-learning') . '</div>';
+            if ($can_manage_partner && $partner_user_id > 0) {
+                $html .= '<button type="button" class="pl-partner-remove learni-course-partner-remove" data-object-type="course" data-object-id="' . esc_attr((string) $course_id) . '" data-user-id="' . esc_attr((string) $partner_user_id) . '" aria-label="' . esc_attr__('Eliminar partner', 'politeia-learning') . '" title="' . esc_attr__('Eliminar partner', 'politeia-learning') . '">×</button>';
+            }
+            $html .= '</div>';
+
+            $pending_invite = function_exists('pl_get_pending_course_partner_invite') ? pl_get_pending_course_partner_invite((int) $course_id) : null;
+            if (is_array($pending_invite) && !empty($pending_invite['label'])) {
+                $html .= '<div class="learni-course-partner-pending">' . esc_html(sprintf(__('Esperando a %s', 'politeia-learning'), (string) $pending_invite['label'])) . '</div>';
+            }
+
+            // Competition / visibility: show progress bars for both users (partner first, then the viewer).
+            if (class_exists('\\Learni\\Database\\Progress') && $other_user_id > 0 && $partner_user_id > 0) {
+                $progress_users = array_values(array_unique(array_filter(array_map('absint', [$other_user_id, $user_id]))));
+
+                if (!empty($progress_users)) {
+                    $html .= '<div class="learni-course-partner-progress" aria-label="' . esc_attr__('Course progress comparison', 'politeia-learning') . '">';
+
+                    foreach ($progress_users as $pid) {
+                        $u = get_userdata($pid);
+                        $display = ($u instanceof \WP_User) ? (string) $u->display_name : '';
+                        if ($display === '') {
+                            $display = (string) $pid;
+                        }
+                        $avatar = function_exists('get_avatar_url') ? (string) get_avatar_url((int) $pid, ['size' => 48]) : '';
+                        $p_summary = \Learni\Database\Progress::course_summary($pid, $course_id);
+                        $p_percent = (int) ($p_summary['percent'] ?? 0);
+                        if ($p_percent < 0) {
+                            $p_percent = 0;
+                        } elseif ($p_percent > 100) {
+                            $p_percent = 100;
+                        }
+
+                        $html .= '<div class="learni-course-partner-progress-item">';
+                        $html .= '<div class="learni-course-partner-progress-head">';
+                        $html .= '<div class="learni-course-partner-progress-user">';
+                        if ($avatar !== '') {
+                            $html .= '<img class="learni-course-partner-progress-avatar" src="' . esc_url($avatar) . '" alt="">';
+                        }
+                        $html .= '<span class="learni-course-partner-progress-name">' . esc_html($display) . '</span>';
+                        $html .= '</div>';
+                        $html .= '<span class="learni-course-partner-progress-percent">' . esc_html((string) $p_percent) . '%</span>';
+                        $html .= '</div>';
+                        $html .= '<div class="learni-course-partner-progress-bar" role="progressbar" aria-valuenow="' . esc_attr((string) $p_percent) . '" aria-valuemin="0" aria-valuemax="100">';
+                        $html .= '<span class="learni-course-partner-progress-fill" style="width:' . esc_attr((string) $p_percent) . '%"></span>';
+                        $html .= '</div>';
+                        $html .= '</div>';
+                    }
+
+                    $html .= '</div>';
+                }
+            }
+
+            if ($can_manage_partner) {
+                $btn_label = ($partner_user_id > 0) ? __('Replace Partner', 'politeia-learning') : __('Add Partner', 'politeia-learning');
+                $html .= '<button id="pl-add-partner-btn-' . esc_attr((string) $course_id) . '" type="button" class="learni-btn learni-course-partner-btn pl-add-partner addPartnerBtn">';
+                $html .= '<span class="material-symbols-outlined learni-ms-icon" aria-hidden="true">person_add</span>';
+                $html .= '<span class="learni-course-partner-btn-text">' . esc_html($btn_label) . '</span>';
+                $html .= '</button>';
+            }
+            $html .= '</div>';
+        }
+
         $html .= '</div>';
         $html .= '<div class="learni-course-includes">';
         $html .= '<div class="learni-course-includes-title">' . esc_html__('CURSO INCLUYE', 'politeia-learning') . '</div>';
@@ -713,6 +1036,7 @@ final class PL_Learni_Frontend_Templates
         // Render course content using the normal WP content pipeline (minus our own wrapper filter).
         $raw = (string) get_post_field('post_content', $course_id);
         $processed = apply_filters('the_content', $raw);
+        $processed = self::strip_empty_course_padding_group($processed);
         $html .= '<div class="learni-course-body">';
         $html .= '<div class="learni-tabs" role="tablist" aria-label="' . esc_attr__('Course tabs', 'politeia-learning') . '">';
         $html .= '<button type="button" class="learni-tab is-active" role="tab" aria-selected="true" data-learni-tab="content">' . esc_html__('CONTENT', 'politeia-learning') . '</button>';
@@ -773,7 +1097,7 @@ final class PL_Learni_Frontend_Templates
         $html .= '</div>'; // course body
         $html .= '</div>'; // #learni-course
 
-        if ($certificate_url !== '') {
+        if ($certificate_available) {
             $html .= self::render_certificate_modal_html($course_id, $user_id);
         }
 
@@ -960,7 +1284,7 @@ final class PL_Learni_Frontend_Templates
         $html .= '<div class="learni-lesson-step">' . esc_html(sprintf(__('LECCIÓN %1$d DE %2$d', 'politeia-learning'), (int) $step, (int) $total)) . '</div>';
         $html .= '<div class="learni-lesson-top-actions">';
 
-        $btn_label = $is_complete ? __('FINALIZADO', 'politeia-learning') : __('FINALIZAR', 'politeia-learning');
+        $btn_label = __('FINALIZADO', 'politeia-learning');
         $btn_disabled = ($user_id <= 0) || $is_complete || ($course_id <= 0) || $is_locked;
         $requires_video_gate = (!$btn_disabled && $video_provider === 'youtube' && $video_html !== '');
         $btn_disabled = $btn_disabled || $requires_video_gate;
@@ -1481,6 +1805,58 @@ final class PL_Learni_Frontend_Templates
             'initial' => $initial,
             'final' => $final,
         ];
+    }
+
+    private static function binomial_quiz_id_for_course(int $course_id): int
+    {
+        if ($course_id <= 0) {
+            return 0;
+        }
+
+        global $wpdb;
+        if (!$wpdb) {
+            return 0;
+        }
+
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, lesson_post_id, settings_json
+                 FROM {$wpdb->prefix}learni_quizzes
+                 WHERE course_post_id = %d
+                 ORDER BY id ASC",
+                $course_id
+            ),
+            ARRAY_A
+        );
+        if (empty($rows)) {
+            return 0;
+        }
+
+        $quiz_id = 0;
+        $fallback_id = 0;
+        $fallback_count = 0;
+        foreach ($rows as $row) {
+            $settings = [];
+            if (!empty($row['settings_json'])) {
+                $decoded = json_decode((string) $row['settings_json'], true);
+                if (is_array($decoded)) {
+                    $settings = $decoded;
+                }
+            }
+            if (isset($settings['role']) && (string) $settings['role'] === 'binomial') {
+                $quiz_id = (int) ($row['id'] ?? 0);
+                break;
+            }
+            if (empty($row['lesson_post_id'])) {
+                $fallback_id = (int) ($row['id'] ?? 0);
+                $fallback_count++;
+            }
+        }
+        if ($quiz_id <= 0 && $fallback_count === 1) {
+            $quiz_id = $fallback_id;
+        }
+
+        return $quiz_id > 0 ? $quiz_id : 0;
     }
 
     private static function attempt_public_payload(array $row): array

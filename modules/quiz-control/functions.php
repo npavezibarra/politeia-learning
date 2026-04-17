@@ -694,7 +694,7 @@ function mostrar_info_usuario_checkout()
     echo '</div>';
     echo '</div>';
 }
-add_action('woocommerce_before_checkout_form', 'mostrar_info_usuario_checkout', 5);
+// add_action('woocommerce_before_checkout_form', 'mostrar_info_usuario_checkout', 5);
 
 
 
@@ -765,8 +765,8 @@ function bfg_validar_y_avisar_compra_duplicada()
         }
     }
 }
-add_action('woocommerce_before_checkout_form', 'bfg_validar_y_avisar_compra_duplicada', 1);
-add_action('woocommerce_before_cart', 'bfg_validar_y_avisar_compra_duplicada', 1);
+// add_action('woocommerce_before_checkout_form', 'bfg_validar_y_avisar_compra_duplicada', 1);
+// add_action('woocommerce_before_cart', 'bfg_validar_y_avisar_compra_duplicada', 1);
 
 
 /* FUNCION AJAX */

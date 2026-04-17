@@ -14,6 +14,8 @@ class PL_Auth_Login_Register
     private const TOKEN_EXPIRES_META = 'pl_auth_verification_token_expires';
     private const NONCE_ACTION = 'pl_auth_submit';
     private const NONCE_FIELD = 'pl_auth_nonce';
+    private const RESEND_NONCE_ACTION = 'pl_auth_resend_confirmation';
+    private const RESEND_NONCE_FIELD = 'pl_auth_resend_nonce';
     private const QUERY_VIEW = 'pl_auth_view';
     private const QUERY_NOTICE = 'pl_auth_notice';
     private const QUERY_ERROR = 'pl_auth_error';
@@ -21,15 +23,34 @@ class PL_Auth_Login_Register
 
     public static function init(): void
     {
+        add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_assets'], 20);
         add_action('wp_body_open', [__CLASS__, 'render_auth_modal'], 20);
         add_action('wp_footer', [__CLASS__, 'render_auth_modal'], 20);
+        add_action('wp_footer', [__CLASS__, 'render_unverified_popup'], 30);
         add_action('admin_post_nopriv_pl_auth_submit', [__CLASS__, 'handle_submit']);
         add_action('admin_post_pl_auth_submit', [__CLASS__, 'handle_submit']);
+        add_action('admin_post_pl_auth_resend_confirmation', [__CLASS__, 'handle_resend_confirmation']);
+        add_action('admin_post_nopriv_pl_auth_resend_confirmation', [__CLASS__, 'handle_resend_confirmation_nopriv']);
         add_action('template_redirect', [__CLASS__, 'handle_confirmation_link'], 1);
         add_filter('login_url', [__CLASS__, 'filter_login_url'], 10, 3);
         add_filter('register_url', [__CLASS__, 'filter_register_url'], 10);
         add_filter('wp_authenticate_user', [__CLASS__, 'ensure_verified_before_login'], 20, 2);
         add_shortcode('pl_auth_links', [__CLASS__, 'render_auth_links_shortcode']);
+    }
+
+    public static function enqueue_assets(): void
+    {
+        if (is_admin() || is_user_logged_in()) {
+            return;
+        }
+
+        // Poppins font for auth modal UI.
+        wp_enqueue_style(
+            'pl-auth-poppins',
+            'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap',
+            [],
+            null
+        );
     }
 
     public static function filter_login_url(string $login_url, string $redirect, bool $force_reauth): string
@@ -65,6 +86,11 @@ class PL_Auth_Login_Register
         echo self::get_auth_modal_markup();
     }
 
+    public static function render_unverified_popup(): void
+    {
+        echo self::get_unverified_popup_markup();
+    }
+
     public static function get_auth_modal_markup(): string
     {
         static $rendered = false;
@@ -76,8 +102,8 @@ class PL_Auth_Login_Register
         $rendered = true;
 
         $view = self::sanitize_view((string) wp_unslash($_GET[self::QUERY_VIEW] ?? 'login'));
-        $notice = self::get_notice_message((string) wp_unslash($_GET[self::QUERY_NOTICE] ?? ''));
-        $error = self::get_error_message((string) wp_unslash($_GET[self::QUERY_ERROR] ?? ''));
+        $notice = (string) sanitize_key((string) wp_unslash($_GET[self::QUERY_NOTICE] ?? ''));
+        $error = (string) sanitize_key((string) wp_unslash($_GET[self::QUERY_ERROR] ?? ''));
         $redirect_to = self::resolve_redirect_to((string) wp_unslash($_GET['redirect_to'] ?? ''));
         $auto_open = isset($_GET[self::QUERY_VIEW]) || isset($_GET[self::QUERY_NOTICE]) || isset($_GET[self::QUERY_ERROR]);
         $action_url = admin_url('admin-post.php');
@@ -85,6 +111,159 @@ class PL_Auth_Login_Register
 
         ob_start();
         include PL_AUTH_PATH . 'templates/auth-modal.php';
+        return (string) ob_get_clean();
+    }
+
+    public static function get_unverified_popup_markup(): string
+    {
+        static $rendered = false;
+        if ($rendered || is_admin() || !is_user_logged_in()) {
+            return '';
+        }
+
+        $user_id = (int) get_current_user_id();
+        if ($user_id <= 0 || self::is_verified($user_id) || !self::requires_verification($user_id)) {
+            return '';
+        }
+
+        $rendered = true;
+
+        $notice_code = (string) sanitize_key((string) wp_unslash($_GET[self::QUERY_NOTICE] ?? ''));
+        $error_code = (string) sanitize_key((string) wp_unslash($_GET[self::QUERY_ERROR] ?? ''));
+        $force_open = isset($_GET['pl_auth_unverified']) && sanitize_key((string) wp_unslash($_GET['pl_auth_unverified'])) === '1';
+        $open_after_quiz = isset($_GET['pl_auth_unverified_after_quiz']) && sanitize_key((string) wp_unslash($_GET['pl_auth_unverified_after_quiz'])) === '1';
+        $action_url = admin_url('admin-post.php');
+        $nonce = wp_create_nonce(self::RESEND_NONCE_ACTION);
+        $redirect_to = self::resolve_redirect_to((string) wp_unslash($_GET['redirect_to'] ?? ''));
+        $redirect_to_for_form = remove_query_arg([
+            'pl_auth_unverified_after_quiz',
+            'pl_auth_unverified',
+            self::QUERY_NOTICE,
+            self::QUERY_ERROR,
+        ], $redirect_to);
+
+        $is_spanish = strpos(get_locale(), 'es') === 0;
+        $title = $is_spanish ? 'Aún no has verificado tu cuenta' : 'Your account is not verified yet';
+        $body = $is_spanish
+            ? 'Para mayor seguridad revisa tu correo y verifica la creación de tu cuenta en Politeia.'
+            : 'For your security, please check your email and verify the creation of your Politeia account.';
+        $cta = $is_spanish ? 'Enviar correo de confirmación' : 'Send confirmation email';
+        $sent = $is_spanish ? 'Te enviamos un correo de confirmación. Por favor revisa tu bandeja de entrada.' : 'We sent a confirmation email. Please check your inbox.';
+        $throttled = $is_spanish ? 'Espera un momento antes de reenviar el correo.' : 'Please wait a moment before resending.';
+        $generic_err = $is_spanish ? 'Algo salió mal. Por favor, inténtalo de nuevo.' : 'Something went wrong. Please try again.';
+
+        $message_html = '';
+        if ($notice_code === 'verification_sent') {
+            $message_html = '<div class="pl-auth-unverified__msg is-ok">' . esc_html($sent) . '</div>';
+        } elseif ($error_code === 'resend_throttled') {
+            $message_html = '<div class="pl-auth-unverified__msg is-err">' . esc_html($throttled) . '</div>';
+        } elseif ($error_code !== '') {
+            $message_html = '<div class="pl-auth-unverified__msg is-err">' . esc_html($generic_err) . '</div>';
+        }
+
+        // Do not interrupt the post-register flow (we auto-start the quiz after registration).
+        // The popup is opened after completing the quiz (via explicit query param), or when a resend action errors.
+        $should_open = $force_open || $open_after_quiz || ($error_code === 'resend_throttled' || $error_code === 'invalid_nonce');
+
+        ob_start();
+        ?>
+        <style>
+            #pl-auth-unverified {
+                position: fixed;
+                inset: 0;
+                z-index: 10001;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                padding: 24px;
+                background: rgba(15, 23, 42, 0.68);
+                backdrop-filter: blur(10px);
+                box-sizing: border-box;
+                font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            }
+            #pl-auth-unverified.is-open { display: flex; }
+            #pl-auth-unverified * { box-sizing: border-box; }
+            .pl-auth-unverified__card {
+                width: min(100%, 520px);
+                background: #fff;
+                border: 1px solid rgba(15, 23, 42, 0.08);
+                border-radius: 24px;
+                box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28);
+                overflow: hidden;
+            }
+            .pl-auth-unverified__inner { padding: 28px 28px 26px; position: relative; }
+            .pl-auth-unverified__close {
+                position: absolute;
+                right: 14px;
+                top: 12px;
+                width: 42px;
+                height: 42px;
+                border-radius: 999px;
+                border: 0;
+                background: rgba(15, 23, 42, 0.06);
+                cursor: pointer;
+                font-size: 18px;
+                line-height: 1;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .pl-auth-unverified__title { margin: 0 0 10px; font-size: 20px; line-height: 1.15; color: #0f172a; }
+            .pl-auth-unverified__text { margin: 0 0 18px; font-size: 15px; line-height: 1.5; color: #475569; }
+            .pl-auth-unverified__msg { margin: 0 0 14px; padding: 12px 14px; border-radius: 14px; font-size: 14px; line-height: 1.4; }
+            .pl-auth-unverified__msg.is-ok { background: rgba(16, 185, 129, 0.10); border: 1px solid rgba(16, 185, 129, 0.22); color: #065f46; }
+            .pl-auth-unverified__msg.is-err { background: rgba(239, 68, 68, 0.10); border: 1px solid rgba(239, 68, 68, 0.22); color: #7f1d1d; }
+            .pl-auth-unverified__actions { display: flex; justify-content: center; }
+            .pl-auth-unverified__btn {
+                appearance: none;
+                border: 1px solid rgba(17, 24, 39, 0.12);
+                background: #111827;
+                color: #fff;
+                border-radius: 12px;
+                height: 44px;
+                padding: 0 16px;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                cursor: pointer;
+            }
+        </style>
+        <div id="pl-auth-unverified" class="pl-auth-unverified<?php echo $should_open ? ' is-open' : ''; ?>" role="dialog" aria-modal="true" aria-label="<?php echo esc_attr($title); ?>">
+            <div class="pl-auth-unverified__card">
+                <div class="pl-auth-unverified__inner">
+                    <button type="button" class="pl-auth-unverified__close" aria-label="<?php echo esc_attr__('Close', 'politeia-learning'); ?>" data-pl-auth-unverified-close>×</button>
+                    <h3 class="pl-auth-unverified__title"><?php echo esc_html($title); ?></h3>
+                    <p class="pl-auth-unverified__text"><?php echo esc_html($body); ?></p>
+                    <?php echo $message_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                    <form method="post" action="<?php echo esc_url($action_url); ?>" class="pl-auth-unverified__actions">
+                        <input type="hidden" name="action" value="pl_auth_resend_confirmation">
+                        <input type="hidden" name="<?php echo esc_attr(self::RESEND_NONCE_FIELD); ?>" value="<?php echo esc_attr($nonce); ?>">
+                        <input type="hidden" name="redirect_to" value="<?php echo esc_attr($redirect_to_for_form); ?>">
+                        <button type="submit" class="pl-auth-unverified__btn"><?php echo esc_html($cta); ?></button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function(){
+            var overlay = document.getElementById('pl-auth-unverified');
+            if (!overlay) return;
+            try {
+                var shouldAutoOpen = <?php echo $should_open ? 'true' : 'false'; ?>;
+                if (overlay.classList.contains('is-open') && window.history && window.history.replaceState) {
+                    var url = new URL(window.location.href);
+                    url.searchParams.delete('pl_auth_unverified_after_quiz');
+                    url.searchParams.delete('pl_auth_unverified');
+                    url.searchParams.delete('<?php echo esc_js(self::QUERY_NOTICE); ?>');
+                    url.searchParams.delete('<?php echo esc_js(self::QUERY_ERROR); ?>');
+                    window.history.replaceState({}, document.title, url.toString());
+                }
+            } catch (e) {}
+            var btn = overlay.querySelector('[data-pl-auth-unverified-close]');
+            if (btn) btn.addEventListener('click', function(){ overlay.classList.remove('is-open'); });
+        })();
+        </script>
+        <?php
         return (string) ob_get_clean();
     }
 
@@ -134,23 +313,80 @@ class PL_Auth_Login_Register
             return $user;
         }
 
-        if (!self::requires_verification($user->ID)) {
-            return $user;
+        // Allow login even when not verified; verification can be enforced by feature gating
+        // (e.g. checkout, final quiz, certificate) while still letting users take the first quiz.
+        return $user;
+    }
+
+    public static function handle_resend_confirmation_nopriv(): void
+    {
+        $redirect_to = self::resolve_redirect_to((string) wp_unslash($_REQUEST['redirect_to'] ?? ''));
+        wp_safe_redirect(self::build_modal_url('login', $redirect_to));
+        exit;
+    }
+
+    public static function handle_resend_confirmation(): void
+    {
+        if (!is_user_logged_in()) {
+            self::handle_resend_confirmation_nopriv();
         }
 
-        if (self::is_verified($user->ID)) {
-            return $user;
+        if (!isset($_POST[self::RESEND_NONCE_FIELD]) || !wp_verify_nonce((string) wp_unslash($_POST[self::RESEND_NONCE_FIELD]), self::RESEND_NONCE_ACTION)) {
+            $redirect_to = self::resolve_redirect_to((string) wp_unslash($_POST['redirect_to'] ?? ''));
+            wp_safe_redirect(add_query_arg([self::QUERY_ERROR => 'invalid_nonce'], $redirect_to));
+            exit;
         }
 
-        return new WP_Error(
-            'pl_auth_unverified',
-            __('Your account is not verified yet. Please check your email and confirm your account first.', 'politeia-learning')
-        );
+        $user_id = (int) get_current_user_id();
+        $redirect_to = self::resolve_redirect_to((string) wp_unslash($_POST['redirect_to'] ?? ''));
+        if ($user_id <= 0) {
+            wp_safe_redirect($redirect_to);
+            exit;
+        }
+
+        if (get_transient('pl_auth_resend_' . $user_id)) {
+            wp_safe_redirect(add_query_arg([self::QUERY_ERROR => 'resend_throttled'], $redirect_to));
+            exit;
+        }
+        set_transient('pl_auth_resend_' . $user_id, 1, 60);
+
+        $user = get_userdata($user_id);
+        if (!$user || empty($user->user_email)) {
+            wp_safe_redirect(add_query_arg([self::QUERY_ERROR => 'create_failed'], $redirect_to));
+            exit;
+        }
+
+        if (!self::requires_verification($user_id)) {
+            // If the account doesn't require verification, do nothing.
+            wp_safe_redirect($redirect_to);
+            exit;
+        }
+
+        if (self::is_verified($user_id)) {
+            wp_safe_redirect(add_query_arg([self::QUERY_NOTICE => 'verified'], $redirect_to));
+            exit;
+        }
+
+        $token = self::issue_confirmation_token($user_id);
+        $display_name = (string) ($user->display_name ?? '');
+        if ($display_name === '') {
+            $display_name = (string) $user_id;
+        }
+        self::send_confirmation_for_user($user_id, (string) $user->user_email, $display_name, $redirect_to, $token);
+
+        wp_safe_redirect(add_query_arg([self::QUERY_NOTICE => 'verification_sent', 'pl_auth_unverified' => '1'], $redirect_to));
+        exit;
     }
 
     private static function handle_login_request(string $redirect_to): void
     {
-        $login_or_email = isset($_POST['user_login']) ? sanitize_text_field((string) wp_unslash($_POST['user_login'])) : '';
+        $login_or_email = '';
+        if (isset($_POST['user_login'])) {
+            $login_or_email = sanitize_text_field((string) wp_unslash($_POST['user_login']));
+        } elseif (isset($_POST['email'])) {
+            // Back-compat: some forms use `email` for the same field.
+            $login_or_email = sanitize_text_field((string) wp_unslash($_POST['email']));
+        }
         $password = isset($_POST['password']) ? (string) wp_unslash($_POST['password']) : '';
         $remember = !empty($_POST['remember']);
 
@@ -186,7 +422,13 @@ class PL_Auth_Login_Register
     {
         $first_name = isset($_POST['first_name']) ? sanitize_text_field((string) wp_unslash($_POST['first_name'])) : '';
         $last_name = isset($_POST['last_name']) ? sanitize_text_field((string) wp_unslash($_POST['last_name'])) : '';
-        $email = isset($_POST['email']) ? sanitize_email((string) wp_unslash($_POST['email'])) : '';
+        $email = '';
+        if (isset($_POST['email'])) {
+            $email = sanitize_email((string) wp_unslash($_POST['email']));
+        } elseif (isset($_POST['user_login'])) {
+            // Back-compat: modal template uses `user_login` for the email field.
+            $email = sanitize_email((string) wp_unslash($_POST['user_login']));
+        }
         $email_confirm = isset($_POST['email_confirm']) ? sanitize_email((string) wp_unslash($_POST['email_confirm'])) : '';
         $password = isset($_POST['password']) ? (string) wp_unslash($_POST['password']) : '';
         $password_confirm = isset($_POST['password_confirm']) ? (string) wp_unslash($_POST['password_confirm']) : '';
@@ -228,7 +470,18 @@ class PL_Auth_Login_Register
         $user_id = wp_create_user($username, $password, $email);
 
         if (is_wp_error($user_id)) {
-            wp_safe_redirect(self::build_modal_url('register', $redirect_to, [self::QUERY_ERROR => 'create_failed']));
+            $code = (string) $user_id->get_error_code();
+            // Normalize common WP user creation errors to our UI codes.
+            if ($code === 'existing_user_email' || $code === 'existing_user_login') {
+                $code = 'account_exists';
+            } elseif ($code === 'invalid_email') {
+                $code = 'invalid_email';
+            } elseif ($code === 'invalid_username' || $code === 'empty_username') {
+                $code = 'invalid_username';
+            } else {
+                $code = 'create_failed';
+            }
+            wp_safe_redirect(self::build_modal_url('register', $redirect_to, [self::QUERY_ERROR => $code]));
             exit;
         }
 
@@ -249,7 +502,19 @@ class PL_Auth_Login_Register
         self::send_confirmation_for_user((int) $user_id, $email, $display_name, $redirect_to, $token);
         wp_new_user_notification((int) $user_id, null, 'admin');
 
-        wp_safe_redirect(self::build_modal_url('login', $redirect_to, [self::QUERY_NOTICE => 'verification_sent']));
+        // Auto-login after registration (even before email confirmation) to reduce friction.
+        // Unverified accounts can be prompted and feature-gated elsewhere.
+        wp_set_current_user((int) $user_id);
+        wp_set_auth_cookie((int) $user_id, true, is_ssl());
+        $u = get_user_by('id', (int) $user_id);
+        if ($u instanceof WP_User) {
+            do_action('wp_login', $u->user_login, $u);
+        }
+
+        // Do not add notices here: after registering we immediately start the quiz (if requested via redirect_to).
+        // The unverified popup will appear after completing the quiz.
+        $redirect_to = add_query_arg(['pl_auth_registered' => '1'], $redirect_to);
+        wp_safe_redirect(wp_validate_redirect($redirect_to, home_url('/')));
         exit;
     }
 
@@ -408,4 +673,3 @@ class PL_Auth_Login_Register
         return $username;
     }
 }
-error_log('PL Auth Init called');

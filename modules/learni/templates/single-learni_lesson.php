@@ -228,7 +228,7 @@ echo '<div class="learni-lesson-top">';
 echo '<div class="learni-lesson-step">' . esc_html(sprintf(__('LECCIÓN %1$d DE %2$d', 'politeia-learning'), (int) $step, (int) $total)) . '</div>';
 echo '<div class="learni-lesson-top-actions">';
 
-$btn_label = $is_complete ? __('FINALIZADO', 'politeia-learning') : __('FINALIZAR', 'politeia-learning');
+$btn_label = __('FINALIZADO', 'politeia-learning');
 $btn_disabled = ($user_id <= 0) || $is_complete || ($course_id <= 0) || $is_locked;
 $requires_video_gate = (!$btn_disabled && $video_provider === 'youtube' && $video_html !== '');
 $btn_disabled = $btn_disabled || $requires_video_gate;

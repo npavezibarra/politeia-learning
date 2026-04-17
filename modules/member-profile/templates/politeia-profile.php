@@ -105,8 +105,11 @@ $unread_notifications = ($is_own_profile && function_exists('bp_notifications_ge
     : 0;
 
 $pl_pending_follow_requests = [];
+$pl_pending_course_partner_invites = [];
+$pl_recent_course_partner_accept = null;
 $pl_relationship_respond_nonce = '';
 $pl_relationship_block_nonce = '';
+$pl_course_partner_invite_nonce = '';
 if ($is_own_profile && class_exists('PL_Relationships')) {
     $pl_relationship_respond_nonce = (string) wp_create_nonce('pl_relationship_respond');
     $pl_relationship_block_nonce = (string) wp_create_nonce('pl_relationship_block');
@@ -134,7 +137,250 @@ if ($is_own_profile && class_exists('PL_Relationships')) {
 	            'from_avatar_url' => $avatar,
 	            'created_at' => (string) ($req['created_at'] ?? ''),
 	        ];
-	    }
+		    }
+	}
+
+// Course partner invitations (separate from friend/follow requests).
+if ($is_own_profile && $logged_in_user_id > 0) {
+    $pl_course_partner_invite_nonce = (string) wp_create_nonce('pl_course_partner_invite_respond');
+    $current_user = get_userdata((int) $logged_in_user_id);
+    $current_email = ($current_user instanceof WP_User) ? strtolower(trim((string) ($current_user->user_email ?? ''))) : '';
+
+    if ($current_email !== '') {
+        global $wpdb;
+        if ($wpdb) {
+            $now_ts = current_time('timestamp', true);
+
+            $add_invite = static function (array $invite) use (&$pl_pending_course_partner_invites) {
+                $key = (string) ($invite['course_id'] ?? 0) . '|' . (string) ($invite['invitee_email'] ?? '');
+                $pl_pending_course_partner_invites[$key] = $invite;
+            };
+
+            $table = $wpdb->prefix . 'politeia_user_object_partnerships';
+            $table_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table);
+            if ($table_exists) {
+                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+                $rows = $wpdb->get_results(
+                    $wpdb->prepare(
+                        "SELECT id, object_id, owner_user_id, invitee_email, invited_at, created_at, expires_at
+                         FROM {$table}
+                         WHERE object_type = %s
+                           AND role = %s
+                           AND status = %s
+                           AND LOWER(invitee_email) = %s
+                         ORDER BY id DESC",
+                        'course',
+                        'partner',
+                        'pending',
+                        $current_email
+                    ),
+                    ARRAY_A
+                );
+
+                foreach ((array) $rows as $row) {
+                    $invite_id = (int) ($row['id'] ?? 0);
+                    $course_id = (int) ($row['object_id'] ?? 0);
+                    if ($invite_id <= 0 || $course_id <= 0) {
+                        continue;
+                    }
+                    $expires_ts = strtotime((string) ($row['expires_at'] ?? '') . ' UTC');
+                    if ($expires_ts && $expires_ts < $now_ts) {
+                        continue;
+                    }
+
+                    $from_id = (int) ($row['owner_user_id'] ?? 0);
+                    $from_user = $from_id > 0 ? get_userdata($from_id) : null;
+                    $from_name = ($from_user instanceof WP_User) ? (string) ($from_user->display_name ?: $from_user->user_login) : '';
+                    if ($from_name === '') {
+                        $from_name = $from_id > 0 ? ('User #' . $from_id) : __('Someone', 'politeia-learning');
+                    }
+                    $from_avatar = $from_id > 0 && function_exists('pl_get_user_profile_avatar_custom_url')
+                        ? pl_get_user_profile_avatar_custom_url($from_id, 64)
+                        : '';
+                    if ($from_avatar === '' && $from_id > 0) {
+                        $from_avatar = (string) get_avatar_url($from_id, ['size' => 64]);
+                    }
+
+                    $course_title = (string) get_the_title($course_id);
+                    if ($course_title === '') {
+                        $course_title = sprintf(__('Course #%d', 'politeia-learning'), $course_id);
+                    }
+
+                    $add_invite([
+                        'id' => $invite_id,
+                        'source' => 'partnerships',
+                        'course_id' => $course_id,
+                        'course_title' => $course_title,
+                        'from_user_id' => $from_id,
+                        'from_name' => $from_name,
+                        'from_avatar_url' => $from_avatar,
+                        'created_at' => (string) ($row['invited_at'] ?? $row['created_at'] ?? ''),
+                        'invitee_email' => $current_email,
+                    ]);
+                }
+            }
+
+            $legacy = $wpdb->prefix . 'politeia_plan_participant_invites';
+            $legacy_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $legacy)) === $legacy);
+            if ($legacy_exists) {
+                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+                $rows = $wpdb->get_results(
+                    $wpdb->prepare(
+                        "SELECT id, object_id, inviter_user_id, invitee_email, created_at, expires_at
+                         FROM {$legacy}
+                         WHERE object_type = %s
+                           AND role = %s
+                           AND status = %s
+                           AND LOWER(invitee_email) = %s
+                         ORDER BY id DESC",
+                        'course',
+                        'partner',
+                        'pending',
+                        $current_email
+                    ),
+                    ARRAY_A
+                );
+
+                foreach ((array) $rows as $row) {
+                    $invite_id = (int) ($row['id'] ?? 0);
+                    $course_id = (int) ($row['object_id'] ?? 0);
+                    if ($invite_id <= 0 || $course_id <= 0) {
+                        continue;
+                    }
+                    $expires_ts = strtotime((string) ($row['expires_at'] ?? '') . ' UTC');
+                    if ($expires_ts && $expires_ts < $now_ts) {
+                        continue;
+                    }
+
+                    $from_id = (int) ($row['inviter_user_id'] ?? 0);
+                    $from_user = $from_id > 0 ? get_userdata($from_id) : null;
+                    $from_name = ($from_user instanceof WP_User) ? (string) ($from_user->display_name ?: $from_user->user_login) : '';
+                    if ($from_name === '') {
+                        $from_name = $from_id > 0 ? ('User #' . $from_id) : __('Someone', 'politeia-learning');
+                    }
+                    $from_avatar = $from_id > 0 && function_exists('pl_get_user_profile_avatar_custom_url')
+                        ? pl_get_user_profile_avatar_custom_url($from_id, 64)
+                        : '';
+                    if ($from_avatar === '' && $from_id > 0) {
+                        $from_avatar = (string) get_avatar_url($from_id, ['size' => 64]);
+                    }
+
+                    $course_title = (string) get_the_title($course_id);
+                    if ($course_title === '') {
+                        $course_title = sprintf(__('Course #%d', 'politeia-learning'), $course_id);
+                    }
+
+                    $add_invite([
+                        'id' => $invite_id,
+                        'source' => 'legacy',
+                        'course_id' => $course_id,
+                        'course_title' => $course_title,
+                        'from_user_id' => $from_id,
+                        'from_name' => $from_name,
+                        'from_avatar_url' => $from_avatar,
+                        'created_at' => (string) ($row['created_at'] ?? ''),
+                        'invitee_email' => $current_email,
+                    ]);
+                }
+            }
+        }
+    }
+}
+
+// Build a "recently accepted" card so the UI can expand and show progress after clicking Accept.
+if ($is_own_profile && $logged_in_user_id > 0) {
+    $recent_status = isset($_GET['pl_cp_invite']) ? sanitize_key((string) wp_unslash($_GET['pl_cp_invite'])) : '';
+    $recent_id = isset($_GET['pl_cp_invite_id']) ? absint((string) wp_unslash($_GET['pl_cp_invite_id'])) : 0;
+    $recent_source = isset($_GET['pl_cp_invite_source']) ? sanitize_key((string) wp_unslash($_GET['pl_cp_invite_source'])) : '';
+
+    if ($recent_status === 'accepted' && $recent_id > 0) {
+        $current_user = get_userdata((int) $logged_in_user_id);
+        $current_email = ($current_user instanceof WP_User) ? strtolower(trim((string) ($current_user->user_email ?? ''))) : '';
+
+        global $wpdb;
+        if ($wpdb && $current_email !== '') {
+            $source = ($recent_source === 'legacy') ? 'legacy' : 'partnerships';
+            $table = $wpdb->prefix . ($source === 'legacy' ? 'politeia_plan_participant_invites' : 'politeia_user_object_partnerships');
+
+            $row = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT id, object_id, object_type, role, status, invitee_email, accepted_at, created_at, invited_at, owner_user_id, inviter_user_id
+                     FROM {$table}
+                     WHERE id = %d
+                     LIMIT 1",
+                    $recent_id
+                ),
+                ARRAY_A
+            );
+
+            if (is_array($row)) {
+                $object_type = sanitize_key((string) ($row['object_type'] ?? ''));
+                $role = sanitize_key((string) ($row['role'] ?? ''));
+                $status = sanitize_key((string) ($row['status'] ?? ''));
+                $invite_email = strtolower(trim((string) ($row['invitee_email'] ?? '')));
+                $course_id = (int) ($row['object_id'] ?? 0);
+
+                if ($object_type === 'course' && $role === 'partner' && $status === 'accepted' && $invite_email === $current_email && $course_id > 0) {
+                    $from_user_id = (int) (($source === 'legacy') ? ($row['inviter_user_id'] ?? 0) : ($row['owner_user_id'] ?? 0));
+                    $from_user = $from_user_id > 0 ? get_userdata($from_user_id) : null;
+                    $from_name = ($from_user instanceof WP_User) ? (string) ($from_user->display_name ?: $from_user->user_login) : '';
+                    if ($from_name === '') {
+                        $from_name = $from_user_id > 0 ? ('User #' . $from_user_id) : __('Someone', 'politeia-learning');
+                    }
+                    $from_avatar = $from_user_id > 0 && function_exists('pl_get_user_profile_avatar_custom_url')
+                        ? pl_get_user_profile_avatar_custom_url($from_user_id, 64)
+                        : '';
+                    if ($from_avatar === '' && $from_user_id > 0) {
+                        $from_avatar = (string) get_avatar_url($from_user_id, ['size' => 64]);
+                    }
+
+                    $course_title = (string) get_the_title($course_id);
+                    if ($course_title === '') {
+                        $course_title = sprintf(__('Course #%d', 'politeia-learning'), $course_id);
+                    }
+
+                    $course_url = (string) get_permalink($course_id);
+
+                    $me_name = $display_name;
+                    $me_avatar = $avatar_url;
+
+                    $me_percent = 0;
+                    $from_percent = 0;
+                    if (class_exists('\\Learni\\Database\\Progress')) {
+                        try {
+                            $sum_me = \Learni\Database\Progress::course_summary((int) $logged_in_user_id, $course_id);
+                            $sum_from = $from_user_id > 0 ? \Learni\Database\Progress::course_summary((int) $from_user_id, $course_id) : null;
+                            $me_percent = is_array($sum_me) ? (int) ($sum_me['percent'] ?? 0) : 0;
+                            $from_percent = is_array($sum_from) ? (int) ($sum_from['percent'] ?? 0) : 0;
+                        } catch (\Throwable $e) {
+                            $me_percent = 0;
+                            $from_percent = 0;
+                        }
+                    }
+
+                    $pl_recent_course_partner_accept = [
+                        'invite_id' => $recent_id,
+                        'course_id' => $course_id,
+                        'course_title' => $course_title,
+                        'course_url' => $course_url,
+                        'accepted_at' => (string) ($row['accepted_at'] ?? ''),
+                        'me' => [
+                            'user_id' => (int) $logged_in_user_id,
+                            'name' => $me_name,
+                            'avatar_url' => $me_avatar,
+                            'percent' => $me_percent,
+                        ],
+                        'other' => [
+                            'user_id' => $from_user_id,
+                            'name' => $from_name,
+                            'avatar_url' => $from_avatar,
+                            'percent' => $from_percent,
+                        ],
+                    ];
+                }
+            }
+        }
+    }
 }
 
 $is_notifications_view = function_exists('bp_is_user_notifications') ? (bool) bp_is_user_notifications() : false;
@@ -168,6 +414,13 @@ if ($pl_subscribe_error_code !== '') {
 $server_view = $is_notifications_view ? 'notifications' : ($is_friends_view ? 'friends' : '');
 $initial_tab = $server_view !== '' ? $server_view : 'main';
 $initial_label = $server_view === 'notifications' ? 'Notifications' : ($server_view === 'friends' ? 'Friends' : 'Main');
+
+// Allow forcing an initial tab via ?tab=requests (used after responding to a request).
+$requested_tab = isset($_GET['tab']) ? sanitize_key((string) wp_unslash($_GET['tab'])) : '';
+if ($requested_tab !== '' && in_array($requested_tab, $pl_allowed_tabs, true)) {
+    $initial_tab = $requested_tab;
+    $initial_label = ucfirst($requested_tab);
+}
 
 // --- Filter Queries based on Portfolio ---
 $pl_allow_courses = in_array('courses', $pl_allowed_tabs, true);
@@ -1074,8 +1327,11 @@ pl_template_open();
 
 	        const thoughts = <?php echo json_encode($book_thoughts); ?>;
 	        const followRequests = <?php echo json_encode($pl_pending_follow_requests); ?>;
+	        const coursePartnerInvites = <?php echo json_encode(array_values($pl_pending_course_partner_invites)); ?>;
+	        const recentAcceptedPartnerInvite = <?php echo json_encode($pl_recent_course_partner_accept); ?>;
 	        const respondNonce = <?php echo json_encode($pl_relationship_respond_nonce); ?>;
 	        const blockNonce = <?php echo json_encode($pl_relationship_block_nonce); ?>;
+	        const coursePartnerInviteNonce = <?php echo json_encode($pl_course_partner_invite_nonce); ?>;
 	        const adminPostUrl = <?php echo json_encode(admin_url('admin-post.php')); ?>;
 
 	        const books = [
@@ -1168,80 +1424,239 @@ pl_template_open();
 	            wrapper.className = `${profileContainerClass} card-transition`;
 
 	            switch (currentTab) {
-	                case 'requests': {
-	                    const title = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Solicitudes de Follow' : 'Follow Requests'); ?>;
-	                    const emptyText = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'No tienes solicitudes pendientes.' : 'No pending requests.'); ?>;
-	                    const acceptLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Aceptar' : 'Accept'); ?>;
-	                    const rejectLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Rechazar' : 'Reject'); ?>;
-	                    const blockLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Bloquear' : 'Block'); ?>;
+		                case 'requests': {
+		                    const title = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Solicitudes de Follow' : 'Follow Requests'); ?>;
+		                    const partnerTitle = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Invitaciones de Partner de Curso' : 'Course Partner Invitations'); ?>;
+		                    const emptyText = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'No tienes solicitudes pendientes.' : 'No pending requests.'); ?>;
+		                    const acceptLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Aceptar' : 'Accept'); ?>;
+		                    const rejectLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Rechazar' : 'Reject'); ?>;
+		                    const blockLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Bloquear' : 'Block'); ?>;
+		                    const partnerKindLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'partner de curso' : 'course partner'); ?>;
+		                    const goToCourseLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Ir al curso' : 'Go to course'); ?>;
 
-	                    if (!Array.isArray(followRequests) || followRequests.length === 0) {
-	                        wrapper.innerHTML = `
-	                            <div class="p-8 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
-	                                <h3 class="text-xl font-semibold text-neutral-900 mb-2">${title}</h3>
-	                                <p class="text-sm text-neutral-600">${emptyText}</p>
-	                            </div>
-	                        `;
-	                        break;
-	                    }
+		                    const hasFollow = Array.isArray(followRequests) && followRequests.length > 0;
+		                    const hasPartnerInvites = Array.isArray(coursePartnerInvites) && coursePartnerInvites.length > 0;
+		                    if (!hasFollow && !hasPartnerInvites) {
+		                        wrapper.innerHTML = `
+		                            <div class="p-8 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
+		                                <h3 class="text-xl font-semibold text-neutral-900 mb-2">${<?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Solicitudes' : 'Requests'); ?>}</h3>
+		                                <p class="text-sm text-neutral-600">${emptyText}</p>
+		                            </div>
+		                        `;
+		                        break;
+		                    }
 
-		                    const itemsHtml = followRequests.map(req => {
-		                        const name = String(req.from_name || 'User');
-		                        const avatarUrl = String(req.from_avatar_url || '');
-		                        const created = req.created_at ? `<span class="text-xs text-neutral-400">${String(req.created_at)}</span>` : '';
-		                        const reqId = Number(req.id) || 0;
-		                        const fromUserId = Number(req.from_user_id) || 0;
-	                        const nonceInput = respondNonce ? `<input type="hidden" name="_wpnonce" value="${respondNonce}">` : '';
-		                        const blockNonceInput = blockNonce ? `<input type="hidden" name="_wpnonce" value="${blockNonce}">` : '';
-		                        return `
-		                            <div class="flex items-center justify-between gap-4 p-4 border border-neutral-200 rounded-[6px] bg-neutral-50">
-		                                <div class="min-w-0 flex items-center gap-3">
-		                                    ${avatarUrl ? `<img src="${avatarUrl}" alt="" class="w-10 h-10 rounded-full object-cover border border-neutral-200 bg-white" />` : `<div class="w-10 h-10 rounded-full bg-neutral-200 border border-neutral-200"></div>`}
-		                                    <div class="min-w-0">
-		                                        <div class="flex items-center gap-2">
-		                                            <p class="text-sm font-semibold text-neutral-900 truncate">${name}</p>
-		                                            ${created}
+		                    const sections = [];
+
+		                    if (recentAcceptedPartnerInvite && recentAcceptedPartnerInvite.course_id) {
+		                        const inv = recentAcceptedPartnerInvite;
+		                        const courseTitle = String(inv.course_title || '');
+		                        const acceptedAt = inv.accepted_at ? `<span class="text-xs text-neutral-400">${String(inv.accepted_at)}</span>` : '';
+		                        const courseUrl = String(inv.course_url || '#');
+		                        const me = inv.me || {};
+		                        const other = inv.other || {};
+
+		                        const dropdown = `
+		                            <div class="pl-course-partner-invite-dropdown mt-4 border-t border-neutral-200 pt-4">
+		                                <div class="space-y-4">
+		                                    <div class="flex items-center gap-3">
+		                                        ${other.avatar_url ? `<img src="${String(other.avatar_url)}" alt="" class="w-9 h-9 rounded-full object-cover border border-neutral-200 bg-white" />` : `<div class="w-9 h-9 rounded-full bg-neutral-200 border border-neutral-200"></div>`}
+		                                        <div class="min-w-0 flex-1">
+		                                            <div class="flex items-center justify-between gap-3">
+		                                                <p class="text-sm font-semibold text-neutral-900 truncate">${String(other.name || 'User')}</p>
+		                                                <span class="text-xs text-neutral-500">${Number(other.percent || 0)}%</span>
+		                                            </div>
+		                                            <div class="w-full bg-neutral-200 h-2 rounded-full mt-2 overflow-hidden">
+		                                                <div class="bg-black h-full rounded-full" style="width:${Math.max(0, Math.min(100, Number(other.percent || 0)))}%"></div>
+		                                            </div>
 		                                        </div>
-		                                    <p class="text-xs text-neutral-500">follow</p>
+		                                    </div>
+		                                    <div class="flex items-center gap-3">
+		                                        ${me.avatar_url ? `<img src="${String(me.avatar_url)}" alt="" class="w-9 h-9 rounded-full object-cover border border-neutral-200 bg-white" />` : `<div class="w-9 h-9 rounded-full bg-neutral-200 border border-neutral-200"></div>`}
+		                                        <div class="min-w-0 flex-1">
+		                                            <div class="flex items-center justify-between gap-3">
+		                                                <p class="text-sm font-semibold text-neutral-900 truncate">${String(me.name || 'You')}</p>
+		                                                <div class="flex items-center gap-3 shrink-0">
+		                                                    <span class="text-xs text-neutral-500">${Number(me.percent || 0)}%</span>
+		                                                    <a href="${courseUrl}" class="text-[10px] font-semibold uppercase tracking-widest text-neutral-700 hover:text-black no-underline">${goToCourseLabel}</a>
+		                                                </div>
+		                                            </div>
+		                                            <div class="w-full bg-neutral-200 h-2 rounded-full mt-2 overflow-hidden">
+		                                                <div class="bg-black h-full rounded-full" style="width:${Math.max(0, Math.min(100, Number(me.percent || 0)))}%"></div>
+		                                            </div>
+		                                        </div>
 		                                    </div>
 		                                </div>
-		                                <div class="flex items-center gap-2 shrink-0">
-	                                    <form method="post" action="${adminPostUrl}" class="m-0">
-	                                        ${nonceInput}
-	                                        <input type="hidden" name="action" value="pl_relationship_respond">
-	                                        <input type="hidden" name="request_id" value="${reqId}">
-	                                        <input type="hidden" name="decision" value="accept">
-	                                        <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] bg-black text-white hover:bg-neutral-800">${acceptLabel}</button>
-	                                    </form>
-	                                    <form method="post" action="${adminPostUrl}" class="m-0">
-	                                        ${nonceInput}
-	                                        <input type="hidden" name="action" value="pl_relationship_respond">
-	                                        <input type="hidden" name="request_id" value="${reqId}">
-	                                        <input type="hidden" name="decision" value="reject">
-	                                        <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-neutral-200 text-neutral-700 hover:bg-white">${rejectLabel}</button>
-	                                    </form>
-	                                    <form method="post" action="${adminPostUrl}" class="m-0">
-	                                        ${blockNonceInput}
-	                                        <input type="hidden" name="action" value="pl_relationship_block">
-	                                        <input type="hidden" name="blocked_user_id" value="${fromUserId}">
-	                                        <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-red-200 text-red-600 hover:bg-white">${blockLabel}</button>
-	                                    </form>
-	                                </div>
-	                            </div>
-	                        `;
-	                    }).join('');
+		                            </div>
+		                        `;
 
-	                    wrapper.innerHTML = `
-	                        <div class="space-y-4">
-	                            <div class="p-6 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
-	                                <h3 class="text-xl font-semibold text-neutral-900">${title}</h3>
-	                                <p class="text-sm text-neutral-500 mt-1">${followRequests.length} ${followRequests.length === 1 ? 'request' : 'requests'}</p>
-	                            </div>
-	                            <div class="space-y-3">${itemsHtml}</div>
-	                        </div>
-	                    `;
-	                    break;
-	                }
+		                        sections.push(`
+		                            <div class="space-y-4">
+		                                <div class="p-6 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
+		                                    <h3 class="text-xl font-semibold text-neutral-900">${<?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Partner de Curso' : 'Course Partner'); ?>}</h3>
+		                                    <p class="text-sm text-neutral-500 mt-1">${<?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Aceptado recientemente' : 'Recently accepted'); ?>}</p>
+		                                </div>
+		                                <div class="space-y-3">
+		                                    <div class="pl-course-partner-invite-item is-accepted flex items-center justify-between gap-4 p-4 border border-neutral-200 rounded-[6px] bg-neutral-50" data-course-id="${Number(inv.course_id) || 0}">
+		                                        <div class="min-w-0 flex items-center gap-3">
+		                                            ${other.avatar_url ? `<img src="${String(other.avatar_url)}" alt="" class="w-10 h-10 rounded-full object-cover border border-neutral-200 bg-white" />` : `<div class="w-10 h-10 rounded-full bg-neutral-200 border border-neutral-200"></div>`}
+		                                            <div class="min-w-0">
+		                                                <div class="flex items-center gap-2">
+		                                                    <p class="text-sm font-semibold text-neutral-900 truncate">${courseTitle}</p>
+		                                                    ${acceptedAt}
+		                                                </div>
+		                                                <p class="text-xs text-neutral-500">${partnerKindLabel} • ${String(other.name || '')}</p>
+		                                                ${dropdown}
+		                                            </div>
+		                                        </div>
+		                                        <div class="flex items-center gap-2 shrink-0">
+		                                            <a href="${courseUrl}" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] bg-black text-white hover:bg-neutral-800 no-underline">${goToCourseLabel}</a>
+		                                        </div>
+		                                    </div>
+		                                </div>
+		                            </div>
+		                        `);
+		                    }
+
+		                    if (hasPartnerInvites) {
+		                        let redirectToRequests = window.location.href;
+		                        try {
+		                            const u = new URL(window.location.href);
+		                            u.searchParams.set('tab', 'requests');
+		                            redirectToRequests = u.toString();
+		                        } catch (e) {}
+
+		                        const itemsHtml = coursePartnerInvites.map(inv => {
+		                            const fromName = String(inv.from_name || 'User');
+		                            const avatarUrl = String(inv.from_avatar_url || '');
+		                            const created = inv.created_at ? `<span class="text-xs text-neutral-400">${String(inv.created_at)}</span>` : '';
+		                            const courseTitle = String(inv.course_title || '');
+		                            const inviteId = Number(inv.id) || 0;
+		                            const source = String(inv.source || 'partnerships');
+		                            const nonceInput = coursePartnerInviteNonce ? `<input type="hidden" name="_wpnonce" value="${coursePartnerInviteNonce}">` : '';
+		                            const redirectInput = `<input type="hidden" name="redirect_to" value="${redirectToRequests.replace(/\"/g, '&quot;')}">`;
+
+		                            return `
+		                                <div class="pl-course-partner-invite-item flex items-center justify-between gap-4 p-4 border border-neutral-200 rounded-[6px] bg-neutral-50" data-course-id="${Number(inv.course_id) || 0}">
+		                                    <div class="min-w-0 flex items-center gap-3">
+		                                        ${avatarUrl ? `<img src="${avatarUrl}" alt="" class="w-10 h-10 rounded-full object-cover border border-neutral-200 bg-white" />` : `<div class="w-10 h-10 rounded-full bg-neutral-200 border border-neutral-200"></div>`}
+		                                        <div class="min-w-0">
+		                                            <div class="flex items-center gap-2">
+		                                                <p class="text-sm font-semibold text-neutral-900 truncate">${courseTitle}</p>
+		                                                ${created}
+		                                            </div>
+		                                            <p class="text-xs text-neutral-500">${partnerKindLabel} • ${fromName}</p>
+		                                        </div>
+		                                    </div>
+		                                    <div class="flex items-center gap-2 shrink-0">
+		                                        <form method="post" action="${adminPostUrl}" class="m-0">
+		                                            ${nonceInput}
+		                                            ${redirectInput}
+		                                            <input type="hidden" name="action" value="pl_course_partner_invite_respond">
+		                                            <input type="hidden" name="invite_id" value="${inviteId}">
+		                                            <input type="hidden" name="source" value="${source}">
+		                                            <input type="hidden" name="decision" value="accept">
+		                                            <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] bg-black text-white hover:bg-neutral-800">${acceptLabel}</button>
+		                                        </form>
+		                                        <form method="post" action="${adminPostUrl}" class="m-0">
+		                                            ${nonceInput}
+		                                            ${redirectInput}
+		                                            <input type="hidden" name="action" value="pl_course_partner_invite_respond">
+		                                            <input type="hidden" name="invite_id" value="${inviteId}">
+		                                            <input type="hidden" name="source" value="${source}">
+		                                            <input type="hidden" name="decision" value="reject">
+		                                            <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-neutral-200 text-neutral-700 hover:bg-white">${rejectLabel}</button>
+		                                        </form>
+		                                    </div>
+		                                </div>
+		                            `;
+		                        }).join('');
+
+		                        sections.push(`
+		                            <div class="space-y-4">
+		                                <div class="p-6 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
+		                                    <h3 class="text-xl font-semibold text-neutral-900">${partnerTitle}</h3>
+		                                    <p class="text-sm text-neutral-500 mt-1">${coursePartnerInvites.length} ${coursePartnerInvites.length === 1 ? 'request' : 'requests'}</p>
+		                                </div>
+		                                <div class="space-y-3">${itemsHtml}</div>
+		                            </div>
+		                        `);
+		                    }
+
+		                    if (hasFollow) {
+		                        const itemsHtml = followRequests.map(req => {
+		                            const name = String(req.from_name || 'User');
+		                            const avatarUrl = String(req.from_avatar_url || '');
+		                            const created = req.created_at ? `<span class="text-xs text-neutral-400">${String(req.created_at)}</span>` : '';
+		                            const reqId = Number(req.id) || 0;
+		                            const fromUserId = Number(req.from_user_id) || 0;
+		                            const nonceInput = respondNonce ? `<input type="hidden" name="_wpnonce" value="${respondNonce}">` : '';
+		                            const blockNonceInput = blockNonce ? `<input type="hidden" name="_wpnonce" value="${blockNonce}">` : '';
+		                            return `
+		                                <div class="flex items-center justify-between gap-4 p-4 border border-neutral-200 rounded-[6px] bg-neutral-50">
+		                                    <div class="min-w-0 flex items-center gap-3">
+		                                        ${avatarUrl ? `<img src="${avatarUrl}" alt="" class="w-10 h-10 rounded-full object-cover border border-neutral-200 bg-white" />` : `<div class="w-10 h-10 rounded-full bg-neutral-200 border border-neutral-200"></div>`}
+		                                        <div class="min-w-0">
+		                                            <div class="flex items-center gap-2">
+		                                                <p class="text-sm font-semibold text-neutral-900 truncate">${name}</p>
+		                                                ${created}
+		                                            </div>
+		                                            <p class="text-xs text-neutral-500">follow</p>
+		                                        </div>
+		                                    </div>
+		                                    <div class="flex items-center gap-2 shrink-0">
+		                                        <form method="post" action="${adminPostUrl}" class="m-0">
+		                                            ${nonceInput}
+		                                            <input type="hidden" name="action" value="pl_relationship_respond">
+		                                            <input type="hidden" name="request_id" value="${reqId}">
+		                                            <input type="hidden" name="decision" value="accept">
+		                                            <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] bg-black text-white hover:bg-neutral-800">${acceptLabel}</button>
+		                                        </form>
+		                                        <form method="post" action="${adminPostUrl}" class="m-0">
+		                                            ${nonceInput}
+		                                            <input type="hidden" name="action" value="pl_relationship_respond">
+		                                            <input type="hidden" name="request_id" value="${reqId}">
+		                                            <input type="hidden" name="decision" value="reject">
+		                                            <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-neutral-200 text-neutral-700 hover:bg-white">${rejectLabel}</button>
+		                                        </form>
+		                                        <form method="post" action="${adminPostUrl}" class="m-0">
+		                                            ${blockNonceInput}
+		                                            <input type="hidden" name="action" value="pl_relationship_block">
+		                                            <input type="hidden" name="blocked_user_id" value="${fromUserId}">
+		                                            <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-red-200 text-red-600 hover:bg-white">${blockLabel}</button>
+		                                        </form>
+		                                    </div>
+		                                </div>
+		                            `;
+		                        }).join('');
+
+		                        sections.push(`
+		                            <div class="space-y-4">
+		                                <div class="p-6 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
+		                                    <h3 class="text-xl font-semibold text-neutral-900">${title}</h3>
+		                                    <p class="text-sm text-neutral-500 mt-1">${followRequests.length} ${followRequests.length === 1 ? 'request' : 'requests'}</p>
+		                                </div>
+		                                <div class="space-y-3">${itemsHtml}</div>
+		                            </div>
+		                        `);
+		                    }
+
+		                    wrapper.innerHTML = `<div class="space-y-8">${sections.join('')}</div>`;
+
+		                    // Toggle dropdown for accepted partner card(s).
+		                    try {
+		                        wrapper.querySelectorAll('.pl-course-partner-invite-item.is-accepted').forEach((item) => {
+		                            item.addEventListener('click', (evt) => {
+		                                const target = evt.target;
+		                                if (target && target.closest && target.closest('a,button,form')) return;
+		                                const dd = item.querySelector('.pl-course-partner-invite-dropdown');
+		                                if (!dd) return;
+		                                dd.classList.toggle('hidden');
+		                            });
+		                        });
+		                    } catch (e) {}
+		                    break;
+		                }
 	                case 'friends':
 	                    wrapper.innerHTML = `
 	                        <div class="py-20 text-center p-8 bg-neutral-50 rounded-[6px] border border-neutral-200">

@@ -35,8 +35,7 @@ The quiz creator has been completely refactored into a compact, unified form tha
 │  Number of Questions: [10] *             │
 │  Time Limit: [0]  Passing %: [80]       │
 │  Specific Subjects: [____________]       │
-│  ☐ Randomize Questions                   │
-│  ☐ Randomize Answers                     │
+│  ☑ Respect Question Order                │
 │  ☐ Allow Only One Attempt                │
 │  ☐ Force Answer Before Next              │
 │  ☐ Show Points                           │
@@ -109,8 +108,7 @@ Single Form: All fields + inline actions
 | **Time Limit** | Number | No | Minutes (0 = no limit) |
 | **Passing Percentage** | Number | No | Default: 80% |
 | **Specific Subjects** | Text | No | Comma-separated keywords |
-| **Randomize Questions** | Checkbox | No | Shuffle question order |
-| **Randomize Answers** | Checkbox | No | Shuffle answer order |
+| **Respect Question Order** | Checkbox | Yes | Keep provided order (No = random) |
 | **Allow Only One Attempt** | Checkbox | No | Limit to single attempt |
 | **Force Answer** | Checkbox | No | Must answer to proceed |
 | **Show Points** | Checkbox | No | Display points to students |

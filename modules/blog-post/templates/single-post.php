@@ -42,8 +42,139 @@ if (!function_exists('pl_bp_blog_post_lead_text')) {
     }
 }
 
+if (!function_exists('pl_bp_blog_post_author_name')) {
+    function pl_bp_blog_post_author_name(int $user_id): string
+    {
+        $first = (string) get_user_meta($user_id, 'first_name', true);
+        $last = (string) get_user_meta($user_id, 'last_name', true);
+        $full = trim(trim($first) . ' ' . trim($last));
+        if ($full !== '') {
+            return $full;
+        }
+
+        $display = (string) get_the_author_meta('display_name', $user_id);
+        return $display !== '' ? $display : 'Politeia';
+    }
+}
+
+if (!function_exists('pl_bp_blog_post_apply_leadin_caps')) {
+    function pl_bp_blog_post_apply_leadin_caps(string $html, int $words = 3): string
+    {
+        $words = max(1, (int) $words);
+        if ($html === '') {
+            return $html;
+        }
+
+        if (strpos($html, 'pl-bp-leadin-caps') !== false) {
+            return $html;
+        }
+
+        if (!class_exists('DOMDocument')) {
+            return $html;
+        }
+
+        $doc = new DOMDocument();
+        libxml_use_internal_errors(true);
+        $wrapped = '<div id="pl-bp-root">' . $html . '</div>';
+        $loaded = $doc->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+        libxml_use_internal_errors(false);
+
+        if (!$loaded) {
+            return $html;
+        }
+
+        $root = $doc->getElementById('pl-bp-root');
+        if (!$root) {
+            return $html;
+        }
+
+        $paragraphs = $root->getElementsByTagName('p');
+        foreach ($paragraphs as $p) {
+            if (!($p instanceof DOMElement)) {
+                continue;
+            }
+
+            // Avoid applying inside captions/figures.
+            $ancestor = $p->parentNode;
+            while ($ancestor instanceof DOMNode) {
+                if ($ancestor instanceof DOMElement && strtolower($ancestor->tagName) === 'figcaption') {
+                    continue 2;
+                }
+                $ancestor = $ancestor->parentNode;
+            }
+
+            if (trim((string) $p->textContent) === '') {
+                continue;
+            }
+
+            $node = null;
+            foreach ($p->childNodes as $child) {
+                if ($child instanceof DOMText && trim((string) $child->nodeValue) !== '') {
+                    $node = $child;
+                    break;
+                }
+            }
+            if (!($node instanceof DOMText)) {
+                continue;
+            }
+
+            $text = (string) $node->nodeValue;
+
+            // Split on whitespace tokens; keep original spacing between the first N words.
+            $pattern = '/^(\s*)(\S+)(\s+)(\S+)(\s+)(\S+)(.*)$/u';
+            $pattern2 = '/^(\s*)(\S+)(\s+)(\S+)(.*)$/u';
+            $pattern1 = '/^(\s*)(\S+)(.*)$/u';
+
+            $leading = '';
+            $lead_text = '';
+            $rest = '';
+
+            if ($words >= 3 && preg_match($pattern, $text, $m)) {
+                $leading = $m[1];
+                $lead_text = $m[2] . $m[3] . $m[4] . $m[5] . $m[6];
+                $rest = $m[7];
+            } elseif ($words >= 2 && preg_match($pattern2, $text, $m)) {
+                $leading = $m[1];
+                $lead_text = $m[2] . $m[3] . $m[4];
+                $rest = $m[5];
+            } elseif (preg_match($pattern1, $text, $m)) {
+                $leading = $m[1];
+                $lead_text = $m[2];
+                $rest = $m[3];
+            } else {
+                continue;
+            }
+
+            $frag = $doc->createDocumentFragment();
+            if ($leading !== '') {
+                $frag->appendChild($doc->createTextNode($leading));
+            }
+
+            $span = $doc->createElement('span');
+            $span->setAttribute('class', 'pl-bp-leadin-caps');
+            $span->appendChild($doc->createTextNode($lead_text));
+            $frag->appendChild($span);
+
+            if ($rest !== '') {
+                $frag->appendChild($doc->createTextNode($rest));
+            }
+
+            $node->parentNode->replaceChild($frag, $node);
+            break;
+        }
+
+        $out = '';
+        foreach ($root->childNodes as $child) {
+            $out .= $doc->saveHTML($child);
+        }
+
+        return $out !== '' ? $out : $html;
+    }
+}
+
 $featured_img = get_the_post_thumbnail_url($post, 'large');
-$author_name = (string) get_the_author_meta('display_name', (int) $post->post_author);
+$author_name = pl_bp_blog_post_author_name((int) $post->post_author);
 $date_display = (string) get_the_date('j \d\e F, Y', $post);
 $lead_text = pl_bp_blog_post_lead_text($post, 40);
 
@@ -120,38 +251,43 @@ pl_template_open();
     <main class="pl-bp-blog-post-main">
         <?php if (have_posts()) : while (have_posts()) : the_post(); ?>
             <?php
-            $post_object = get_post();
-            if (!($post_object instanceof WP_Post)) {
-                continue;
-            }
+	            $post_object = get_post();
+	            if (!($post_object instanceof WP_Post)) {
+	                continue;
+	            }
 
-            $featured_img = get_the_post_thumbnail_url($post_object, 'large');
-            $author_name = (string) get_the_author_meta('display_name', (int) $post_object->post_author);
-            $date_display = (string) get_the_date('j \d\e F, Y', $post_object);
-            $lead_text = pl_bp_blog_post_lead_text($post_object, 40);
-            $primary_category = pl_bp_blog_post_primary_category_name((int) $post_object->ID);
-            ?>
+	            $featured_img = get_the_post_thumbnail_url($post_object, 'large');
+	            $has_featured_img = is_string($featured_img) && $featured_img !== '';
+	            $author_name = pl_bp_blog_post_author_name((int) $post_object->post_author);
+	            $date_display = (string) get_the_date('j \d\e F, Y', $post_object);
+	            $lead_text = pl_bp_blog_post_lead_text($post_object, 40);
+	            $primary_category = pl_bp_blog_post_primary_category_name((int) $post_object->ID);
+	            $title = (string) get_the_title($post_object);
+	            $title_len = function_exists('mb_strlen') ? mb_strlen(trim($title), 'UTF-8') : strlen(trim($title));
+	            $title_size_class = $title_len <= 24 ? 'pl-bp-title-short' : 'pl-bp-title-long';
+	            $hero_classes = 'pl-bp-blog-post-hero' . ($has_featured_img ? '' : ' pl-bp-hero--no-image');
+	            ?>
 
-            <article id="post-<?php the_ID(); ?>" <?php post_class('pl-bp-blog-post-article'); ?>>
-                <div class="pl-bp-blog-post-hero">
-                    <div class="pl-bp-blog-post-hero-media">
-                        <?php if (is_string($featured_img) && $featured_img !== '') : ?>
-                            <img
-                                src="<?php echo esc_url($featured_img); ?>"
-                                alt="<?php echo esc_attr((string) get_the_title($post_object)); ?>"
-                                class="pl-bp-blog-post-cover"
-                                decoding="async"
-                                loading="eager"
-                            />
-                        <?php endif; ?>
-                    </div>
+	            <article id="post-<?php the_ID(); ?>" <?php post_class('pl-bp-blog-post-article'); ?>>
+	                <div class="<?php echo esc_attr($hero_classes); ?>">
+	                    <?php if ($has_featured_img) : ?>
+	                        <div class="pl-bp-blog-post-hero-media">
+	                            <img
+	                                src="<?php echo esc_url($featured_img); ?>"
+	                                alt="<?php echo esc_attr($title); ?>"
+	                                class="pl-bp-blog-post-cover"
+	                                decoding="async"
+	                                loading="eager"
+	                            />
+	                        </div>
+	                    <?php endif; ?>
 
-                    <div class="pl-bp-blog-post-hero-copy">
-                        <h1 class="pl-bp-blog-post-title"><?php echo esc_html((string) get_the_title($post_object)); ?></h1>
-                        <p class="pl-bp-blog-post-meta">
-                            <?php echo esc_html__('por', 'politeia-learning'); ?>
-                            <span><?php echo esc_html($author_name !== '' ? $author_name : 'Politeia'); ?></span>
-                            <?php echo esc_html(' | ' . $date_display); ?>
+	                    <div class="pl-bp-blog-post-hero-copy">
+	                        <h1 class="pl-bp-blog-post-title <?php echo esc_attr($title_size_class); ?>"><?php echo esc_html($title); ?></h1>
+	                        <p class="pl-bp-blog-post-meta">
+	                            <?php echo esc_html__('por', 'politeia-learning'); ?>
+	                            <span><?php echo esc_html($author_name !== '' ? $author_name : 'Politeia'); ?></span>
+	                            <?php echo esc_html(' | ' . $date_display); ?>
                             <?php if ($primary_category !== '') : ?>
                                 <span class="pl-bp-blog-post-meta-separator">|</span>
                                 <span><?php echo esc_html($primary_category); ?></span>
@@ -165,11 +301,15 @@ pl_template_open();
                     </div>
                 </div>
 
-                <div class="pl-bp-blog-post-content-wrap">
-                    <div class="pl-bp-blog-post-content">
-                        <?php echo apply_filters('the_content', (string) $post_object->post_content); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                    </div>
-                </div>
+	                <div class="pl-bp-blog-post-content-wrap">
+	                    <div class="pl-bp-blog-post-content">
+	                        <?php
+	                        $content_html = (string) apply_filters('the_content', (string) $post_object->post_content);
+	                        $content_html = pl_bp_blog_post_apply_leadin_caps($content_html, 3);
+	                        echo $content_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	                        ?>
+	                    </div>
+	                </div>
 
                 <?php if (is_array($other_posts) && $other_posts !== []) : ?>
                     <section class="pl-bp-blog-post-related">
@@ -180,11 +320,11 @@ pl_template_open();
                                 if (!($other_post instanceof WP_Post)) {
                                     continue;
                                 }
-                                $other_img = get_the_post_thumbnail_url($other_post, 'medium_large');
-                                $other_cat = pl_bp_blog_post_primary_category_name((int) $other_post->ID);
-                                $other_author = (string) get_the_author_meta('display_name', (int) $other_post->post_author);
-                                $other_date = (string) get_the_date('j M Y', $other_post);
-                                ?>
+	                                $other_img = get_the_post_thumbnail_url($other_post, 'medium_large');
+	                                $other_cat = pl_bp_blog_post_primary_category_name((int) $other_post->ID);
+	                                $other_author = pl_bp_blog_post_author_name((int) $other_post->post_author);
+	                                $other_date = (string) get_the_date('j M Y', $other_post);
+	                                ?>
                                 <a href="<?php echo esc_url((string) get_permalink($other_post)); ?>" class="pl-bp-blog-post-card">
                                     <div class="pl-bp-blog-post-card-media">
                                         <?php if (is_string($other_img) && $other_img !== '') : ?>

@@ -14,6 +14,14 @@ if (!defined('ABSPATH'))
             <div class="pcg-escrito-toolbar-inner">
                 <!-- Formatting Tools -->
                 <div class="pcg-escrito-tools-group">
+                    <!-- Back Button -->
+                    <button type="button" id="pcg-btn-back-to-escritos" class="pcg-toolbar-btn"
+                        title="<?php _e('Volver', 'politeia-learning'); ?>">
+                        <span class="dashicons dashicons-arrow-left-alt2"></span>
+                    </button>
+
+                    <div class="pcg-escrito-divider"></div>
+
                     <button type="button" onclick="window.pcgEscritoExec && window.pcgEscritoExec('bold')"
                         class="pcg-toolbar-btn" title="<?php esc_attr_e('Bold', 'politeia-learning'); ?>">
                         <span class="dashicons dashicons-editor-bold"></span>
@@ -81,13 +89,6 @@ if (!defined('ABSPATH'))
                         <span class="dashicons dashicons-format-image"></span>
                     </button>
 
-                    <div class="pcg-escrito-divider"></div>
-
-                    <!-- Return Button -->
-                    <button type="button" id="pcg-btn-back-to-escritos" class="pcg-toolbar-btn"
-                        title="<?php _e('Volver', 'politeia-learning'); ?>">
-                        <span class="dashicons dashicons-arrow-left-alt2"></span>
-                    </button>
                 </div>
 
                 <!-- Action Buttons -->

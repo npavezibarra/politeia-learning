@@ -45,8 +45,7 @@ Quiz created in LearnDash
 │  Quiz Title: [________________]      │
 │  Time Limit: [___] minutes           │
 │  Passing %:  [80_]                   │
-│  ☐ Randomize Question Order          │
-│  ☐ Randomize Answer Order            │
+│  ☑ Respect Question Order            │
 │  ☐ Allow Only One Attempt            │
 │  ☐ Force Answer Before Next          │
 │  ☐ Show Points to Students           │
@@ -161,8 +160,7 @@ Create [NUMBER] questions about [YOUR TOPIC].
 | **Quiz Title** | Text | Required | Name of the quiz |
 | **Time Limit** | Number | 0 | Minutes (0 = no limit) |
 | **Passing Percentage** | Number | 80 | Percentage to pass |
-| **Randomize Questions** | Checkbox | Off | Randomize question order |
-| **Randomize Answers** | Checkbox | Off | Randomize answer order |
+| **Respect Question Order** | Checkbox | On | Keep the file/manual order (off = random) |
 | **Allow Only One Attempt** | Checkbox | Off | Limit to one attempt |
 | **Force Answer Before Next** | Checkbox | Off | Must answer to proceed |
 | **Show Points** | Checkbox | Off | Display points to students |
@@ -238,7 +236,7 @@ Create [NUMBER] questions about [YOUR TOPIC].
 Quiz Title: Introduction to Political Science
 Time Limit: 10 minutes
 Passing %: 70
-✓ Randomize Answer Order
+✓ Answers are always shuffled
 ```
 
 ### **Step 2: Get Questions from ChatGPT**

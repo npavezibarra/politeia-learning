@@ -95,10 +95,18 @@ class PQC_Quiz_Creator
             )
         );
 
+        $question_order = isset($settings['questionOrder']) ? sanitize_text_field((string) $settings['questionOrder']) : '';
+        if ($question_order !== 'random' && $question_order !== 'in_order') {
+            $question_order = !empty($settings['random_questions']) ? 'random' : 'in_order';
+        }
+
         $settings_json = wp_json_encode(
             [
-                'random_questions' => (int) ($settings['random_questions'] ?? 0),
-                'random_answers' => (int) ($settings['random_answers'] ?? 0),
+                'questionOrder' => $question_order,
+                'random_questions' => $question_order === 'random' ? 1 : 0,
+                // Answers are always shuffled (not configurable).
+                'shuffleAnswers' => true,
+                'random_answers' => 1,
                 'run_once' => (int) ($settings['run_once'] ?? 0),
                 'force_solve' => (int) ($settings['force_solve'] ?? 0),
                 'show_points' => (int) ($settings['show_points'] ?? 0),
@@ -170,12 +178,42 @@ class PQC_Quiz_Creator
         $answer_table = $wpdb->prefix . self::TABLE_ANSWERS;
 
         $quiz = $wpdb->get_row(
-            $wpdb->prepare("SELECT id, title FROM {$quiz_table} WHERE id = %d LIMIT 1", $quiz_id),
+            $wpdb->prepare("SELECT id, title, passing_score, time_limit_seconds, settings_json FROM {$quiz_table} WHERE id = %d LIMIT 1", $quiz_id),
             ARRAY_A
         );
         if (!is_array($quiz)) {
             return null;
         }
+
+        $settings = [
+            'random_questions' => 0,
+            'random_answers' => 1,
+            'run_once' => 0,
+            'force_solve' => 0,
+            'show_points' => 0,
+            'questions_per_attempt' => 0,
+            'questions_subset_random' => 0,
+            'questionOrder' => 'in_order',
+        ];
+        if (!empty($quiz['settings_json'])) {
+            $decoded = json_decode((string) $quiz['settings_json'], true);
+            if (is_array($decoded)) {
+                foreach ($settings as $k => $v) {
+                    if (isset($decoded[$k])) {
+                        $settings[$k] = $decoded[$k];
+                    }
+                }
+                // Compatibility keys used by Learni
+                if (isset($decoded['shuffleAnswers']) && !isset($decoded['random_answers'])) {
+                    $settings['random_answers'] = !empty($decoded['shuffleAnswers']) ? 1 : 0;
+                }
+                if (isset($decoded['questionOrder']) && (string) $decoded['questionOrder'] === 'random' && !isset($decoded['random_questions'])) {
+                    $settings['random_questions'] = 1;
+                }
+            }
+        }
+        // Answers are always shuffled (not configurable).
+        $settings['random_answers'] = 1;
 
         $questions = $wpdb->get_results(
             $wpdb->prepare(
@@ -216,17 +254,30 @@ class PQC_Quiz_Creator
 
             $out_answers = [];
             foreach ((array) $answers as $a) {
+                $text = trim((string) ($a['answer_text'] ?? ''));
+                if ($text === '') {
+                    continue;
+                }
                 $out_answers[] = [
-                    'text' => (string) ($a['answer_text'] ?? ''),
+                    'text' => $text,
                     'correct' => !empty($a['is_correct']),
                     'points' => 0,
                 ];
             }
 
+            $title = (string) ($meta['title'] ?? '');
+            if ($title === '') {
+                $plain = trim(wp_strip_all_tags((string) ($q['prompt'] ?? '')));
+                if ($plain !== '') {
+                    $plain = trim((string) preg_replace('/\s+/', ' ', $plain));
+                    $title = strlen($plain) > 64 ? (substr($plain, 0, 64) . '…') : $plain;
+                }
+            }
+
             $out_questions[] = [
                 'id' => $qid,
                 'pro_id' => 0,
-                'title' => (string) ($meta['title'] ?? ''),
+                'title' => $title,
                 'question_text' => (string) ($q['prompt'] ?? ''),
                 'answers' => $out_answers,
             ];
@@ -235,6 +286,9 @@ class PQC_Quiz_Creator
         return [
             'id' => (int) ($quiz['id'] ?? 0),
             'title' => (string) ($quiz['title'] ?? ''),
+            'passing_score' => (int) ($quiz['passing_score'] ?? 0),
+            'time_limit_seconds' => (int) ($quiz['time_limit_seconds'] ?? 0),
+            'settings' => $settings,
             'questions' => $out_questions,
         ];
     }
@@ -288,11 +342,15 @@ class PQC_Quiz_Creator
             $wpdb->delete($answer_table, ['question_id' => $qid], ['%d']);
             $answers = isset($q['answers']) && is_array($q['answers']) ? $q['answers'] : [];
             foreach (array_values($answers) as $a_index => $a) {
+                $text = sanitize_text_field((string) ($a['text'] ?? ''));
+                if ($text === '') {
+                    continue;
+                }
                 $wpdb->insert(
                     $answer_table,
                     [
                         'question_id' => $qid,
-                        'answer_text' => sanitize_text_field((string) ($a['text'] ?? '')),
+                        'answer_text' => $text,
                         'is_correct' => !empty($a['correct']) ? 1 : 0,
                         'sort_order' => (int) $a_index,
                         'meta_json' => null,
@@ -314,6 +372,200 @@ class PQC_Quiz_Creator
         }
 
         return true;
+    }
+
+    /**
+     * Replace current quiz questions with the provided array (JSON-decoded).
+     *
+     * @param int $quiz_id
+     * @param array $questions
+     * @return array{total_questions:int,questions_inserted:int}|WP_Error
+     */
+    public static function replace_quiz_questions(int $quiz_id, array $questions)
+    {
+        global $wpdb;
+        if (!$wpdb) {
+            return new WP_Error('db_missing', __('Database unavailable.', 'politeia-quiz-creator'));
+        }
+
+        if ($quiz_id <= 0) {
+            return new WP_Error('invalid_quiz', __('Invalid quiz.', 'politeia-quiz-creator'));
+        }
+
+        $quiz_table = $wpdb->prefix . self::TABLE_QUIZZES;
+        $exists = (int) $wpdb->get_var($wpdb->prepare("SELECT id FROM {$quiz_table} WHERE id = %d LIMIT 1", $quiz_id));
+        if ($exists <= 0) {
+            return new WP_Error('quiz_not_found', __('Quiz not found.', 'politeia-quiz-creator'));
+        }
+
+        $normalized = self::normalize_questions_payload($questions);
+        if (is_wp_error($normalized)) {
+            return $normalized;
+        }
+
+        self::delete_quiz_children($quiz_id);
+        $insert_results = self::insert_questions($quiz_id, $normalized);
+
+        $inserted = 0;
+        foreach ($insert_results as $row) {
+            if (!empty($row['success'])) {
+                $inserted++;
+            }
+        }
+
+        return [
+            'total_questions' => count($normalized),
+            'questions_inserted' => $inserted,
+        ];
+    }
+
+    /**
+     * Append new questions to the end of an existing quiz.
+     *
+     * @param int $quiz_id
+     * @param array $questions
+     * @return array{total_questions:int,questions_inserted:int}|WP_Error
+     */
+    public static function append_quiz_questions(int $quiz_id, array $questions)
+    {
+        global $wpdb;
+        if (!$wpdb) {
+            return new WP_Error('db_missing', __('Database unavailable.', 'politeia-quiz-creator'));
+        }
+
+        if ($quiz_id <= 0) {
+            return new WP_Error('invalid_quiz', __('Invalid quiz.', 'politeia-quiz-creator'));
+        }
+
+        $quiz_table = $wpdb->prefix . self::TABLE_QUIZZES;
+        $exists = (int) $wpdb->get_var($wpdb->prepare("SELECT id FROM {$quiz_table} WHERE id = %d LIMIT 1", $quiz_id));
+        if ($exists <= 0) {
+            return new WP_Error('quiz_not_found', __('Quiz not found.', 'politeia-quiz-creator'));
+        }
+
+        $normalized = self::normalize_questions_payload($questions);
+        if (is_wp_error($normalized)) {
+            return $normalized;
+        }
+
+        $question_table = $wpdb->prefix . self::TABLE_QUESTIONS;
+        $offset = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$question_table} WHERE quiz_id = %d", $quiz_id));
+        $replaced_placeholder = false;
+
+        // If the quiz only has the initial demo placeholder question, treat "append" as "replace"
+        // so users don't get stuck seeing the demo as Question 1.
+        if ($offset === 1 && self::quiz_has_demo_placeholder_question($quiz_id)) {
+            self::delete_quiz_children($quiz_id);
+            $offset = 0;
+            $replaced_placeholder = true;
+        }
+
+        $insert_results = self::insert_questions($quiz_id, $normalized, $offset);
+
+        $inserted = 0;
+        foreach ($insert_results as $row) {
+            if (!empty($row['success'])) {
+                $inserted++;
+            }
+        }
+
+        return [
+            'total_questions' => $offset + count($normalized),
+            'questions_inserted' => $inserted,
+            'go_to_index' => $replaced_placeholder ? 0 : $offset,
+            'replaced_placeholder' => $replaced_placeholder ? 1 : 0,
+        ];
+    }
+
+    /**
+     * Update quiz settings_json (subset + shuffle).
+     *
+     * @param int $quiz_id
+     * @param array $settings
+     * @return array<string,mixed>|WP_Error
+     */
+    public static function update_quiz_settings(int $quiz_id, array $settings)
+    {
+        global $wpdb;
+        if (!$wpdb) {
+            return new WP_Error('db_missing', __('Database unavailable.', 'politeia-quiz-creator'));
+        }
+
+        if ($quiz_id <= 0) {
+            return new WP_Error('invalid_quiz', __('Invalid quiz.', 'politeia-quiz-creator'));
+        }
+
+        $quiz_table = $wpdb->prefix . self::TABLE_QUIZZES;
+        $row = $wpdb->get_row(
+            $wpdb->prepare("SELECT id, settings_json FROM {$quiz_table} WHERE id = %d LIMIT 1", $quiz_id),
+            ARRAY_A
+        );
+        if (!is_array($row) || empty($row['id'])) {
+            return new WP_Error('quiz_not_found', __('Quiz not found.', 'politeia-quiz-creator'));
+        }
+
+        $existing = [];
+        if (!empty($row['settings_json'])) {
+            $decoded = json_decode((string) $row['settings_json'], true);
+            if (is_array($decoded)) {
+                $existing = $decoded;
+            }
+        }
+
+        $allowed = [
+            'questions_per_attempt' => 0,
+            'questions_subset_random' => 0,
+            'questionOrder' => 'in_order',
+        ];
+
+        $next = $existing;
+        foreach ($allowed as $k => $default) {
+            if (array_key_exists($k, $settings)) {
+                $v = $settings[$k];
+                if ($k === 'questions_per_attempt') {
+                    $v = (int) $v;
+                    if ($v < 0) {
+                        $v = 0;
+                    }
+                } elseif ($k === 'questionOrder') {
+                    $v = sanitize_text_field((string) $v);
+                    if ($v !== 'random' && $v !== 'in_order') {
+                        $v = 'in_order';
+                    }
+                } else {
+                    $v = !empty($v) ? 1 : 0;
+                }
+                $next[$k] = $v;
+            }
+        }
+
+        // Compatibility keys consumed by learner runtime.
+        $next['shuffleAnswers'] = true;
+        $next['random_answers'] = 1;
+        $next['random_questions'] = (isset($next['questionOrder']) && (string) $next['questionOrder'] === 'random') ? 1 : 0;
+
+        $ok = $wpdb->update(
+            $quiz_table,
+            ['settings_json' => wp_json_encode($next)],
+            ['id' => $quiz_id],
+            ['%s'],
+            ['%d']
+        );
+        if ($ok === false) {
+            return new WP_Error('settings_update_failed', __('Failed to save settings.', 'politeia-quiz-creator'));
+        }
+
+        // Return a normalized subset for the editor.
+        return [
+            'random_questions' => !empty($next['random_questions']) ? 1 : 0,
+            'random_answers' => 1,
+            'run_once' => !empty($next['run_once']) ? 1 : 0,
+            'force_solve' => !empty($next['force_solve']) ? 1 : 0,
+            'show_points' => !empty($next['show_points']) ? 1 : 0,
+            'questions_per_attempt' => (int) ($next['questions_per_attempt'] ?? 0),
+            'questions_subset_random' => !empty($next['questions_subset_random']) ? 1 : 0,
+            'questionOrder' => isset($next['questionOrder']) ? (string) $next['questionOrder'] : 'in_order',
+        ];
     }
 
     /**
@@ -475,16 +727,42 @@ class PQC_Quiz_Creator
         $out = [];
         $i = 0;
 
+        $derive_title_from_prompt = function (string $prompt, int $index): string {
+            $plain = trim(wp_strip_all_tags($prompt));
+            if ($plain === '') {
+                return sanitize_text_field('Pregunta ' . ($index + 1));
+            }
+            $max = 64;
+            $t = substr($plain, 0, $max);
+            $t = preg_replace('/\s+/', ' ', (string) $t);
+            $t = trim((string) $t);
+            if ($t === '') {
+                return sanitize_text_field('Pregunta ' . ($index + 1));
+            }
+            if (strlen($plain) > $max) {
+                $t .= '…';
+            }
+            return sanitize_text_field($t);
+        };
+
         foreach ($questions as $q) {
             if (!is_array($q)) {
                 continue;
             }
 
-            $title = sanitize_text_field((string) ($q['title'] ?? ('Pregunta ' . ($i + 1))));
             $question_text = (string) ($q['question_text'] ?? ($q['text'] ?? ''));
             $question_text = wp_kses_post($question_text);
             if (trim(wp_strip_all_tags($question_text)) === '') {
                 $question_text = '';
+            }
+
+            // Title is optional; we derive it from the question text for internal use.
+            $title = '';
+            if (isset($q['title'])) {
+                $title = sanitize_text_field((string) $q['title']);
+            }
+            if ($title === '') {
+                $title = $derive_title_from_prompt($question_text, $i);
             }
 
             $answers = isset($q['answers']) && is_array($q['answers']) ? $q['answers'] : [];
@@ -533,13 +811,14 @@ class PQC_Quiz_Creator
      * @param array<int,array{title:string,prompt:string,answers:array<int,array{text:string,correct:bool}>}> $questions
      * @return array<int,array{success:bool,question_id:int}>
      */
-    private static function insert_questions(int $quiz_id, array $questions): array
+    private static function insert_questions(int $quiz_id, array $questions, int $offset = 0): array
     {
         global $wpdb;
         $question_table = $wpdb->prefix . self::TABLE_QUESTIONS;
         $answer_table = $wpdb->prefix . self::TABLE_ANSWERS;
 
         $results = [];
+        $offset = max(0, (int) $offset);
         foreach (array_values($questions) as $index => $q) {
             $ok = $wpdb->insert(
                 $question_table,
@@ -549,7 +828,7 @@ class PQC_Quiz_Creator
                     'prompt' => (string) $q['prompt'],
                     'explanation' => null,
                     'points' => 1,
-                    'sort_order' => (int) $index,
+                    'sort_order' => (int) ($offset + $index),
                     'meta_json' => wp_json_encode(['title' => (string) $q['title']]),
                 ],
                 ['%d', '%s', '%s', '%s', '%d', '%d', '%s']
@@ -581,5 +860,71 @@ class PQC_Quiz_Creator
         }
 
         return $results;
+    }
+
+    private static function quiz_has_demo_placeholder_question(int $quiz_id): bool
+    {
+        global $wpdb;
+        if (!$wpdb || $quiz_id <= 0) {
+            return false;
+        }
+
+        $question_table = $wpdb->prefix . self::TABLE_QUESTIONS;
+        $answer_table = $wpdb->prefix . self::TABLE_ANSWERS;
+
+        $q = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT id, prompt, meta_json
+                 FROM {$question_table}
+                 WHERE quiz_id = %d
+                 ORDER BY sort_order ASC, id ASC
+                 LIMIT 1",
+                $quiz_id
+            ),
+            ARRAY_A
+        );
+        if (!is_array($q) || empty($q['id'])) {
+            return false;
+        }
+
+        $prompt = (string) ($q['prompt'] ?? '');
+        $prompt_plain = trim(wp_strip_all_tags($prompt));
+        if ($prompt_plain !== '') {
+            return false;
+        }
+
+        $meta = [];
+        if (!empty($q['meta_json'])) {
+            $decoded = json_decode((string) $q['meta_json'], true);
+            if (is_array($decoded)) {
+                $meta = $decoded;
+            }
+        }
+        $title = strtolower(trim((string) ($meta['title'] ?? '')));
+        $title_ok = in_array($title, ['pregunta 1', 'question 1'], true);
+        if (!$title_ok) {
+            return false;
+        }
+
+        $answers = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT answer_text
+                 FROM {$answer_table}
+                 WHERE question_id = %d
+                 ORDER BY sort_order ASC, id ASC
+                 LIMIT 2",
+                (int) $q['id']
+            ),
+            ARRAY_A
+        );
+
+        if (!is_array($answers) || count($answers) < 2) {
+            return false;
+        }
+
+        $a1 = strtolower(trim((string) ($answers[0]['answer_text'] ?? '')));
+        $a2 = strtolower(trim((string) ($answers[1]['answer_text'] ?? '')));
+
+        return ($a1 === 'respuesta 1' && $a2 === 'respuesta 2') || ($a1 === 'answer 1' && $a2 === 'answer 2');
     }
 }

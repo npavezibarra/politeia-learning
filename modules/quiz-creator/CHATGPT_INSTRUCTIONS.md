@@ -18,7 +18,7 @@ Create a quiz in JSON format with the following structure:
   "settings": {
     "time_limit": 300,
     "random_questions": 0,
-    "random_answers": 0,
+    "random_answers": 1,
     "run_once": 0,
     "force_solve": 0,
     "passing_percentage": 80
@@ -94,7 +94,7 @@ Create a quiz about [TOPIC] with [NUMBER] questions in JSON format.
 
 Requirements:
 - Time limit: [X] minutes
-- Randomize answer order: [yes/no]
+- Answer order: always shuffled
 - Passing percentage: [X]%
 - Each question should have [X] answer options
 
@@ -103,7 +103,7 @@ Use this structure:
   "title": "Quiz Title",
   "settings": {
     "time_limit": [SECONDS],
-    "random_answers": [0 or 1],
+    "random_answers": 1,
     "passing_percentage": [NUMBER]
   },
   "questions": [

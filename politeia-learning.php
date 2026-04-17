@@ -138,46 +138,70 @@ add_filter('bp_core_get_user_displayname', function ($display_name, $user_id) {
     return pl_get_user_full_name_or_display_name((int) $user_id, (string) $display_name);
 }, 10, 2);
 
-// Enforce Poppins typography across LearnDash course and lesson pages.
+// Global Styles and Typography
 add_action('wp_enqueue_scripts', function () {
-    if (!is_singular('sfwd-courses') && !is_singular('sfwd-lessons') && !is_singular('learni_course') && !is_singular('learni_lesson')) {
-        return;
-    }
-
+    // Enqueue Poppins for all pages to support branded elements like the mini-cart badge
     wp_enqueue_style(
-        'pl-course-poppins',
+        'pl-global-styles',
         'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap',
         [],
         null
     );
 
-    wp_add_inline_style(
-        'pl-course-poppins',
-        'body.single-sfwd-courses,body.single-sfwd-lessons{font-family:"Poppins",sans-serif!important;}' .
-        'body.single-learni_course,body.single-learni_lesson{font-family:"Poppins",sans-serif!important;}' .
-        'body.single-sfwd-courses button,' .
-        'body.single-sfwd-courses input,' .
-        'body.single-sfwd-courses select,' .
-        'body.single-sfwd-courses textarea,' .
-        'body.single-sfwd-courses h1,' .
-        'body.single-sfwd-courses h2,' .
-        'body.single-sfwd-courses h3,' .
-        'body.single-sfwd-courses h4,' .
-        'body.single-sfwd-courses h5,' .
-        'body.single-sfwd-courses h6,' .
-        'body.single-sfwd-lessons button,' .
-        'body.single-sfwd-lessons input,' .
-        'body.single-sfwd-lessons select,' .
-        'body.single-sfwd-lessons textarea,' .
-        'body.single-sfwd-lessons h1,' .
-        'body.single-sfwd-lessons h2,' .
-        'body.single-sfwd-lessons h3,' .
-        'body.single-sfwd-lessons h4,' .
-        'body.single-sfwd-lessons h5,' .
-        'body.single-sfwd-lessons h6{' .
-        'font-family:"Poppins",sans-serif!important;' .
-        '}'
-    );
+    // Mini-cart badge styling (requested by user)
+    $custom_css = "
+        .wc-block-mini-cart__badge {
+            align-items: center;
+            font-family: 'Poppins', sans-serif;
+            border-radius: 1em;
+            box-sizing: border-box;
+            display: flex;
+            font-size: 9px;
+            font-weight: 600;
+            height: 20px;
+            justify-content: center;
+            left: 100%;
+            margin-left: -44%;
+            min-width: 20px;
+            padding: 0 .25em;
+            position: absolute;
+            transform: translateY(-50%);
+            white-space: nowrap;
+            z-index: 1;
+        }
+    ";
+
+    // Legacy Course Typography enforcements (kept for backward compatibility)
+    if (is_singular('sfwd-courses') || is_singular('sfwd-lessons') || is_singular('learni_course') || is_singular('learni_lesson')) {
+        $custom_css .= '
+            body.single-sfwd-courses,body.single-sfwd-lessons{font-family:"Poppins",sans-serif!important;}
+            body.single-learni_course,body.single-learni_lesson{font-family:"Poppins",sans-serif!important;}
+            body.single-sfwd-courses button,
+            body.single-sfwd-courses input,
+            body.single-sfwd-courses select,
+            body.single-sfwd-courses textarea,
+            body.single-sfwd-courses h1,
+            body.single-sfwd-courses h2,
+            body.single-sfwd-courses h3,
+            body.single-sfwd-courses h4,
+            body.single-sfwd-courses h5,
+            body.single-sfwd-courses h6,
+            body.single-sfwd-lessons button,
+            body.single-sfwd-lessons input,
+            body.single-sfwd-lessons select,
+            body.single-sfwd-lessons textarea,
+            body.single-sfwd-lessons h1,
+            body.single-sfwd-lessons h2,
+            body.single-sfwd-lessons h3,
+            body.single-sfwd-lessons h4,
+            body.single-sfwd-lessons h5,
+            body.single-sfwd-lessons h6{
+                font-family:"Poppins",sans-serif!important;
+            }
+        ';
+    }
+
+    wp_add_inline_style('pl-global-styles', $custom_css);
 }, 20);
 
 /**

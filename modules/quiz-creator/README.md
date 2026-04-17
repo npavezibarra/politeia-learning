@@ -63,7 +63,7 @@ Most flexible format, perfect for ChatGPT generation.
   "settings": {
     "time_limit": 300,
     "random_questions": 0,
-    "random_answers": 0,
+    "random_answers": 1,
     "run_once": 0,
     "force_solve": 0,
     "passing_percentage": 80
@@ -146,7 +146,7 @@ A: Answer 2
 |---------|------|---------|-------------|
 | `time_limit` | int | 0 | Time limit in seconds (0 = no limit) |
 | `random_questions` | int | 0 | Randomize question order (0 = no, 1 = yes) |
-| `random_answers` | int | 0 | Randomize answer order (0 = no, 1 = yes) |
+| `random_answers` | int | 1 | Answers are always shuffled (not configurable) |
 | `run_once` | int | 0 | Limit quiz attempts (0 = no limit, 1 = yes) |
 | `run_once_type` | int | 0 | 0=user, 1=cookie, 2=IP, 3=both |
 | `force_solve` | int | 0 | Force answering before next (0 = no, 1 = yes) |
@@ -171,7 +171,7 @@ Create a quiz in JSON format with the following structure:
   "settings": {
     "time_limit": 300,
     "random_questions": 0,
-    "random_answers": 0,
+    "random_answers": 1,
     "run_once": 0,
     "force_solve": 0,
     "passing_percentage": 80

@@ -2068,40 +2068,118 @@ jQuery(document).ready(function ($) {
             return true;
         }
 
+        function getClosestEditorBlock(node, editor) {
+            if (!node || !editor) return null;
+            let current = node.nodeType === Node.ELEMENT_NODE ? node : node.parentNode;
+            while (current && current !== editor) {
+                if (
+                    current.nodeType === Node.ELEMENT_NODE &&
+                    /^(P|DIV|H1|H2|H3|H4|H5|H6)$/i.test(current.tagName)
+                ) {
+                    return current;
+                }
+                current = current.parentNode;
+            }
+            return null;
+        }
+
+        function replaceBlockTag(block, tagName) {
+            if (!block || !block.parentNode || !tagName) return null;
+            const nextTag = String(tagName).toUpperCase();
+            if (block.tagName === nextTag) return block;
+
+            const replacement = document.createElement(nextTag);
+            replacement.innerHTML = block.innerHTML;
+
+            // Preserve editor-specific metadata if ever added to these blocks.
+            Array.from(block.attributes || []).forEach(function (attr) {
+                if (attr && attr.name && attr.name !== 'style') {
+                    replacement.setAttribute(attr.name, attr.value);
+                }
+            });
+
+            block.parentNode.replaceChild(replacement, block);
+            return replacement;
+        }
+
+        function applyBlockTagFallback(tag) {
+            const editor = getEditorEl();
+            if (!editor) return false;
+
+            const sel = window.getSelection ? window.getSelection() : null;
+            let range = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0) : null;
+            if (!isRangeInsideEditor(range, editor)) {
+                range = (savedEditorRange && isRangeInsideEditor(savedEditorRange, editor)) ? savedEditorRange.cloneRange() : null;
+            }
+            if (!range) return false;
+
+            const block = getClosestEditorBlock(range.startContainer, editor) || getClosestEditorBlock(range.commonAncestorContainer, editor);
+            if (!block) return false;
+
+            const replacement = replaceBlockTag(block, tag);
+            if (!replacement || !sel) return false;
+
+            const nextRange = document.createRange();
+            nextRange.selectNodeContents(replacement);
+            nextRange.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(nextRange);
+            savedEditorRange = nextRange.cloneRange();
+            return true;
+        }
+
         // Expose helpers for inline toolbar buttons.
         window.pcgEscritoExec = function (cmd, value) {
-            focusEditor();
             try {
+                focusEditor();
+                restoreEditorSelection();
                 document.execCommand(cmd, false, value ?? null);
+                saveEditorSelection(true);
             } catch (_) {
                 // no-op
             }
         };
 
         window.pcgEscritoFormatBlock = function (tag) {
+            const editor = document.getElementById('pcg-escrito-content-editor');
+            if (!editor || !editor.innerHTML.trim()) {
+                if (editor) editor.innerHTML = '<p><br></p>';
+            }
+
             focusEditor();
+            restoreEditorSelection();
+
+            let applied = false;
             try {
-                const editor = document.getElementById('pcg-escrito-content-editor');
-                if (!editor || !editor.innerHTML.trim()) {
-                    if (editor) editor.innerHTML = '<p><br></p>';
-                }
-                document.execCommand('formatBlock', false, tag);
+                applied = document.execCommand('formatBlock', false, tag);
             } catch (err) {
+                applied = false;
+            }
+
+            if (!applied) {
                 try {
-                    document.execCommand('formatBlock', false, '<' + tag + '>');
-                } catch (e) {
-                    // fallback
+                    applied = document.execCommand('formatBlock', false, '<' + tag + '>');
+                } catch (err) {
+                    applied = false;
                 }
+            }
+
+            if (!applied) {
+                applyBlockTagFallback(tag);
+            } else {
+                saveEditorSelection(true);
             }
         };
 
         $(document).on('mousedown', '.pcg-toolbar-btn, .pcg-dropdown-content button', function (e) {
+            saveEditorSelection(true);
             e.preventDefault();
         });
 
         $(document).on('click', '.pcg-toolbar-btn, .pcg-dropdown-content button', function () {
             if ($(this).attr('onclick')) {
                 focusEditor();
+                restoreEditorSelection();
             }
         });
 
@@ -2112,14 +2190,18 @@ jQuery(document).ready(function ($) {
             // Get raw text (ignores HTML tags)
             const text = $ed.text().trim();
             const html = $ed.html().trim().toLowerCase();
+            const hasImages = html.includes('<img') || html.includes('<figure');
             // It's empty if there's no actual text, AND the HTML is either entirely empty or just browsers' default empty blocks
-            const isEmpty = (text === '' && (html === '' || html === '<br>' || html === '<p><br></p>' || html === '<p></p>' || html === '<br><div></div>' || html.replace(/<[^>]*>/g, '').trim() === ''));
+            const isEmpty = (!hasImages && text === '' && (html === '' || html === '<br>' || html === '<p><br></p>' || html === '<p></p>' || html === '<br><div></div>' || html.replace(/<[^>]*>/g, '').trim() === ''));
             $ed.toggleClass('pcg-is-empty', isEmpty);
             $('#pcg-editor-placeholder').toggle(isEmpty);
         }
 
         $(document).on('input keyup blur focus change', '#pcg-escrito-content-editor', handlePlaceholder);
         $(document).on('keyup mouseup focus blur input', '#pcg-escrito-content-editor', saveEditorSelection);
+        $(document).on('selectionchange', function () {
+            saveEditorSelection();
+        });
 
         let currentEscritoId = 0;
         let escritoThumbnailId = 0;
@@ -2142,7 +2224,10 @@ jQuery(document).ready(function ($) {
         $('#pcg-show-escritos-form').on('click', function () {
             $('#pcg-my-escritos-section').fadeOut(300, function () {
                 resetEscritoForm();
-                $('#pcg-escritos-form-section').fadeIn(300);
+                $('#pcg-escritos-form-section').fadeIn(300, function () {
+                    initInlineImageMicroText();
+                    normalizeInlineImages(getEditorEl());
+                });
             });
         });
 
@@ -2253,6 +2338,8 @@ jQuery(document).ready(function ($) {
                             $('#pcg-escrito-upload-ui').hide();
                         }
                         handlePlaceholder();
+                        initInlineImageMicroText();
+                        normalizeInlineImages(getEditorEl());
 
                         if (data.permalink) {
                             $('#pcg-btn-preview-escrito').attr('href', data.permalink).show();
@@ -2391,22 +2478,31 @@ jQuery(document).ready(function ($) {
                             entity_id: currentEscritoId
                         },
                         success: function (response) {
-                            if (response.success) {
-                                const loader = document.getElementById(tempId);
-                                if (loader) {
-                                    $(loader).replaceWith(`<img src="${response.data.url}" class="pcg-new-inline-image" />`);
-                                    const insertedImg = document.querySelector('#pcg-escrito-content-editor img.pcg-new-inline-image');
-                                    if (insertedImg) {
-                                        insertedImg.classList.remove('pcg-new-inline-image');
-                                        insertedImg.scrollIntoView({ block: 'center', inline: 'nearest' });
-                                    } else {
-                                        window.scrollTo(0, preModalScrollY);
-                                    }
-                                } else {
-                                    insertHtmlAtEditorSelection(`<img src="${response.data.url}" />`);
-                                    window.scrollTo(0, preModalScrollY);
-                                }
-                            } else {
+	                            if (response.success) {
+	                                const loader = document.getElementById(tempId);
+                                const attachmentId = response && response.data && response.data.id ? String(response.data.id) : '';
+                                const imageId = attachmentId ? `pcg-inline-img-${attachmentId}` : `pcg-inline-img-${Date.now()}`;
+                                const figureHtml = `
+                                    <figure class="pcg-inline-figure">
+                                        <img id="${imageId}" data-attachment-id="${attachmentId}" src="${response.data.url}" />
+                                        <figcaption class="pcg-inline-caption" contenteditable="false" data-placeholder="Escribe un texto para esta imagen..." data-editing="false"></figcaption>
+                                    </figure>
+                                `.replace(/\s{2,}/g, ' ').trim();
+	                                if (loader) {
+	                                    $(loader).replaceWith(figureHtml);
+	                                    const insertedFigure = document.querySelector('#pcg-escrito-content-editor figure.pcg-inline-figure:last-of-type');
+	                                    if (insertedFigure) {
+	                                        insertedFigure.scrollIntoView({ block: 'center', inline: 'nearest' });
+                                            normalizeInlineImages(getEditorEl());
+	                                    } else {
+	                                        window.scrollTo(0, preModalScrollY);
+	                                    }
+	                                } else {
+	                                    insertHtmlAtEditorSelection(figureHtml);
+                                        normalizeInlineImages(getEditorEl());
+	                                    window.scrollTo(0, preModalScrollY);
+	                                }
+	                            } else {
                                 alert(t('errorUploadingImage'));
                                 $('#' + tempId).remove();
                             }
@@ -2442,13 +2538,184 @@ jQuery(document).ready(function ($) {
             activeHoverImg = null;
         });
 
-        $floatRemoveBtn.on('click', function (e) {
-            e.preventDefault();
-            if (activeHoverImg) {
-                activeHoverImg.remove();
-                $floatRemoveBtn.hide();
-                activeHoverImg = null;
+	        $floatRemoveBtn.on('click', function (e) {
+	            e.preventDefault();
+	            if (activeHoverImg) {
+	                const $figure = activeHoverImg.closest('figure.pcg-inline-figure');
+	                if ($figure.length) {
+	                    $figure.remove();
+	                } else {
+	                    activeHoverImg.remove();
+	                }
+	                $floatRemoveBtn.hide();
+	                activeHoverImg = null;
+	            }
+	        });
+
+        function updateCaptionState(captionEl) {
+            const caption = captionEl instanceof HTMLElement ? captionEl : null;
+            if (!caption) return;
+            const figure = caption.closest('figure.pcg-inline-figure');
+            if (!figure) return;
+	            const text = (caption.textContent || '').replace(/\u00a0/g, ' ').trim();
+	            if (text.length === 0) {
+	                // Remove stray <br> that browsers often insert into empty contenteditables
+	                caption.innerHTML = '';
             }
+            figure.classList.toggle('pcg-has-caption-text', text.length > 0);
+        }
+
+        let inlineImageObserverInitialized = false;
+        let isNormalizingInlineImages = false;
+
+        function ensureUniqueId(id, el) {
+            if (!id) return '';
+            let candidate = id;
+            let i = 2;
+            while (document.getElementById(candidate) && document.getElementById(candidate) !== el) {
+                candidate = `${id}-${i++}`;
+            }
+            return candidate;
+        }
+
+        function normalizeInlineImages(editor) {
+            if (!editor || isNormalizingInlineImages) return;
+            isNormalizingInlineImages = true;
+            try {
+                const images = Array.from(editor.querySelectorAll('img'));
+                images.forEach((img) => {
+                    if (!(img instanceof HTMLElement)) return;
+
+                    const attachmentId = (img.getAttribute('data-attachment-id') || '').trim();
+                    if (!img.id) {
+                        const baseId = attachmentId ? `pcg-inline-img-${attachmentId}` : `pcg-inline-img-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+                        img.id = ensureUniqueId(baseId, img);
+                    } else {
+                        img.id = ensureUniqueId(img.id, img);
+                    }
+
+                    const existingFigure = img.closest('figure');
+                    if (existingFigure && existingFigure.classList.contains('pcg-inline-figure')) {
+                        let caption = existingFigure.querySelector('figcaption');
+                        if (!caption) {
+                            caption = document.createElement('figcaption');
+                            existingFigure.appendChild(caption);
+                        }
+                        caption.classList.add('pcg-inline-caption');
+                        caption.setAttribute('data-placeholder', caption.getAttribute('data-placeholder') || 'Escribe un texto para esta imagen...');
+                        caption.setAttribute('data-editing', 'false');
+                        caption.setAttribute('contenteditable', 'false');
+                        updateCaptionState(caption);
+                        return;
+                    }
+
+                    if (existingFigure && !existingFigure.classList.contains('pcg-inline-figure')) {
+                        existingFigure.classList.add('pcg-inline-figure');
+                        let caption = existingFigure.querySelector('figcaption');
+                        if (!caption) {
+                            caption = document.createElement('figcaption');
+                            existingFigure.appendChild(caption);
+                        }
+                        caption.classList.add('pcg-inline-caption');
+                        caption.setAttribute('data-placeholder', caption.getAttribute('data-placeholder') || 'Escribe un texto para esta imagen...');
+                        caption.setAttribute('data-editing', 'false');
+                        caption.setAttribute('contenteditable', 'false');
+                        updateCaptionState(caption);
+                        return;
+                    }
+
+                    // Avoid restructuring images inside tables.
+                    if (img.closest('table')) return;
+
+                    const parent = img.parentElement;
+                    const shouldReplaceParent = parent && parent.tagName === 'P' && parent.childNodes.length === 1;
+                    const figure = document.createElement('figure');
+                    figure.className = 'pcg-inline-figure';
+
+                    const caption = document.createElement('figcaption');
+                    caption.className = 'pcg-inline-caption';
+                    caption.setAttribute('contenteditable', 'false');
+                    caption.setAttribute('data-placeholder', 'Escribe un texto para esta imagen...');
+                    caption.setAttribute('data-editing', 'false');
+
+                    if (shouldReplaceParent) {
+                        parent.parentNode && parent.parentNode.replaceChild(figure, parent);
+                    } else if (parent) {
+                        parent.insertBefore(figure, img);
+                    }
+
+                    figure.appendChild(img);
+                    figure.appendChild(caption);
+                    updateCaptionState(caption);
+                });
+            } finally {
+                isNormalizingInlineImages = false;
+            }
+        }
+
+        function initInlineImageMicroText() {
+            const editor = getEditorEl();
+            if (!editor || inlineImageObserverInitialized || typeof MutationObserver === 'undefined') return;
+            inlineImageObserverInitialized = true;
+
+            const observer = new MutationObserver((mutations) => {
+                if (isNormalizingInlineImages) return;
+                let hasImageChange = false;
+                for (const m of mutations) {
+                    if (m.type !== 'childList') continue;
+                    for (const node of Array.from(m.addedNodes || [])) {
+                        if (!node || node.nodeType !== 1) continue;
+                        const el = node;
+                        if (el.tagName === 'IMG' || (el.querySelector && el.querySelector('img'))) {
+                            hasImageChange = true;
+                            break;
+                        }
+                    }
+                    if (hasImageChange) break;
+                }
+                if (hasImageChange) normalizeInlineImages(editor);
+            });
+
+            observer.observe(editor, { childList: true, subtree: true });
+            normalizeInlineImages(editor);
+        }
+
+        function focusCaptionAtEnd(caption) {
+            if (!caption || !window.getSelection || !document.createRange) return;
+            const range = document.createRange();
+            range.selectNodeContents(caption);
+            range.collapse(false);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            caption.focus();
+        }
+
+        $(document).on('click', '#pcg-escrito-content-editor figcaption.pcg-inline-caption', function (e) {
+            const caption = this;
+            const isEditing = caption.getAttribute('data-editing') === 'true';
+            if (!isEditing) {
+                e.preventDefault();
+                caption.setAttribute('contenteditable', 'true');
+                caption.setAttribute('data-editing', 'true');
+                focusCaptionAtEnd(caption);
+            }
+        });
+
+        $(document).on('keydown', '#pcg-escrito-content-editor figcaption.pcg-inline-caption', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.blur();
+            }
+        });
+
+        $(document).on('input blur', '#pcg-escrito-content-editor figcaption.pcg-inline-caption', function (e) {
+            if (e.type === 'blur') {
+                const text = (this.textContent || '').replace(/\u00a0/g, ' ').trim();
+                this.setAttribute('data-editing', 'false');
+                this.setAttribute('contenteditable', 'false');
+            }
+            updateCaptionState(this);
         });
 
         // Auto-resize title
@@ -2468,7 +2735,7 @@ jQuery(document).ready(function ($) {
                 html = html.replace(/<div[^>]*>/gi, '<p>').replace(/<\/div>/gi, '</p>');
 
                 const $temp = $('<div>').html(html);
-                const allowedTags = ['P', 'H1', 'H2', 'H3', 'A', 'BR', 'UL', 'OL', 'LI', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'STRONG', 'EM', 'B', 'I', 'IMG'];
+                const allowedTags = ['P', 'H1', 'H2', 'H3', 'A', 'BR', 'UL', 'OL', 'LI', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'STRONG', 'EM', 'B', 'I', 'IMG', 'FIGURE', 'FIGCAPTION'];
 
                 // Recursive cleanup
                 function cleanNode(node) {
@@ -2490,7 +2757,11 @@ jQuery(document).ready(function ($) {
                         if (tag === 'A') {
                             allowedAttrs = ['href', 'target'];
                         } else if (tag === 'IMG') {
-                            allowedAttrs = ['src', 'alt', 'class', 'width', 'height'];
+                            allowedAttrs = ['src', 'alt', 'class', 'width', 'height', 'id', 'data-attachment-id'];
+                        } else if (tag === 'FIGURE') {
+                            allowedAttrs = ['class'];
+                        } else if (tag === 'FIGCAPTION') {
+                            allowedAttrs = ['class', 'data-placeholder', 'data-editing'];
                         }
 
                         for (let i = attributes.length - 1; i >= 0; i--) {
@@ -3733,8 +4004,21 @@ jQuery(document).ready(function ($) {
 
     // Save Course Logic
     $('.pcg-btn-save-course').on('click', function () {
+        function setSaveButtonState($button, state) {
+            const $icon = $button.find('.dashicons').first();
+            if ($icon.length) {
+                $icon.removeClass('dashicons-saved dashicons-update dashicons-yes-alt dashicons-warning');
+                if (state === 'loading') $icon.addClass('dashicons-update');
+                else if (state === 'success') $icon.addClass('dashicons-yes-alt');
+                else if (state === 'error') $icon.addClass('dashicons-warning');
+                else $icon.addClass('dashicons-saved');
+            }
+        }
+
         // Trigger Quiz Save if the editor is active
-        $(document).trigger('pqc_save');
+        try {
+            $(document).trigger('pqc_save', [{ silent: true }]);
+        } catch (_) {}
 
         const $btn = $(this);
 
@@ -3774,9 +4058,11 @@ jQuery(document).ready(function ($) {
 
         if (!courseData.title) {
             alert(t('pleaseEnterCourseTitle'));
+            setSaveButtonState($btn, 'default');
             return;
         }
 
+        setSaveButtonState($btn, 'loading');
         $btn.addClass('loading').prop('disabled', true);
 
         $.ajax({
@@ -3787,19 +4073,21 @@ jQuery(document).ready(function ($) {
                 nonce: pcgCreatorData.nonce,
                 course_data: courseData
             },
-	            success: function (response) {
-	                $btn.removeClass('loading');
-	                if (response.success) {
-	                    currentCourseId = response.data.course_id;
-	                    if (response.data && response.data.status) {
-	                        currentCourseStatus = response.data.status;
-	                        updatePublishButton();
-	                    }
-	                    $('#pcg-current-course-id').val(currentCourseId);
-	                    $btn.addClass('success');
+            success: function (response) {
+                $btn.removeClass('loading');
+                if (response.success) {
+                    currentCourseId = response.data.course_id;
+                    if (response.data && response.data.status) {
+                        currentCourseStatus = response.data.status;
+                        updatePublishButton();
+                    }
+                    $('#pcg-current-course-id').val(currentCourseId);
+                    setSaveButtonState($btn, 'success');
+                    $btn.addClass('success');
                     refreshActiveList();
                     setTimeout(() => {
                         $btn.prop('disabled', false).removeClass('success');
+                        setSaveButtonState($btn, 'default');
                     }, 2000);
 
                     if (response.data.permalink) {
@@ -3808,13 +4096,17 @@ jQuery(document).ready(function ($) {
                     }
                 } else {
                     alert(t('errorPrefix') + response.data.message);
+                    setSaveButtonState($btn, 'error');
                     $btn.prop('disabled', false);
+                    setTimeout(() => setSaveButtonState($btn, 'default'), 2000);
                 }
             },
             error: function () {
                 $btn.removeClass('loading');
                 alert(t('errorSavingCourse'));
+                setSaveButtonState($btn, 'error');
                 $btn.prop('disabled', false);
+                setTimeout(() => setSaveButtonState($btn, 'default'), 2000);
             }
         });
     });

@@ -230,12 +230,8 @@ if (!defined('ABSPATH')) {
                 </div>
                 <div class="pqc-settings-grid">
                     <div class="pqc-field pqc-field-checkbox">
-                        <label><input type="checkbox" id="pqc-random-questions"
-                                name="random_questions" /><span><?php _e('Randomize Question Order', 'politeia-quiz-creator'); ?></span></label>
-                    </div>
-                    <div class="pqc-field pqc-field-checkbox">
-                        <label><input type="checkbox" id="pqc-random-answers"
-                                name="random_answers" /><span><?php _e('Randomize Answer Order', 'politeia-quiz-creator'); ?></span></label>
+                        <label><input type="checkbox" id="pqc-respect-question-order" name="respect_question_order" checked />
+                            <span><?php _e('Respect question order (as provided)', 'politeia-quiz-creator'); ?></span></label>
                     </div>
                     <div class="pqc-field pqc-field-checkbox">
                         <label><input type="checkbox" id="pqc-run-once"

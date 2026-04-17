@@ -18,7 +18,7 @@ class PL_Course_Partner_Modal
 
     public static function enqueue_assets(): void
     {
-        if (!is_singular('sfwd-courses')) {
+        if (!is_singular('sfwd-courses') && !is_singular('learni_course')) {
             return;
         }
 
@@ -27,10 +27,26 @@ class PL_Course_Partner_Modal
             return;
         }
 
+        // Fonts/icons for the modal UI.
+        wp_enqueue_style(
+            'pl-course-partner-poppins',
+            'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap',
+            [],
+            null
+        );
+
+        wp_enqueue_style(
+            'pl-course-partner-material-symbols',
+            // Use the full font (no `icon_names` subsetting) to avoid glyph fallback showing text like "CLOSE".
+            'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap',
+            [],
+            null
+        );
+
         wp_enqueue_style(
             'pl-course-partner-modal',
             PL_URL . 'assets/css/course-partner-modal.css',
-            [],
+            ['pl-course-partner-poppins', 'pl-course-partner-material-symbols'],
             (string) @filemtime(PL_PATH . 'assets/css/course-partner-modal.css')
         );
 
@@ -89,7 +105,7 @@ class PL_Course_Partner_Modal
 
     public static function render_modal(): void
     {
-        if (!is_singular('sfwd-courses')) {
+        if (!is_singular('sfwd-courses') && !is_singular('learni_course')) {
             return;
         }
 
@@ -109,11 +125,21 @@ class PL_Course_Partner_Modal
                 <div class="pl-partner-modal__header">
                     <h3 id="plPartnerTitle" class="pl-partner-modal__title"><?php echo esc_html__('Add Partner', 'politeia-learning'); ?></h3>
                     <button type="button" class="pl-partner-modal__close" aria-label="<?php echo esc_attr__('Close', 'politeia-learning'); ?>">
-                        ×
+                        <span class="material-symbols-outlined" aria-hidden="true">close</span>
                     </button>
                 </div>
 
                 <div id="plPartnerFormContent">
+                    <div class="pl-partner-intro" aria-hidden="false">
+                        <div class="pl-partner-intro__icon" aria-hidden="true">
+                            <span class="material-symbols-outlined" aria-hidden="true">groups</span>
+                        </div>
+                        <p class="pl-partner-intro__copy">
+                            <?php echo esc_html__('Puedes añadir a un compañero de estudio que tendrá acceso al mismo contenido y podrá hacer la evaluación de manera cruzada.', 'politeia-learning'); ?>
+                            <span class="pl-partner-intro__copy-strong"><?php echo esc_html__('Súma a quien tú quieras para hacer de tu estudio una aventura acompañada.', 'politeia-learning'); ?></span>
+                        </p>
+                    </div>
+
                     <div class="pl-partner-toggle" data-state="members">
                         <button type="button" class="pl-partner-toggle__option is-active" data-option="members">
                             <?php echo esc_html__('Members', 'politeia-learning'); ?>
@@ -126,8 +152,11 @@ class PL_Course_Partner_Modal
                     <form id="plPartnerForm" class="pl-partner-form">
                         <div class="pl-partner-field" data-mode="members">
                             <label class="pl-partner-label" for="plPartnerMemberInput"><?php echo esc_html__('Search name', 'politeia-learning'); ?></label>
-                            <input id="plPartnerMemberInput" class="pl-partner-input" type="text" autocomplete="off"
-                                placeholder="<?php echo esc_attr__('Start typing…', 'politeia-learning'); ?>" />
+                            <div class="pl-partner-input-row">
+                                <input id="plPartnerMemberInput" class="pl-partner-input" type="text" autocomplete="off"
+                                    placeholder="<?php echo esc_attr__('Start typing…', 'politeia-learning'); ?>" />
+                                <span class="pl-partner-input-icon material-symbols-outlined" aria-hidden="true">search</span>
+                            </div>
                             <div id="plPartnerMemberResults" class="pl-partner-results" aria-live="polite"></div>
                             <div id="plPartnerMemberError" class="pl-partner-error" hidden>
                                 <?php echo esc_html__('Select a member from the list.', 'politeia-learning'); ?>
@@ -137,20 +166,26 @@ class PL_Course_Partner_Modal
                         <div class="pl-partner-field" data-mode="non-members" hidden>
                             <div>
                                 <label class="pl-partner-label" for="plPartnerFirstName"><?php echo esc_html__('First name', 'politeia-learning'); ?></label>
-                                <input id="plPartnerFirstName" class="pl-partner-input" type="text" autocomplete="off"
-                                    placeholder="<?php echo esc_attr__('First name', 'politeia-learning'); ?>" />
+                                <div class="pl-partner-input-row">
+                                    <input id="plPartnerFirstName" class="pl-partner-input" type="text" autocomplete="off"
+                                        placeholder="<?php echo esc_attr__('First name', 'politeia-learning'); ?>" />
+                                </div>
                             </div>
 
                             <div>
                                 <label class="pl-partner-label" for="plPartnerLastName"><?php echo esc_html__('Last name', 'politeia-learning'); ?></label>
-                                <input id="plPartnerLastName" class="pl-partner-input" type="text" autocomplete="off"
-                                    placeholder="<?php echo esc_attr__('Last name', 'politeia-learning'); ?>" />
+                                <div class="pl-partner-input-row">
+                                    <input id="plPartnerLastName" class="pl-partner-input" type="text" autocomplete="off"
+                                        placeholder="<?php echo esc_attr__('Last name', 'politeia-learning'); ?>" />
+                                </div>
                             </div>
 
                             <div>
                                 <label class="pl-partner-label" for="plPartnerEmail"><?php echo esc_html__('Email', 'politeia-learning'); ?></label>
-                                <input id="plPartnerEmail" class="pl-partner-input" type="email" autocomplete="off"
-                                    placeholder="<?php echo esc_attr__('name@email.com', 'politeia-learning'); ?>" />
+                                <div class="pl-partner-input-row">
+                                    <input id="plPartnerEmail" class="pl-partner-input" type="email" autocomplete="off"
+                                        placeholder="<?php echo esc_attr__('name@email.com', 'politeia-learning'); ?>" />
+                                </div>
                             </div>
                         </div>
 

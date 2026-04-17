@@ -31,6 +31,8 @@ class PQC_Ajax_Handler
         add_action('wp_ajax_pqc_get_quiz_editor', [$this, 'handle_get_quiz_editor']);
         add_action('wp_ajax_pqc_add_question', [$this, 'handle_add_question']);
         add_action('wp_ajax_pqc_delete_question', [$this, 'handle_delete_question']);
+        add_action('wp_ajax_pqc_import_questions_json', [$this, 'handle_import_questions_json']);
+        add_action('wp_ajax_pqc_save_quiz_settings', [$this, 'handle_save_quiz_settings']);
     }
 
     /**
@@ -124,6 +126,19 @@ class PQC_Ajax_Handler
 
         $course_id = intval($_POST['course_id'] ?? 0);
 
+        // Question order: default to respecting the provided order.
+        $question_order = 'in_order';
+        if (isset($quiz_settings['question_order'])) {
+            $v = sanitize_text_field((string) $quiz_settings['question_order']);
+            if ($v === 'random' || $v === 'in_order') {
+                $question_order = $v;
+            }
+        } elseif (array_key_exists('respect_question_order', $quiz_settings)) {
+            $question_order = !empty($quiz_settings['respect_question_order']) ? 'in_order' : 'random';
+        } elseif (array_key_exists('random_questions', $quiz_settings)) {
+            $question_order = !empty($quiz_settings['random_questions']) ? 'random' : 'in_order';
+        }
+
         // Check permissions (allow course authors without broad WP caps)
         if (!function_exists('pqc_can_access_quiz_creator') || !pqc_can_access_quiz_creator($course_id, 0)) {
             wp_send_json_error([
@@ -137,8 +152,10 @@ class PQC_Ajax_Handler
             'settings' => [
                 'time_limit' => intval($quiz_settings['time_limit'] ?? 0),
                 'passing_percentage' => intval($quiz_settings['passing_percentage'] ?? 80),
-                'random_questions' => intval($quiz_settings['random_questions'] ?? 0),
-                'random_answers' => intval($quiz_settings['random_answers'] ?? 0),
+                'questionOrder' => $question_order,
+                'random_questions' => $question_order === 'random' ? 1 : 0,
+                // Answers are always shuffled (not configurable).
+                'random_answers' => 1,
                 'run_once' => intval($quiz_settings['run_once'] ?? 0),
                 'force_solve' => intval($quiz_settings['force_solve'] ?? 0),
                 'show_points' => intval($quiz_settings['show_points'] ?? 0),
@@ -317,6 +334,95 @@ class PQC_Ajax_Handler
         } else {
             wp_send_json_error(__('Failed to delete quiz.', 'politeia-quiz-creator'));
         }
+    }
+
+    /**
+     * Import questions JSON into an existing quiz (replaces current questions).
+     */
+    public function handle_import_questions_json()
+    {
+        error_log('PQC: import_questions_json called');
+        // Verify nonce
+        if (!check_ajax_referer('pqc_upload_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Security check failed.', 'politeia-quiz-creator')]);
+        }
+
+        $quiz_id = isset($_POST['quiz_id']) ? intval($_POST['quiz_id']) : 0;
+        if (!$quiz_id) {
+            error_log('PQC: import_questions_json missing quiz_id');
+            wp_send_json_error(['message' => __('Quiz ID is required.', 'politeia-quiz-creator')]);
+        }
+
+        // Check permissions
+        if (!function_exists('pqc_can_access_quiz_creator') || !pqc_can_access_quiz_creator(0, $quiz_id)) {
+            error_log('PQC: import_questions_json permission denied for quiz_id=' . $quiz_id);
+            wp_send_json_error(['message' => __('You do not have permission to edit quizzes.', 'politeia-quiz-creator')]);
+        }
+
+        $json_text = isset($_POST['quiz_json_text']) ? stripslashes((string) $_POST['quiz_json_text']) : '';
+        $json_text = trim($json_text);
+        if ($json_text === '') {
+            error_log('PQC: import_questions_json empty json');
+            wp_send_json_error(['message' => __('No JSON provided.', 'politeia-quiz-creator')]);
+        }
+
+        $parsed = json_decode($json_text, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($parsed)) {
+            error_log('PQC: import_questions_json invalid json, error=' . json_last_error_msg());
+            wp_send_json_error(['message' => __('Invalid JSON format.', 'politeia-quiz-creator')]);
+        }
+
+        $mode = isset($_POST['mode']) ? sanitize_text_field((string) $_POST['mode']) : 'append';
+        if ($mode === 'replace') {
+            $result = PQC_Quiz_Creator::replace_quiz_questions($quiz_id, $parsed);
+        } else {
+            $result = PQC_Quiz_Creator::append_quiz_questions($quiz_id, $parsed);
+        }
+        if (is_wp_error($result)) {
+            error_log('PQC: import_questions_json failed: ' . $result->get_error_code() . ' ' . $result->get_error_message());
+            wp_send_json_error(['message' => $result->get_error_message(), 'code' => $result->get_error_code()]);
+        }
+
+        wp_send_json_success([
+            'message' => __('Questions imported.', 'politeia-quiz-creator'),
+            'total_questions' => (int) ($result['total_questions'] ?? 0),
+            'questions_inserted' => (int) ($result['questions_inserted'] ?? 0),
+            'go_to_index' => (int) ($result['go_to_index'] ?? 0),
+            'replaced_placeholder' => (int) ($result['replaced_placeholder'] ?? 0),
+        ]);
+    }
+
+    public function handle_save_quiz_settings()
+    {
+        if (!check_ajax_referer('pqc_upload_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Security check failed.', 'politeia-quiz-creator')]);
+        }
+
+        $quiz_id = isset($_POST['quiz_id']) ? intval($_POST['quiz_id']) : 0;
+        if (!$quiz_id) {
+            wp_send_json_error(['message' => __('Quiz ID is required.', 'politeia-quiz-creator')]);
+        }
+
+        if (!function_exists('pqc_can_access_quiz_creator') || !pqc_can_access_quiz_creator(0, $quiz_id)) {
+            wp_send_json_error(['message' => __('You do not have permission to edit quizzes.', 'politeia-quiz-creator')]);
+        }
+
+        $raw = isset($_POST['settings']) ? stripslashes((string) $_POST['settings']) : '';
+        $raw = trim($raw);
+        $settings = $raw !== '' ? json_decode($raw, true) : null;
+        if (!is_array($settings)) {
+            wp_send_json_error(['message' => __('Invalid settings payload.', 'politeia-quiz-creator')]);
+        }
+
+        $result = PQC_Quiz_Creator::update_quiz_settings($quiz_id, $settings);
+        if (is_wp_error($result)) {
+            wp_send_json_error(['message' => $result->get_error_message(), 'code' => $result->get_error_code()]);
+        }
+
+        wp_send_json_success([
+            'message' => __('Settings saved.', 'politeia-quiz-creator'),
+            'settings' => $result,
+        ]);
     }
 
     /**

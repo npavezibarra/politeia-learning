@@ -27,11 +27,41 @@ final class Access
 
         // If it's a paid course (has price or a linked WC product).
         if ($price > 0 || $product_id > 0) {
-            return $user_id > 0 && class_exists('\\Learni\\Database\\Enrollments') && \Learni\Database\Enrollments::user_has_active($user_id, $course_post_id);
+            if ($user_id <= 0 || !class_exists('\\Learni\\Database\\Enrollments')) {
+                return false;
+            }
+
+            if (\Learni\Database\Enrollments::user_has_active($user_id, $course_post_id)) {
+                return true;
+            }
+
+            // Course partner access: if the user is an active partner for this course, grant access and
+            // ensure an enrollment row exists so the rest of the Learni UX works consistently.
+            if (class_exists('PL_Partnerships_Repository') && method_exists('PL_Partnerships_Repository', 'get_object_partners_by_role')) {
+                try {
+                    $rows = \PL_Partnerships_Repository::get_object_partners_by_role('course', $course_post_id, 'partner');
+                    if (is_array($rows)) {
+                        foreach ($rows as $row) {
+                            if (is_array($row) && (int) ($row['partner_user_id'] ?? 0) === $user_id && ($row['status'] ?? '') === 'active') {
+                                \Learni\Database\Enrollments::upsert($user_id, $course_post_id, [
+                                    'status' => \Learni\Database\Enrollments::STATUS_ACTIVE,
+                                    'source' => \Learni\Database\Enrollments::SOURCE_MANUAL,
+                                    'payment_provider' => 'partner_invite',
+                                    'payment_reference' => 'course_partner',
+                                ]);
+                                return true;
+                            }
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // ignore and fall through
+                }
+            }
+
+            return false;
         }
 
         // Free courses are public.
         return true;
     }
 }
-

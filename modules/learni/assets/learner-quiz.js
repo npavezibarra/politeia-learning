@@ -6,6 +6,178 @@
     return window.Learni || {};
   }
 
+  function i18n(key, fallback) {
+    var cfg = getConfig();
+    var table = cfg && cfg.i18n ? cfg.i18n : null;
+    if (table && Object.prototype.hasOwnProperty.call(table, key)) {
+      var v = table[key];
+      if (v !== undefined && v !== null && String(v) !== "") return String(v);
+    }
+    return String(fallback || "");
+  }
+
+  function formatTemplate(tpl, vars) {
+    var out = String(tpl || "");
+    var v = vars && typeof vars === "object" ? vars : {};
+    Object.keys(v).forEach(function (k) {
+      out = out.split("{" + k + "}").join(String(v[k]));
+    });
+    return out;
+  }
+
+  function getCourseTitleFromDom() {
+    var el = document.getElementById("learni-course-title");
+    if (el && el.textContent) return String(el.textContent).trim();
+    // Fallback: some templates may not have the ID.
+    var h1 = document.querySelector && document.querySelector("main .learni-course-header h1, main h1");
+    if (h1 && h1.textContent) return String(h1.textContent).trim();
+    return "";
+  }
+
+  function fetchJson(res, defaultMessage) {
+    return res.json().then(function (data) {
+      if (!res.ok) {
+        var msg = (data && data.message) || defaultMessage || "Request failed";
+        throw new Error(msg);
+      }
+      return data;
+    });
+  }
+
+	  function openLoginRegister(courseId, phase) {
+	    try {
+	      // Open our modal (same UI as the "INGRESAR" menu button) and ensure the redirect_to includes
+	      // a return URL that can launch the quiz right after auth.
+	      var redirectUrl = new URL(window.location.href);
+	      if (courseId) redirectUrl.searchParams.set("learni_course_id", String(courseId));
+	      if (phase) redirectUrl.searchParams.set("learni_quiz_phase", String(phase));
+	      redirectUrl.searchParams.set("learni_auto_quiz", "1");
+
+	      if (window.PLAuthOpenModal) {
+	        window.PLAuthOpenModal("login");
+	        var input = document.querySelector && document.querySelector("#pl-auth-overlay [data-pl-auth-redirect]");
+	        if (input) input.value = redirectUrl.toString();
+	        return true;
+	      }
+	    } catch (e) {}
+
+	    // Preferred: open our login/register modal with a redirect that auto-starts the quiz after registration/login.
+	    try {
+	      var cfg2 = getConfig();
+      var base = cfg2 && cfg2.authBaseUrl ? String(cfg2.authBaseUrl) : "";
+      if (base) {
+        var redirectUrl = new URL(window.location.href);
+        if (courseId) redirectUrl.searchParams.set("learni_course_id", String(courseId));
+        if (phase) redirectUrl.searchParams.set("learni_quiz_phase", String(phase));
+        redirectUrl.searchParams.set("learni_auto_quiz", "1");
+
+        var modalUrl = new URL(base);
+        modalUrl.searchParams.set("pl_auth_view", "login");
+        modalUrl.searchParams.set("redirect_to", redirectUrl.toString());
+        window.location.href = modalUrl.toString();
+        return true;
+      }
+    } catch (e0) {}
+
+    // Fallback: redirect to a login page (Woo "My account" if available).
+    try {
+      var cfg = getConfig();
+      var url = cfg && cfg.loginUrl ? String(cfg.loginUrl) : "";
+      if (url) {
+        window.location.href = url;
+        return true;
+      }
+    } catch (e2) {}
+
+	    return false;
+	  }
+
+	  function showPostAuthQuizPrompt(courseId, phase, opts) {
+	    var options = opts && typeof opts === "object" ? opts : {};
+	    var isRegistered = !!options.isRegistered;
+	    var courseTitle = getCourseTitleFromDom() || i18n("course", "Course");
+
+	    // Try to reuse the exact aside CTA label when available (keeps language consistent).
+	    var asideBtn = document.getElementById("learni-course-first-quiz");
+	    var ctaLabel = asideBtn && asideBtn.textContent ? String(asideBtn.textContent).trim() : "";
+	    if (!ctaLabel) {
+	      ctaLabel = i18n("takeFirstQuiz", "Take First Quiz");
+	    }
+
+		    var cfg = getConfig();
+		    var lang =
+		      String((cfg && cfg.locale) || "") ||
+		      String((document && document.documentElement && document.documentElement.lang) || "") ||
+		      String((navigator && navigator.language) || "");
+		    var isSpanish = lang.toLowerCase().indexOf("es") === 0;
+	    var msg = isRegistered
+	      ? (isSpanish
+	          ? "¡Te has registrado con éxito! Toma el First Quiz ahora."
+	          : "Registration successful! Take the First Quiz now.")
+	      : (isSpanish
+	          ? "Toma el First Quiz ahora."
+	          : "Take the First Quiz now.");
+
+	    // Ensure modal exists before setting title/body (otherwise setQuizModalTitle/Body are no-ops).
+	    showQuizModal();
+	    setQuizModalTitle(courseTitle);
+	    setQuizModalBody(
+	      '<div class="learni-quiz-intro">' +
+	        '<div class="learni-quiz-intro__text">' +
+	        escapeHtml(msg) +
+	        "</div>" +
+	        '<div class="learni-quiz-actions">' +
+	        '<button type="button" class="learni-btn" id="learni-quiz-postauth-start">' +
+	        escapeHtml(ctaLabel) +
+	        "</button>" +
+	        "</div>" +
+	      "</div>"
+	    );
+	    var btn = document.getElementById("learni-quiz-postauth-start");
+	    if (btn) {
+	      btn.addEventListener("click", function () {
+	        startBinomialQuiz(courseId, phase || "initial");
+	      });
+	    }
+	  }
+
+		  function maybeAutoStartQuizFromUrl() {
+		    try {
+		      var cfg = getConfig();
+		      var url = new URL(window.location.href);
+	      // One-time param used to show the "unverified account" prompt after completing the first quiz.
+	      if (url.searchParams.get("pl_auth_unverified_after_quiz")) {
+	        url.searchParams.delete("pl_auth_unverified_after_quiz");
+	        try {
+	          window.history.replaceState({}, document.title, url.toString());
+	        } catch (e0) {}
+	      }
+
+		      if (!cfg || !cfg.isLoggedIn) return;
+
+		      // After auth, we show an explicit CTA instead of auto-starting (more reliable across themes).
+		      var auto = url.searchParams.get("learni_auto_quiz");
+		      if (!auto) return;
+
+		      var courseId = url.searchParams.get("learni_course_id") || "";
+		      var phase = url.searchParams.get("learni_quiz_phase") || "initial";
+		      if (!courseId) return;
+
+		      var registered = url.searchParams.get("pl_auth_registered") === "1";
+
+		      // Clean URL to avoid re-opening on refresh/back.
+		      url.searchParams.delete("learni_auto_quiz");
+		      url.searchParams.delete("learni_course_id");
+		      url.searchParams.delete("learni_quiz_phase");
+		      url.searchParams.delete("pl_auth_registered");
+		      try {
+		        window.history.replaceState({}, document.title, url.toString());
+		      } catch (e) {}
+
+		      showPostAuthQuizPrompt(courseId, phase, { isRegistered: registered });
+	    } catch (e3) {}
+	  }
+
   function apiFetch(path, options) {
     var cfg = getConfig();
     var url = (cfg.restUrl || "/wp-json/") + path.replace(/^\//, "");
@@ -19,31 +191,57 @@
     return fetch(url, Object.assign({}, options || {}, { headers: headers }));
   }
 
-  function escapeHtml(s) {
-    return String(s || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
+	  function escapeHtml(s) {
+	    return String(s || "")
+	      .replace(/&/g, "&amp;")
+	      .replace(/</g, "&lt;")
+	      .replace(/>/g, "&gt;")
+	      .replace(/"/g, "&quot;")
+	      .replace(/'/g, "&#039;");
+	  }
 
-  function ensureQuizModal() {
-    var existing = document.getElementById("learni-quiz-modal");
-    if (existing) return existing;
+	  function hash32(str) {
+	    // Simple non-crypto 32-bit hash (FNV-1a-ish) for stable shuffles.
+	    var s = String(str || "");
+	    var h = 2166136261;
+	    for (var i = 0; i < s.length; i++) {
+	      h ^= s.charCodeAt(i);
+	      // h *= 16777619 (with overflow), via bit ops
+	      h = (h + (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24)) >>> 0;
+	    }
+	    return h >>> 0;
+	  }
 
-    var modal = document.createElement("div");
-    modal.id = "learni-quiz-modal";
-    modal.className = "learni-quiz-modal";
-    modal.innerHTML =
-      '<div class="learni-quiz-modal__backdrop" data-learni-quiz-close="1"></div>' +
-      '<div class="learni-quiz-modal__panel" role="dialog" aria-modal="true" aria-label="Quiz">' +
-      '<div class="learni-quiz-modal__head">' +
-      '<div class="learni-quiz-modal__title" id="learni-quiz-modal-title">Quiz</div>' +
-      '<button type="button" class="learni-quiz-modal__close" data-learni-quiz-close="1">Close</button>' +
-      "</div>" +
-      '<div class="learni-quiz-modal__body" id="learni-quiz-modal-body"></div>' +
-      "</div>";
+	  function stableShuffleBySeed(items, seed) {
+	    var arr = Array.isArray(items) ? items.slice() : [];
+	    var s = String(seed || "");
+	    arr.sort(function (a, b) {
+	      var ha = hash32(s + ":" + String(a && a.id !== undefined ? a.id : a));
+	      var hb = hash32(s + ":" + String(b && b.id !== undefined ? b.id : b));
+	      if (ha === hb) return 0;
+	      return ha < hb ? -1 : 1;
+	    });
+	    return arr;
+	  }
+
+	  function ensureQuizModal() {
+	    var existing = document.getElementById("learni-quiz-modal");
+	    if (existing) return existing;
+
+	    var modal = document.createElement("div");
+	    modal.id = "learni-quiz-modal";
+	    modal.className = "learni-quiz-modal";
+	    modal.innerHTML =
+	      '<div class="learni-quiz-modal__backdrop"></div>' +
+	      '<div class="learni-quiz-modal__panel" role="dialog" aria-modal="true" aria-label="Quiz">' +
+	      '<div class="learni-quiz-modal__head">' +
+	      '<div class="learni-quiz-modal__title" id="learni-quiz-modal-title">Quiz</div>' +
+	      '<button type="button" class="learni-quiz-modal__close" data-learni-quiz-close="1" aria-label="' +
+	      escapeHtml(i18n("close", "Close")) +
+	      '">×</button>' +
+	      "</div>" +
+	      '<div class="learni-quiz-modal__body" id="learni-quiz-modal-body"></div>' +
+	      "</div>";
     document.body.appendChild(modal);
 
     modal.addEventListener("click", function (e) {
@@ -216,15 +414,15 @@
         fPct = Math.max(0, Math.min(100, Math.round(fPct)));
 
         var delta = fPct - iPct;
-        var certificateUrl = data && data.certificateUrl ? String(data.certificateUrl) : "";
+        var certificateAvailable = !!(data && data.certificateAvailable);
 
         var certBlock = "";
-        if (certificateUrl) {
+        if (certificateAvailable) {
           certBlock =
             '<div class="learni-final-overlay__cert">Has obtenido el certificado de este curso.</div>' +
-            '<a class="learni-btn learni-course-primary-btn" href="' +
-            escapeHtml(certificateUrl) +
-            '" target="_blank" rel="noopener">VER CERTIFICADO</a>';
+            '<button type="button" class="learni-btn learni-course-primary-btn" data-learni-cert-open="1" data-course-id="' +
+            escapeHtml(String(courseId)) +
+            '">VER CERTIFICADO</button>';
         }
 
         var html =
@@ -257,63 +455,95 @@
 
   function startBinomialQuiz(courseId, phase) {
     showQuizModal();
-    setQuizModalTitle(phase === "final" ? "Final Quiz" : "First Quiz");
-    setQuizModalBody('<div class="learni-quiz-modal__loading">Loading…</div>');
+    setQuizModalTitle(phase === "final" ? i18n("quizFinalKicker", "Final Quiz") : i18n("quizInitialKicker", "First Quiz"));
+    setQuizModalBody('<div class="learni-quiz-modal__loading">' + escapeHtml(i18n("loading", "Loading…")) + "</div>");
 
-    apiFetch("/learni/v1/courses/" + courseId + "/binomial/start", {
+    var startReq = apiFetch("/learni/v1/courses/" + courseId + "/binomial/start", {
       method: "POST",
       body: JSON.stringify({ phase: phase }),
-    })
-      .then(function (res) {
-        return res.json().then(function (data) {
-          if (!res.ok) {
-            var msg = (data && data.message) || "Failed to start quiz";
-            throw new Error(msg);
-          }
-          return data;
-        });
-      })
-      .then(function (data) {
-        var attemptId = data && data.attempt && data.attempt.id ? String(data.attempt.id) : "";
-        var title = data && data.quiz && data.quiz.title ? data.quiz.title : "Quiz";
-        var introText = data && data.quiz && data.quiz.introText ? String(data.quiz.introText) : "";
-        var questions = data && Array.isArray(data.questions) ? data.questions : [];
+    }).then(function (res) {
+      return fetchJson(res, "Failed to start quiz");
+    });
 
-        setQuizModalTitle(title);
+    var initialScoreReq =
+      phase === "final"
+        ? apiFetch("/learni/v1/courses/" + courseId + "/binomial", { method: "GET" })
+            .then(function (res) {
+              return fetchJson(res, "Failed to load results");
+            })
+            .then(function (data) {
+              var attempts = (data && data.attempts) || {};
+              var initial = attempts && attempts.initial ? attempts.initial : null;
+              var pct = initial && typeof initial.percent === "number" ? initial.percent : null;
+              if (pct === null || !isFinite(pct)) return null;
+              return Math.max(0, Math.min(100, Math.round(pct)));
+            })
+            .catch(function () {
+              return null;
+            })
+        : Promise.resolve(null);
 
-        var state = {
-          attemptId: attemptId,
-          phase: phase,
-          title: title,
-          introText: introText,
-          questions: questions,
-          slide: "intro", // intro | q
-          index: 0,
-          answers: {}, // questionId -> answerId
-        };
+    Promise.all([startReq, initialScoreReq])
+      .then(function (parts) {
+        var data = parts[0];
+        var initialScore = parts[1];
 
-        function render() {
-          if (state.slide === "intro") {
-            var phaseLabel = state.phase === "final" ? "Final Quiz" : "First Quiz";
-            var intro = state.introText
-              ? '<div class="learni-quiz-intro__text">' + escapeHtml(state.introText) + "</div>"
-              : "";
-            var html =
-              '<div class="learni-quiz-intro">' +
-              '<div class="learni-quiz-intro__kicker">' +
-              escapeHtml(phaseLabel) +
-              "</div>" +
-              '<div class="learni-quiz-intro__title">' +
-              escapeHtml(state.title) +
-              "</div>" +
-              intro +
-              '<div class="learni-quiz-actions">' +
-              '<button type="button" class="learni-btn" id="learni-quiz-begin">Begin</button>' +
-              '<button type="button" class="learni-btn secondary" data-learni-quiz-close="1">Cancel</button>' +
-              "</div>" +
-              "</div>";
-            setQuizModalBody(html);
-            var begin = document.getElementById("learni-quiz-begin");
+	        var attemptId = data && data.attempt && data.attempt.id ? String(data.attempt.id) : "";
+	        var title = data && data.quiz && data.quiz.title ? data.quiz.title : "Quiz";
+	        var introText = data && data.quiz && data.quiz.introText ? String(data.quiz.introText) : "";
+	        var questions = data && Array.isArray(data.questions) ? data.questions : [];
+
+	        setQuizModalTitle(title);
+
+		        var state = {
+		          attemptId: attemptId,
+		          phase: phase,
+		          title: title,
+		          introText: introText,
+		          courseTitle: getCourseTitleFromDom() || title,
+		          initialScore: initialScore,
+		          questions: questions,
+		          slide: "intro", // intro | q
+		          index: 0,
+		          answers: {}, // questionId -> answerId
+		          answerOrders: {}, // questionId -> shuffled answers[]
+		        };
+
+	        function render() {
+	          if (state.slide === "intro") {
+	            var phaseLabel = state.phase === "final" ? i18n("quizFinalKicker", "Final Quiz") : i18n("quizInitialKicker", "First Quiz");
+	            var prep =
+	              state.phase === "final"
+	                ? formatTemplate(i18n("quizPrepFinal", ""), {
+	                    course: state.courseTitle,
+	                    count: state.questions.length,
+	                    score: typeof state.initialScore === "number" ? state.initialScore : "—",
+	                  })
+	                : formatTemplate(i18n("quizPrepInitial", ""), { course: state.courseTitle, count: state.questions.length });
+
+	            var extra = state.introText
+	              ? '<div class="learni-quiz-intro__text">' + escapeHtml(String(state.introText)) + "</div>"
+	              : "";
+		            var html =
+		              '<div class="learni-quiz-intro">' +
+		              '<div class="learni-quiz-intro__kicker">' +
+		              escapeHtml(phaseLabel) +
+		              "</div>" +
+		              '<div class="learni-quiz-intro__title">' +
+		              escapeHtml(state.courseTitle) +
+		              "</div>" +
+		              '<div class="learni-quiz-intro__text">' +
+		              escapeHtml(prep) +
+		              "</div>" +
+		              extra +
+		              '<div class="learni-quiz-actions">' +
+		              '<button type="button" class="learni-btn" id="learni-quiz-begin">' +
+		              escapeHtml(i18n("quizBegin", "Begin")) +
+		              "</button>" +
+		              "</div>" +
+		              "</div>";
+	            setQuizModalBody(html);
+	            var begin = document.getElementById("learni-quiz-begin");
             if (begin) {
               begin.addEventListener("click", function () {
                 state.slide = "q";
@@ -330,68 +560,85 @@
             return;
           }
 
-          var isLast = state.index === state.questions.length - 1;
-          var answersHtml = "";
-          var answers = Array.isArray(q.answers) ? q.answers : [];
-          answers.forEach(function (a) {
-            answersHtml +=
-              '<label class="learni-quiz-a">' +
-              '<input type="radio" name="q" value="' +
-              escapeHtml(String(a.id)) +
-              '">' +
-              '<span class="learni-quiz-a__text">' +
-              escapeHtml(String(a.text || "")) +
-              "</span>" +
-              "</label>";
-          });
+	          var isLast = state.index === state.questions.length - 1;
+	          var answersHtml = "";
+	          var answers = Array.isArray(q.answers) ? q.answers : [];
+	          var qid = String(q.id || "");
+	          if (qid) {
+	            if (!state.answerOrders[qid]) {
+	              state.answerOrders[qid] = stableShuffleBySeed(answers, state.attemptId + ":" + qid);
+	            }
+	            answers = state.answerOrders[qid];
+	          } else {
+	            answers = stableShuffleBySeed(answers, state.attemptId + ":idx:" + String(state.index));
+	          }
+	          answers.forEach(function (a) {
+	            var aid = a && a.id !== undefined ? String(a.id) : "";
+	            var checked = "";
+	            if (qid && state.answers[qid] !== undefined && String(state.answers[qid]) === aid) checked = ' checked="checked"';
+	            answersHtml +=
+	              '<label class="learni-quiz-a">' +
+	              '<input type="radio" name="q" value="' +
+	              escapeHtml(String(a.id)) +
+	              '"' +
+	              checked +
+	              ">" +
+	              '<span class="learni-quiz-a__text">' +
+	              escapeHtml(String(a.text || "")) +
+	              "</span>" +
+	              "</label>";
+	          });
 
-          var htmlQ =
-            '<form id="learni-quiz-slide" class="learni-quiz-form" data-attempt-id="' +
-            escapeHtml(state.attemptId) +
-            '">' +
-            '<div class="learni-quiz-q">' +
-            '<div class="learni-quiz-q__meta">Question ' +
-            (state.index + 1) +
-            " of " +
-            state.questions.length +
-            "</div>" +
-            '<div class="learni-quiz-q__text">' +
-            escapeHtml(String(q.prompt || "")) +
-            "</div>" +
-            "</div>" +
+	          var htmlQ =
+	            '<form id="learni-quiz-slide" class="learni-quiz-form" data-attempt-id="' +
+	            escapeHtml(state.attemptId) +
+	            '">' +
+	            '<div class="learni-quiz-q">' +
+	            '<div class="learni-quiz-q__meta">' +
+	            escapeHtml(
+	              formatTemplate(i18n("quizQuestionOf", "Question {current} of {total}"), {
+	                current: state.index + 1,
+	                total: state.questions.length,
+	              })
+	            ) +
+	            "</div>" +
+	            '<div class="learni-quiz-q__text">' +
+	            escapeHtml(String(q.prompt || "")) +
+	            "</div>" +
+	            "</div>" +
             '<div class="learni-quiz-a-list">' +
             answersHtml +
             "</div>" +
-            '<div class="learni-quiz-actions">' +
-            (state.index > 0
-              ? '<button type="button" class="learni-btn secondary" id="learni-quiz-prev">Back</button>'
-              : '<button type="button" class="learni-btn secondary" data-learni-quiz-close="1">Cancel</button>') +
-            '<button type="submit" class="learni-btn" id="learni-quiz-next">' +
-            (isLast ? "Submit" : "Next") +
-            "</button>" +
-            "</div>" +
-            "</form>";
+	            '<div class="learni-quiz-actions">' +
+	            (state.index > 0
+	              ? '<button type="button" class="learni-btn secondary" id="learni-quiz-prev">' + escapeHtml(i18n("quizBack", "Back")) + "</button>"
+	              : "") +
+	            '<button type="submit" class="learni-btn" id="learni-quiz-next">' +
+	            escapeHtml(isLast ? i18n("quizSubmit", "Submit") : i18n("quizNext", "Next")) +
+	            "</button>" +
+	            "</div>" +
+	            "</form>";
 
           setQuizModalBody(htmlQ);
 
           var form = document.getElementById("learni-quiz-slide");
-          var prevBtn = document.getElementById("learni-quiz-prev");
-          if (prevBtn) {
-            prevBtn.addEventListener("click", function () {
-              state.index = Math.max(0, state.index - 1);
-              render();
-            });
-          }
+	          var prevBtn = document.getElementById("learni-quiz-prev");
+	          if (prevBtn) {
+	            prevBtn.addEventListener("click", function () {
+	              state.index = Math.max(0, state.index - 1);
+	              render();
+	            });
+	          }
 
           if (!form) return;
-          form.addEventListener("submit", function (e) {
-            e.preventDefault();
-            var chosen = form.querySelector('input[name="q"]:checked');
-            if (!chosen || !chosen.value) {
-              alert("Please choose an answer.");
-              return;
-            }
-            state.answers[String(q.id)] = Number(chosen.value);
+	          form.addEventListener("submit", function (e) {
+	            e.preventDefault();
+	            var chosen = form.querySelector('input[name="q"]:checked');
+	            if (!chosen || !chosen.value) {
+	              alert(i18n("quizChooseAnswer", "Please choose an answer."));
+	              return;
+	            }
+	            state.answers[String(q.id)] = Number(chosen.value);
 
             if (!isLast) {
               state.index = Math.min(state.questions.length - 1, state.index + 1);
@@ -402,11 +649,11 @@
             var submitBtn = document.getElementById("learni-quiz-next");
             if (submitBtn) submitBtn.disabled = true;
 
-            if (Object.keys(state.answers).length !== state.questions.length) {
-              if (submitBtn) submitBtn.disabled = false;
-              alert("Please answer all questions.");
-              return;
-            }
+	            if (Object.keys(state.answers).length !== state.questions.length) {
+	              if (submitBtn) submitBtn.disabled = false;
+	              alert(i18n("quizAnswerAll", "Please answer all questions."));
+	              return;
+	            }
 
             apiFetch("/learni/v1/attempts/" + state.attemptId + "/submit", {
               method: "POST",
@@ -460,15 +707,22 @@
 
                 setQuizModalBody(html);
 
-                var cont = document.getElementById("learni-quiz-results-continue");
-                if (cont) {
-                  cont.addEventListener("click", function () {
-                    hideQuizModal();
-                    window.location.reload();
-                  });
-                }
-              })
-              .catch(function (err) {
+		                var cont = document.getElementById("learni-quiz-results-continue");
+		                if (cont) {
+		                  cont.addEventListener("click", function () {
+		                    hideQuizModal();
+		                    try {
+		                      // After finishing the first quiz, show the "unverified account" prompt on reload (if applicable).
+		                      var url = new URL(window.location.href);
+		                      url.searchParams.set("pl_auth_unverified_after_quiz", "1");
+		                      window.location.href = url.toString();
+		                    } catch (e) {
+		                      window.location.reload();
+		                    }
+		                  });
+		                }
+	              })
+	              .catch(function (err) {
                 if (submitBtn) submitBtn.disabled = false;
                 alert((err && err.message) || "Failed to submit quiz");
               });
@@ -483,32 +737,41 @@
   }
 
   function setupBinomialQuiz() {
-    var firstBtn = document.getElementById("learni-course-first-quiz");
-    var finalBtn = document.getElementById("learni-course-final-quiz");
-    var restartBtn = document.getElementById("learni-course-restart");
-
     function onStartClick(btn) {
       if (!btn || btn.disabled) return;
+      var cfg = getConfig();
       var courseId = btn.getAttribute("data-course-id") || "";
       var phase = btn.getAttribute("data-phase") || "initial";
+      if (!cfg || !cfg.isLoggedIn) {
+        openLoginRegister(courseId, phase);
+        return;
+      }
       if (!courseId) return;
       startBinomialQuiz(courseId, phase);
     }
 
-    if (firstBtn) {
-      firstBtn.addEventListener("click", function () {
+    // Delegate clicks so dynamically-inserted CTAs (partner views, cache busting) also work.
+    document.addEventListener("click", function (e) {
+      var t = e && e.target ? e.target : null;
+      if (!t || !t.closest) return;
+
+      var firstBtn = t.closest("#learni-course-first-quiz");
+      if (firstBtn) {
+        e.preventDefault();
         onStartClick(firstBtn);
-      });
-    }
+        return;
+      }
 
-    if (finalBtn) {
-      finalBtn.addEventListener("click", function () {
+      var finalBtn = t.closest("#learni-course-final-quiz");
+      if (finalBtn) {
+        e.preventDefault();
         onStartClick(finalBtn);
-      });
-    }
+        return;
+      }
 
-    if (restartBtn) {
-      restartBtn.addEventListener("click", function () {
+      var restartBtn = t.closest("#learni-course-restart");
+      if (restartBtn) {
+        e.preventDefault();
         var courseId = restartBtn.getAttribute("data-course-id") || "";
         if (!courseId) return;
         if (!window.confirm("¿Reiniciar curso? Esto reiniciará tu progreso de lecciones.")) return;
@@ -530,17 +793,214 @@
             restartBtn.disabled = false;
             alert((err && err.message) || "Failed to restart course");
           });
-      });
+      }
+    });
+  }
+
+  function getCourseIdFromDom() {
+    var root = document.getElementById("learni-course");
+    var courseId = root ? root.getAttribute("data-course-id") || "" : "";
+    if (courseId) return String(courseId);
+    var anyBtn = document.querySelector && document.querySelector("[data-course-id]");
+    if (anyBtn) return String(anyBtn.getAttribute("data-course-id") || "");
+    return "";
+  }
+
+  function ensureEvalBlock(container, kind, title, percent) {
+    if (!container) return null;
+    var selector = '.learni-eval[data-learni-eval="' + String(kind) + '"]';
+    var el = container.querySelector ? container.querySelector(selector) : null;
+
+    if (percent === null || percent === undefined) {
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+      return null;
+    }
+
+    var pct = typeof percent === "number" ? percent : parseInt(percent, 10);
+    if (!isFinite(pct)) pct = 0;
+    pct = Math.max(0, Math.min(100, Math.round(pct)));
+
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "learni-eval";
+      el.setAttribute("data-learni-eval", String(kind));
+      el.innerHTML =
+        '<div class="learni-eval-head"><span class="learni-eval-title"></span><span class="learni-eval-percent"></span></div>' +
+        '<div class="learni-eval-track"><div class="learni-eval-bar"></div></div>';
+      // Insert near the top of the actions area.
+      container.insertBefore(el, container.firstChild || null);
+    }
+
+    var titleEl = el.querySelector ? el.querySelector(".learni-eval-title") : null;
+    var pctEl = el.querySelector ? el.querySelector(".learni-eval-percent") : null;
+    var barEl = el.querySelector ? el.querySelector(".learni-eval-bar") : null;
+    if (titleEl) titleEl.textContent = String(title || "");
+    if (pctEl) pctEl.textContent = String(pct) + "%";
+    if (barEl && barEl.style) barEl.style.width = String(pct) + "%";
+    return el;
+  }
+
+  function ensureFirstQuizCta(container, courseId, shouldShow) {
+    if (!container) return;
+    var existing = document.getElementById("learni-course-first-quiz");
+    if (!shouldShow) {
+      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+      return;
+    }
+
+    if (!existing) {
+      existing = document.createElement("button");
+      existing.id = "learni-course-first-quiz";
+      existing.className = "learni-btn learni-btn-quiz";
+      existing.type = "button";
+      existing.setAttribute("data-course-id", String(courseId));
+      existing.setAttribute("data-phase", "initial");
+      existing.textContent = i18n("takeFirstQuiz", "TAKE FIRST QUIZ");
+    } else {
+      existing.setAttribute("data-course-id", String(courseId));
+      existing.setAttribute("data-phase", "initial");
+    }
+
+    // Place it before the primary CTA (CONTINUE/BUY) if present.
+    var anchor =
+      (container.querySelector && container.querySelector("#learni-course-final-quiz")) ||
+      (container.querySelector && container.querySelector("#learni-course-restart")) ||
+      (container.querySelector && container.querySelector(".learni-course-primary-btn")) ||
+      null;
+    if (anchor && anchor.parentNode === container) {
+      container.insertBefore(existing, anchor);
+    } else if (!existing.parentNode) {
+      container.appendChild(existing);
     }
   }
 
+  function syncBinomialAsideFromApi() {
+    var cfg = getConfig();
+    if (!cfg || !cfg.isLoggedIn) return;
+
+    var courseId = getCourseIdFromDom();
+    if (!courseId) return;
+
+    var container = document.querySelector && document.querySelector(".learni-course-card-actions");
+    if (!container) return;
+
+    apiFetch("/learni/v1/courses/" + courseId + "/binomial", { method: "GET" })
+      .then(function (res) {
+        return fetchJson(res, "Failed to load quiz status");
+      })
+      .then(function (data) {
+        var attempts = (data && data.attempts) || {};
+        var ui = (data && data.ui) || {};
+        var initial = attempts && attempts.initial ? attempts.initial : null;
+        var final = attempts && attempts.final ? attempts.final : null;
+
+        var iPct = initial && typeof initial.percent === "number" ? initial.percent : null;
+        var fPct = final && typeof final.percent === "number" ? final.percent : null;
+
+        // Always re-sync the evaluation blocks from the API response (avoids cross-user cached HTML).
+        ensureEvalBlock(container, "initial", i18n("evalInitial", "EVALUACIÓN INICIAL"), iPct);
+        ensureEvalBlock(container, "final", i18n("evalFinal", "EVALUACIÓN FINAL"), fPct);
+
+        var needsInitial = !!(ui && ui.needsInitial);
+        ensureFirstQuizCta(container, courseId, needsInitial);
+      })
+      .catch(function () {
+        // Ignore: server HTML stays as-is.
+      });
+  }
+
   function ensureCertModal() {
-    return document.getElementById("learni-cert-modal");
+    var existing = document.getElementById("learni-cert-modal");
+    if (existing) {
+      // Ensure the modal is attached to <body> so `position: fixed` truly covers the viewport
+      // (some themes add transforms to content wrappers, which would otherwise scope fixed positioning).
+      try {
+        if (existing.parentNode && existing.parentNode !== document.body) {
+          document.body.appendChild(existing);
+        }
+      } catch (e) {}
+
+      // Ensure event handlers exist for server-rendered modals.
+      if (!existing.getAttribute("data-learni-cert-bound")) {
+        existing.setAttribute("data-learni-cert-bound", "1");
+        existing.addEventListener("click", function (e) {
+          var t = e && e.target ? e.target : null;
+          if (!t || !t.getAttribute) return;
+
+          if (t.getAttribute("data-learni-cert-close") || (t.closest && t.closest("[data-learni-cert-close]"))) {
+            hideCertModal();
+            return;
+          }
+
+          if (t.getAttribute("data-learni-cert-download") || (t.closest && t.closest("[data-learni-cert-download]"))) {
+            downloadCertPdf();
+          }
+        });
+      }
+      if (!window.__learniCertEscapeBound) {
+        window.__learniCertEscapeBound = true;
+        document.addEventListener("keydown", function (e) {
+          if (e && e.key === "Escape") hideCertModal();
+        });
+      }
+
+      // Backfill expected IDs if a server-rendered modal exists.
+      var notice = existing.querySelector && existing.querySelector(".learni-cert-modal__notice");
+      if (notice && !notice.id) notice.id = "learni-cert-modal-notice";
+      var body = existing.querySelector && existing.querySelector(".learni-cert-modal__body");
+      if (body && !body.id) body.id = "learni-cert-modal-body";
+      return existing;
+    }
+
+    var modal = document.createElement("div");
+    modal.id = "learni-cert-modal";
+    modal.className = "learni-cert-modal";
+    modal.setAttribute("aria-hidden", "true");
+    modal.innerHTML =
+      '<div class="learni-cert-modal__backdrop" data-learni-cert-close="1"></div>' +
+      '<div class="learni-cert-modal__panel" role="dialog" aria-modal="true" aria-label="Certificate">' +
+      '<div class="learni-cert-modal__head">' +
+      '<div class="learni-cert-modal__title">' +
+      i18n("certTitle", "Certificate") +
+      "</div>" +
+      '<div class="learni-cert-modal__actions">' +
+      '<button type="button" class="learni-btn secondary" data-learni-cert-download="1" style="display:none" disabled>' +
+      i18n("downloadPdf", "Download PDF") +
+      "</button>" +
+      '<button type="button" class="learni-btn secondary" data-learni-cert-close="1">' +
+      i18n("close", "Close") +
+      "</button>" +
+      "</div>" +
+      "</div>" +
+      '<div class="learni-cert-modal__notice" id="learni-cert-modal-notice" style="display:none"></div>' +
+      '<div class="learni-cert-modal__body" id="learni-cert-modal-body"></div>' +
+      "</div>";
+
+    document.body.appendChild(modal);
+
+    modal.addEventListener("click", function (e) {
+      var t = e && e.target ? e.target : null;
+      if (!t || !t.getAttribute) return;
+
+      if (t.getAttribute("data-learni-cert-close") || (t.closest && t.closest("[data-learni-cert-close]"))) {
+        hideCertModal();
+        return;
+      }
+
+      if (t.getAttribute("data-learni-cert-download") || (t.closest && t.closest("[data-learni-cert-download]"))) {
+        downloadCertPdf();
+      }
+    });
+
+    document.addEventListener("keydown", function (e) {
+      if (e && e.key === "Escape") hideCertModal();
+    });
+
+    return modal;
   }
 
   function showCertModal() {
     var modal = ensureCertModal();
-    if (!modal) return;
     modal.classList.add("is-open");
     modal.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
@@ -548,160 +1008,188 @@
 
   function hideCertModal() {
     var modal = ensureCertModal();
-    if (!modal) return;
     modal.classList.remove("is-open");
     modal.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "";
+    try {
+      var body = document.getElementById("learni-cert-modal-body");
+      if (body) body.innerHTML = "";
+      var notice = document.getElementById("learni-cert-modal-notice");
+      if (notice) {
+        notice.textContent = "";
+        notice.style.display = "none";
+      }
+    } catch (e) {}
+    window.removeEventListener("resize", resizeCertStage);
   }
 
-  function certPrintStyles() {
-    return (
-      "@page{size:letter landscape;margin:0.5in;}html,body{padding:0;margin:0;background:#fff;}" +
-      ".wrap{padding:0.2in;}" +
-      ".sheet{width:11in;height:8.5in;aspect-ratio:auto;box-shadow:none;border:0;border-radius:0;}" +
-      ".sheet .actions{display:none;}"
-    );
+  function setCertModalBody(html) {
+    var body = document.getElementById("learni-cert-modal-body");
+    if (!body) {
+      var modal = document.getElementById("learni-cert-modal");
+      body = modal && modal.querySelector ? modal.querySelector(".learni-cert-modal__body") : null;
+      if (body && !body.id) body.id = "learni-cert-modal-body";
+    }
+    if (body) body.innerHTML = html || "";
+    resizeCertStage();
   }
 
-  function printCertificate() {
-    // We add a temporary class to the body to handle print visibility in CSS.
-    // This avoids popup blockers entirely by printing the current page with a dedicated print stylesheet.
-    document.body.classList.add("is-printing-cert");
-    
-    // We need to ensure the scaling is removed during print so it uses the full 11in width.
-    // The CSS @media print will handle this, but calling window.print() here is the trigger.
-    window.print();
-    
-    // Remote the class after the print dialog closes.
-    // Most browsers pause execution while the dialog is open.
-    setTimeout(function() {
-      document.body.classList.remove("is-printing-cert");
-    }, 500);
+  function setCertNotice(text) {
+    var notice = document.getElementById("learni-cert-modal-notice");
+    if (!notice) {
+      var modal = document.getElementById("learni-cert-modal");
+      notice = modal && modal.querySelector ? modal.querySelector(".learni-cert-modal__notice") : null;
+      if (notice && !notice.id) notice.id = "learni-cert-modal-notice";
+    }
+    if (!notice) return;
+    if (text) {
+      notice.textContent = text;
+      notice.style.display = "";
+    } else {
+      notice.textContent = "";
+      notice.style.display = "none";
+    }
+  }
+
+  function setCertDownloadEnabled(enabled) {
+    var modal = document.getElementById("learni-cert-modal");
+    var btn = modal && modal.querySelector ? modal.querySelector("[data-learni-cert-download]") : null;
+    if (!btn) return;
+    if (enabled) {
+      btn.disabled = false;
+      btn.style.display = "";
+      btn.setAttribute("aria-disabled", "false");
+    } else {
+      btn.disabled = true;
+      btn.style.display = "none";
+      btn.setAttribute("aria-disabled", "true");
+    }
+  }
+
+  function resizeCertStage() {
+    var stage = document.querySelector("#learni-cert-modal-body .learni-cert-stage");
+    var sheet = stage && stage.querySelector ? stage.querySelector(".learni-cert-sheet") : null;
+    if (!stage || !sheet) return;
+
+    // Measure natural sheet size (before scaling).
+    stage.style.setProperty("--learni-cert-scale", "1");
+    var sheetW = sheet.offsetWidth || 0;
+    var sheetH = sheet.offsetHeight || 0;
+    if (!sheetW || !sheetH) return;
+
+    var availW = Math.max(320, window.innerWidth - 32);
+    var availH = Math.max(320, window.innerHeight - 140);
+    var scale = Math.min(availW / sheetW, availH / sheetH, 1);
+    scale = Math.max(0.1, Math.round(scale * 100) / 100);
+
+    stage.style.setProperty("--learni-cert-scale", String(scale));
+    stage.style.width = Math.round(sheetW * scale) + "px";
+    stage.style.height = Math.round(sheetH * scale) + "px";
+  }
+
+  function openCertificate(courseId) {
+    if (!courseId) return;
+    showCertModal();
+    setCertNotice("");
+    setCertDownloadEnabled(false);
+    setCertModalBody('<div class="learni-quiz-modal__loading">' + escapeHtml(i18n("loading", "Loading…")) + "</div>");
+
+    apiFetch("/learni/v1/courses/" + String(courseId) + "/certificate", { method: "GET" })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          if (!res.ok) {
+            var msg = (data && data.message) || "Failed to load certificate";
+            throw new Error(msg);
+          }
+          return data;
+        });
+      })
+      .then(function (data) {
+        var eligible = !!(data && data.eligible);
+        if (!eligible) {
+          setCertNotice(i18n("ineligible", "Complete the course to unlock your certificate."));
+        }
+        setCertModalBody((data && data.html) || "");
+        setCertDownloadEnabled(eligible);
+        window.addEventListener("resize", resizeCertStage);
+      })
+      .catch(function (err) {
+        setCertModalBody('<div class="learni-quiz-modal__error">' + escapeHtml((err && err.message) || "Failed to load certificate") + "</div>");
+      });
+  }
+
+  function downloadCertPdf() {
+    var sheet = document.querySelector("#learni-cert-modal-body .learni-cert-sheet");
+    if (!sheet) return;
+    var win = window.open("", "_blank");
+    if (!win) return;
+
+	    var css =
+	      "@page{size:11in 8.5in;margin:0}" +
+	      "html,body{width:11in;height:8.5in;margin:0;padding:0;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}" +
+	      "body{background:#fff;font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#111827}" +
+	      ".print-wrap{width:11in;height:8.5in;display:flex;justify-content:center;align-items:stretch;padding:0;margin:0}" +
+	      ".learni-cert-sheet{width:11in;height:8.5in;margin:0;background:#fff;border:0;border-radius:0;box-shadow:none;overflow:hidden}" +
+	      ".learni-cert-sheet__inner{height:100%;padding:42px 54px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px}" +
+	      ".learni-cert-sheet__top{min-height:42px;display:flex;align-items:center}" +
+	      ".learni-cert-sheet__top.learni-align-left{justify-content:flex-start}" +
+      ".learni-cert-sheet__top.learni-align-center{justify-content:center}" +
+      ".learni-cert-sheet__top.learni-align-right{justify-content:flex-end}" +
+      ".learni-cert-sheet__logo{max-height:64px;max-width:240px;object-fit:contain}" +
+      ".learni-cert-sheet__title{font-size:34px;font-weight:800;letter-spacing:-.02em;margin-top:2px}" +
+      ".learni-cert-sheet__kicker{opacity:.7;font-size:14px}" +
+      ".learni-cert-sheet__name{font-size:28px;font-weight:700}" +
+      ".learni-cert-sheet__course{font-size:24px;font-weight:600;opacity:.9}" +
+      ".learni-cert-sheet__paragraph{font-size:14px;opacity:.85;max-width:76ch;white-space:pre-line}" +
+      ".learni-cert-sheet__claims{margin-top:6px;padding:12px 14px;border:1px solid rgba(17,24,39,.08);border-radius:10px;background:rgba(17,24,39,.02);display:grid;gap:6px;width:fit-content}" +
+      ".learni-cert-sheet__claims-title{font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;opacity:.7}" +
+      ".learni-cert-sheet__claim{font-size:13px;opacity:.9}" +
+      ".learni-cert-sheet__bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-top:auto;padding-top:10px}" +
+      ".learni-cert-sheet__meta{display:grid;gap:6px;font-size:12px;opacity:.85;min-width:0}" +
+      ".learni-cert-sheet__meta-row{display:flex;gap:10px;align-items:baseline;min-width:0}" +
+      ".learni-cert-sheet__meta-label{font-weight:700;opacity:.7;white-space:nowrap}" +
+      ".learni-cert-sheet__meta-value{min-width:0;overflow:hidden;text-overflow:ellipsis}" +
+      ".learni-cert-sheet__sig{display:grid;justify-items:end;gap:6px;min-width:260px;max-width:45%}" +
+      ".learni-cert-sheet__sigimg{max-height:92px;max-width:100%;object-fit:contain}" +
+      ".learni-cert-sheet__sigline{width:100%;max-width:320px;height:1px;background:rgba(17,24,39,.25)}" +
+      ".learni-cert-sheet__siglabel{font-size:12px;opacity:.75}";
+
+	    var html =
+	      "<!doctype html><html><head><meta charset=\"utf-8\" />" +
+	      "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />" +
+	      "<title></title>" +
+	      "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>" +
+	      "<link href=\"https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap\" rel=\"stylesheet\">" +
+      "<style>" +
+      css +
+      "</style>" +
+      "</head><body><div class=\"print-wrap\">" +
+      sheet.outerHTML +
+      "</div><script>window.onload=function(){setTimeout(function(){window.print();},150);};</script></body></html>";
+
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
   }
 
   function setupCertificates() {
-    function sheetPxSize() {
-      // Standard Letter Landscape is 11in x 8.5in. CSS uses 96px/in.
-      return { w: 11 * 96, h: 8.5 * 96 };
-    }
-
-    function ensureStage(sheetEl) {
-      if (!sheetEl) return null;
-      var parent = sheetEl.parentNode;
-      if (parent && parent.classList && parent.classList.contains("learni-cert-stage")) return parent;
-
-      var stage = document.createElement("div");
-      stage.className = "learni-cert-stage";
-      if (parent) {
-        parent.insertBefore(stage, sheetEl);
-        stage.appendChild(sheetEl);
-      }
-      return stage;
-    }
-
-    function applyScale(containerEl, sheetEl) {
-      if (!containerEl || !sheetEl) return;
-      var sz = sheetPxSize();
-      var pad = 48; // modal body padding
-      var rect = null;
-      try {
-        rect = containerEl.getBoundingClientRect ? containerEl.getBoundingClientRect() : null;
-      } catch (e) {}
-      var cw = rect && rect.width ? rect.width : containerEl.clientWidth || 0;
-      var ch = rect && rect.height ? rect.height : containerEl.clientHeight || 0;
-
-      if (cw < 100 || ch < 100) return;
-
-      var availW = Math.max(100, cw - pad);
-      var availH = Math.max(100, ch - pad);
-      
-      // Restore dual-axis scaling to ensure the certificate fits both width and height
-      // and remains centered without overflowing the viewport.
-      var scale = Math.min(availW / sz.w, availH / sz.h, 1);
-      
-      scale = Math.max(0.1, Math.round(scale * 100) / 100);
-
-      var stage = ensureStage(sheetEl);
-      if (!stage) return;
-      stage.style.width = String(sz.w * scale) + "px";
-      stage.style.height = String(sz.h * scale) + "px";
-      sheetEl.style.setProperty("--learni-cert-scale", String(scale));
-
-      try {
-        var modalRoot = containerEl.closest ? containerEl.closest(".learni-cert-modal") : null;
-        if (modalRoot && modalRoot.style) {
-          modalRoot.style.setProperty("--learni-cert-stage-w", String(sz.w * scale) + "px");
-          modalRoot.style.setProperty("--learni-cert-stage-h", String(sz.h * scale) + "px");
-        }
-      } catch (e) {}
-    }
-
-    function scheduleScale(containerEl, sheetEl) {
-      try {
-        requestAnimationFrame(function () {
-          applyScale(containerEl, sheetEl);
-          requestAnimationFrame(function () {
-            applyScale(containerEl, sheetEl);
-          });
-        });
-      } catch (e) {}
-      setTimeout(function () { applyScale(containerEl, sheetEl); }, 100);
-      setTimeout(function () { applyScale(containerEl, sheetEl); }, 400);
-    }
-
-    // Intercept trigger clicks
     document.addEventListener("click", function (e) {
-      var trigger = e.target && e.target.closest && e.target.closest(".learni-course-cert-trigger");
+      var t = e && e.target ? e.target : null;
+      if (!t || !t.closest) return;
+      var trigger = t.closest("[data-learni-cert-open=\"1\"], .learni-course-cert-trigger");
       if (!trigger) return;
 
-      var modal = ensureCertModal();
-      if (!modal) return; // Fallback to normal server-side link (target=_blank)
-
       e.preventDefault();
-      showCertModal();
-
-      var body = modal.querySelector(".learni-cert-modal__body");
-      var sheet = modal.querySelector("[data-learni-cert-sheet]");
-      if (body && sheet) scheduleScale(body, sheet);
+      var courseId = trigger.getAttribute("data-course-id") || "";
+      openCertificate(courseId);
     });
-
-    var modal = ensureCertModal();
-    if (modal) {
-      // Move modal to body to ensure full-screen backdrop coverage (escapes sidebar/content containers)
-      document.body.appendChild(modal);
-
-      var bodyEl = modal.querySelector(".learni-cert-modal__body");
-      var sheetEl = modal.querySelector("[data-learni-cert-sheet]");
-
-      if (bodyEl && sheetEl) {
-        window.addEventListener("resize", function () {
-          scheduleScale(bodyEl, sheetEl);
-        });
-      }
-
-      modal.addEventListener("click", function (e) {
-        var t = e && e.target ? e.target : null;
-        if (!t || !t.getAttribute) return;
-
-        if (t.getAttribute("data-learni-cert-close") || t.closest("[data-learni-cert-close]")) {
-          hideCertModal();
-          return;
-        }
-
-        if (t.getAttribute("data-learni-cert-download") || t.closest("[data-learni-cert-download]")) {
-          printCertificate();
-        }
-      });
-
-      document.addEventListener("keydown", function (e) {
-        if (e && e.key === "Escape") hideCertModal();
-      });
-    }
   }
 
   function init() {
+    syncBinomialAsideFromApi();
     setupBinomialQuiz();
     setupCertificates();
+    maybeAutoStartQuizFromUrl();
   }
 
   window.LearniQuiz.apiFetch = apiFetch;

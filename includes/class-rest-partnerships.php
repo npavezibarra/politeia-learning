@@ -10,14 +10,18 @@ if (!defined('ABSPATH')) {
 class PL_Rest_Partnerships
 {
     private const COURSE_POST_TYPE = 'sfwd-courses';
+    private const LEARNI_COURSE_POST_TYPE = 'learni_course';
     private const COURSE_TEACHERS_META_KEY = '_pcg_course_teachers';
-    private const INVITES_TABLE_SLUG = 'politeia_plan_participant_invites';
+    private const PARTNERSHIPS_TABLE_SLUG = 'politeia_user_object_partnerships';
+    private const LEGACY_INVITES_TABLE_SLUG = 'politeia_plan_participant_invites';
     private const ACCEPT_INVITE_PATH = '/accept-invite';
     private const REGISTER_QUERY_MODE = 'mode';
     private const REGISTER_QUERY_VALUE = 'register';
     private const REGISTER_QUERY_STATUS = 'status';
     private const REGISTER_STATUS_CREATED = 'created';
     private const REGISTER_FORM_ACTION = 'pl_accept_invite_register';
+    private const INVITE_RESPOND_ACTION = 'pl_course_partner_invite_respond';
+    private const INVITE_RESPOND_NONCE_ACTION = 'pl_course_partner_invite_respond';
 
     public static function init(): void
     {
@@ -25,6 +29,7 @@ class PL_Rest_Partnerships
         add_action('init', [__CLASS__, 'handle_invite_accept']);
         add_action('admin_post_nopriv_' . self::REGISTER_FORM_ACTION, [__CLASS__, 'handle_invite_register_submit']);
         add_action('admin_post_' . self::REGISTER_FORM_ACTION, [__CLASS__, 'handle_invite_register_submit']);
+        add_action('admin_post_' . self::INVITE_RESPOND_ACTION, [__CLASS__, 'handle_course_partner_invite_respond']);
     }
 
     public static function register_routes(): void
@@ -157,7 +162,7 @@ class PL_Rest_Partnerships
             return new WP_Error('server_error', 'Partnerships repository not available', ['status' => 500]);
         }
 
-        $result = PL_Partnerships_Repository::add_partner($object_type, $object_id, $user_id, 'partner');
+        $result = PL_Partnerships_Repository::add_partner($object_type, $object_id, $user_id, 'partner', $current_user);
 
         return rest_ensure_response([
             'success' => $result ? true : false,
@@ -348,24 +353,7 @@ class PL_Rest_Partnerships
             return;
         }
 
-        $token_hash = hash('sha256', $raw_token);
-
-        global $wpdb;
-        $invites_table = $wpdb->prefix . self::INVITES_TABLE_SLUG;
-
-        $invite = $wpdb->get_row(
-            $wpdb->prepare(
-                "SELECT *
-                 FROM {$invites_table}
-                 WHERE token_hash = %s
-                   AND status = %s
-                 LIMIT 1",
-                $token_hash,
-                'pending'
-            ),
-            ARRAY_A
-        );
-
+        $invite = self::get_pending_invite_by_raw_token($raw_token);
         if (!$invite) {
             return;
         }
@@ -374,17 +362,7 @@ class PL_Rest_Partnerships
         $now_ts = current_time('timestamp', true);
         $expires_ts = strtotime((string) ($invite['expires_at'] ?? '') . ' UTC');
         if ($expires_ts && $expires_ts < $now_ts) {
-            $now = current_time('mysql');
-            $wpdb->update(
-                $invites_table,
-                [
-                    'status' => 'expired',
-                    'updated_at' => $now,
-                ],
-                ['id' => (int) ($invite['id'] ?? 0)],
-                ['%s', '%s'],
-                ['%d']
-            );
+            self::mark_invite_expired($invite);
             return;
         }
 
@@ -431,28 +409,10 @@ class PL_Rest_Partnerships
             return;
         }
 
-        if (!class_exists('PL_Partnerships_Repository') || !method_exists('PL_Partnerships_Repository', 'add_partner')) {
-            return;
-        }
-
-        $ok = PL_Partnerships_Repository::add_partner($object_type, $object_id, $user_id, $role);
+        $ok = self::accept_invite_for_user($raw_token, $user_id);
         if (!$ok) {
             return;
         }
-
-        $now = current_time('mysql');
-        $wpdb->update(
-            $invites_table,
-            [
-                'status' => 'accepted',
-                'accepted_at' => $now,
-                'invitee_user_id' => $user_id,
-                'updated_at' => $now,
-            ],
-            ['id' => (int) ($invite['id'] ?? 0)],
-            ['%s', '%s', '%d', '%s'],
-            ['%d']
-        );
 
         $redirect = home_url('/dashboard');
         if ($object_type === 'course') {
@@ -561,6 +521,49 @@ class PL_Rest_Partnerships
         exit;
     }
 
+    private static function mark_invite_expired(array $invite): void
+    {
+        global $wpdb;
+        if (!$wpdb) {
+            return;
+        }
+
+        $invite_id = (int) ($invite['id'] ?? 0);
+        if ($invite_id <= 0) {
+            return;
+        }
+
+        $source = (string) ($invite['_pl_source'] ?? 'legacy');
+        $now = current_time('mysql');
+
+        if ($source === 'partnerships') {
+            $table = $wpdb->prefix . self::PARTNERSHIPS_TABLE_SLUG;
+            $wpdb->update(
+                $table,
+                [
+                    'status' => 'expired',
+                    'updated_at' => $now,
+                ],
+                ['id' => $invite_id],
+                ['%s', '%s'],
+                ['%d']
+            );
+            return;
+        }
+
+        $table = $wpdb->prefix . self::LEGACY_INVITES_TABLE_SLUG;
+        $wpdb->update(
+            $table,
+            [
+                'status' => 'expired',
+                'updated_at' => $now,
+            ],
+            ['id' => $invite_id],
+            ['%s', '%s'],
+            ['%d']
+        );
+    }
+
     /**
      * @return array<string,mixed>|null
      */
@@ -578,7 +581,30 @@ class PL_Rest_Partnerships
             return null;
         }
 
-        $invites_table = $wpdb->prefix . self::INVITES_TABLE_SLUG;
+        $partnerships_table = $wpdb->prefix . self::PARTNERSHIPS_TABLE_SLUG;
+        $partnerships_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $partnerships_table)) === $partnerships_table);
+
+        if ($partnerships_exists && self::invites_table_column_exists($partnerships_table, 'invitation_token_hash')) {
+            $invite = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT *
+                     FROM {$partnerships_table}
+                     WHERE invitation_token_hash = %s
+                       AND status = %s
+                     LIMIT 1",
+                    $token_hash,
+                    'pending'
+                ),
+                ARRAY_A
+            );
+
+            if (is_array($invite)) {
+                $invite['_pl_source'] = 'partnerships';
+                return $invite;
+            }
+        }
+
+        $invites_table = $wpdb->prefix . self::LEGACY_INVITES_TABLE_SLUG;
         $invite = $wpdb->get_row(
             $wpdb->prepare(
                 "SELECT *
@@ -592,7 +618,12 @@ class PL_Rest_Partnerships
             ARRAY_A
         );
 
-        return is_array($invite) ? $invite : null;
+        if (is_array($invite)) {
+            $invite['_pl_source'] = 'legacy';
+            return $invite;
+        }
+
+        return null;
     }
 
     private static function accept_invite_for_user(string $raw_token, int $user_id): bool
@@ -602,27 +633,10 @@ class PL_Rest_Partnerships
             return false;
         }
 
-        // Expiry check.
-        global $wpdb;
-        if (!$wpdb) {
-            return false;
-        }
-        $invites_table = $wpdb->prefix . self::INVITES_TABLE_SLUG;
-
         $now_ts = current_time('timestamp', true);
         $expires_ts = strtotime((string) ($invite['expires_at'] ?? '') . ' UTC');
         if ($expires_ts && $expires_ts < $now_ts) {
-            $now = current_time('mysql');
-            $wpdb->update(
-                $invites_table,
-                [
-                    'status' => 'expired',
-                    'updated_at' => $now,
-                ],
-                ['id' => (int) ($invite['id'] ?? 0)],
-                ['%s', '%s'],
-                ['%d']
-            );
+            self::mark_invite_expired($invite);
             return false;
         }
 
@@ -649,26 +663,388 @@ class PL_Rest_Partnerships
             return false;
         }
 
-        $ok = PL_Partnerships_Repository::add_partner($object_type, $object_id, $user_id, $role);
-        if (!$ok) {
-            return false;
+        $already_partner = false;
+        if (method_exists('PL_Partnerships_Repository', 'get_object_partners_by_role')) {
+            $rows = PL_Partnerships_Repository::get_object_partners_by_role($object_type, $object_id, $role);
+            if (is_array($rows) && !empty($rows)) {
+                $first = $rows[0] ?? null;
+                if (is_array($first) && (int) ($first['partner_user_id'] ?? 0) === $user_id) {
+                    $already_partner = true;
+                }
+            }
+        }
+
+        if (!$already_partner) {
+            $owner_user_id = (int) ($invite['owner_user_id'] ?? 0);
+            $ok = PL_Partnerships_Repository::add_partner($object_type, $object_id, $user_id, $role, $owner_user_id);
+            if (!$ok) {
+                return false;
+            }
+        }
+
+        // Partner invites must grant course access (Learni: active enrollment).
+        if ($object_type === 'course' && $role === 'partner') {
+            self::ensure_course_enrollment_for_partner($user_id, $object_id);
         }
 
         $now = current_time('mysql');
-        $wpdb->update(
-            $invites_table,
+        global $wpdb;
+        if (!$wpdb) {
+            return false;
+        }
+
+        $invite_id = (int) ($invite['id'] ?? 0);
+        if ($invite_id <= 0) {
+            return false;
+        }
+
+        $source = (string) ($invite['_pl_source'] ?? 'legacy');
+        if ($source === 'partnerships') {
+            $table = $wpdb->prefix . self::PARTNERSHIPS_TABLE_SLUG;
+            $updated = $wpdb->update(
+                $table,
+                [
+                    'status' => 'accepted',
+                    'accepted_at' => $now,
+                    'updated_at' => $now,
+                ],
+                ['id' => $invite_id],
+                ['%s', '%s', '%s'],
+                ['%d']
+            );
+
+            return $updated !== false;
+        }
+
+        $table = $wpdb->prefix . self::LEGACY_INVITES_TABLE_SLUG;
+        $updated = $wpdb->update(
+            $table,
             [
                 'status' => 'accepted',
                 'accepted_at' => $now,
                 'invitee_user_id' => $user_id,
                 'updated_at' => $now,
             ],
-            ['id' => (int) ($invite['id'] ?? 0)],
+            ['id' => $invite_id],
             ['%s', '%s', '%d', '%s'],
             ['%d']
         );
 
-        return true;
+        return $updated !== false;
+    }
+
+    private static function ensure_course_enrollment_for_partner(int $user_id, int $course_id): void
+    {
+        if ($user_id <= 0 || $course_id <= 0) {
+            return;
+        }
+
+        if (!class_exists('\\Learni\\Database\\Enrollments')) {
+            return;
+        }
+
+        // Avoid rewriting an existing active enrollment unless it's a previously-misclassified partner enrollment.
+        if (method_exists('\\Learni\\Database\\Enrollments', 'get_enrollment')) {
+            $row = \Learni\Database\Enrollments::get_enrollment($user_id, $course_id);
+            if (is_array($row) && (($row['status'] ?? '') === \Learni\Database\Enrollments::STATUS_ACTIVE)) {
+                $source = (string) ($row['source'] ?? '');
+                $provider = (string) ($row['payment_provider'] ?? '');
+                $ref = (string) ($row['payment_reference'] ?? '');
+
+                // If it was a partner enrollment but missing the provider marker, normalize it.
+                if ($source === \Learni\Database\Enrollments::SOURCE_MANUAL && $ref === 'course_partner' && $provider !== 'partner_invite') {
+                    \Learni\Database\Enrollments::upsert($user_id, $course_id, [
+                        'status' => \Learni\Database\Enrollments::STATUS_ACTIVE,
+                        'source' => \Learni\Database\Enrollments::SOURCE_MANUAL,
+                        'payment_provider' => 'partner_invite',
+                        'payment_reference' => 'course_partner',
+                    ]);
+                }
+                return;
+            }
+        }
+
+        \Learni\Database\Enrollments::upsert($user_id, $course_id, [
+            'status' => \Learni\Database\Enrollments::STATUS_ACTIVE,
+            'source' => \Learni\Database\Enrollments::SOURCE_MANUAL,
+            'payment_provider' => 'partner_invite',
+            'payment_reference' => 'course_partner',
+        ]);
+    }
+
+    public static function handle_course_partner_invite_respond(): void
+    {
+        if (!is_user_logged_in()) {
+            auth_redirect();
+            exit;
+        }
+
+        $redirect_to = isset($_POST['redirect_to']) ? (string) wp_unslash($_POST['redirect_to']) : '';
+        $redirect_to = $redirect_to !== '' ? esc_url_raw($redirect_to) : home_url('/');
+
+        $nonce = isset($_POST['_wpnonce']) ? (string) wp_unslash($_POST['_wpnonce']) : '';
+        if ($nonce === '' || !wp_verify_nonce($nonce, self::INVITE_RESPOND_NONCE_ACTION)) {
+            wp_safe_redirect(add_query_arg(['pl_cp_invite' => 'invalid_nonce'], $redirect_to));
+            exit;
+        }
+
+        $invite_id = isset($_POST['invite_id']) ? absint((string) wp_unslash($_POST['invite_id'])) : 0;
+        $source = isset($_POST['source']) ? sanitize_key((string) wp_unslash($_POST['source'])) : 'partnerships';
+        $decision = isset($_POST['decision']) ? sanitize_key((string) wp_unslash($_POST['decision'])) : '';
+
+        if ($invite_id <= 0 || ($decision !== 'accept' && $decision !== 'reject')) {
+            wp_safe_redirect(add_query_arg(['pl_cp_invite' => 'bad_request'], $redirect_to));
+            exit;
+        }
+
+        $user_id = (int) get_current_user_id();
+        $ok = false;
+        if ($decision === 'accept') {
+            $ok = self::accept_course_partner_invite_by_id($source, $invite_id, $user_id);
+        } else {
+            $ok = self::decline_course_partner_invite_by_id($source, $invite_id, $user_id);
+        }
+
+        $args = [
+            'pl_cp_invite' => $ok ? ($decision === 'accept' ? 'accepted' : 'declined') : 'failed',
+        ];
+        if ($ok && $decision === 'accept') {
+            // Preserve context so the profile page can show a "just accepted" dropdown.
+            $args['pl_cp_invite_id'] = $invite_id;
+            $args['pl_cp_invite_source'] = $source;
+        }
+        // Keep the user on the Requests tab in the profile UI.
+        $args['tab'] = 'requests';
+
+        wp_safe_redirect(add_query_arg($args, $redirect_to));
+        exit;
+    }
+
+    private static function accept_course_partner_invite_by_id(string $source, int $invite_id, int $user_id): bool
+    {
+        global $wpdb;
+        if (!$wpdb || $invite_id <= 0 || $user_id <= 0) {
+            return false;
+        }
+
+        $user = get_userdata($user_id);
+        if (!($user instanceof \WP_User)) {
+            return false;
+        }
+        $current_email = self::normalize_email((string) ($user->user_email ?? ''));
+        if ($current_email === '') {
+            return false;
+        }
+
+        $now_ts = current_time('timestamp', true);
+        $now = current_time('mysql');
+
+        if ($source === 'legacy') {
+            $table = $wpdb->prefix . self::LEGACY_INVITES_TABLE_SLUG;
+            $row = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT id, object_type, object_id, role, status, invitee_email, expires_at
+                     FROM {$table}
+                     WHERE id = %d
+                     LIMIT 1",
+                    $invite_id
+                ),
+                ARRAY_A
+            );
+            if (!is_array($row)) {
+                return false;
+            }
+
+            if (sanitize_key((string) ($row['object_type'] ?? '')) !== 'course') {
+                return false;
+            }
+            if (sanitize_key((string) ($row['role'] ?? '')) !== 'partner') {
+                return false;
+            }
+            if (sanitize_key((string) ($row['status'] ?? '')) !== 'pending') {
+                return false;
+            }
+            $invite_email = self::normalize_email((string) ($row['invitee_email'] ?? ''));
+            if ($invite_email === '' || $invite_email !== $current_email) {
+                return false;
+            }
+
+            $expires_ts = strtotime((string) ($row['expires_at'] ?? '') . ' UTC');
+            if ($expires_ts && $expires_ts < $now_ts) {
+                return false;
+            }
+
+            $object_id = (int) ($row['object_id'] ?? 0);
+            if ($object_id <= 0) {
+                return false;
+            }
+            if (!class_exists('PL_Partnerships_Repository') || !method_exists('PL_Partnerships_Repository', 'add_partner')) {
+                return false;
+            }
+            if (!PL_Partnerships_Repository::add_partner('course', $object_id, $user_id, 'partner', 0)) {
+                return false;
+            }
+
+            self::ensure_course_enrollment_for_partner($user_id, $object_id);
+
+            $updated = $wpdb->update(
+                $table,
+                [
+                    'status' => 'accepted',
+                    'accepted_at' => $now,
+                    'invitee_user_id' => $user_id,
+                    'updated_at' => $now,
+                ],
+                ['id' => $invite_id],
+                ['%s', '%s', '%d', '%s'],
+                ['%d']
+            );
+
+            return $updated !== false;
+        }
+
+        // Default: partnerships table.
+        $table = $wpdb->prefix . self::PARTNERSHIPS_TABLE_SLUG;
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+            "SELECT id, object_type, object_id, role, status, invitee_email, expires_at, owner_user_id
+                 FROM {$table}
+                 WHERE id = %d
+                 LIMIT 1",
+            $invite_id
+        ),
+            ARRAY_A
+        );
+        if (!is_array($row)) {
+            return false;
+        }
+
+        if (sanitize_key((string) ($row['object_type'] ?? '')) !== 'course') {
+            return false;
+        }
+        if (sanitize_key((string) ($row['role'] ?? '')) !== 'partner') {
+            return false;
+        }
+        if (sanitize_key((string) ($row['status'] ?? '')) !== 'pending') {
+            return false;
+        }
+        $invite_email = self::normalize_email((string) ($row['invitee_email'] ?? ''));
+        if ($invite_email === '' || $invite_email !== $current_email) {
+            return false;
+        }
+
+        $expires_ts = strtotime((string) ($row['expires_at'] ?? '') . ' UTC');
+        if ($expires_ts && $expires_ts < $now_ts) {
+            return false;
+        }
+
+        $object_id = (int) ($row['object_id'] ?? 0);
+        if ($object_id <= 0) {
+            return false;
+        }
+        if (!class_exists('PL_Partnerships_Repository') || !method_exists('PL_Partnerships_Repository', 'add_partner')) {
+            return false;
+        }
+        $owner_user_id = (int) ($row['owner_user_id'] ?? 0);
+        if (!PL_Partnerships_Repository::add_partner('course', $object_id, $user_id, 'partner', $owner_user_id)) {
+            return false;
+        }
+
+        self::ensure_course_enrollment_for_partner($user_id, $object_id);
+
+        $updated = $wpdb->update(
+            $table,
+            [
+                'status' => 'accepted',
+                'accepted_at' => $now,
+                'updated_at' => $now,
+            ],
+            ['id' => $invite_id],
+            ['%s', '%s', '%s'],
+            ['%d']
+        );
+
+        return $updated !== false;
+    }
+
+    private static function decline_course_partner_invite_by_id(string $source, int $invite_id, int $user_id): bool
+    {
+        global $wpdb;
+        if (!$wpdb || $invite_id <= 0 || $user_id <= 0) {
+            return false;
+        }
+
+        $user = get_userdata($user_id);
+        if (!($user instanceof \WP_User)) {
+            return false;
+        }
+        $current_email = self::normalize_email((string) ($user->user_email ?? ''));
+        if ($current_email === '') {
+            return false;
+        }
+
+        $now = current_time('mysql');
+        $table = $wpdb->prefix . (($source === 'legacy') ? self::LEGACY_INVITES_TABLE_SLUG : self::PARTNERSHIPS_TABLE_SLUG);
+
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT id, object_type, object_id, role, status, invitee_email
+                 FROM {$table}
+                 WHERE id = %d
+                 LIMIT 1",
+                $invite_id
+            ),
+            ARRAY_A
+        );
+        if (!is_array($row)) {
+            return false;
+        }
+
+        if (sanitize_key((string) ($row['object_type'] ?? '')) !== 'course') {
+            return false;
+        }
+        if (sanitize_key((string) ($row['role'] ?? '')) !== 'partner') {
+            return false;
+        }
+        if (sanitize_key((string) ($row['status'] ?? '')) !== 'pending') {
+            return false;
+        }
+        $invite_email = self::normalize_email((string) ($row['invitee_email'] ?? ''));
+        if ($invite_email === '' || $invite_email !== $current_email) {
+            return false;
+        }
+
+        $data = [
+            'status' => 'declined',
+            'updated_at' => $now,
+        ];
+        $formats = ['%s', '%s'];
+
+        if ($source === 'legacy') {
+            if (self::invites_table_column_exists($table, 'declined_at')) {
+                $data['declined_at'] = $now;
+                $formats[] = '%s';
+            }
+            $updated = $wpdb->update(
+                $table,
+                $data,
+                ['id' => $invite_id],
+                $formats,
+                ['%d']
+            );
+            return $updated !== false;
+        }
+
+        $data['declined_at'] = $now;
+        $formats[] = '%s';
+        $updated = $wpdb->update(
+            $table,
+            $data,
+            ['id' => $invite_id],
+            $formats,
+            ['%d']
+        );
+        return $updated !== false;
     }
 
     private static function generate_username_from_email(string $email): string
@@ -755,7 +1131,28 @@ class PL_Rest_Partnerships
             return null;
         }
 
-        $invites_table = $wpdb->prefix . self::INVITES_TABLE_SLUG;
+        $partnerships_table = $wpdb->prefix . self::PARTNERSHIPS_TABLE_SLUG;
+        $partnerships_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $partnerships_table)) === $partnerships_table);
+
+        if ($partnerships_exists && self::invites_table_column_exists($partnerships_table, 'invitation_token_hash')) {
+            $invite = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT *
+                     FROM {$partnerships_table}
+                     WHERE invitation_token_hash = %s
+                     LIMIT 1",
+                    $token_hash
+                ),
+                ARRAY_A
+            );
+
+            if (is_array($invite)) {
+                $invite['_pl_source'] = 'partnerships';
+                return $invite;
+            }
+        }
+
+        $invites_table = $wpdb->prefix . self::LEGACY_INVITES_TABLE_SLUG;
         $invite = $wpdb->get_row(
             $wpdb->prepare(
                 "SELECT *
@@ -767,7 +1164,12 @@ class PL_Rest_Partnerships
             ARRAY_A
         );
 
-        return is_array($invite) ? $invite : null;
+        if (is_array($invite)) {
+            $invite['_pl_source'] = 'legacy';
+            return $invite;
+        }
+
+        return null;
     }
 
     private static function user_can_manage_course(int $user_id, int $course_id): bool
@@ -781,8 +1183,23 @@ class PL_Rest_Partnerships
         }
 
         $post = get_post($course_id);
-        if (!$post || ($post->post_type ?? '') !== self::COURSE_POST_TYPE) {
+        $post_type = $post ? (string) ($post->post_type ?? '') : '';
+        if (!$post || !in_array($post_type, [self::COURSE_POST_TYPE, self::LEARNI_COURSE_POST_TYPE], true)) {
             return false;
+        }
+
+        // Invited course partners must never be allowed to replace/remove the partner.
+        if ($post_type === self::LEARNI_COURSE_POST_TYPE && class_exists('PL_Partnerships_Repository') && method_exists('PL_Partnerships_Repository', 'get_object_partners_by_role')) {
+            try {
+                $rows = PL_Partnerships_Repository::get_object_partners_by_role('course', $course_id, 'partner');
+                foreach ((array) $rows as $row) {
+                    if (is_array($row) && (int) ($row['partner_user_id'] ?? 0) === $user_id && ($row['status'] ?? '') === 'active') {
+                        return false;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
         }
 
         $author_id = (int) ($post->post_author ?? 0);
@@ -793,6 +1210,22 @@ class PL_Rest_Partnerships
         $teacher_ids = get_post_meta($course_id, self::COURSE_TEACHERS_META_KEY, false);
         $teacher_ids = array_map('absint', (array) $teacher_ids);
         if (in_array($user_id, $teacher_ids, true)) {
+            return true;
+        }
+
+        // Learner access (Learni): only the purchaser/owner (not the invited partner) can manage partners.
+        if ($post_type === self::LEARNI_COURSE_POST_TYPE && class_exists('\\Learni\\Database\\Enrollments') && method_exists('\\Learni\\Database\\Enrollments', 'user_is_owner')) {
+            try {
+                if ((bool) \Learni\Database\Enrollments::user_is_owner($user_id, $course_id)) {
+                    return true;
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
+
+        // Learner access (LearnDash legacy): if the user is enrolled and has access to the course, allow managing their partner.
+        if ($post_type === self::COURSE_POST_TYPE && function_exists('sfwd_lms_has_access') && (bool) sfwd_lms_has_access($course_id, $user_id)) {
             return true;
         }
 
@@ -832,7 +1265,122 @@ class PL_Rest_Partnerships
             return '';
         }
 
-        $table = $wpdb->prefix . self::INVITES_TABLE_SLUG;
+        $partnerships_table = $wpdb->prefix . self::PARTNERSHIPS_TABLE_SLUG;
+        $partnerships_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $partnerships_table)) === $partnerships_table);
+
+        $has_invite_cols = $partnerships_exists
+            && self::invites_table_column_exists($partnerships_table, 'invitation_token_hash')
+            && self::invites_table_column_exists($partnerships_table, 'invitee_email')
+            && self::invites_table_column_exists($partnerships_table, 'invited_at')
+            && self::invites_table_column_exists($partnerships_table, 'expires_at')
+            && self::invites_table_column_exists($partnerships_table, 'accepted_at')
+            && self::invites_table_column_exists($partnerships_table, 'revoked_at');
+
+        if ($has_invite_cols) {
+            $token = bin2hex(random_bytes(32));
+            $token_hash = hash('sha256', $token);
+            $now = current_time('mysql');
+            $expires_at = gmdate('Y-m-d H:i:s', current_time('timestamp', true) + (7 * DAY_IN_SECONDS));
+
+            // Single-slot: revoke existing pending invites for this object+role.
+            $wpdb->query(
+                $wpdb->prepare(
+                    "UPDATE {$partnerships_table}
+                     SET status = %s, revoked_at = %s, updated_at = %s
+                     WHERE object_type = %s
+                       AND object_id = %d
+                       AND role = %s
+                       AND status = %s",
+                    'revoked',
+                    $now,
+                    $now,
+                    $object_type,
+                    $object_id,
+                    $role,
+                    'pending'
+                )
+            );
+
+            // Upsert by (object_type, object_id, invitee_email, role) due to unique key.
+            $existing = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT id
+                     FROM {$partnerships_table}
+                     WHERE object_type = %s
+                       AND object_id = %d
+                       AND invitee_email = %s
+                       AND role = %s
+                     LIMIT 1",
+                    $object_type,
+                    $object_id,
+                    $email,
+                    $role
+                ),
+                ARRAY_A
+            );
+
+            if (is_array($existing) && !empty($existing['id'])) {
+                $updated = $wpdb->query(
+                    $wpdb->prepare(
+                        "UPDATE {$partnerships_table}
+                         SET owner_user_id = %d,
+                             partner_user_id = NULL,
+                             status = %s,
+                             invitation_token_hash = %s,
+                             invited_at = %s,
+                             expires_at = %s,
+                             accepted_at = NULL,
+                             declined_at = NULL,
+                             revoked_at = NULL,
+                             updated_at = %s
+                         WHERE id = %d",
+                        (int) get_current_user_id(),
+                        'pending',
+                        $token_hash,
+                        $now,
+                        $expires_at,
+                        $now,
+                        (int) $existing['id']
+                    )
+                );
+
+                return $updated !== false ? $token : '';
+            }
+
+            $inserted = $wpdb->query(
+                $wpdb->prepare(
+                    "INSERT INTO {$partnerships_table}
+                        (object_type, object_id, owner_user_id, partner_user_id, invitee_email, role, status, invitation_token_hash, invited_at, expires_at, created_at, updated_at)
+                     VALUES
+                        (%s, %d, %d, NULL, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    $object_type,
+                    $object_id,
+                    (int) get_current_user_id(),
+                    $email,
+                    $role,
+                    'pending',
+                    $token_hash,
+                    $now,
+                    $expires_at,
+                    $now,
+                    $now
+                )
+            );
+
+            return $inserted ? $token : '';
+        }
+
+        return self::create_invite_legacy($object_type, $object_id, $email, $role);
+    }
+
+    private static function create_invite_legacy(string $object_type, int $object_id, string $email, string $role): string
+    {
+        global $wpdb;
+        if (!$wpdb) {
+            return '';
+        }
+
+        $table = $wpdb->prefix . self::LEGACY_INVITES_TABLE_SLUG;
         $table_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table);
         if (!$table_exists) {
             // Best-effort: the invites table is owned by Politeia Bookshelf (Reading Planner).

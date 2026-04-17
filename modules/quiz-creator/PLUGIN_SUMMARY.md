@@ -239,7 +239,7 @@ Create a quiz in JSON format with the following structure:
   "settings": {
     "time_limit": 300,
     "random_questions": 0,
-    "random_answers": 0,
+    "random_answers": 1,
     "run_once": 0,
     "force_solve": 0,
     "passing_percentage": 80
@@ -270,7 +270,7 @@ Create a quiz about [YOUR TOPIC] with [NUMBER] questions.
 |---------|------|---------|-------------|
 | `time_limit` | int | 0 | Time in seconds (0 = no limit) |
 | `random_questions` | int | 0 | Randomize question order |
-| `random_answers` | int | 0 | Randomize answer order |
+| `random_answers` | int | 1 | Answers are always shuffled (not configurable) |
 | `run_once` | int | 0 | Limit quiz attempts |
 | `run_once_type` | int | 0 | 0=user, 1=cookie, 2=IP, 3=both |
 | `force_solve` | int | 0 | Must answer before next |
