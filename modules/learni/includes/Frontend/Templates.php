@@ -1191,9 +1191,41 @@ final class PL_Learni_Frontend_Templates
         $percent = (int) ($summary['percent'] ?? 0);
 
         $raw = (string) get_post_field('post_content', $lesson_id);
-        $processed = apply_filters('the_content', $raw);
+        ob_start();
+        $processed_filtered = apply_filters('the_content', $raw);
+        $processed_echoed = ob_get_clean();
+        $processed = $processed_echoed . (is_string($processed_filtered) ? $processed_filtered : '');
 
-        $video_url = (string) get_post_meta($lesson_id, \Learni\PostTypes\Lesson::META_VIDEO_URL, true);
+        $src_meta_key = class_exists('\\Learni\\PostTypes\\Lesson')
+            ? \Learni\PostTypes\Lesson::META_SOURCE_POST_ID
+            : 'learni_source_post_id';
+        $src_post_id = $lesson_id > 0 ? (int) get_post_meta($lesson_id, $src_meta_key, true) : 0;
+        if ($src_post_id > 0) {
+            $escrito_post = get_post($src_post_id);
+            $valid_type = ($escrito_post instanceof \WP_Post) && $escrito_post->post_type === 'post';
+            $valid_status = $valid_type && in_array((string) $escrito_post->post_status, ['publish', 'draft'], true);
+            $can_view_draft = $valid_type && current_user_can('edit_post', (int) $src_post_id);
+            if (!$valid_type || !$valid_status || ((string) $escrito_post->post_status !== 'publish' && !$can_view_draft)) {
+                $processed = '<p>' . esc_html__('El texto vinculado no está disponible.', 'politeia-learning') . '</p>';
+            } else {
+                $orig_post = $GLOBALS['post'] ?? null;
+                $GLOBALS['post'] = $escrito_post;
+                setup_postdata($GLOBALS['post']);
+                ob_start();
+                $escrito_filtered = apply_filters('the_content', (string) ($escrito_post->post_content ?? ''));
+                $escrito_echoed = ob_get_clean();
+                wp_reset_postdata();
+                if ($orig_post instanceof \WP_Post) {
+                    $GLOBALS['post'] = $orig_post;
+                }
+                $processed = '<div class="pcg-escrito-content-editor">' . $escrito_echoed . (is_string($escrito_filtered) ? $escrito_filtered : '') . '</div>';
+            }
+        }
+
+        $video_meta_key = class_exists('\\Learni\\PostTypes\\Lesson')
+            ? \Learni\PostTypes\Lesson::META_VIDEO_URL
+            : 'learni_video_url';
+        $video_url = (string) get_post_meta($lesson_id, $video_meta_key, true);
         $video_html = '';
         $video_provider = '';
         $youtube_id = '';
