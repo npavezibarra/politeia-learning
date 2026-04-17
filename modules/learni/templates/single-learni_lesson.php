@@ -163,9 +163,13 @@ ob_start();
 $lesson_body_filtered = apply_filters('the_content', (string) ($post->post_content ?? ''));
 $lesson_body_echoed = ob_get_clean();
 $lesson_body_html = $lesson_body_echoed . (is_string($lesson_body_filtered) ? $lesson_body_filtered : '');
-$src_post_id = ($lesson_id > 0 && class_exists('\\Learni\\PostTypes\\Lesson'))
-    ? (int) get_post_meta($lesson_id, \Learni\PostTypes\Lesson::META_SOURCE_POST_ID, true)
-    : 0;
+
+// Avoid relying on the Lesson class being loaded; the template should work even if
+// PostTypes aren't bootstrapped yet.
+$src_meta_key = class_exists('\\Learni\\PostTypes\\Lesson')
+    ? \Learni\PostTypes\Lesson::META_SOURCE_POST_ID
+    : 'learni_source_post_id';
+$src_post_id = $lesson_id > 0 ? (int) get_post_meta($lesson_id, $src_meta_key, true) : 0;
 
 if ($src_post_id > 0) {
     $is_enrolled = ($user_id > 0 && $course_id > 0 && class_exists('\\Learni\\Database\\Enrollments'))

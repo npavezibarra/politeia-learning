@@ -540,9 +540,12 @@ final class PL_Learni_Frontend_Templates
 
         // When a lesson reuses an Escrito (WP post) as its body, reuse the same frontend CSS
         // so typography/images match the blog rendering.
-        if (is_singular('learni_lesson') && defined('PL_CC_URL') && defined('PL_CC_PATH') && class_exists('\\Learni\\PostTypes\\Lesson')) {
+        if (is_singular('learni_lesson') && defined('PL_CC_URL') && defined('PL_CC_PATH')) {
             $lesson_id = (int) get_queried_object_id();
-            $src_post_id = $lesson_id > 0 ? (int) get_post_meta($lesson_id, \Learni\PostTypes\Lesson::META_SOURCE_POST_ID, true) : 0;
+            $src_meta_key = class_exists('\\Learni\\PostTypes\\Lesson')
+                ? \Learni\PostTypes\Lesson::META_SOURCE_POST_ID
+                : 'learni_source_post_id';
+            $src_post_id = $lesson_id > 0 ? (int) get_post_meta($lesson_id, $src_meta_key, true) : 0;
             if ($src_post_id > 0) {
                 $frontend_css_path = PL_CC_PATH . 'assets/css/escrito-frontend.css';
                 $frontend_css_ver = file_exists($frontend_css_path) ? (string) filemtime($frontend_css_path) : '1.0.0';
