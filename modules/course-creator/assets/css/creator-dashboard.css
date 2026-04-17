@@ -6968,6 +6968,15 @@ body,
    Template Center-2 Specific Styles
    ─────────────────────────────────────────────────────────── */
 
+/* Remove site footer on Center-2 screens */
+body.pcg-template-center-2-active #colophon,
+body.pcg-template-center-2-active footer.wp-block-template-part,
+body.pcg-template-center-2-active .wp-site-blocks > footer,
+body.pcg-template-center-2-active footer#colophon,
+body.pcg-template-center-2-active footer.site-footer {
+    display: none !important;
+}
+
 /* Reset outer header/footer to full width */
 body.pcg-template-center-2-active #masthead,
 body.pcg-template-center-2-active #colophon {
