@@ -170,6 +170,14 @@ add_action('wp_enqueue_scripts', function () {
             white-space: nowrap;
             z-index: 1;
         }
+
+        .round {
+            border-radius: 12px !important;
+        }
+
+        .pcg-sidecard {
+            background: white !important;
+        }
     ";
 
     // Legacy Course Typography enforcements (kept for backward compatibility)
