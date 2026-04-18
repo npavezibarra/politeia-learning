@@ -158,11 +158,12 @@ add_action('wp_enqueue_scripts', function () {
             display: flex;
             font-size: 9px;
             font-weight: 600;
-            height: 20px;
+            height: 18px;
+            background: linear-gradient(135deg, #783F27, #B87333, #E5AA70);
             justify-content: center;
             left: 100%;
             margin-left: -44%;
-            min-width: 20px;
+            min-width: 18px;
             padding: 0 .25em;
             position: absolute;
             transform: translateY(-50%);
