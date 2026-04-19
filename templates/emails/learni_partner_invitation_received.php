@@ -1,6 +1,6 @@
 <?php
 /**
- * Email: course partner invite
+ * Email: Learni partner invitation (received by invitee).
  *
  * Available variables:
  * - $invitee_name (string)
@@ -27,3 +27,4 @@ $pl_email_document_title = (string) __('Invitación al Curso - Politeia', 'polit
 <?php include PL_PATH . 'templates/emails/partials/unified-shell-top.php'; ?>
 <?php include PL_PATH . 'templates/emails/partials/course-partner-invite-body.php'; ?>
 <?php include PL_PATH . 'templates/emails/partials/unified-shell-bottom.php'; ?>
+

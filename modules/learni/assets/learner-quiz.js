@@ -178,6 +178,26 @@
 	    } catch (e3) {}
 	  }
 
+  function maybeAutoOpenCertificateFromUrl() {
+    try {
+      var cfg = getConfig();
+      if (!cfg || !cfg.isLoggedIn) return;
+      var url = new URL(window.location.href);
+      if (url.searchParams.get("learni_open_cert") !== "1") return;
+
+      var courseId = getCourseIdFromDom();
+      if (!courseId) return;
+
+      // Clean URL to avoid reopening on refresh/back.
+      url.searchParams.delete("learni_open_cert");
+      try {
+        window.history.replaceState({}, document.title, url.toString());
+      } catch (e0) {}
+
+      openCertificate(courseId);
+    } catch (e) {}
+  }
+
   function apiFetch(path, options) {
     var cfg = getConfig();
     var url = (cfg.restUrl || "/wp-json/") + path.replace(/^\//, "");
@@ -453,6 +473,99 @@
       });
   }
 
+  function showBinomialComparisonInQuiz(courseId, opts) {
+    opts = opts && typeof opts === "object" ? opts : {};
+    var subject = opts.subject === "partnerOther" ? "partnerOther" : "self"; // self | partnerOther
+    var title = opts.title || i18n("quizCrossDoneTitle", "Listo");
+    var kicker = opts.kicker || i18n("quizCrossKicker", "Test Partner");
+
+    showQuizModal();
+    setQuizModalTitle(title);
+    setQuizModalBody('<div class="learni-quiz-modal__loading">' + escapeHtml(i18n("loading", "Loading…")) + "</div>");
+
+    apiFetch("/learni/v1/courses/" + String(courseId) + "/binomial", { method: "GET" })
+      .then(function (res) { return fetchJson(res, "Failed to load results"); })
+      .then(function (data) {
+        // Keep aside partner scores in sync without forcing a refresh.
+        updatePartnerSectionFromApi(data);
+        updateTestPartnerCtaFromApi(data, courseId);
+
+        var attempts = null;
+        if (subject === "partnerOther") {
+          attempts = (data && data.partner && data.partner.otherAttempts) ? data.partner.otherAttempts : null;
+        } else {
+          attempts = (data && data.attempts) ? data.attempts : null;
+        }
+        attempts = attempts || {};
+
+        var initial = attempts && attempts.initial ? attempts.initial : null;
+        var final = attempts && attempts.final ? attempts.final : null;
+
+        var iPct = initial && typeof initial.percent === "number" ? initial.percent : 0;
+        var fPct = final && typeof final.percent === "number" ? final.percent : 0;
+        if (!isFinite(iPct)) iPct = 0;
+        if (!isFinite(fPct)) fPct = 0;
+        iPct = Math.max(0, Math.min(100, Math.round(iPct)));
+        fPct = Math.max(0, Math.min(100, Math.round(fPct)));
+
+        var delta = fPct - iPct;
+        var courseTitle = (data && data.courseId) ? (getCourseTitleFromDom() || "") : "";
+        if (!courseTitle) {
+          courseTitle = String((data && data.partner && data.partner.courseTitle) || "") || "";
+        }
+        if (!courseTitle && data && data.courseId) {
+          try { courseTitle = String(data.courseTitle || ""); } catch (e0) {}
+        }
+
+        var html =
+          '<div class="learni-quiz-results">' +
+          '<div class="learni-quiz-results__kicker">' +
+          escapeHtml(kicker) +
+          "</div>" +
+          '<div class="learni-quiz-results__text">' +
+          escapeHtml(i18n("quizCrossResultsBody", "Estos fueron los resultados:")) +
+          "</div>" +
+          '<div class="learni-final-overlay__charts" aria-label="Resultados">' +
+          progressChart(i18n("quizInitialKicker", "Evaluación inicial"), iPct, "learniGoldGradientInitialInQuiz") +
+          progressChart(i18n("quizFinalKicker", "Evaluación final"), fPct, "learniGoldGradientFinalInQuiz") +
+          "</div>" +
+          '<div class="learni-final-overlay__variation">' +
+          escapeHtml(labelDelta(delta)) +
+          "</div>" +
+          '<div class="learni-quiz-actions">' +
+          '<button type="button" class="learni-btn" id="learni-quiz-cross-results-close">' +
+          escapeHtml(i18n("quizCrossResultsClose", i18n("quizCrossDoneClose", "Cerrar"))) +
+          "</button>" +
+          "</div>" +
+          "</div>";
+
+        setQuizModalBody(html);
+        var closeBtn = document.getElementById("learni-quiz-cross-results-close");
+        if (closeBtn) closeBtn.addEventListener("click", function () { hideQuizModal(); });
+      })
+      .catch(function () {
+        // Fallback: keep previous behavior if results can't be loaded.
+        setQuizModalTitle(i18n("quizCrossDoneTitle", "Listo"));
+        var html =
+          '<div class="learni-quiz-results">' +
+          '<div class="learni-quiz-results__kicker">' +
+          escapeHtml(kicker) +
+          "</div>" +
+          '<div class="learni-quiz-results__text">' +
+          escapeHtml(i18n("quizCrossDoneBody", "El resultado quedó guardado en la cuenta de tu partner.")) +
+          "</div>" +
+          '<div class="learni-quiz-actions">' +
+          '<button type="button" class="learni-btn" id="learni-quiz-cross-done-close">' +
+          escapeHtml(i18n("quizCrossDoneClose", "Cerrar")) +
+          "</button>" +
+          "</div>" +
+          "</div>";
+        setQuizModalBody(html);
+        var closeBtn = document.getElementById("learni-quiz-cross-done-close");
+        if (closeBtn) closeBtn.addEventListener("click", function () { hideQuizModal(); });
+      });
+  }
+
   function startBinomialQuiz(courseId, phase) {
     showQuizModal();
     setQuizModalTitle(phase === "final" ? i18n("quizFinalKicker", "Final Quiz") : i18n("quizInitialKicker", "First Quiz"));
@@ -487,252 +600,405 @@
       .then(function (parts) {
         var data = parts[0];
         var initialScore = parts[1];
-
-	        var attemptId = data && data.attempt && data.attempt.id ? String(data.attempt.id) : "";
-	        var title = data && data.quiz && data.quiz.title ? data.quiz.title : "Quiz";
-	        var introText = data && data.quiz && data.quiz.introText ? String(data.quiz.introText) : "";
-	        var questions = data && Array.isArray(data.questions) ? data.questions : [];
-
-	        setQuizModalTitle(title);
-
-		        var state = {
-		          attemptId: attemptId,
-		          phase: phase,
-		          title: title,
-		          introText: introText,
-		          courseTitle: getCourseTitleFromDom() || title,
-		          initialScore: initialScore,
-		          questions: questions,
-		          slide: "intro", // intro | q
-		          index: 0,
-		          answers: {}, // questionId -> answerId
-		          answerOrders: {}, // questionId -> shuffled answers[]
-		        };
-
-	        function render() {
-	          if (state.slide === "intro") {
-	            var phaseLabel = state.phase === "final" ? i18n("quizFinalKicker", "Final Quiz") : i18n("quizInitialKicker", "First Quiz");
-	            var prep =
-	              state.phase === "final"
-	                ? formatTemplate(i18n("quizPrepFinal", ""), {
-	                    course: state.courseTitle,
-	                    count: state.questions.length,
-	                    score: typeof state.initialScore === "number" ? state.initialScore : "—",
-	                  })
-	                : formatTemplate(i18n("quizPrepInitial", ""), { course: state.courseTitle, count: state.questions.length });
-
-	            var extra = state.introText
-	              ? '<div class="learni-quiz-intro__text">' + escapeHtml(String(state.introText)) + "</div>"
-	              : "";
-		            var html =
-		              '<div class="learni-quiz-intro">' +
-		              '<div class="learni-quiz-intro__kicker">' +
-		              escapeHtml(phaseLabel) +
-		              "</div>" +
-		              '<div class="learni-quiz-intro__title">' +
-		              escapeHtml(state.courseTitle) +
-		              "</div>" +
-		              '<div class="learni-quiz-intro__text">' +
-		              escapeHtml(prep) +
-		              "</div>" +
-		              extra +
-		              '<div class="learni-quiz-actions">' +
-		              '<button type="button" class="learni-btn" id="learni-quiz-begin">' +
-		              escapeHtml(i18n("quizBegin", "Begin")) +
-		              "</button>" +
-		              "</div>" +
-		              "</div>";
-	            setQuizModalBody(html);
-	            var begin = document.getElementById("learni-quiz-begin");
-            if (begin) {
-              begin.addEventListener("click", function () {
-                state.slide = "q";
-                state.index = 0;
-                render();
-              });
-            }
-            return;
-          }
-
-          var q = state.questions[state.index];
-          if (!q) {
-            setQuizModalBody('<div class="learni-quiz-modal__error">No questions found.</div>');
-            return;
-          }
-
-	          var isLast = state.index === state.questions.length - 1;
-	          var answersHtml = "";
-	          var answers = Array.isArray(q.answers) ? q.answers : [];
-	          var qid = String(q.id || "");
-	          if (qid) {
-	            if (!state.answerOrders[qid]) {
-	              state.answerOrders[qid] = stableShuffleBySeed(answers, state.attemptId + ":" + qid);
-	            }
-	            answers = state.answerOrders[qid];
-	          } else {
-	            answers = stableShuffleBySeed(answers, state.attemptId + ":idx:" + String(state.index));
-	          }
-	          answers.forEach(function (a) {
-	            var aid = a && a.id !== undefined ? String(a.id) : "";
-	            var checked = "";
-	            if (qid && state.answers[qid] !== undefined && String(state.answers[qid]) === aid) checked = ' checked="checked"';
-	            answersHtml +=
-	              '<label class="learni-quiz-a">' +
-	              '<input type="radio" name="q" value="' +
-	              escapeHtml(String(a.id)) +
-	              '"' +
-	              checked +
-	              ">" +
-	              '<span class="learni-quiz-a__text">' +
-	              escapeHtml(String(a.text || "")) +
-	              "</span>" +
-	              "</label>";
-	          });
-
-	          var htmlQ =
-	            '<form id="learni-quiz-slide" class="learni-quiz-form" data-attempt-id="' +
-	            escapeHtml(state.attemptId) +
-	            '">' +
-	            '<div class="learni-quiz-q">' +
-	            '<div class="learni-quiz-q__meta">' +
-	            escapeHtml(
-	              formatTemplate(i18n("quizQuestionOf", "Question {current} of {total}"), {
-	                current: state.index + 1,
-	                total: state.questions.length,
-	              })
-	            ) +
-	            "</div>" +
-	            '<div class="learni-quiz-q__text">' +
-	            escapeHtml(String(q.prompt || "")) +
-	            "</div>" +
-	            "</div>" +
-            '<div class="learni-quiz-a-list">' +
-            answersHtml +
-            "</div>" +
-	            '<div class="learni-quiz-actions">' +
-	            (state.index > 0
-	              ? '<button type="button" class="learni-btn secondary" id="learni-quiz-prev">' + escapeHtml(i18n("quizBack", "Back")) + "</button>"
-	              : "") +
-	            '<button type="submit" class="learni-btn" id="learni-quiz-next">' +
-	            escapeHtml(isLast ? i18n("quizSubmit", "Submit") : i18n("quizNext", "Next")) +
-	            "</button>" +
-	            "</div>" +
-	            "</form>";
-
-          setQuizModalBody(htmlQ);
-
-          var form = document.getElementById("learni-quiz-slide");
-	          var prevBtn = document.getElementById("learni-quiz-prev");
-	          if (prevBtn) {
-	            prevBtn.addEventListener("click", function () {
-	              state.index = Math.max(0, state.index - 1);
-	              render();
-	            });
-	          }
-
-          if (!form) return;
-	          form.addEventListener("submit", function (e) {
-	            e.preventDefault();
-	            var chosen = form.querySelector('input[name="q"]:checked');
-	            if (!chosen || !chosen.value) {
-	              alert(i18n("quizChooseAnswer", "Please choose an answer."));
-	              return;
-	            }
-	            state.answers[String(q.id)] = Number(chosen.value);
-
-            if (!isLast) {
-              state.index = Math.min(state.questions.length - 1, state.index + 1);
-              render();
-              return;
-            }
-
-            var submitBtn = document.getElementById("learni-quiz-next");
-            if (submitBtn) submitBtn.disabled = true;
-
-	            if (Object.keys(state.answers).length !== state.questions.length) {
-	              if (submitBtn) submitBtn.disabled = false;
-	              alert(i18n("quizAnswerAll", "Please answer all questions."));
-	              return;
-	            }
-
-            apiFetch("/learni/v1/attempts/" + state.attemptId + "/submit", {
+        renderBinomialQuizFromData(courseId, phase, data, initialScore, {
+          mode: "self",
+          submitAttempt: function (attemptId, answers) {
+            return apiFetch("/learni/v1/attempts/" + String(attemptId) + "/submit", {
               method: "POST",
-              body: JSON.stringify({ answers: state.answers }),
-            })
-              .then(function (res) {
-                return res.json().then(function (data) {
-                  if (!res.ok) {
-                    var msg = (data && data.message) || "Failed to submit quiz";
-                    throw new Error(msg);
-                  }
-                  return data;
-                });
-              })
-              .then(function (data) {
-                if (state.phase === "final") {
-                  hideQuizModal();
-                  showFinalQuizCompletion(courseId);
-                  return;
-                }
-
-                var percent = data && typeof data.percent === "number" ? data.percent : null;
-                if (percent === null || !isFinite(percent)) percent = 0;
-                percent = Math.max(0, Math.min(100, Math.round(percent)));
-
-                var score = data && typeof data.score === "number" ? data.score : 0;
-                var total = data && typeof data.total === "number" ? data.total : state.questions.length;
-                if (!isFinite(score) || score < 0) score = 0;
-                if (!isFinite(total) || total <= 0) total = state.questions.length;
-
-                setQuizModalTitle("Resultados");
-
-                var html =
-                  '<div class="learni-quiz-results">' +
-                  '<div class="learni-quiz-results__kicker">Evaluación inicial</div>' +
-                  '<div class="learni-quiz-results__chart">' +
-                  ringChartSvg(percent, "learniGoldGradientResults", "learni-quiz-results__chart-svg") +
-                  "</div>" +
-                  '<div class="learni-quiz-results__meta">' +
-                  score +
-                  " de " +
-                  total +
-                  " correctas</div>" +
-                  '<div class="learni-quiz-results__text">Felicitaciones: obtuviste <strong>' +
-                  percent +
-                  '%</strong> de respuestas correctas en la Evaluación Inicial. Ahora completa todas las lecciones de este curso. Al finalizar, podrás rendir la Evaluación Final y compararemos tu resultado inicial con el final para ver tu progreso.</div>' +
-                  '<div class="learni-quiz-actions">' +
-                  '<button type="button" class="learni-btn" id="learni-quiz-results-continue">Continuar</button>' +
-                  "</div>" +
-                  "</div>";
-
-                setQuizModalBody(html);
-
-		                var cont = document.getElementById("learni-quiz-results-continue");
-		                if (cont) {
-		                  cont.addEventListener("click", function () {
-		                    hideQuizModal();
-		                    try {
-		                      // After finishing the first quiz, show the "unverified account" prompt on reload (if applicable).
-		                      var url = new URL(window.location.href);
-		                      url.searchParams.set("pl_auth_unverified_after_quiz", "1");
-		                      window.location.href = url.toString();
-		                    } catch (e) {
-		                      window.location.reload();
-		                    }
-		                  });
-		                }
-	              })
-	              .catch(function (err) {
-                if (submitBtn) submitBtn.disabled = false;
-                alert((err && err.message) || "Failed to submit quiz");
-              });
-          });
-        }
-
-        render();
+              body: JSON.stringify({ answers: answers }),
+            }).then(function (res) {
+              return fetchJson(res, "Failed to submit quiz");
+            });
+          },
+        });
       })
       .catch(function (err) {
         setQuizModalBody('<div class="learni-quiz-modal__error">' + escapeHtml((err && err.message) || "Failed to start quiz") + "</div>");
+      });
+  }
+
+  function renderBinomialQuizFromData(courseId, phase, data, initialScore, opts) {
+    opts = opts || {};
+    var mode = opts.mode || "self"; // self | cross
+    var submitAttempt = typeof opts.submitAttempt === "function" ? opts.submitAttempt : null;
+
+    var attemptId = data && data.attempt && data.attempt.id ? String(data.attempt.id) : "";
+    var title = data && data.quiz && data.quiz.title ? data.quiz.title : "Quiz";
+    var introText = data && data.quiz && data.quiz.introText ? String(data.quiz.introText) : "";
+    var questions = data && Array.isArray(data.questions) ? data.questions : [];
+
+    setQuizModalTitle(title);
+
+    function indexToLabel(i) {
+      var n = typeof i === "number" ? i : parseInt(i, 10);
+      if (!isFinite(n) || n < 0) n = 0;
+      // A..Z then AA..AZ...
+      var s = "";
+      n = n + 1;
+      while (n > 0) {
+        var rem = (n - 1) % 26;
+        s = String.fromCharCode(65 + rem) + s;
+        n = Math.floor((n - 1) / 26);
+      }
+      return s;
+    }
+
+    var state = {
+      attemptId: attemptId,
+      phase: phase,
+      mode: mode,
+      title: title,
+      introText: introText,
+      courseTitle: getCourseTitleFromDom() || title,
+      initialScore: initialScore,
+      questions: questions,
+      slide: "intro", // intro | q
+      index: 0,
+      answers: {}, // questionId -> answerId
+      answerOrders: {}, // questionId -> answers[]
+    };
+
+    function renderCrossDone() {
+      // After completing Test Partner, show the same "Initial vs Final" comparison screen,
+      // but using the partner's attempt payload (stored under the tested user's account).
+      showBinomialComparisonInQuiz(courseId, {
+        subject: "partnerOther",
+        title: i18n("quizCrossDoneTitle", "Listo"),
+        kicker: i18n("quizCrossKicker", "Test Partner"),
+      });
+    }
+
+    function render() {
+      if (state.slide === "intro") {
+        var phaseLabel =
+          state.mode === "cross"
+            ? i18n("quizCrossKicker", "Test Partner")
+            : state.phase === "final"
+              ? i18n("quizFinalKicker", "Final Quiz")
+              : i18n("quizInitialKicker", "First Quiz");
+
+        var prep = "";
+        if (state.mode === "cross") {
+          prep = formatTemplate(i18n("quizCrossPrepFinal", ""), { course: state.courseTitle, count: state.questions.length });
+        } else if (state.phase === "final") {
+          prep = formatTemplate(i18n("quizPrepFinal", ""), {
+            course: state.courseTitle,
+            count: state.questions.length,
+            score: typeof state.initialScore === "number" ? state.initialScore : "—",
+          });
+        } else {
+          prep = formatTemplate(i18n("quizPrepInitial", ""), { course: state.courseTitle, count: state.questions.length });
+        }
+
+        var extra = state.introText ? '<div class="learni-quiz-intro__text">' + escapeHtml(String(state.introText)) + "</div>" : "";
+        var html =
+          '<div class="learni-quiz-intro">' +
+          '<div class="learni-quiz-intro__kicker">' +
+          escapeHtml(phaseLabel) +
+          "</div>" +
+          '<div class="learni-quiz-intro__title">' +
+          escapeHtml(state.courseTitle) +
+          "</div>" +
+          '<div class="learni-quiz-intro__text">' +
+          escapeHtml(prep) +
+          "</div>" +
+          extra +
+          '<div class="learni-quiz-actions">' +
+          '<button type="button" class="learni-btn" id="learni-quiz-begin">' +
+          escapeHtml(i18n("quizBegin", "Begin")) +
+          "</button>" +
+          "</div>" +
+          "</div>";
+        setQuizModalBody(html);
+        var begin = document.getElementById("learni-quiz-begin");
+        if (begin) {
+          begin.addEventListener("click", function () {
+            state.slide = "q";
+            state.index = 0;
+            render();
+          });
+        }
+        return;
+      }
+
+      var q = state.questions[state.index];
+      if (!q) {
+        setQuizModalBody('<div class="learni-quiz-modal__error">No questions found.</div>');
+        return;
+      }
+
+      var isLast = state.index === state.questions.length - 1;
+      var answersHtml = "";
+      var answers = Array.isArray(q.answers) ? q.answers : [];
+      var qid = String(q.id || "");
+      if (qid) {
+        if (!state.answerOrders[qid]) {
+          // Preserve the server-provided order exactly.
+          state.answerOrders[qid] = answers.slice();
+        }
+        answers = state.answerOrders[qid];
+      }
+      answers.forEach(function (a, idx) {
+        var aid = a && a.id !== undefined ? String(a.id) : "";
+        var checked = "";
+        if (qid && state.answers[qid] !== undefined && String(state.answers[qid]) === aid) checked = ' checked="checked"';
+        answersHtml +=
+          '<label class="learni-quiz-a">' +
+          '<input type="radio" name="q" value="' +
+          escapeHtml(String(a.id)) +
+          '"' +
+          checked +
+          ">" +
+          '<span class="learni-quiz-a__label">' +
+          escapeHtml(indexToLabel(idx)) +
+          "</span>" +
+          '<span class="learni-quiz-a__text">' +
+          escapeHtml(String(a.text || "")) +
+          "</span>" +
+          "</label>";
+      });
+
+      var htmlQ =
+        '<form id="learni-quiz-slide" class="learni-quiz-form" data-attempt-id="' +
+        escapeHtml(state.attemptId) +
+        '">' +
+        '<div class="learni-quiz-q">' +
+        '<div class="learni-quiz-q__meta">' +
+        escapeHtml(
+          formatTemplate(i18n("quizQuestionOf", "Question {current} of {total}"), {
+            current: state.index + 1,
+            total: state.questions.length,
+          })
+        ) +
+        "</div>" +
+        '<div class="learni-quiz-q__text">' +
+        escapeHtml(String(q.prompt || "")) +
+        "</div>" +
+        "</div>" +
+        '<div class="learni-quiz-a-list">' +
+        answersHtml +
+        "</div>" +
+        '<div class="learni-quiz-actions">' +
+        (state.index > 0
+          ? '<button type="button" class="learni-btn secondary" id="learni-quiz-prev">' + escapeHtml(i18n("quizBack", "Back")) + "</button>"
+          : "") +
+        '<button type="submit" class="learni-btn" id="learni-quiz-next">' +
+        escapeHtml(isLast ? i18n("quizSubmit", "Submit") : i18n("quizNext", "Next")) +
+        "</button>" +
+        "</div>" +
+        "</form>";
+
+      setQuizModalBody(htmlQ);
+
+      var form = document.getElementById("learni-quiz-slide");
+      var prevBtn = document.getElementById("learni-quiz-prev");
+      if (prevBtn) {
+        prevBtn.addEventListener("click", function () {
+          state.index = Math.max(0, state.index - 1);
+          render();
+        });
+      }
+
+      if (!form) return;
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var chosen = form.querySelector('input[name="q"]:checked');
+        if (!chosen || !chosen.value) {
+          alert(i18n("quizChooseAnswer", "Please choose an answer."));
+          return;
+        }
+        state.answers[String(q.id)] = Number(chosen.value);
+
+        if (!isLast) {
+          state.index = Math.min(state.questions.length - 1, state.index + 1);
+          render();
+          return;
+        }
+
+        var submitBtn = document.getElementById("learni-quiz-next");
+        if (submitBtn) submitBtn.disabled = true;
+
+        if (Object.keys(state.answers).length !== state.questions.length) {
+          if (submitBtn) submitBtn.disabled = false;
+          alert(i18n("quizAnswerAll", "Please answer all questions."));
+          return;
+        }
+
+        if (!submitAttempt) {
+          if (submitBtn) submitBtn.disabled = false;
+          alert("Missing submit handler");
+          return;
+        }
+
+        submitAttempt(state.attemptId, state.answers)
+          .then(function (data) {
+            if (state.phase === "final") {
+              if (state.mode === "cross") {
+                renderCrossDone();
+                return;
+              }
+              hideQuizModal();
+              showFinalQuizCompletion(courseId);
+              return;
+            }
+
+            var percent = data && typeof data.percent === "number" ? data.percent : null;
+            if (percent === null || !isFinite(percent)) percent = 0;
+            percent = Math.max(0, Math.min(100, Math.round(percent)));
+
+            var score = data && typeof data.score === "number" ? data.score : 0;
+            var total = data && typeof data.total === "number" ? data.total : state.questions.length;
+            if (!isFinite(score) || score < 0) score = 0;
+            if (!isFinite(total) || total <= 0) total = state.questions.length;
+
+            setQuizModalTitle("Resultados");
+
+            var html =
+              '<div class="learni-quiz-results">' +
+              '<div class="learni-quiz-results__kicker">Evaluación inicial</div>' +
+              '<div class="learni-quiz-results__chart">' +
+              ringChartSvg(percent, "learniGoldGradientResults", "learni-quiz-results__chart-svg") +
+              "</div>" +
+              '<div class="learni-quiz-results__meta">' +
+              score +
+              " de " +
+              total +
+              " correctas</div>" +
+              '<div class="learni-quiz-results__text">Felicitaciones: obtuviste <strong>' +
+              percent +
+              '%</strong> de respuestas correctas en la Evaluación Inicial. Ahora completa todas las lecciones de este curso. Al finalizar, podrás rendir la Evaluación Final y compararemos tu resultado inicial con el final para ver tu progreso.</div>' +
+              '<div class="learni-quiz-actions">' +
+              '<button type="button" class="learni-btn" id="learni-quiz-results-continue">Continuar</button>' +
+              "</div>" +
+              "</div>";
+
+            setQuizModalBody(html);
+
+            var cont = document.getElementById("learni-quiz-results-continue");
+            if (cont) {
+              cont.addEventListener("click", function () {
+                hideQuizModal();
+                try {
+                  var url = new URL(window.location.href);
+                  url.searchParams.set("pl_auth_unverified_after_quiz", "1");
+                  window.location.href = url.toString();
+                } catch (e) {
+                  window.location.reload();
+                }
+              });
+            }
+          })
+          .catch(function (err) {
+            if (submitBtn) submitBtn.disabled = false;
+            alert((err && err.message) || "Failed to submit quiz");
+          });
+      });
+    }
+
+    render();
+  }
+
+  function startCrossEvalPartnerTest(courseId) {
+    showQuizModal();
+    setQuizModalTitle(i18n("quizCrossKicker", "Test Partner"));
+
+    function renderWait(sessionId) {
+      var html =
+        '<div class="learni-quiz-intro">' +
+        '<div class="learni-quiz-intro__kicker">' +
+        escapeHtml(i18n("quizCrossKicker", "Test Partner")) +
+        "</div>" +
+        '<div class="learni-quiz-intro__title">' +
+        escapeHtml(i18n("quizCrossWaitTitle", "Waiting…")) +
+        "</div>" +
+        '<div class="learni-quiz-intro__text">' +
+        escapeHtml(i18n("quizCrossWaitBody", "")) +
+        "</div>" +
+        '<div class="learni-quiz-actions">' +
+        '<button type="button" class="learni-btn secondary" id="learni-cross-eval-cancel">' +
+        escapeHtml(i18n("quizCrossCancel", "Cancel")) +
+        "</button>" +
+        "</div>" +
+        "</div>";
+      setQuizModalBody(html);
+      var cancelBtn = document.getElementById("learni-cross-eval-cancel");
+      if (cancelBtn) {
+        cancelBtn.addEventListener("click", function () {
+          if (!sessionId) {
+            hideQuizModal();
+            return;
+          }
+          cancelBtn.disabled = true;
+          apiFetch("/learni/v1/cross-eval/sessions/" + String(sessionId) + "/cancel", { method: "POST", body: JSON.stringify({}) })
+            .then(function () { hideQuizModal(); })
+            .catch(function () { hideQuizModal(); });
+        });
+      }
+    }
+
+    renderWait(0);
+
+    apiFetch("/learni/v1/courses/" + courseId + "/cross-eval/create", { method: "POST", body: JSON.stringify({}) })
+      .then(function (res) { return fetchJson(res, "Failed to create session"); })
+      .then(function (data) {
+        var sessionId = data && data.sessionId ? String(data.sessionId) : "";
+        if (!sessionId) throw new Error("Invalid session");
+        renderWait(sessionId);
+
+        var stopped = false;
+        var intId = null;
+        var poll = function () {
+          if (stopped) return;
+          apiFetch("/learni/v1/cross-eval/sessions/" + sessionId, { method: "GET" })
+            .then(function (res) { return fetchJson(res, "Failed to load status"); })
+            .then(function (sdata) {
+              var st = sdata && sdata.session && sdata.session.status ? String(sdata.session.status) : "";
+              if (!st) return;
+              if (st === "accepted" || st === "started") {
+                stopped = true;
+                try { if (intId) window.clearInterval(intId); } catch (e) {}
+                setQuizModalBody('<div class="learni-quiz-modal__loading">' + escapeHtml(i18n("loading", "Loading…")) + "</div>");
+                return apiFetch("/learni/v1/courses/" + courseId + "/cross-eval/binomial/start", {
+                  method: "POST",
+                  body: JSON.stringify({ sessionId: Number(sessionId) }),
+                })
+                  .then(function (res) { return fetchJson(res, "Failed to start quiz"); })
+                  .then(function (qdata) {
+                    renderBinomialQuizFromData(courseId, "final", qdata, null, {
+                      mode: "cross",
+                      submitAttempt: function (attemptId, answers) {
+                        return apiFetch("/learni/v1/attempts/" + String(attemptId) + "/cross-eval/submit", {
+                          method: "POST",
+                          body: JSON.stringify({ sessionId: Number(sessionId), answers: answers }),
+                        }).then(function (res) {
+                          return fetchJson(res, "Failed to submit quiz");
+                        });
+                      },
+                    });
+                  });
+              }
+              if (st === "declined" || st === "expired" || st === "canceled") {
+                stopped = true;
+                try { if (intId) window.clearInterval(intId); } catch (e) {}
+                setQuizModalBody('<div class="learni-quiz-modal__error">' + escapeHtml("Solicitud " + st + ".") + "</div>");
+              }
+            })
+            .catch(function () {});
+        };
+
+        intId = window.setInterval(poll, 2000);
+        window.setTimeout(function () {
+          if (!stopped) poll();
+        }, 250);
+        // Safety stop after 3 minutes.
+        window.setTimeout(function () {
+          if (stopped) return;
+          stopped = true;
+          try { window.clearInterval(intId); } catch (e) {}
+        }, 180000);
+      })
+      .catch(function (err) {
+        setQuizModalBody('<div class="learni-quiz-modal__error">' + escapeHtml((err && err.message) || "Failed to start") + "</div>");
       });
   }
 
@@ -766,6 +1032,21 @@
       if (finalBtn) {
         e.preventDefault();
         onStartClick(finalBtn);
+        return;
+      }
+
+      var testPartnerBtn = t.closest("#learni-course-test-partner");
+      if (testPartnerBtn) {
+        e.preventDefault();
+        if (testPartnerBtn.disabled) return;
+        var cfg = getConfig();
+        var courseId = testPartnerBtn.getAttribute("data-course-id") || "";
+        if (!cfg || !cfg.isLoggedIn) {
+          openLoginRegister(courseId, "final");
+          return;
+        }
+        if (!courseId) return;
+        startCrossEvalPartnerTest(courseId);
         return;
       }
 
@@ -840,6 +1121,82 @@
     return el;
   }
 
+  function updatePartnerSectionFromApi(data) {
+    if (!data || typeof data !== "object") return;
+    var partner = data.partner || {};
+    var otherUserId = partner && partner.otherUserId ? Number(partner.otherUserId) : 0;
+    if (!otherUserId) return;
+
+    var myLessons = data && data.progress && typeof data.progress.lessonsPercent === "number" ? data.progress.lessonsPercent : null;
+    var otherLessons = partner && typeof partner.otherLessonsPercent === "number" ? partner.otherLessonsPercent : null;
+    if (myLessons === null || !isFinite(myLessons)) myLessons = 0;
+    if (otherLessons === null || !isFinite(otherLessons)) otherLessons = 0;
+    myLessons = Math.max(0, Math.min(100, Math.round(Number(myLessons))));
+    otherLessons = Math.max(0, Math.min(100, Math.round(Number(otherLessons))));
+
+    var myFinal = data && data.attempts && data.attempts.final ? data.attempts.final : null;
+    var otherFinal = partner && partner.otherAttempts && partner.otherAttempts.final ? partner.otherAttempts.final : null;
+    var myFinalPct = myFinal && typeof myFinal.percent === "number" ? myFinal.percent : null;
+    var otherFinalPct = otherFinal && typeof otherFinal.percent === "number" ? otherFinal.percent : null;
+    if (myFinalPct !== null && myFinalPct !== undefined) {
+      myFinalPct = Math.max(0, Math.min(100, Math.round(Number(myFinalPct))));
+    } else {
+      myFinalPct = null;
+    }
+    if (otherFinalPct !== null && otherFinalPct !== undefined) {
+      otherFinalPct = Math.max(0, Math.min(100, Math.round(Number(otherFinalPct))));
+    } else {
+      otherFinalPct = null;
+    }
+
+    var items = document.querySelectorAll
+      ? document.querySelectorAll(".learni-course-partner-progress-item[data-user-id]")
+      : [];
+    for (var i = 0; i < items.length; i++) {
+      var el = items[i];
+      if (!el || !el.getAttribute) continue;
+      var pid = Number(el.getAttribute("data-user-id") || 0);
+      if (!pid) continue;
+
+      var isOther = pid === otherUserId;
+      var lessonsPct = isOther ? otherLessons : myLessons;
+      var finalPct = isOther ? otherFinalPct : myFinalPct;
+      var hasFinal = finalPct !== null && finalPct !== undefined;
+
+      // Update label: progress % or final score.
+      var pctNode = el.querySelector ? el.querySelector(".learni-course-partner-progress-percent") : null;
+      if (pctNode) {
+        pctNode.textContent = hasFinal ? ("🏆 PUNTAJE FINAL: " + String(finalPct) + "%") : (String(lessonsPct) + "%");
+      }
+
+      // Toggle progress bar: visible only before final.
+      var bar = el.querySelector ? el.querySelector(".learni-course-partner-progress-bar") : null;
+      if (hasFinal) {
+        if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
+      } else {
+        if (!bar) {
+          bar = document.createElement("div");
+          bar.className = "learni-course-partner-progress-bar";
+          bar.setAttribute("role", "progressbar");
+          bar.setAttribute("aria-valuemin", "0");
+          bar.setAttribute("aria-valuemax", "100");
+          bar.innerHTML = '<span class="learni-course-partner-progress-fill"></span>';
+          el.appendChild(bar);
+        }
+        var fill = bar.querySelector ? bar.querySelector(".learni-course-partner-progress-fill") : null;
+        if (fill && fill.style) fill.style.width = String(lessonsPct) + "%";
+        if (bar && bar.setAttribute) bar.setAttribute("aria-valuenow", String(lessonsPct));
+      }
+
+      // Keep data attrs in sync (handy for debugging / future styling).
+      try {
+        el.setAttribute("data-lessons-percent", String(lessonsPct));
+        el.setAttribute("data-has-final", hasFinal ? "1" : "0");
+        el.setAttribute("data-final-percent", hasFinal ? String(finalPct) : "0");
+      } catch (e0) {}
+    }
+  }
+
   function ensureFirstQuizCta(container, courseId, shouldShow) {
     if (!container) return;
     var existing = document.getElementById("learni-course-first-quiz");
@@ -874,6 +1231,184 @@
     }
   }
 
+  function ensureTestPartnerCta(container, courseId, shouldShow) {
+    if (!container) return;
+    var existing = document.getElementById("learni-course-test-partner");
+    if (!shouldShow) {
+      if (existing) {
+        // Remove wrapper too if present.
+        var p = existing.parentNode;
+        if (p && p.classList && p.classList.contains("learni-tooltip-wrap")) {
+          if (p.parentNode) p.parentNode.removeChild(p);
+        } else if (existing.parentNode) {
+          existing.parentNode.removeChild(existing);
+        }
+      }
+      return;
+    }
+
+    if (!existing) {
+      existing = document.createElement("button");
+      existing.id = "learni-course-test-partner";
+      existing.className = "learni-btn learni-btn-quiz";
+      existing.type = "button";
+      existing.textContent = i18n("testPartner", "TEST PARTNER");
+      existing.setAttribute("data-base-label", existing.textContent);
+    }
+    if (!existing.getAttribute("data-base-label")) {
+      existing.setAttribute("data-base-label", existing.textContent || i18n("testPartner", "TEST PARTNER"));
+    }
+    existing.setAttribute("data-course-id", String(courseId));
+
+    var anchor =
+      (container.querySelector && container.querySelector("#learni-course-restart")) ||
+      (container.querySelector && container.querySelector(".learni-course-primary-btn")) ||
+      null;
+    if (anchor && anchor.parentNode === container) {
+      if (existing.parentNode !== container || existing.nextSibling !== anchor) {
+        container.insertBefore(existing, anchor);
+      }
+    } else if (existing.parentNode !== container) {
+      container.appendChild(existing);
+    }
+  }
+
+  function ensureFinalQuizCta(container, courseId, shouldShow) {
+    if (!container) return;
+    var existing = document.getElementById("learni-course-final-quiz");
+    if (!shouldShow) {
+      if (existing) {
+        var p = existing.parentNode;
+        if (p && p.classList && p.classList.contains("learni-tooltip-wrap")) {
+          if (p.parentNode) p.parentNode.removeChild(p);
+        } else if (existing.parentNode) {
+          existing.parentNode.removeChild(existing);
+        }
+      }
+      return;
+    }
+
+    if (!existing) {
+      existing = document.createElement("button");
+      existing.id = "learni-course-final-quiz";
+      existing.className = "learni-btn learni-btn-quiz";
+      existing.type = "button";
+      existing.textContent = i18n("takeFinalQuiz", "TAKE FINAL QUIZ");
+      existing.setAttribute("data-base-label", existing.textContent);
+    }
+    if (!existing.getAttribute("data-base-label")) {
+      existing.setAttribute("data-base-label", existing.textContent || i18n("takeFinalQuiz", "TAKE FINAL QUIZ"));
+    }
+    existing.setAttribute("data-course-id", String(courseId));
+    existing.setAttribute("data-phase", "final");
+
+    var anchor =
+      (container.querySelector && container.querySelector("#learni-course-restart")) ||
+      (container.querySelector && container.querySelector(".learni-course-primary-btn")) ||
+      null;
+    if (anchor && anchor.parentNode === container) {
+      if (existing.parentNode !== container || existing.nextSibling !== anchor) {
+        container.insertBefore(existing, anchor);
+      }
+    } else if (existing.parentNode !== container) {
+      container.appendChild(existing);
+    }
+  }
+
+  function wrapWithTooltip(btn, title) {
+    if (!btn || !btn.parentNode) return;
+    var p = btn.parentNode;
+    if (p && p.classList && p.classList.contains("learni-tooltip-wrap")) {
+      p.title = String(title || "");
+      return;
+    }
+    var wrap = document.createElement("span");
+    wrap.className = "learni-tooltip-wrap";
+    wrap.title = String(title || "");
+    p.insertBefore(wrap, btn);
+    wrap.appendChild(btn);
+  }
+
+  function unwrapTooltip(btn) {
+    if (!btn) return;
+    var p = btn.parentNode;
+    if (!p || !p.classList || !p.classList.contains("learni-tooltip-wrap")) return;
+    var gp = p.parentNode;
+    if (!gp) return;
+    gp.insertBefore(btn, p);
+    gp.removeChild(p);
+  }
+
+  function updateTestPartnerCtaFromApi(data, courseId) {
+    if (!data || typeof data !== "object") return;
+    var container = document.querySelector && document.querySelector(".learni-course-card-actions");
+    if (!container) return;
+
+    var partner = data.partner || {};
+    var hasPartner = !!(partner && partner.hasPartner);
+    if (!hasPartner) {
+      ensureTestPartnerCta(container, courseId, false);
+      return;
+    }
+
+    var shouldShow =
+      !!partner.otherNeedsFinal &&
+      !(partner && partner.otherFinalEligible) &&
+      (typeof partner.otherLessonsPercent === "number" ? partner.otherLessonsPercent : 0) >= 100;
+
+    ensureTestPartnerCta(container, courseId, shouldShow);
+    var btn = document.getElementById("learni-course-test-partner");
+    if (!btn) return;
+
+    var days = partner && typeof partner.otherFinalCooldownDaysRemaining === "number" ? partner.otherFinalCooldownDaysRemaining : 0;
+    var disabled = !partner.otherCanTakeFinal || days > 0;
+    btn.disabled = !!disabled;
+    if (days > 0) {
+      var base = btn.getAttribute("data-base-label") || i18n("testPartner", "TEST PARTNER");
+      btn.textContent = base + " — " + String(days) + " días +";
+      wrapWithTooltip(btn, "En " + String(days) + " días podrás volver a tomar la Evaluación Final.");
+    } else {
+      var base2 = btn.getAttribute("data-base-label") || i18n("testPartner", "TEST PARTNER");
+      btn.textContent = base2;
+      unwrapTooltip(btn);
+    }
+  }
+
+  function updateFinalQuizCtaFromApi(data, courseId) {
+    if (!data || typeof data !== "object") return;
+    var container = document.querySelector && document.querySelector(".learni-course-card-actions");
+    if (!container) return;
+
+    var partner = data.partner || {};
+    var hasPartner = !!(partner && partner.hasPartner);
+    if (hasPartner) {
+      ensureFinalQuizCta(container, courseId, false);
+      return;
+    }
+
+    var ui = (data && data.ui) || {};
+    var progress = (data && data.progress) || {};
+    var lessons = typeof progress.lessonsPercent === "number" ? progress.lessonsPercent : 0;
+
+    var shouldShow = !!ui.needsFinal && lessons >= 100 && !(ui && ui.finalEligible);
+    ensureFinalQuizCta(container, courseId, shouldShow);
+    var btn = document.getElementById("learni-course-final-quiz");
+    if (!btn) return;
+
+    var days = ui && typeof ui.finalCooldownDaysRemaining === "number" ? ui.finalCooldownDaysRemaining : 0;
+    var disabled = !ui.canTakeFinal || days > 0;
+    btn.disabled = !!disabled;
+    if (days > 0) {
+      var base = btn.getAttribute("data-base-label") || i18n("takeFinalQuiz", "TAKE FINAL QUIZ");
+      btn.textContent = base + " — " + String(days) + " días +";
+      wrapWithTooltip(btn, "En " + String(days) + " días podrás volver a tomar la Evaluación Final.");
+    } else {
+      var base2 = btn.getAttribute("data-base-label") || i18n("takeFinalQuiz", "TAKE FINAL QUIZ");
+      btn.textContent = base2;
+      unwrapTooltip(btn);
+    }
+  }
+
   function syncBinomialAsideFromApi() {
     var cfg = getConfig();
     if (!cfg || !cfg.isLoggedIn) return;
@@ -903,6 +1438,11 @@
 
         var needsInitial = !!(ui && ui.needsInitial);
         ensureFirstQuizCta(container, courseId, needsInitial);
+
+        // Also re-sync the Partner section's "last test %" (server-rendered HTML may be stale across users).
+        updatePartnerSectionFromApi(data);
+        updateTestPartnerCtaFromApi(data, courseId);
+        updateFinalQuizCtaFromApi(data, courseId);
       })
       .catch(function () {
         // Ignore: server HTML stays as-is.
@@ -1190,10 +1730,12 @@
     setupBinomialQuiz();
     setupCertificates();
     maybeAutoStartQuizFromUrl();
+    maybeAutoOpenCertificateFromUrl();
   }
 
   window.LearniQuiz.apiFetch = apiFetch;
   window.LearniQuiz.startBinomialQuiz = startBinomialQuiz;
+  window.LearniQuiz.showBinomialComparisonInQuiz = showBinomialComparisonInQuiz;
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);

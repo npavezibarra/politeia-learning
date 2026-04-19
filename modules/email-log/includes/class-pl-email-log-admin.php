@@ -299,10 +299,24 @@ final class PL_Email_Log_Admin
             $site_name = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
             $user = wp_get_current_user();
             $username = $user && $user->user_login ? (string) $user->user_login : 'usuario';
+            $inviter_display = $user && !empty($user->display_name) ? (string) $user->display_name : ($site_name !== '' ? $site_name : 'Politeia');
 
             return (string) PL_Email::render('course-partner-invite', [
                 'invitee_name' => $username,
-                'inviter_name' => $site_name !== '' ? $site_name : 'Politeia',
+                'inviter_name' => $inviter_display,
+                'course_name' => __('Curso de prueba', 'politeia-learning'),
+                'accept_url' => add_query_arg(['pl_invite' => 'accept'], home_url('/')),
+            ]);
+        }
+
+        if (in_array($slug, ['learni_partner_invitation_sent', 'learni_partner_invitation_received'], true)) {
+            $site_name = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
+            $user = wp_get_current_user();
+            $inviter_display = $user && !empty($user->display_name) ? (string) $user->display_name : ($site_name !== '' ? $site_name : 'Politeia');
+
+            return (string) PL_Email::render($slug, [
+                'invitee_name' => __('Partner', 'politeia-learning'),
+                'inviter_name' => $inviter_display,
                 'course_name' => __('Curso de prueba', 'politeia-learning'),
                 'accept_url' => add_query_arg(['pl_invite' => 'accept'], home_url('/')),
             ]);
@@ -326,6 +340,28 @@ final class PL_Email_Log_Admin
             return (string) PL_Email::render('learni_final_quiz_completed', [
                 'percentage_first' => $percentage_first,
                 'percentage_final' => $percentage_final,
+            ]);
+        }
+
+        if ($slug === 'learni_cross_eval_completed') {
+            // Dummy data used only for the Test Emails previewer (to visualize colors/variation/time blocks).
+            $percentage_first = isset($preview['percentage_first']) ? (int) $preview['percentage_first'] : 11;
+            $percentage_final = isset($preview['percentage_final']) ? (int) $preview['percentage_final'] : 20;
+            $percentage_first = max(0, min(100, $percentage_first));
+            $percentage_final = max(0, min(100, $percentage_final));
+
+            return (string) PL_Email::render('learni_cross_eval_completed', [
+                'course_name' => __('Curso de prueba', 'politeia-learning'),
+                'tester_name' => __('Partner', 'politeia-learning'),
+                'tested_name' => __('Estudiante', 'politeia-learning'),
+                'recipient_role' => 'tested',
+                'percentage_first' => $percentage_first,
+                'percentage_final' => $percentage_final,
+                'first_date_label' => date_i18n('d M Y', strtotime('-66 days')),
+                'final_date_label' => date_i18n('d M Y'),
+                'duration_days' => 66,
+                'cta_url' => add_query_arg('learni_open_cert', '1', home_url('/')),
+                'cta_label' => __('VER CERTIFICADO', 'politeia-learning'),
             ]);
         }
 
@@ -621,13 +657,17 @@ final class PL_Email_Log_Admin
                 'label' => __('Final Quiz completado (progreso)', 'politeia-learning'),
                 'template' => 'templates/emails/learni_final_quiz_completed.php',
             ],
+            'learni_cross_eval_completed' => [
+                'label' => __('Test Partner completado (cross evaluation)', 'politeia-learning'),
+                'template' => 'templates/emails/learni_cross_eval_completed.php',
+            ],
             'learni_partner_invitation_sent' => [
                 'label' => __('Invitación partner enviada', 'politeia-learning'),
-                'template' => 'templates/emails/course-partner-invite.php',
+                'template' => 'templates/emails/learni_partner_invitation_sent.php',
             ],
             'learni_partner_invitation_received' => [
                 'label' => __('Invitación partner recibida', 'politeia-learning'),
-                'template' => 'templates/emails/course-partner-invite.php',
+                'template' => 'templates/emails/learni_partner_invitation_received.php',
             ],
         ];
 
@@ -989,10 +1029,16 @@ final class PL_Email_Log_Admin
         if (in_array($key, ['learni_partner_invitation_sent', 'learni_partner_invitation_received'], true) && class_exists('PL_Email')) {
             $accept_url = add_query_arg(['pl_invite' => 'accept'], home_url('/'));
             $course_name = __('Curso de prueba', 'politeia-learning');
+            $inviter_display = $user && !empty($user->display_name) ? (string) $user->display_name : $site_name;
+            $invitee_display = __('Partner', 'politeia-learning');
 
-            $html = (string) PL_Email::render('course-partner-invite', [
-                'invitee_name' => $username,
-                'inviter_name' => $site_name,
+            $template_slug = $key === 'learni_partner_invitation_sent'
+                ? 'learni_partner_invitation_sent'
+                : 'learni_partner_invitation_received';
+
+            $html = (string) PL_Email::render($template_slug, [
+                'invitee_name' => $invitee_display,
+                'inviter_name' => $inviter_display,
                 'course_name' => $course_name,
                 'accept_url' => $accept_url,
             ]);

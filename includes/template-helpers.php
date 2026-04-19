@@ -265,3 +265,127 @@ function pl_get_pending_course_partner_invite(int $course_id): ?array
         'user_id' => $invitee_user_id,
     ];
 }
+
+/**
+ * Return the most recent pending partner invite for a course that targets the given user.
+ *
+ * This is used to render an "Accept / Reject" CTA directly on the course page aside.
+ *
+ * @return array{invite_id:int,source:string,invitee_email:string,owner_user_id:int,owner_label:string}|null
+ */
+function pl_get_pending_course_partner_invite_for_user(int $course_id, int $user_id): ?array
+{
+    global $wpdb;
+
+    if ($course_id <= 0 || $user_id <= 0 || !$wpdb) {
+        return null;
+    }
+
+    $u = get_userdata($user_id);
+    if (!($u instanceof WP_User)) {
+        return null;
+    }
+    $email = sanitize_email((string) ($u->user_email ?? ''));
+    if ($email === '') {
+        return null;
+    }
+    $email_norm = strtolower(trim($email));
+
+    // Prefer unified partnerships table (Politeia Learning-owned) for pending course partner invites.
+    $table = $wpdb->prefix . 'politeia_user_object_partnerships';
+    $table_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table);
+    if ($table_exists) {
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT id, owner_user_id, invitee_email
+                 FROM {$table}
+                 WHERE object_type = %s
+                   AND object_id = %d
+                   AND role = %s
+                   AND status = %s
+                 ORDER BY id DESC
+                 LIMIT 1",
+                'course',
+                $course_id,
+                'partner',
+                'pending'
+            ),
+            ARRAY_A
+        );
+
+        if (is_array($row) && !empty($row['invitee_email'])) {
+            $invitee = strtolower(trim(sanitize_email((string) ($row['invitee_email'] ?? ''))));
+            if ($invitee !== '' && $invitee === $email_norm) {
+                $owner_user_id = !empty($row['owner_user_id']) ? absint($row['owner_user_id']) : 0;
+                $owner_label = '';
+                if ($owner_user_id > 0) {
+                    $owner = get_userdata($owner_user_id);
+                    if ($owner instanceof WP_User) {
+                        $owner_label = (string) ($owner->display_name ?? '');
+                    }
+                }
+                $owner_label = $owner_label !== '' ? $owner_label : ($owner_user_id > 0 ? (string) $owner_user_id : __('Someone', 'politeia-learning'));
+
+                return [
+                    'invite_id' => absint($row['id'] ?? 0),
+                    'source' => 'partnerships',
+                    'invitee_email' => $invitee,
+                    'owner_user_id' => $owner_user_id,
+                    'owner_label' => $owner_label,
+                ];
+            }
+        }
+    }
+
+    // Legacy fallback: Bookshelf Reading Planner invites table.
+    $table = $wpdb->prefix . 'politeia_plan_participant_invites';
+    $table_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table);
+    if (!$table_exists) {
+        return null;
+    }
+
+    $row = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT id, owner_user_id, invitee_email
+             FROM {$table}
+             WHERE object_type = %s
+               AND object_id = %d
+               AND role = %s
+               AND status = %s
+             ORDER BY id DESC
+             LIMIT 1",
+            'course',
+            $course_id,
+            'partner',
+            'pending'
+        ),
+        ARRAY_A
+    );
+
+    if (!is_array($row) || empty($row['invitee_email'])) {
+        return null;
+    }
+
+    $invitee = strtolower(trim(sanitize_email((string) ($row['invitee_email'] ?? ''))));
+    if ($invitee === '' || $invitee !== $email_norm) {
+        return null;
+    }
+
+    $owner_user_id = !empty($row['owner_user_id']) ? absint($row['owner_user_id']) : 0;
+    $owner_label = '';
+    if ($owner_user_id > 0) {
+        $owner = get_userdata($owner_user_id);
+        if ($owner instanceof WP_User) {
+            $owner_label = (string) ($owner->display_name ?? '');
+        }
+    }
+    $owner_label = $owner_label !== '' ? $owner_label : ($owner_user_id > 0 ? (string) $owner_user_id : __('Someone', 'politeia-learning'));
+
+    return [
+        'invite_id' => absint($row['id'] ?? 0),
+        'source' => 'legacy',
+        'invitee_email' => $invitee,
+        'owner_user_id' => $owner_user_id,
+        'owner_label' => $owner_label,
+    ];
+}

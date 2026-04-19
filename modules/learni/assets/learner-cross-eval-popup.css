@@ -1,0 +1,118 @@
+.learni-cross-eval-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: none;
+}
+
+.learni-cross-eval-popup.is-open {
+  display: block;
+}
+
+.learni-cross-eval-popup__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.learni-cross-eval-popup__panel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, calc(100vw - 32px));
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+.learni-cross-eval-popup__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.learni-cross-eval-popup__title {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.learni-cross-eval-popup__close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px;
+}
+
+.learni-cross-eval-popup__body {
+  padding: 16px;
+  color: #111;
+  font-size: 15px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.learni-cross-eval-popup__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.learni-cross-eval-popup__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  background: rgba(17, 24, 39, 0.04);
+}
+
+.learni-cross-eval-popup__online {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.learni-cross-eval-popup__question {
+  font-size: 15px;
+  color: #111;
+}
+
+.learni-cross-eval-popup__actions {
+  display: flex;
+  gap: 10px;
+  padding: 0 16px 16px 16px;
+}
+
+.learni-cross-eval-popup__btn {
+  appearance: none;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  background: #fff;
+  font-weight: 600;
+  flex: 1;
+}
+
+.learni-cross-eval-popup__btn.primary {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
+.learni-cross-eval-popup__btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

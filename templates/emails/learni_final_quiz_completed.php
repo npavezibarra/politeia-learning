@@ -20,6 +20,10 @@ $first_date_label = isset($first_date_label) ? (string) $first_date_label : '';
 $final_date_label = isset($final_date_label) ? (string) $final_date_label : '';
 $duration_days = isset($duration_days) ? (int) $duration_days : 0;
 $lessons_url = isset($lessons_url) ? (string) $lessons_url : '';
+$cooldown_days_remaining = isset($cooldown_days_remaining) ? (int) $cooldown_days_remaining : 0;
+$retry_date_label = isset($retry_date_label) ? (string) $retry_date_label : '';
+$cta_url = isset($cta_url) ? (string) $cta_url : '';
+$cta_label = isset($cta_label) ? (string) $cta_label : '';
 
 if ($first_date_label === '') {
     $first_date_label = date_i18n('d M Y', strtotime('-' . (string) random_int(15, 60) . ' days'));
@@ -32,6 +36,12 @@ if ($duration_days <= 0) {
 }
 if ($lessons_url === '') {
     $lessons_url = home_url('/courses/');
+}
+if ($cta_url === '') {
+    $cta_url = $lessons_url;
+}
+if ($cta_label === '') {
+    $cta_label = __('Revisar Lecciones', 'politeia-learning');
 }
 
 $delta = $percentage_final - $percentage_first;
@@ -52,7 +62,22 @@ if ($delta > 0) {
     $recommendation = 'Para subir tu puntaje, revisa las lecciones asociadas a las preguntas más difíciles y vuelve a intentarlo cuando te sientas listo/a.';
 } else {
     $description = 'Completaste la evaluación final del curso. Vemos una baja respecto a tu resultado inicial. Dado que la evaluación puede ser muy similar (o incluso la misma), este tipo de variación a veces ocurre por factores externos como el tiempo disponible, la concentración del día o la estrategia al responder.';
-$recommendation = 'Revisa las lecciones vinculadas a las preguntas donde tuviste más dificultad y vuelve a intentarlo cuando te sientas listo/a. Usa este resultado como una guía práctica para enfocar tu repaso.';
+    $recommendation = 'Revisa las lecciones vinculadas a las preguntas donde tuviste más dificultad y vuelve a intentarlo cuando te sientas listo/a. Usa este resultado como una guía práctica para enfocar tu repaso.';
+    if ($cooldown_days_remaining > 0) {
+        $recommendation .= ' ' . sprintf(
+            _n(
+                'Podrás volver a tomar la Evaluación Final en %d día.',
+                'Podrás volver a tomar la Evaluación Final en %d días.',
+                $cooldown_days_remaining,
+                'politeia-learning'
+            ),
+            $cooldown_days_remaining
+        );
+        if ($retry_date_label !== '') {
+            $recommendation .= ' ' . sprintf(__('Fecha estimada: %s.', 'politeia-learning'), $retry_date_label);
+        }
+        $recommendation .= ' ' . __('Para obtener el certificado, necesitas sacar un puntaje igual o mayor al de la Evaluación Inicial.', 'politeia-learning');
+    }
 }
 
 $chart_url_first = pl_quickchart_doughnut_url($percentage_first, 'First Quiz');
@@ -76,7 +101,7 @@ $chart_url_final = pl_quickchart_doughnut_url($percentage_final, 'Final Quiz');
     <center style="width:100%;background:#ffffff;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="background:#ffffff;">
             <tr>
-                <td align="center" style="padding:40px 12px;">
+                <td align="center" style="padding:20px 15px;">
                     <table role="presentation" width="672" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:672px;background:#ffffff;border-radius:16px;overflow:hidden;">
                         <?php include PL_PATH . 'templates/emails/partials/unified-header.php'; ?>
                         <tr>
@@ -187,8 +212,8 @@ $chart_url_final = pl_quickchart_doughnut_url($percentage_final, 'Final Quiz');
 
                         <tr>
                             <td align="center" style="padding:28px 32px 40px;">
-                                <a href="<?php echo esc_url($lessons_url); ?>" style="display:inline-block;background:#000000;color:#ffffff !important;padding:14px 46px;border-radius:6px;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:2px;border:1px solid #000000;">
-                                    Revisar Lecciones
+                                <a href="<?php echo esc_url($cta_url); ?>" style="display:inline-block;background:#000000;color:#ffffff !important;padding:14px 46px;border-radius:6px;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:2px;border:1px solid #000000;">
+                                    <?php echo esc_html($cta_label); ?>
                                 </a>
                             </td>
                         </tr>

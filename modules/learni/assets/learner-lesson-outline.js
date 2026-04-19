@@ -111,6 +111,8 @@
 			.then((res) => res.json().then((data) => (res.ok ? data : null)))
 			.then((data) => {
 				if (!data || !data.quizId || !data.ui) return;
+				// If the course has a partner, final quiz should run via "Test Partner" instead of self-evaluation.
+				if (data.partner && data.partner.hasPartner) return;
 				if (!data.ui.needsFinal) return;
 				if (!(data.progress && Number(data.progress.lessonsPercent || 0) >= 100)) return;
 				if (!data.ui.canTakeFinal) return;

@@ -58,25 +58,13 @@
 	      if (card.parentNode !== card.__learniOriginalParent) {
 	        card.__learniOriginalParent.appendChild(card);
 	      }
-	      // Desktop: keep the card visually fixed in the exact same spot while the page scrolls.
-	      // We compute its current viewport position (from the absolute layout) and then pin it.
-	      // This avoids guessing header heights or container offsets.
+	      // Desktop: keep the card in its original layout (it should scroll with the page).
 	      card.style.position = "";
 	      card.style.top = "";
 	      card.style.left = "";
 	      card.style.right = "";
 	      card.style.bottom = "";
 	      card.style.width = "";
-
-	      try {
-	        var rect = card.getBoundingClientRect();
-	        card.style.position = "fixed";
-	        card.style.top = rect.top + "px";
-	        card.style.left = rect.left + "px";
-	        card.style.right = "auto";
-	        card.style.bottom = "auto";
-	        card.style.width = rect.width + "px";
-	      } catch (e) {}
 	    }
 	  }
 

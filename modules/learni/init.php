@@ -19,7 +19,7 @@ if (!defined('LEARNI_VERSION')) {
     define('LEARNI_VERSION', '0.1.15');
 }
 if (!defined('LEARNI_DB_VERSION')) {
-    define('LEARNI_DB_VERSION', 5);
+    define('LEARNI_DB_VERSION', 6);
 }
 if (!defined('LEARNI_PLUGIN_FILE')) {
     define('LEARNI_PLUGIN_FILE', __FILE__);
@@ -36,6 +36,7 @@ require_once PL_LEARNI_PATH . 'includes/Access/Access.php';
 require_once PL_LEARNI_PATH . 'includes/PostTypes/Course.php';
 require_once PL_LEARNI_PATH . 'includes/PostTypes/Lesson.php';
 require_once PL_LEARNI_PATH . 'includes/Frontend/Templates.php';
+require_once PL_LEARNI_PATH . 'includes/Frontend/CrossEvalPopup.php';
 require_once PL_LEARNI_PATH . 'includes/Certificates/CertificateCode.php';
 require_once PL_LEARNI_PATH . 'includes/Rest/Routes.php';
 require_once PL_LEARNI_PATH . 'includes/WooCommerce/Integration.php';
@@ -60,6 +61,7 @@ final class PL_Learni_Module
         add_action('init', [__CLASS__, 'register_frontend_templates'], 1);
         add_action('rest_api_init', ['\\Learni\\Rest\\Routes', 'register'], 5);
         add_action('plugins_loaded', [__CLASS__, 'maybe_init_woocommerce'], 20);
+        add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_cross_eval_popup'], 25);
 
         if (is_admin()) {
             \Learni\Admin\UserProfile::init();
@@ -81,6 +83,13 @@ final class PL_Learni_Module
     {
         if (class_exists('PL_Learni_Frontend_Templates')) {
             PL_Learni_Frontend_Templates::init();
+        }
+    }
+
+    public static function enqueue_cross_eval_popup(): void
+    {
+        if (class_exists('PL_Learni_Cross_Eval_Popup')) {
+            PL_Learni_Cross_Eval_Popup::init();
         }
     }
 

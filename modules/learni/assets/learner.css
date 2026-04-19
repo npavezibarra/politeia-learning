@@ -217,9 +217,27 @@ h1#learni-course-title {
 	min-height: 0;
 }
 
-.learni-course-card-actions {
-	display: grid;
-	gap: 10px;
+	.learni-course-card-actions {
+		display: grid;
+		gap: 10px;
+	}
+
+	.learni-course-card-actions .learni-course-partner-btn {
+		justify-self: center;
+	}
+
+	.learni-tooltip-wrap {
+		display: block;
+		width: 100%;
+	}
+
+.learni-tooltip-wrap > button[disabled] {
+	pointer-events: none;
+}
+
+.learni-course-card-actions .learni-btn.learni-btn-quiz,
+.learni-course-card-actions .learni-btn.learni-course-primary-btn {
+	width: 100%;
 }
 
 .learni-course-includes {
@@ -879,10 +897,10 @@ section.learni-course-content {
 	background: #0b1220;
 }
 
-	button.learni-btn {
-		font-family: 'Poppins';
-		letter-spacing: 2px;
-	}
+		button.learni-btn {
+			font-family: 'Poppins';
+			letter-spacing: 1px;
+		}
 
 	/* Partner button must be smaller than the primary CTA. */
 		.learni-course-hero-card-body .learni-course-partner-btn.learni-btn {
@@ -1207,9 +1225,75 @@ button#learni-quiz-begin {
 	margin-top: 2px;
 }
 
+.learni-quiz-a__label {
+	min-width: 24px;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	color: rgba(17, 24, 39, 0.55);
+	padding-top: 1px;
+}
+
 .learni-quiz-a__text {
 	font-size: 14px;
 	color: rgba(17, 24, 39, 0.8);
+}
+
+.learni-course-partner-invite {
+	margin: 0 0 14px;
+	padding: 12px;
+	border-radius: 6px;
+	border: 1px solid rgba(17, 24, 39, 0.10);
+	background: rgba(17, 24, 39, 0.02);
+}
+
+.learni-course-partner-invite__title {
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: rgba(17, 24, 39, 0.7);
+	margin-bottom: 6px;
+}
+
+.learni-course-partner-invite__text {
+	font-size: 13px;
+	color: rgba(17, 24, 39, 0.8);
+	margin-bottom: 10px;
+}
+
+.learni-course-partner-invite__row {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	margin-bottom: 10px;
+}
+
+.learni-course-partner-invite__avatar {
+	width: 28px;
+	height: 28px;
+	border-radius: 999px;
+	object-fit: cover;
+	flex: 0 0 auto;
+	border: 1px solid rgba(17, 24, 39, 0.12);
+	background: #fff;
+}
+
+.learni-course-partner-invite__row .learni-course-partner-invite__text {
+	margin-bottom: 0;
+}
+
+.learni-course-partner-invite__actions {
+	display: flex;
+	gap: 10px;
+}
+
+.learni-course-partner-invite__actions form {
+	flex: 1;
+}
+
+.learni-course-partner-invite__actions .learni-btn {
+	width: 100%;
 }
 
 .learni-final-overlay {

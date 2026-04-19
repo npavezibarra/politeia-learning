@@ -145,6 +145,26 @@ final class Installer
             KEY user_id (user_id)
         ) {$charset_collate};";
 
+        $tables[] = "CREATE TABLE {$prefix}learni_cross_eval_sessions (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            course_id BIGINT UNSIGNED NOT NULL,
+            quiz_id BIGINT UNSIGNED NOT NULL,
+            initiator_user_id BIGINT UNSIGNED NOT NULL,
+            target_user_id BIGINT UNSIGNED NOT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            expires_at DATETIME NULL,
+            responded_at DATETIME NULL,
+            started_at DATETIME NULL,
+            completed_at DATETIME NULL,
+            created_at DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
+            updated_at DATETIME NULL,
+            PRIMARY KEY  (id),
+            KEY course_users (course_id, initiator_user_id, target_user_id),
+            KEY target_status (target_user_id, status),
+            KEY initiator_status (initiator_user_id, status),
+            KEY expires_at (expires_at)
+        ) {$charset_collate};";
+
         foreach ($tables as $sql) {
             dbDelta($sql);
         }
@@ -187,4 +207,3 @@ final class Installer
         ];
     }
 }
-
