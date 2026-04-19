@@ -30,12 +30,40 @@ var PL_Cropper = (function ($) {
         outputMaxHeight: 0,
         // JPEG quality for export (0..1). Higher = less artifacts.
         quality: 0.9,
+        // Optional output size cap in bytes. If set, the cropper will reduce JPEG quality and
+        // (if needed) downscale the image to fit under this limit.
+        maxBytes: 0,
+        // Lower bound for JPEG quality while trying to fit `maxBytes`.
+        minQuality: 0.7,
         freeCrop: false,
         circleMask: false,
         title: '',
         onSave: function (dataUrl) { console.log('Cropped Image:', dataUrl); },
         onCancel: function () { }
     };
+
+    function estimateDataUrlBytes(dataUrl) {
+        if (!dataUrl || typeof dataUrl !== 'string') return 0;
+        const commaIdx = dataUrl.indexOf(',');
+        const base64 = commaIdx >= 0 ? dataUrl.slice(commaIdx + 1) : dataUrl;
+        const len = base64.length;
+        if (len === 0) return 0;
+        const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
+        return Math.max(0, Math.floor((len * 3) / 4) - padding);
+    }
+
+    function downscaleCanvas(srcCanvas, nextWidth, nextHeight) {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(nextWidth));
+        canvas.height = Math.max(1, Math.round(nextHeight));
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(srcCanvas, 0, 0, canvas.width, canvas.height);
+        }
+        return canvas;
+    }
 
     /**
      * Open the cropper modal for a specific target
@@ -170,8 +198,41 @@ var PL_Cropper = (function ($) {
 
             const canvas = cropper.getCroppedCanvas(canvasOptions);
 
-            const q = Math.min(1, Math.max(0.5, Number(currentOptions.quality || 0.9) || 0.9));
-            const dataUrl = canvas.toDataURL('image/jpeg', q);
+            const maxBytes = Math.max(0, Number(currentOptions.maxBytes || 0) || 0);
+            const initialQ = Math.min(1, Math.max(0.5, Number(currentOptions.quality || 0.9) || 0.9));
+            const minQ = Math.min(initialQ, Math.max(0.35, Number(currentOptions.minQuality || 0.7) || 0.7));
+
+            let workingCanvas = canvas;
+            let q = initialQ;
+            let dataUrl = workingCanvas.toDataURL('image/jpeg', q);
+
+            if (maxBytes > 0) {
+                let bytes = estimateDataUrlBytes(dataUrl);
+                let guard = 0;
+
+                while (bytes > maxBytes && guard < 60) {
+                    guard += 1;
+
+                    if (q > minQ + 0.001) {
+                        q = Math.max(minQ, Math.round((q - 0.05) * 100) / 100);
+                        dataUrl = workingCanvas.toDataURL('image/jpeg', q);
+                        bytes = estimateDataUrlBytes(dataUrl);
+                        continue;
+                    }
+
+                    // Still too large at min quality: downscale ~10% and retry from initial quality.
+                    const nextW = Math.round(workingCanvas.width * 0.9);
+                    const nextH = Math.round(workingCanvas.height * 0.9);
+                    if (nextW < 320 || nextH < 180) {
+                        break;
+                    }
+
+                    workingCanvas = downscaleCanvas(workingCanvas, nextW, nextH);
+                    q = initialQ;
+                    dataUrl = workingCanvas.toDataURL('image/jpeg', q);
+                    bytes = estimateDataUrlBytes(dataUrl);
+                }
+            }
 
             if (typeof currentOptions.onSave === 'function') {
                 currentOptions.onSave(dataUrl);

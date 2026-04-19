@@ -32,10 +32,79 @@ class PL_Auth_Login_Register
         add_action('admin_post_pl_auth_resend_confirmation', [__CLASS__, 'handle_resend_confirmation']);
         add_action('admin_post_nopriv_pl_auth_resend_confirmation', [__CLASS__, 'handle_resend_confirmation_nopriv']);
         add_action('template_redirect', [__CLASS__, 'handle_confirmation_link'], 1);
+        add_action('wp_ajax_nopriv_pl_auth_forgot_password_probe', [__CLASS__, 'ajax_forgot_password_probe']);
+        add_action('wp_ajax_pl_auth_forgot_password_probe', [__CLASS__, 'ajax_forgot_password_probe']);
         add_filter('login_url', [__CLASS__, 'filter_login_url'], 10, 3);
         add_filter('register_url', [__CLASS__, 'filter_register_url'], 10);
         add_filter('wp_authenticate_user', [__CLASS__, 'ensure_verified_before_login'], 20, 2);
         add_shortcode('pl_auth_links', [__CLASS__, 'render_auth_links_shortcode']);
+
+        if (class_exists('PL_Auth_Reset_Password_Page')) {
+            PL_Auth_Reset_Password_Page::init();
+        }
+    }
+
+    public static function ajax_forgot_password_probe(): void
+    {
+        check_ajax_referer('pl_auth_forgot_password', 'nonce');
+
+        $email = isset($_GET['email']) ? sanitize_email((string) wp_unslash($_GET['email'])) : '';
+        if ($email === '' || !is_email($email)) {
+            wp_send_json_success(['exists' => false, 'sent' => false, 'invalid' => true]);
+        }
+
+        $user = get_user_by('email', $email);
+        if (!($user instanceof WP_User)) {
+            wp_send_json_success(['exists' => false, 'sent' => false]);
+        }
+
+        $ip = isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '';
+        $rate_key = 'pl_auth_pwreset_' . md5(strtolower($email) . '|' . $ip);
+        if (get_transient($rate_key)) {
+            wp_send_json_success(['exists' => true, 'sent' => true, 'rate_limited' => true]);
+        }
+
+        $switched = switch_to_user_locale((int) $user->ID);
+
+        $key = get_password_reset_key($user);
+        if (is_wp_error($key)) {
+            if ($switched) {
+                restore_previous_locale();
+            }
+            wp_send_json_success(['exists' => true, 'sent' => false]);
+        }
+
+        $reset_url = add_query_arg([
+            'key' => $key,
+            'login' => $user->user_login,
+        ], home_url('/restablecer-contrasena/'));
+
+        $html = class_exists('PL_Email')
+            ? (string) PL_Email::render('password-reset', [
+                'user_login' => $user->user_login,
+                'reset_url' => $reset_url,
+            ])
+            : '';
+
+        if ($switched) {
+            restore_previous_locale();
+        }
+
+        if (trim($html) === '') {
+            $html = sprintf(
+                '<p>%s</p><p><a href="%s">%s</a></p>',
+                esc_html__('Reset your password:', 'politeia-learning'),
+                esc_url($reset_url),
+                esc_html($reset_url)
+            );
+        }
+
+        $subject = __('Reset Password', 'politeia-learning');
+        $sent = (bool) wp_mail($email, $subject, $html, ['Content-Type: text/html; charset=UTF-8']);
+
+        set_transient($rate_key, 1, 60);
+
+        wp_send_json_success(['exists' => true, 'sent' => $sent]);
     }
 
     public static function enqueue_assets(): void
@@ -549,11 +618,13 @@ class PL_Auth_Login_Register
 
     private static function send_confirmation_for_user(int $user_id, string $email, string $display_name, string $redirect_to, string $token): void
     {
-        unset($user_id);
-
         $verification_url = self::build_confirmation_url($email, $token, $redirect_to);
 
+        $switched_locale = switch_to_user_locale($user_id);
         PL_Email::send_auth_confirmation($email, $display_name, $verification_url, $token);
+        if ($switched_locale) {
+            restore_previous_locale();
+        }
     }
 
     private static function issue_confirmation_token(int $user_id): string

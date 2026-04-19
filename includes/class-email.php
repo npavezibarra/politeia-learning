@@ -9,6 +9,68 @@ if (!defined('ABSPATH')) {
 
 class PL_Email
 {
+    private const PASSWORD_RESET_MARKER = '<!--pl_password_reset-->';
+
+    public static function init(): void
+    {
+        add_filter('retrieve_password_title', [__CLASS__, 'filter_retrieve_password_title'], 10, 3);
+        add_filter('retrieve_password_message', [__CLASS__, 'filter_retrieve_password_message'], 10, 4);
+        add_filter('wp_mail', [__CLASS__, 'filter_wp_mail_force_html_for_password_reset'], 10, 1);
+    }
+
+    public static function filter_retrieve_password_title(string $title, string $user_login, WP_User $user_data): string
+    {
+        unset($user_login, $user_data);
+        return __('Reset Password', 'politeia-learning');
+    }
+
+    public static function filter_retrieve_password_message(string $message, string $key, string $user_login, WP_User $user_data): string
+    {
+        unset($user_data);
+
+        $reset_url = add_query_arg([
+            'key' => $key,
+            'login' => $user_login,
+        ], home_url('/restablecer-contrasena/'));
+
+        $html = self::render('password-reset', [
+            'user_login' => $user_login,
+            'reset_url' => $reset_url,
+        ]);
+
+        if ('' === trim($html)) {
+            return self::PASSWORD_RESET_MARKER . $message;
+        }
+
+        return self::PASSWORD_RESET_MARKER . $html;
+    }
+
+    public static function filter_wp_mail_force_html_for_password_reset(array $args): array
+    {
+        if (!isset($args['message']) || !is_string($args['message'])) {
+            return $args;
+        }
+
+        if (strpos($args['message'], self::PASSWORD_RESET_MARKER) === false) {
+            return $args;
+        }
+
+        $args['message'] = str_replace(self::PASSWORD_RESET_MARKER, '', $args['message']);
+
+        $headers = $args['headers'] ?? [];
+        if (is_string($headers)) {
+            $headers = [$headers];
+        }
+        if (!is_array($headers)) {
+            $headers = [];
+        }
+
+        $headers[] = 'Content-Type: text/html; charset=UTF-8';
+        $args['headers'] = $headers;
+
+        return $args;
+    }
+
     /**
      * Render an email template from templates/emails/{template}.php.
      *
@@ -107,4 +169,8 @@ class PL_Email
             'Content-Type: text/html; charset=UTF-8',
         ]);
     }
+}
+
+if (function_exists('add_action')) {
+    add_action('plugins_loaded', [PL_Email::class, 'init'], 20);
 }

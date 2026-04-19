@@ -2388,8 +2388,15 @@ jQuery(document).ready(function ($) {
         // Image upload
         $(document).on('click', '[data-upload="escrito-thumbnail"]', function () {
             PL_Cropper.open({
+                // Match the cover preview aspect ratio (16:9) and export at higher resolution,
+                // capped to keep the uploaded file under ~400KB.
                 width: 800,
-                height: 300,
+                height: 450,
+                outputMaxWidth: 1600,
+                outputMaxHeight: 900,
+                maxBytes: 400 * 1024,
+                quality: 0.9,
+                minQuality: 0.7,
                 title: t('uploadImage'),
                 onSave: function (dataUrl) {
                     $.ajax({

@@ -23,8 +23,10 @@ $is_spanish = strpos(get_locale(), 'es') === 0;
 	$labels = [
 	    'welcome' => $is_spanish ? 'Bienvenido de nuevo' : 'Welcome back',
 	    'register_title' => $is_spanish ? 'Crea tu cuenta' : 'Create your account',
+        'forgot_title' => $is_spanish ? 'Olvidé contraseña' : 'Forgot password',
 	    'login_copy' => $is_spanish ? 'Inicia sesión para continuar o crea una nueva cuenta.' : 'Log in to continue or create a new account.',
 	    'register_copy' => $is_spanish ? 'Crea una cuenta para recibir tu email de confirmación.' : 'Create an account and we will send you a confirmation email.',
+        'forgot_copy' => $is_spanish ? 'Ingresa tu correo electrónico para restablecer tu contraseña.' : 'Enter your email to reset your password.',
 	    'login' => $is_spanish ? 'Ingresar' : 'Login',
 	    'register' => $is_spanish ? 'Registrarse' : 'Register',
 	    'first_name' => $is_spanish ? 'Nombre' : 'First name',
@@ -40,6 +42,9 @@ $is_spanish = strpos(get_locale(), 'es') === 0;
 	    'create_account_link' => $is_spanish ? 'Crea una cuenta' : 'Create an account',
 	    'already_account' => $is_spanish ? '¿Ya tienes cuenta?' : 'Already have an account?',
 	    'back_to_login' => $is_spanish ? 'Inicia sesión' : 'Back to login',
+        'forgot_link' => $is_spanish ? 'Olvidé mi contraseña' : 'Forgot password',
+        'email_not_registered' => $is_spanish ? 'Este email no está registrado' : 'This email is not registered',
+        'reset_sent' => $is_spanish ? 'Hemos enviado un correo para reestablecer contraseña' : 'We sent a password reset email',
 	];
 
 $login_url = PL_Auth_Login_Register::build_modal_url('login', $redirect_to);
@@ -379,6 +384,7 @@ $register_url = PL_Auth_Login_Register::build_modal_url('register', $redirect_to
 	                        inputmode="<?php echo esc_attr($view === 'register' ? 'email' : 'text'); ?>"
 	                        placeholder="<?php echo esc_attr($is_spanish ? ($view === 'register' ? 'correo@ejemplo.com' : 'correo@ejemplo.com o usuario') : ($view === 'register' ? 'email@domain.com' : 'email@domain.com or username')); ?>"
 	                    >
+                        <div class="pl-auth-inline-message" data-pl-auth-inline-message style="display:none; margin-top:10px; font-size:12px; font-weight:600; color:#000000;"></div>
 	                </div>
 
                 <div class="pl-auth-field pl-auth-register-only pl-auth-hidden" data-pl-auth-email-confirm>
@@ -386,7 +392,7 @@ $register_url = PL_Auth_Login_Register::build_modal_url('register', $redirect_to
                     <input id="pl-auth-email-confirm" name="email_confirm" type="email" autocomplete="email" placeholder="correo@ejemplo.com">
                 </div>
 
-                <div class="pl-auth-field">
+                <div class="pl-auth-field" data-pl-auth-password-field>
                     <label for="pl-auth-password"><?php echo esc_html($labels['password']); ?></label>
                     <input id="pl-auth-password" name="password" type="password" autocomplete="<?php echo esc_attr($view === 'register' ? 'new-password' : 'current-password'); ?>" placeholder="********">
                 </div>
@@ -401,6 +407,9 @@ $register_url = PL_Auth_Login_Register::build_modal_url('register', $redirect_to
                         <input type="checkbox" name="remember" value="1">
                         <?php echo esc_html($labels['remember_me']); ?>
                     </label>
+                    <a href="#" class="pl-auth-forgot" data-pl-auth-forgot-link style="font-size: 0.75rem; color:#000000; text-decoration: underline; font-weight: 600;">
+                        <?php echo esc_html($labels['forgot_link']); ?>
+                    </a>
                 </div>
 
                 <button class="pl-auth-submit" type="submit" data-pl-auth-submit><?php echo esc_html($view === 'register' ? $labels['create_account'] : $labels['login']); ?></button>
@@ -441,6 +450,14 @@ $register_url = PL_Auth_Login_Register::build_modal_url('register', $redirect_to
 	    var firstNameField = document.getElementById('pl-auth-first-name');
 	    var lastNameField = document.getElementById('pl-auth-last-name');
 	    var emailLabel = overlay.querySelector('[data-pl-auth-email-label]');
+        var inlineMessage = overlay.querySelector('[data-pl-auth-inline-message]');
+        var forgotLink = overlay.querySelector('[data-pl-auth-forgot-link]');
+        var passwordField = overlay.querySelector('[data-pl-auth-password-field]');
+        var forgotNonce = '<?php echo esc_js(wp_create_nonce('pl_auth_forgot_password')); ?>';
+        var ajaxUrl = '<?php echo esc_js(admin_url('admin-ajax.php')); ?>';
+        var forgotTimer = null;
+        var lastForgotEmail = '';
+        var hasSentReset = false;
 
     function prefillFromQuery() {
         try {
@@ -518,6 +535,7 @@ $register_url = PL_Auth_Login_Register::build_modal_url('register', $redirect_to
 
 	    function showView(view) {
 	        var isRegister = view === 'register';
+            var isForgot = view === 'forgot';
 
         tabs.forEach(function (tab) {
             tab.classList.toggle('is-active', tab.getAttribute('data-pl-auth-view') === view);
@@ -529,50 +547,67 @@ $register_url = PL_Auth_Login_Register::build_modal_url('register', $redirect_to
 
         if (submitBtn) {
             submitBtn.textContent = isRegister ? '<?php echo esc_js($labels['create_account']); ?>' : '<?php echo esc_js($labels['login']); ?>';
+            submitBtn.classList.toggle('pl-auth-hidden', isForgot);
         }
 
         if (title) {
-            title.textContent = isRegister ? '<?php echo esc_js($labels['register_title']); ?>' : '<?php echo esc_js($labels['welcome']); ?>';
+            title.textContent = isForgot
+                ? '<?php echo esc_js($labels['forgot_title']); ?>'
+                : (isRegister ? '<?php echo esc_js($labels['register_title']); ?>' : '<?php echo esc_js($labels['welcome']); ?>');
         }
 
 	        if (copy) {
-	            copy.textContent = isRegister
-	                ? '<?php echo esc_js($labels['register_copy']); ?>'
-	                : '<?php echo esc_js($labels['login_copy']); ?>';
+	            copy.textContent = isForgot
+                    ? '<?php echo esc_js($labels['forgot_copy']); ?>'
+	                : (isRegister ? '<?php echo esc_js($labels['register_copy']); ?>' : '<?php echo esc_js($labels['login_copy']); ?>');
 	        }
 
 	        if (emailField) {
-	            emailField.type = isRegister ? 'email' : 'text';
-	            emailField.setAttribute('autocomplete', isRegister ? 'email' : 'username');
-	            emailField.setAttribute('inputmode', isRegister ? 'email' : 'text');
+	            emailField.type = (isRegister || isForgot) ? 'email' : 'text';
+	            emailField.setAttribute('autocomplete', (isRegister || isForgot) ? 'email' : 'username');
+	            emailField.setAttribute('inputmode', (isRegister || isForgot) ? 'email' : 'text');
 	            emailField.setAttribute('placeholder', isRegister
 	                ? '<?php echo esc_js($is_spanish ? 'correo@ejemplo.com' : 'email@domain.com'); ?>'
-	                : '<?php echo esc_js($is_spanish ? 'correo@ejemplo.com o usuario' : 'email@domain.com or username'); ?>');
+	                : (isForgot
+                        ? '<?php echo esc_js($is_spanish ? 'correo@ejemplo.com' : 'email@domain.com'); ?>'
+	                    : '<?php echo esc_js($is_spanish ? 'correo@ejemplo.com o usuario' : 'email@domain.com or username'); ?>'));
 	        }
 
 	        if (emailLabel) {
-	            emailLabel.textContent = isRegister
+	            emailLabel.textContent = (isRegister || isForgot)
 	                ? '<?php echo esc_js($labels['email']); ?>'
 	                : '<?php echo esc_js($labels['login_identifier']); ?>';
 	        }
 
 	        if (footerCopy && toggleLink) {
-	            footerCopy.textContent = isRegister
-	                ? '<?php echo esc_js($labels['already_account']); ?>'
-	                : '<?php echo esc_js($labels['new_here']); ?>';
-            toggleLink.textContent = isRegister
+	            footerCopy.textContent = isForgot
+                    ? '<?php echo esc_js($is_spanish ? "¿Recordaste tu contraseña?" : "Remembered your password?"); ?>'
+	                : (isRegister ? '<?php echo esc_js($labels['already_account']); ?>' : '<?php echo esc_js($labels['new_here']); ?>');
+            toggleLink.textContent = isForgot
                 ? '<?php echo esc_js($labels['back_to_login']); ?>'
-                : '<?php echo esc_js($labels['create_account_link']); ?>';
-            toggleLink.setAttribute('href', isRegister ? '<?php echo esc_js($login_url); ?>' : '<?php echo esc_js($register_url); ?>');
+                : (isRegister ? '<?php echo esc_js($labels['back_to_login']); ?>' : '<?php echo esc_js($labels['create_account_link']); ?>');
+            toggleLink.setAttribute('href', isForgot ? '<?php echo esc_js($login_url); ?>' : (isRegister ? '<?php echo esc_js($login_url); ?>' : '<?php echo esc_js($register_url); ?>'));
         }
 
         if (loginOnly) {
-            loginOnly.classList.toggle('pl-auth-hidden', isRegister);
+            loginOnly.classList.toggle('pl-auth-hidden', isRegister || isForgot);
         }
 
         registerFields.forEach(function (field) {
             field.classList.toggle('pl-auth-hidden', !isRegister);
         });
+
+        if (passwordField) {
+            passwordField.classList.toggle('pl-auth-hidden', isForgot);
+        }
+
+        if (inlineMessage) {
+            inlineMessage.style.display = 'none';
+            inlineMessage.textContent = '';
+            inlineMessage.style.color = '#000000';
+        }
+
+        hasSentReset = false;
     }
 
     function openModal(view) {
@@ -625,8 +660,85 @@ $register_url = PL_Auth_Login_Register::build_modal_url('register', $redirect_to
         toggleLink.addEventListener('click', function (event) {
             event.preventDefault();
             var current = modeInput ? modeInput.value : 'login';
-            showView(current === 'register' ? 'login' : 'register');
+            if (current === 'forgot') {
+                showView('login');
+            } else {
+                showView(current === 'register' ? 'login' : 'register');
+            }
             setMessage('', '');
+        });
+    }
+
+    if (forgotLink) {
+        forgotLink.addEventListener('click', function (event) {
+            event.preventDefault();
+            showView('forgot');
+            setMessage('', '');
+        });
+    }
+
+    function setInlineMessage(type, text) {
+        if (!inlineMessage) return;
+        if (!text) {
+            inlineMessage.style.display = 'none';
+            inlineMessage.textContent = '';
+            inlineMessage.style.color = '#000000';
+            return;
+        }
+        inlineMessage.style.display = 'block';
+        inlineMessage.textContent = text;
+        inlineMessage.style.color = type === 'error' ? '#b91c1c' : '#000000';
+    }
+
+    function debounceForgotProbe() {
+        if (!emailField) return;
+        var email = (emailField.value || '').trim().toLowerCase();
+        if (forgotTimer) window.clearTimeout(forgotTimer);
+
+        if (!email || email.indexOf('@') === -1) {
+            setInlineMessage('', '');
+            lastForgotEmail = '';
+            hasSentReset = false;
+            return;
+        }
+
+        forgotTimer = window.setTimeout(function () {
+            if ((modeInput ? modeInput.value : 'login') !== 'forgot') return;
+            if (email === lastForgotEmail && hasSentReset) return;
+
+            lastForgotEmail = email;
+            setInlineMessage('', '');
+
+            var url = ajaxUrl
+                + '?action=pl_auth_forgot_password_probe'
+                + '&nonce=' + encodeURIComponent(forgotNonce)
+                + '&email=' + encodeURIComponent(email);
+
+            fetch(url, { credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data || !data.success || !data.data) return;
+                    if (data.data.invalid) return;
+                    if (!data.data.exists) {
+                        hasSentReset = false;
+                        setInlineMessage('error', '<?php echo esc_js($labels['email_not_registered']); ?>');
+                        return;
+                    }
+                    hasSentReset = true;
+                    setInlineMessage('notice', '<?php echo esc_js($labels['reset_sent']); ?>');
+                })
+                .catch(function () {});
+        }, 450);
+    }
+
+    if (emailField) {
+        emailField.addEventListener('input', function () {
+            if ((modeInput ? modeInput.value : 'login') !== 'forgot') return;
+            debounceForgotProbe();
+        });
+        emailField.addEventListener('blur', function () {
+            if ((modeInput ? modeInput.value : 'login') !== 'forgot') return;
+            debounceForgotProbe();
         });
     }
 
@@ -637,6 +749,12 @@ $register_url = PL_Auth_Login_Register::build_modal_url('register', $redirect_to
             var emailConfirm = document.getElementById('pl-auth-email-confirm');
             var password = document.getElementById('pl-auth-password');
             var passwordConfirm = document.getElementById('pl-auth-password-confirm');
+
+            if (view === 'forgot') {
+                event.preventDefault();
+                debounceForgotProbe();
+                return;
+            }
 
             if (view === 'register') {
                 var emailValue = email ? email.value.trim() : '';

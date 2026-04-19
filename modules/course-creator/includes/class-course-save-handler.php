@@ -2839,7 +2839,8 @@ class PL_CC_Course_Save_Handler
         }
 
         $thumbnail_id = get_post_thumbnail_id($post->ID);
-        $thumbnail_url = get_the_post_thumbnail_url($post->ID, 'large');
+        // In the editor we prefer the full image to avoid pixelation in wide previews.
+        $thumbnail_url = get_the_post_thumbnail_url($post->ID, 'full');
 
         wp_send_json_success([
             'id' => $post->ID,
