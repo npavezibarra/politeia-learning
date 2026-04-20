@@ -18,6 +18,34 @@ if (!defined('ABSPATH')) {
     <?php echo esc_html__('Lista unificada de correos automáticos (WP core / WooCommerce / Learni). Todos se muestran, incluso si no tienen template.', 'politeia-learning'); ?>
 </p>
 
+<!-- Global Settings Section -->
+<div class="pl-email-global-settings" style="margin-bottom: 24px; padding: 18px; background: #fff; border: 1px solid #000; border-radius: 2px; display: flex; align-items: center; gap: 24px;">
+    <div style="flex: 0 0 auto;">
+        <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.18em; color: rgba(0,0,0,0.4); margin-bottom: 8px;"><?php echo esc_html__('Logo para Emails', 'politeia-learning'); ?></div>
+        <?php 
+        $custom_logo_id = get_option('pl_email_custom_logo_id');
+        $custom_logo_url = $custom_logo_id ? wp_get_attachment_image_url($custom_logo_id, 'thumbnail') : '';
+        ?>
+        <div id="pl-email-logo-preview" style="width: 100px; height: 60px; border: 1px dashed #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; background: #f9fafb; overflow: hidden;">
+            <?php if ($custom_logo_url): ?>
+                <img src="<?php echo esc_url($custom_logo_url); ?>" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+            <?php else: ?>
+                <span style="font-size: 10px; color: #94a3b8;"><?php echo esc_html__('Sin logo', 'politeia-learning'); ?></span>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div style="flex: 1 1 auto;">
+        <p style="margin-top: 0; margin-bottom: 12px; font-size: 13px; color: #334155;">
+            <?php echo esc_html__('Selecciona un logo específico para las cabeceras de tus correos (JPG o PNG recomendado). Si no seleccionas ninguno, se usará el logo por defecto del sitio.', 'politeia-learning'); ?>
+        </p>
+        <div style="display: flex; gap: 10px;">
+            <button type="button" class="button" id="pl-select-email-logo"><?php echo esc_html__('Seleccionar Logo', 'politeia-learning'); ?></button>
+            <button type="button" class="button" id="pl-remove-email-logo" <?php echo !$custom_logo_id ? 'style="display:none;"' : ''; ?>><?php echo esc_html__('Eliminar', 'politeia-learning'); ?></button>
+            <span id="pl-email-logo-status" style="margin-left: 10px; font-size: 12px; color: #64748b; align-self: center;"></span>
+        </div>
+    </div>
+</div>
+
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
 
@@ -806,5 +834,86 @@ if (!defined('ABSPATH')) {
         overlay.addEventListener('click', function(e) {
             if (e.target === overlay) closeTemplateModal();
         });
+
+        // --- Custom Email Logo Selector Logic ---
+        const selectLogoBtn = document.getElementById('pl-select-email-logo');
+        const removeLogoBtn = document.getElementById('pl-remove-email-logo');
+        const logoPreview = document.getElementById('pl-email-logo-preview');
+        const logoStatus = document.getElementById('pl-email-logo-status');
+        let logoFrame;
+
+        if (selectLogoBtn) {
+            selectLogoBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                if (logoFrame) {
+                    logoFrame.open();
+                    return;
+                }
+
+                logoFrame = wp.media({
+                    title: 'Seleccionar Logo para Emails',
+                    button: { text: 'Usar este logo' },
+                    multiple: false
+                });
+
+                logoFrame.on('select', function() {
+                    const attachment = logoFrame.state().get('selection').first().toJSON();
+                    saveEmailLogo(attachment.id, attachment.url);
+                });
+
+                logoFrame.open();
+            });
+        }
+
+        if (removeLogoBtn) {
+            removeLogoBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (confirm('¿Seguro que quieres quitar el logo personalizado de los emails?')) {
+                    saveEmailLogo(0, null);
+                }
+            });
+        }
+
+        function saveEmailLogo(logoId, logoUrl) {
+            const body = new URLSearchParams();
+            body.set('action', 'pl_save_email_logo');
+            body.set('nonce', nonce);
+            body.set('logo_id', logoId);
+
+            logoStatus.textContent = 'Guardando…';
+            logoStatus.style.color = '#64748b';
+
+            fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                body: body.toString()
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.success) {
+                    logoStatus.textContent = 'Guardado.';
+                    logoStatus.style.color = '#10b981';
+                    
+                    // Update Preview
+                    if (logoId && logoUrl) {
+                        logoPreview.innerHTML = `<img src="${logoUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain;">`;
+                        removeLogoBtn.style.display = 'inline-block';
+                    } else {
+                        logoPreview.innerHTML = '<span style="font-size: 10px; color: #94a3b8;">Sin logo</span>';
+                        removeLogoBtn.style.display = 'none';
+                    }
+                    
+                    window.setTimeout(() => { logoStatus.textContent = ''; }, 2000);
+                } else {
+                    logoStatus.textContent = 'Error al guardar.';
+                    logoStatus.style.color = '#ef4444';
+                }
+            })
+            .catch(() => {
+                logoStatus.textContent = 'Error de conexión.';
+                logoStatus.style.color = '#ef4444';
+            });
+        }
     });
 </script>

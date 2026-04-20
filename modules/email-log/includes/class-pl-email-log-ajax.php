@@ -24,6 +24,7 @@ final class PL_Email_Log_Ajax
         add_action('wp_ajax_pl_get_test_email_template', [$this, 'ajax_get_test_email_template']);
         add_action('wp_ajax_pl_save_test_email_template', [$this, 'ajax_save_test_email_template']);
         add_action('wp_ajax_pl_set_test_email_template_mode', [$this, 'ajax_set_test_email_template_mode']);
+        add_action('wp_ajax_pl_save_email_logo', [$this, 'ajax_save_email_logo']);
     }
 
     public function ajax_get_email_content(): void

@@ -339,6 +339,16 @@ final class PL_Email_Log_Admin
 
     private function get_site_logo_url(): string
     {
+        // 1. Check for custom email logo specifically set in the settings
+        $custom_logo_id = get_option('pl_email_custom_logo_id');
+        if ($custom_logo_id) {
+            $url = wp_get_attachment_image_url($custom_logo_id, 'full');
+            if ($url) {
+                return $url;
+            }
+        }
+
+        // 2. Fallback to theme custom logo
         $logo_id = get_theme_mod('custom_logo');
         $url = $logo_id ? wp_get_attachment_image_url($logo_id, 'full') : '';
         
@@ -499,6 +509,11 @@ final class PL_Email_Log_Admin
         }
 
         $active_tab = $this->get_active_tab();
+        
+        // Enqueue WordPress media scripts if on the Test Emails tab
+        if (self::TAB_TEST_EMAILS === $active_tab) {
+            wp_enqueue_media();
+        }
         ?>
         <div class="wrap">
             <h1 class="wp-heading-inline"><?php echo esc_html__('Email Log', 'politeia-learning'); ?></h1>
