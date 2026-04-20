@@ -113,6 +113,9 @@ final class PL_Email_Log_Admin
         if ($origin === 'Woo') {
             return $this->get_woo_test_email_preview($key, $catalog[$key]);
         }
+        if ($origin === 'Woo Custom') {
+            return $this->get_woo_custom_test_email_preview($key, $catalog[$key]);
+        }
         if ($origin === 'Learni') {
             return $this->get_learni_test_email_preview($key, $catalog[$key]);
         }
@@ -147,27 +150,6 @@ final class PL_Email_Log_Admin
                 ];
             }
         }
-
-        $samples = [
-            'new_user_admin' => [
-                'subject' => sprintf('[%s] Nuevo registro de usuario', $site_name),
-                'message_text' => "Se ha registrado un nuevo usuario en {$site_name}.\n\nUsuario: {$username}\nEmail: {$user_email}\n\n{$site_url}",
-            ],
-            'new_user_user' => [
-                'subject' => sprintf('[%s] Bienvenido/a', $site_name),
-                'message_text' => "Hola {$username},\n\nTu cuenta en {$site_name} fue creada.\n\nPuedes ingresar aquí:\n{$site_url}\n",
-            ],
-            'password_reset' => [
-                'subject' => sprintf('[%s] Reset de contraseña', $site_name),
-                'message_text' => "Hola {$username},\n\nRecibimos una solicitud para restablecer tu contraseña.\n\nSi fuiste tú, usa este enlace:\n{$site_url}/wp-login.php?action=rp\n\nSi no fuiste tú, ignora este correo.",
-            ],
-        ];
-
-        return isset($samples[$key]) ? $samples[$key] : [
-            'subject' => sprintf('[%s] Notificación WP', $site_name),
-            'message_text' => "Este es un correo de prueba para el evento {$key}.",
-        ];
-    }
 
         $samples = [
             'new_user_admin' => [
@@ -287,11 +269,93 @@ final class PL_Email_Log_Admin
             }
         }
 
+    private function get_woo_custom_test_email_preview(string $key, array $item): array
+    {
+        $template_rel = isset($item['default_template']) ? (string) $item['default_template'] : '';
+        $path = defined('PL_PATH') ? PL_PATH . $template_rel : '';
+
+        if ($template_rel === '' || !file_exists($path)) {
+            return [
+                'subject' => sprintf('[Woo Custom] %s', $key),
+                'message_text' => sprintf('Archivo de template no econtrado: %s', $template_rel),
+            ];
+        }
+
+        $order = $this->get_sample_wc_order();
+        $site_name = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
+        
+        $subject = isset($item['label']) ? (string) $item['label'] : $key;
+        if ($order) {
+            $subject = str_replace('#%s', '#' . $order->get_order_number(), $subject);
+        }
+
+        $vars = [
+            'order' => $order,
+            'logo_url' => $this->get_site_logo_url(),
+            'view' => ($order && class_exists('PL_Woo_Emails')) ? PL_Woo_Emails::identify_order_type($order) : 'course',
+            'access_links' => ($order && class_exists('PL_Woo_Emails')) ? PL_Woo_Emails::get_access_links($order) : [],
+            'bank_details' => $order ? $this->get_bank_details($order) : [],
+            'product' => ($order) ? current($order->get_items('line_item'))->get_product() : null,
+            'refund' => null,
+            'payment_url' => $order ? $order->get_checkout_payment_url() : home_url(),
+        ];
+
+        // Email Log attribution.
+        if (class_exists('PL_Email_Log_Manager')) {
+            PL_Email_Log_Manager::set_last_template_file($path);
+        }
+
+        extract($vars, EXTR_SKIP);
+        ob_start();
+        include $path;
+        $html = (string) ob_get_clean();
+
+        $allowed_html = $this->get_email_template_allowed_html();
+        $safe_html = wp_kses($html, $allowed_html);
+
         return [
             'subject' => $subject,
-            'message_html' => $message_html,
-            'message_text' => $message_text,
+            'message_html' => $safe_html,
+            'message_text' => wp_strip_all_tags($safe_html),
         ];
+    }
+
+    private function get_sample_wc_order()
+    {
+        if (!function_exists('wc_get_orders')) {
+            return null;
+        }
+
+        $orders = wc_get_orders(['limit' => 1, 'orderby' => 'date', 'order' => 'DESC']);
+        return !empty($orders) ? reset($orders) : null;
+    }
+
+    private function get_site_logo_url(): string
+    {
+        $logo_id = function_exists('get_theme_mod') ? absint(get_theme_mod('custom_logo')) : 0;
+        if ($logo_id > 0 && function_exists('wp_get_attachment_image_url')) {
+            $url = wp_get_attachment_image_url($logo_id, 'full');
+            if (is_string($url) && $url !== '') return $url;
+        }
+        return '';
+    }
+
+    private function get_bank_details(WC_Order $order): array
+    {
+        $method_id = (string) $order->get_payment_method();
+        if ($method_id !== 'bacs') return [];
+
+        if (function_exists('WC') && WC() && isset(WC()->payment_gateways)) {
+            $gateways = WC()->payment_gateways->get_available_payment_gateways();
+            if (is_array($gateways) && isset($gateways['bacs'])) {
+                $bacs = $gateways['bacs'];
+                $accounts = is_object($bacs) && isset($bacs->account_details) ? $bacs->account_details : null;
+                if (is_array($accounts) && !empty($accounts) && is_array($accounts[0])) {
+                    return (array) $accounts[0];
+                }
+            }
+        }
+        return [];
     }
 
     private function get_learni_test_email_preview(string $key, array $item): array
