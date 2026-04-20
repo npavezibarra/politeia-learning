@@ -56,9 +56,24 @@ $site_name = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
     </div>
     <div class="content">
         <p class="muted"><?php echo esc_html(sprintf(__('Hola %s, tu pago no se completó. Puedes reintentar usando el botón de abajo.', 'politeia-learning'), $billing_first_name !== '' ? $billing_first_name : '')); ?></p>
-        <div class="box">
-            <p class="k"><?php echo esc_html__('Total', 'politeia-learning'); ?></p>
-            <p class="v"><?php echo wp_kses_post($total); ?></p>
+        <div style="margin-top: 24px;">
+            <header style="margin-bottom: 32px; text-align: center;">
+                <h2 style="font-size: 20px; font-weight: 900; color: #000000; text-transform: uppercase; letter-spacing: -0.05em; margin: 0;"><?php echo esc_html__('Detalles del Pago', 'politeia-learning'); ?></h2>
+                <div style="margin: 12px auto 0; border-bottom: 4px solid #000000; width: 48px;"></div>
+            </header>
+
+            <table style="width: 100%; text-align: left; border-collapse: collapse;">
+                <tbody style="border-top: 1px solid #e5e7eb;">
+                    <tr>
+                        <th style="padding: 16px 0; font-size: 9px; font-weight: 700; color: #000000; text-transform: uppercase; letter-spacing: 0.2em; border-bottom: 1px solid #e5e7eb; width: 50%;"><?php echo esc_html__('ID Pedido', 'politeia-learning'); ?></th>
+                        <td style="padding: 16px 0; font-size: 13px; font-weight: 600; color: #000000; text-align: right; border-bottom: 1px solid #e5e7eb;">#<?php echo esc_html($order_number); ?></td>
+                    </tr>
+                    <tr>
+                        <th style="padding: 24px 0; font-size: 13px; font-weight: 900; color: #000000; text-transform: uppercase; letter-spacing: 0.2em; border-top: 4px solid #000000;"><?php echo esc_html__('Total a Pagar', 'politeia-learning'); ?></th>
+                        <td style="padding: 24px 0; font-size: 20px; font-weight: 900; color: #000000; text-align: right; border-top: 4px solid #000000;"><?php echo wp_kses_post($total); ?></td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
         <?php if (!empty($payment_url)) : ?>
             <a class="btn" href="<?php echo esc_url((string) $payment_url); ?>"><?php echo esc_html__('Reintentar pago', 'politeia-learning'); ?></a>

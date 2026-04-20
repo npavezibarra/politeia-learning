@@ -86,26 +86,31 @@ $site_name = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
                 </div>
 
                 <div style="padding: 0 32px 32px 32px;">
-                    <div class="receipt-card">
-                        <table class="receipt-table">
+                    <header style="margin-bottom: 48px; text-align: center;">
+                        <h1 style="font-size: 30px; font-weight: 900; color: #000000; text-transform: uppercase; letter-spacing: -0.05em; margin: 0;"><?php echo esc_html__('Detalles de la Venta', 'politeia-learning'); ?></h1>
+                        <div style="margin: 16px auto 0; border-bottom: 4px solid #000000; width: 64px;"></div>
+                    </header>
+
+                    <table style="width: 100%; text-align: left; border-collapse: collapse;">
+                        <tbody style="border-top: 1px solid #e5e7eb;">
                             <tr>
-                                <td class="receipt-label"><?php echo esc_html__('ID Venta', 'politeia-learning'); ?></td>
-                                <td class="receipt-value">#<?php echo esc_html($order_number); ?></td>
+                                <th style="padding: 20px 0; font-size: 10px; font-weight: 700; color: #000000; text-transform: uppercase; letter-spacing: 0.2em; border-bottom: 1px solid #e5e7eb; width: 50%;"><?php echo esc_html__('ID Venta', 'politeia-learning'); ?></th>
+                                <td style="padding: 20px 0; font-size: 14px; font-weight: 600; color: #000000; text-align: right; border-bottom: 1px solid #e5e7eb;">#<?php echo esc_html($order_number); ?></td>
                             </tr>
                             <tr>
-                                <td class="receipt-label"><?php echo esc_html__('Fecha', 'politeia-learning'); ?></td>
-                                <td class="receipt-value"><?php echo esc_html($date); ?></td>
+                                <th style="padding: 20px 0; font-size: 10px; font-weight: 700; color: #000000; text-transform: uppercase; letter-spacing: 0.2em; border-bottom: 1px solid #e5e7eb;"><?php echo esc_html__('Fecha', 'politeia-learning'); ?></th>
+                                <td style="padding: 20px 0; font-size: 14px; color: #000000; text-align: right; border-bottom: 1px solid #e5e7eb;"><?php echo esc_html($date); ?></td>
                             </tr>
                             <tr>
-                                <td class="receipt-label"><?php echo esc_html__('Pago', 'politeia-learning'); ?></td>
-                                <td class="receipt-value"><?php echo esc_html($order->get_payment_method_title()); ?></td>
+                                <th style="padding: 20px 0; font-size: 10px; font-weight: 700; color: #000000; text-transform: uppercase; letter-spacing: 0.2em; border-bottom: 1px solid #e5e7eb;"><?php echo esc_html__('Pago', 'politeia-learning'); ?></th>
+                                <td style="padding: 20px 0; font-size: 14px; color: #000000; text-align: right; border-bottom: 1px solid #e5e7eb;"><?php echo esc_html($order->get_payment_method_title()); ?></td>
                             </tr>
-                            <tr class="receipt-total-row">
-                                <td class="receipt-label" style="font-weight: 700; color: #111827;"><?php echo esc_html__('Total recibido', 'politeia-learning'); ?></td>
-                                <td class="receipt-value receipt-total-value"><?php echo wp_kses_post($total); ?></td>
+                            <tr>
+                                <th style="padding: 32px 0; font-size: 14px; font-weight: 900; color: #000000; text-transform: uppercase; letter-spacing: 0.2em; border-top: 4px solid #000000;"><?php echo esc_html__('Total Recibido', 'politeia-learning'); ?></th>
+                                <td style="padding: 32px 0; font-size: 24px; font-weight: 900; color: #000000; text-align: right; border-top: 4px solid #000000;"><?php echo wp_kses_post($total); ?></td>
                             </tr>
-                        </table>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
 
                 <div class="footer">

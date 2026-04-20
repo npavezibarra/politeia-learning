@@ -67,14 +67,34 @@ if (isset($refund) && $refund instanceof WC_Order && method_exists($refund, 'get
             </div>
         <?php endif; ?>
 
-        <div class="box">
-            <p class="k"><?php echo esc_html__('Total del pedido', 'politeia-learning'); ?></p>
-            <p class="v"><?php echo wp_kses_post($total); ?></p>
-        </div>
+        <div style="margin-top: 24px;">
+            <header style="margin-bottom: 32px; text-align: center;">
+                <h2 style="font-size: 20px; font-weight: 900; color: #000000; text-transform: uppercase; letter-spacing: -0.05em; margin: 0;"><?php echo esc_html__('Detalles del Reembolso', 'politeia-learning'); ?></h2>
+                <div style="margin: 12px auto 0; border-bottom: 4px solid #000000; width: 48px;"></div>
+            </header>
 
-        <div class="box">
-            <p class="k"><?php echo esc_html__('Fecha', 'politeia-learning'); ?></p>
-            <p class="v"><?php echo esc_html($date); ?></p>
+            <table style="width: 100%; text-align: left; border-collapse: collapse;">
+                <tbody style="border-top: 1px solid #e5e7eb;">
+                    <tr>
+                        <th style="padding: 16px 0; font-size: 9px; font-weight: 700; color: #000000; text-transform: uppercase; letter-spacing: 0.2em; border-bottom: 1px solid #e5e7eb; width: 50%;"><?php echo esc_html__('ID Pedido', 'politeia-learning'); ?></th>
+                        <td style="padding: 16px 0; font-size: 13px; font-weight: 600; color: #000000; text-align: right; border-bottom: 1px solid #e5e7eb;">#<?php echo esc_html($order_number); ?></td>
+                    </tr>
+                    <?php if ($refund_total !== '') : ?>
+                    <tr>
+                        <th style="padding: 16px 0; font-size: 9px; font-weight: 700; color: #000000; text-transform: uppercase; letter-spacing: 0.2em; border-bottom: 1px solid #e5e7eb;"><?php echo esc_html__('Monto Reembolsado', 'politeia-learning'); ?></th>
+                        <td style="padding: 16px 0; font-size: 13px; color: #dc2626; font-weight: 600; text-align: right; border-bottom: 1px solid #e5e7eb;">-<?php echo wp_kses_post($refund_total); ?></td>
+                    </tr>
+                    <?php endif; ?>
+                    <tr>
+                        <th style="padding: 16px 0; font-size: 9px; font-weight: 700; color: #000000; text-transform: uppercase; letter-spacing: 0.2em; border-bottom: 1px solid #e5e7eb;"><?php echo esc_html__('Fecha Pedido', 'politeia-learning'); ?></th>
+                        <td style="padding: 16px 0; font-size: 13px; color: #000000; text-align: right; border-bottom: 1px solid #e5e7eb;"><?php echo esc_html($date); ?></td>
+                    </tr>
+                    <tr>
+                        <th style="padding: 24px 0; font-size: 13px; font-weight: 900; color: #000000; text-transform: uppercase; letter-spacing: 0.2em; border-top: 4px solid #000000;"><?php echo esc_html__('Total del Pedido', 'politeia-learning'); ?></th>
+                        <td style="padding: 24px 0; font-size: 20px; font-weight: 900; color: #000000; text-align: right; border-top: 4px solid #000000;"><?php echo wp_kses_post($total); ?></td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
