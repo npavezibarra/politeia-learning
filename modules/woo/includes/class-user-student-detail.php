@@ -106,8 +106,11 @@ class PL_Woo_User_Student_Detail
                 continue;
             }
 
-            // Get related LearnDash courses
-            $related = get_post_meta($pid, '_related_course', true);
+            // Get related Learni courses
+            $related = get_post_meta($pid, '_learni_related_course', true);
+            if (empty($related)) {
+                $related = get_post_meta($pid, '_related_course', true);
+            }
             $cids = is_array($related) ? $related : [$related];
 
             foreach ($cids as $cid) {
@@ -130,13 +133,9 @@ class PL_Woo_User_Student_Detail
 
                 // Progress (only for courses)
                 $progress = 0;
-                if ($type === 'course' && function_exists('learndash_course_progress')) {
-                    $p_data = (array) learndash_course_progress([
-                        'user_id' => $student_id,
-                        'course_id' => $cid,
-                        'array' => true
-                    ]);
-                    $progress = isset($p_data['percentage']) ? (int) $p_data['percentage'] : 0;
+                if ($type === 'course' && class_exists('Learni\Database\Progress')) {
+                    $p_data = \Learni\Database\Progress::course_summary($student_id, $cid);
+                    $progress = isset($p_data['percent']) ? (int) $p_data['percent'] : 0;
                 }
 
                 // Initial and Final Quizzes
@@ -269,23 +268,18 @@ class PL_Woo_User_Student_Detail
     private static function get_best_quiz_score(int $user_id, int $course_id, int $quiz_id): array
     {
         global $wpdb;
-        $ua = $wpdb->prefix . 'learndash_user_activity';
-        $uam = $wpdb->prefix . 'learndash_user_activity_meta';
+        $table = $wpdb->prefix . 'learni_quiz_attempts';
 
         // We want the highest score. If tied, we'll take the earliest completion of that score.
         $query = $wpdb->prepare(
-            "SELECT CAST(uam.activity_meta_value AS DECIMAL(10,2)) as score, ua.activity_completed
-             FROM {$ua} ua
-             INNER JOIN {$uam} uam ON ua.activity_id = uam.activity_id
-             WHERE ua.user_id = %d
-               AND ua.course_id = %d
-               AND ua.post_id = %d
-               AND ua.activity_type = 'quiz'
-               AND uam.activity_meta_key = 'percentage'
-             ORDER BY score DESC, ua.activity_completed ASC
+            "SELECT score, submitted_at
+             FROM {$table}
+             WHERE user_id = %d
+               AND quiz_id = %d
+               AND status = 'submitted'
+             ORDER BY score DESC, submitted_at ASC
              LIMIT 1",
             $user_id,
-            $course_id,
             $quiz_id
         );
 
@@ -300,14 +294,15 @@ class PL_Woo_User_Student_Detail
         }
 
         $date_str = '';
-        if ($row->activity_completed > 0) {
-            $date_str = date_i18n(get_option('date_format'), $row->activity_completed);
+        $ts = strtotime((string) $row->submitted_at);
+        if ($ts > 0) {
+            $date_str = date_i18n(get_option('date_format'), $ts);
         }
 
         return [
             'score' => round((float) $row->score) . '%',
             'date' => $date_str,
-            'timestamp' => (int) $row->activity_completed
+            'timestamp' => $ts
         ];
     }
 }

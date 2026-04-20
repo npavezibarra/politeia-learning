@@ -271,7 +271,7 @@ class PL_Woo_User_Student_Metrics
             }
         }
 
-        // Completion metrics (LearnDash).
+        // Completion metrics (Learni).
         $avg_completion_days = 0.0;
         $completed_courses = 0;
         $assessment_delta_pct = 0.0;
@@ -279,101 +279,81 @@ class PL_Woo_User_Student_Metrics
         $owned_courses = self::owned_course_ids((int) $user_id);
         if (!empty($owned_courses)) {
             global $wpdb;
-            $ua = $wpdb->prefix . 'learndash_user_activity';
-            $uam = $wpdb->prefix . 'learndash_user_activity_meta';
+            $table_progress = $wpdb->prefix . 'learni_progress';
+            $table_enrollments = $wpdb->prefix . 'learni_enrollments';
+            $table_attempts = $wpdb->prefix . 'learni_quiz_attempts';
 
             $placeholders = implode(',', array_fill(0, count($owned_courses), '%d'));
-            $start_ts = (int) $start->getTimestamp();
-            $end_ts = (int) $end->getTimestamp();
+            $start_dt = $start->format('Y-m-d H:i:s');
+            $end_dt = $end->format('Y-m-d H:i:s');
 
-            $completed_courses = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COUNT(*)
-                     FROM {$ua}
-                     WHERE activity_type = 'course'
-                       AND activity_status = 1
-                       AND activity_started IS NOT NULL
-                       AND activity_completed IS NOT NULL
-                       AND activity_completed BETWEEN %d AND %d
-                       AND course_id IN ({$placeholders})",
-                    array_merge([$start_ts, $end_ts], $owned_courses)
-                )
+            // Count users who completed all lessons in an owned course within the timeframe.
+            // This is a proxy for course completion.
+            $completion_query = "
+                SELECT e.user_id, e.course_post_id, e.started_at, MAX(p.completed_at) as completed_at
+                FROM {$table_enrollments} e
+                INNER JOIN {$table_progress} p ON e.user_id = p.user_id AND e.course_post_id = p.course_post_id
+                WHERE e.course_post_id IN ({$placeholders})
+                  AND p.status = 'complete'
+                  AND p.completed_at BETWEEN %s AND %s
+                GROUP BY e.user_id, e.course_post_id
+            ";
+
+            $completions = $wpdb->get_results(
+                $wpdb->prepare($completion_query, array_merge($owned_courses, [$start_dt, $end_dt])),
+                ARRAY_A
             );
 
-            $avg_raw = $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT AVG(GREATEST(0, activity_completed - activity_started) / 86400)
-                     FROM {$ua}
-                     WHERE activity_type = 'course'
-                       AND activity_status = 1
-                       AND activity_started IS NOT NULL
-                       AND activity_completed IS NOT NULL
-                       AND activity_completed BETWEEN %d AND %d
-                       AND course_id IN ({$placeholders})",
-                    array_merge([$start_ts, $end_ts], $owned_courses)
-                )
-            );
-
-            if ($avg_raw !== null) {
-                $avg_completion_days = max(0.0, (float) $avg_raw);
+            if (!empty($completions)) {
+                $total_days = 0.0;
+                foreach ($completions as $row) {
+                    $completed_courses++;
+                    $started = strtotime((string) $row['started_at']);
+                    $completed = strtotime((string) $row['completed_at']);
+                    if ($started && $completed && $completed > $started) {
+                        $total_days += ($completed - $started) / 86400;
+                    }
+                }
+                $avg_completion_days = $total_days / count($completions);
             }
 
-            // Assessment delta (first vs final attempt on the linked quiz).
+            // Assessment delta (first vs last attempt in Learni quiz attempts).
             $quiz_ids = self::course_quiz_ids($owned_courses);
             if (!empty($quiz_ids)) {
                 $quiz_placeholders = implode(',', array_fill(0, count($quiz_ids), '%d'));
 
-                $rows = $wpdb->get_results(
+                $attempts = $wpdb->get_results(
                     $wpdb->prepare(
-                        "SELECT ua.user_id, ua.course_id, ua.post_id AS quiz_id, ua.activity_completed,
-                                CAST(uam.activity_meta_value AS DECIMAL(10,2)) AS pct
-                         FROM {$ua} ua
-                         INNER JOIN {$uam} uam
-                           ON uam.activity_id = ua.activity_id
-                          AND uam.activity_meta_key = 'percentage'
-                         WHERE ua.activity_type = 'quiz'
-                           AND ua.activity_status = 1
-                           AND ua.activity_completed BETWEEN %d AND %d
-                           AND ua.course_id IN ({$placeholders})
-                           AND ua.post_id IN ({$quiz_placeholders})
-                         ORDER BY ua.user_id ASC, ua.course_id ASC, ua.post_id ASC, ua.activity_completed ASC",
-                        array_merge([$start_ts, $end_ts], $owned_courses, $quiz_ids)
+                        "SELECT quiz_id, user_id, score, submitted_at
+                         FROM {$table_attempts}
+                         WHERE quiz_id IN ({$quiz_placeholders})
+                           AND status = 'submitted'
+                           AND submitted_at BETWEEN %s AND %s
+                         ORDER BY user_id ASC, quiz_id ASC, submitted_at ASC",
+                        array_merge($quiz_ids, [$start_dt, $end_dt])
                     ),
                     ARRAY_A
                 );
 
-                $grouped = [];
-                foreach ((array) $rows as $r) {
-                    $uid = (int) ($r['user_id'] ?? 0);
-                    $cid = (int) ($r['course_id'] ?? 0);
-                    $qid = (int) ($r['quiz_id'] ?? 0);
-                    if ($uid <= 0 || $cid <= 0 || $qid <= 0) {
-                        continue;
-                    }
-                    $pct = isset($r['pct']) ? (float) $r['pct'] : null;
-                    if ($pct === null) {
-                        continue;
-                    }
-                    $key = $uid . ':' . $cid . ':' . $qid;
-                    if (!isset($grouped[$key])) {
-                        $grouped[$key] = [];
-                    }
-                    $grouped[$key][] = $pct;
+                $grouped_attempts = [];
+                foreach ((array) $attempts as $a) {
+                    $key = $a['user_id'] . ':' . $a['quiz_id'];
+                    $grouped_attempts[$key][] = (float) $a['score'];
                 }
 
-                $sum = 0.0;
-                $n = 0;
-                foreach ($grouped as $pcts) {
-                    if (!is_array($pcts) || count($pcts) < 2) {
-                        continue;
+                $sum_delta = 0.0;
+                $delta_count = 0;
+                foreach ($grouped_attempts as $scores) {
+                    if (count($scores) >= 2) {
+                        $first = $scores[0];
+                        $last = $scores[count($scores) - 1];
+                        $sum_delta += ($last - $first);
+                        $delta_count++;
                     }
-                    $first = (float) $pcts[0];
-                    $last = (float) $pcts[count($pcts) - 1];
-                    $sum += ($last - $first);
-                    $n++;
                 }
-                if ($n > 0) {
-                    $assessment_delta_pct = $sum / $n;
+
+                if ($delta_count > 0) {
+                    $assessment_delta_pct = $sum_delta / $delta_count;
                 }
             }
         }

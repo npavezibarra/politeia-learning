@@ -15,10 +15,7 @@ $pl_profile_content_container_class = $pl_profile_is_fullwidth ? 'w-full' : 'max
 // Public profile route: /profile/{username}
 $user_id = (int) get_query_var('pl_profile_user_id', 0);
 
-// Legacy BuddyBoss/BuddyPress support (should be unused in pure WP).
-if (!$user_id && function_exists('bp_displayed_user_id')) {
-    $user_id = (int) bp_displayed_user_id();
-}
+// User ID is provided by the public route or defaults to logged-in user.
 
 // Pure WordPress fallback: logged-in user's own profile.
 if (!$user_id) {
@@ -52,10 +49,11 @@ if ($avatar_url === '') {
 // --- Portfolio Settings ---
 $portfolio_manager = PL_Member_Profile_Portfolio_Manager::get_instance();
 $portfolio_settings = $portfolio_manager->get_settings($user_id);
-$twitter = function_exists('xprofile_get_field_data') ? xprofile_get_field_data('Twitter', $user_id) : '';
-$linkedin = function_exists('xprofile_get_field_data') ? xprofile_get_field_data('LinkedIn', $user_id) : '';
-$github = function_exists('xprofile_get_field_data') ? xprofile_get_field_data('GitHub', $user_id) : '';
-$instagram = function_exists('xprofile_get_field_data') ? xprofile_get_field_data('Instagram', $user_id) : '';
+// --- Social Settings (Native User Meta) ---
+$twitter = get_user_meta($user_id, 'twitter_url', true);
+$linkedin = get_user_meta($user_id, 'linkedin_url', true);
+$github = get_user_meta($user_id, 'github_url', true);
+$instagram = get_user_meta($user_id, 'instagram_url', true);
 
 // Rank
 $rank = get_user_meta($user_id, 'pl_profile_rank', true) ?: 'Premium Member';
@@ -93,16 +91,12 @@ if (class_exists('PL_Relationships')) {
     }
 }
 
-$user_domain = function_exists('bp_core_get_user_domain') ? (string) bp_core_get_user_domain($user_id) : '';
-$friends_url = $user_domain ? trailingslashit($user_domain . 'friends') : '';
-$notifications_url = $user_domain ? trailingslashit($user_domain . 'notifications') : '';
+$user_domain = '';
+$friends_url = '';
+$notifications_url = '';
 
-$friends_count = ($is_own_profile && function_exists('friends_get_total_friend_count'))
-    ? (int) friends_get_total_friend_count($user_id)
-    : 0;
-$unread_notifications = ($is_own_profile && function_exists('bp_notifications_get_unread_notification_count'))
-    ? (int) bp_notifications_get_unread_notification_count($user_id)
-    : 0;
+$friends_count = 0;
+$unread_notifications = 0;
 
 $pl_pending_follow_requests = [];
 $pl_pending_course_partner_invites = [];
@@ -383,8 +377,8 @@ if ($is_own_profile && $logged_in_user_id > 0) {
     }
 }
 
-$is_notifications_view = function_exists('bp_is_user_notifications') ? (bool) bp_is_user_notifications() : false;
-$is_friends_view = function_exists('bp_is_user_friends') ? (bool) bp_is_user_friends() : false;
+$is_notifications_view = false;
+$is_friends_view = false;
 
 $pl_subscribe_error_code = isset($_GET['pl_subscribe_error']) ? sanitize_key((string) wp_unslash($_GET['pl_subscribe_error'])) : '';
 $pl_subscribe_error_message = '';
@@ -451,7 +445,7 @@ if ($show_specs && isset($portfolio_settings['specializations'])) {
 $user_courses = [];
 if ($show_courses) {
     $courses_args = [
-        'post_type' => 'sfwd-courses',
+        'post_type' => 'learni_course',
         'post_status' => 'publish',
         'author' => $user_id,
         'posts_per_page' => -1
@@ -467,7 +461,7 @@ if ($show_courses) {
             $user_courses[] = [
                 'id' => get_the_ID(),
                 'title' => get_the_title(),
-                'price' => get_post_meta(get_the_ID(), 'course_price', true) ?: 'Free',
+                'price' => get_post_meta(get_the_ID(), 'learni_price', true) ?: 'Free',
                 'img' => get_the_post_thumbnail_url(get_the_ID(), 'large') ?: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=400&q=80',
                 'link' => get_permalink()
             ];
@@ -511,7 +505,7 @@ if ($show_writings) {
 $user_specs = [];
 if ($show_specs) {
     $specs_args = [
-        'post_type' => 'groups',
+        'post_type' => 'learni_specialization',
         'post_status' => 'publish',
         'author' => $user_id,
         'posts_per_page' => -1
@@ -1269,7 +1263,7 @@ pl_template_open();
 	                </div>
 	            <?php elseif ($server_view === 'friends' && function_exists('bp_get_template_part')) : ?>
 	                <div class="<?php echo esc_attr($pl_profile_content_container_class); ?>">
-	                    <?php bp_get_template_part('members/single/friends'); ?>
+	                    <!-- Student Friends (BuddyPress removed) -->
 	                </div>
 	            <?php else : ?>
 	                <!-- JS will inject content here -->

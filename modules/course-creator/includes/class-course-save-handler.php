@@ -191,19 +191,7 @@ class PL_CC_Course_Save_Handler
         }
 
         $author_id = (int) get_post_field('post_author', $group_id);
-        if ($author_id === $user_id) {
-            return true;
-        }
-
-        if (function_exists('learndash_get_administrators_group_ids')) {
-            $leader_group_ids = learndash_get_administrators_group_ids($user_id);
-            $leader_group_ids = array_map('absint', (array) $leader_group_ids);
-            if (in_array($group_id, $leader_group_ids, true)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $author_id === $user_id;
     }
 
     private function user_can_manage_programa(int $programa_id, int $user_id): bool
@@ -753,7 +741,7 @@ class PL_CC_Course_Save_Handler
 
         // Link product -> course (compat for legacy Politeia modules + Learni native meta).
         // Store as array to match expected serialized format a:1:{i:0;i:XX;} used by older code.
-        update_post_meta($product_id, '_related_course', [$course_id]);
+        update_post_meta($product_id, '_learni_related_course', [$course_id]);
         update_post_meta($product_id, '_learni_course_id', $course_id);
         update_post_meta($course_id, 'learni_wc_product_id', $product_id);
 
@@ -761,9 +749,8 @@ class PL_CC_Course_Save_Handler
     }
 
     /**
-     * Creates or updates a WooCommerce product linked to a LearnDash Group (Especialización).
-     *
-     * Uses LearnDash WooCommerce addon meta key: _related_group
+     * Creates or updates a WooCommerce product linked to a Learni Specialization.
+     * Uses meta key: _learni_related_specialization
      */
     private function sync_group_to_woo_product(int $group_id, array $data, string $price_type, string $post_status = 'publish'): string
     {
@@ -821,15 +808,15 @@ class PL_CC_Course_Save_Handler
             update_post_meta($product_id, 'product_owner', $author_id);
         }
 
-        // Link to LearnDash Group (LearnDash WooCommerce).
-        update_post_meta($product_id, '_related_group', [$group_id]);
+        // Link to Learni Specialization.
+        update_post_meta($product_id, '_learni_related_specialization', $group_id);
 
         return get_permalink($product_id);
     }
 
     /**
-     * Creates or updates a WooCommerce product linked to a Programa (course_program),
-     * granting access to all associated LearnDash Groups by syncing _related_group.
+     * Creates or updates a WooCommerce product linked to a Programa (learni_program),
+     * granting access to all associated Learni Specializations.
      */
     private function sync_program_to_woo_product(int $programa_id, array $data, string $price_type, array $group_ids, string $post_status = 'publish'): string
     {
@@ -889,9 +876,9 @@ class PL_CC_Course_Save_Handler
             update_post_meta($product_id, 'product_owner', $author_id);
         }
 
-        // Store program linkage and sync groups for LearnDash WooCommerce enrollment.
-        update_post_meta($product_id, '_pcg_related_program', $programa_id);
-        update_post_meta($product_id, '_related_group', $group_ids);
+        // Store program linkage and sync specializations for enrollment.
+        update_post_meta($product_id, '_learni_related_program', $programa_id);
+        update_post_meta($product_id, '_learni_related_specializations', $group_ids);
 
         return get_permalink($product_id);
     }
@@ -953,36 +940,39 @@ class PL_CC_Course_Save_Handler
         $roles_table = $wpdb->prefix . 'politeia_course_roles';
 
         if ($container_type === 'group') {
-            // Publish group.
+            // Publish specialization.
             wp_update_post([
                 'ID' => $container_id,
                 'post_status' => 'publish',
             ]);
 
-            if (function_exists('learndash_update_setting') && function_exists('learndash_set_group_enrolled_courses')) {
-                $price_type = sanitize_text_field((string) ($data['price_type'] ?? 'free'));
-                $price = (int) ($data['price'] ?? 0);
-                $course_ids = array_values(array_unique(array_filter(array_map('absint', (array) ($data['course_ids'] ?? [])))));
+            $price_type = sanitize_text_field((string) ($data['price_type'] ?? 'free'));
+            $price = (int) ($data['price'] ?? 0);
+            $course_ids = array_values(array_unique(array_filter(array_map('absint', (array) ($data['course_ids'] ?? [])))));
 
-                learndash_update_setting($container_id, 'group_price_type', $price_type);
-                learndash_update_setting($container_id, 'group_price', $price);
-                learndash_set_group_enrolled_courses($container_id, $course_ids);
+            update_post_meta($container_id, 'learni_price_type', $price_type);
+            update_post_meta($container_id, 'learni_price', $price);
 
-                // Ensure Woo product published (if closed) and button URL points to it.
-                $product_url = '';
-                if ($price_type === 'closed') {
-                    $product_url = $this->sync_group_to_woo_product($container_id, [
-                        'title' => (string) ($data['title'] ?? get_the_title($container_id)),
-                        'description' => (string) ($data['description'] ?? ''),
-                        'price' => (string) $price,
-                    ], $price_type, 'publish');
-                }
-                learndash_update_setting($container_id, 'custom_button_url', $product_url ? $product_url : '');
+            // Set course associations for Learni Specialization.
+            delete_post_meta($container_id, 'learni_courses');
+            foreach ($course_ids as $cid) {
+                add_post_meta($container_id, 'learni_courses', $cid);
+            }
 
-                $product_id = (int) get_post_meta($container_id, '_pcg_woo_product_id', true);
-                if ($product_id) {
-                    wp_update_post(['ID' => $product_id, 'post_status' => 'publish']);
-                }
+            // Ensure Woo product published (if closed) and button URL points to it.
+            $product_url = '';
+            if ($price_type === 'closed') {
+                $product_url = $this->sync_group_to_woo_product($container_id, [
+                    'title' => (string) ($data['title'] ?? get_the_title($container_id)),
+                    'description' => (string) ($data['description'] ?? ''),
+                    'price' => (string) $price,
+                ], $price_type, 'publish');
+            }
+            update_post_meta($container_id, 'learni_custom_button_url', $product_url ? $product_url : '');
+
+            $product_id = (int) get_post_meta($container_id, '_pcg_woo_product_id', true);
+            if ($product_id) {
+                wp_update_post(['ID' => $product_id, 'post_status' => 'publish']);
             }
 
             $wpdb->delete($roles_table, ['object_type' => 'group', 'object_id' => $container_id], ['%s', '%d']);
@@ -1017,10 +1007,14 @@ class PL_CC_Course_Save_Handler
 
             $price_display = $price > 0 ? ('$' . number_format($price, 0, '.', ',')) : __('Gratis', 'politeia-learning');
             update_post_meta($container_id, 'politeia_program_price', $price_display);
-            update_post_meta($container_id, 'politeia_program_groups', wp_json_encode($group_ids));
+            // Set specialization associations for Learni Program.
+            delete_post_meta($container_id, 'learni_specializations');
+            foreach ($group_ids as $gid) {
+                add_post_meta($container_id, 'learni_specializations', $gid);
+            }
+            update_post_meta($container_id, 'learni_price', $price);
             update_post_meta($container_id, '_pcg_program_access_mode', $price_type === 'closed' ? 'closed' : 'open');
             update_post_meta($container_id, '_pcg_program_price_type', $price_type);
-            update_post_meta($container_id, '_pcg_program_price', $price);
 
             $product_url = '';
             if ($price_type === 'closed') {
@@ -1030,7 +1024,7 @@ class PL_CC_Course_Save_Handler
                     'price' => (string) $price,
                 ], $price_type, $group_ids, 'publish');
             }
-            update_post_meta($container_id, '_pcg_program_custom_button_url', $product_url ? $product_url : '');
+            update_post_meta($container_id, 'learni_program_custom_button_url', $product_url ? $product_url : '');
 
             $product_id = (int) get_post_meta($container_id, '_pcg_woo_product_id', true);
             if ($product_id) {
@@ -1062,96 +1056,6 @@ class PL_CC_Course_Save_Handler
             $this->process_learni_course_content((int) $course_id, (array) $content_list);
             return;
         }
-
-        // Cleanup existing lessons to avoid duplicates on every save
-        $existing_lessons = get_posts([
-            'post_type' => 'sfwd-lessons',
-            'posts_per_page' => -1,
-            'meta_query' => [
-                [
-                    'key' => 'course_id',
-                    'value' => $course_id,
-                ]
-            ]
-        ]);
-
-        foreach ($existing_lessons as $old_lesson) {
-            wp_delete_post($old_lesson->ID, true);
-        }
-
-        if (!class_exists('LearnDash_Settings_Section')) {
-            return; // LD not active or not loaded
-        }
-
-        $steps_h = []; // Hierarchy
-        $steps_count = 0;
-
-        foreach ($content_list as $index => $item) {
-            $type = $item['type'];
-            $title = sanitize_text_field($item['title']);
-
-            if ($type === 'lesson') {
-                $video_url = sanitize_text_field($item['video_url'] ?? '');
-                $available_date = sanitize_text_field($item['available_date'] ?? '');
-
-                // Create/Update Lesson
-                $lesson_id = wp_insert_post([
-                    'post_title' => $title,
-                    'post_status' => 'publish',
-                    'post_type' => 'sfwd-lessons',
-                    'menu_order' => $index
-                ]);
-
-                if (!is_wp_error($lesson_id)) {
-                    update_post_meta($lesson_id, 'course_id', $course_id);
-
-                    // LearnDash Lesson Settings
-                    $lesson_settings = [
-                        'sfwd-lessons_course' => $course_id,
-                        'sfwd-lessons_lesson_video_url' => $video_url,
-                        'sfwd-lessons_lesson_video_enabled' => !empty($video_url) ? 'on' : '',
-                    ];
-
-                    if (!empty($available_date)) {
-                        $timestamp = strtotime($available_date);
-                        if ($timestamp) {
-                            $lesson_settings['sfwd-lessons_visible_after_specific_date'] = $timestamp;
-                        }
-                    }
-
-                    update_post_meta($lesson_id, '_sfwd-lessons', $lesson_settings);
-
-                    $steps_h['sfwd-lessons'] = $steps_h['sfwd-lessons'] ?? [];
-                    $steps_h['sfwd-lessons'][$lesson_id] = [
-                        'sfwd-topic' => [],
-                        'sfwd-quiz' => []
-                    ];
-                    $steps_count++;
-                }
-            } else if ($type === 'section') {
-                // LearnDash sections are virtual in the steps array
-                $section_key = 'section-' . $index;
-                $steps_h[$section_key] = [
-                    'title' => $title,
-                    'type' => 'section'
-                ];
-            }
-        }
-
-        // Update Course Builder Steps (Modern LD)
-        $course_steps = [
-            'steps' => [
-                'h' => $steps_h
-            ],
-            'course_id' => $course_id,
-            'version' => '4.23.0',
-            'empty' => empty($steps_h),
-            'course_builder_enabled' => true,
-            'course_shared_steps_enabled' => true,
-            'steps_count' => $steps_count
-        ];
-
-        update_post_meta($course_id, 'ld_course_steps', $course_steps);
     }
 
     private function process_learni_course_content(int $course_id, array $content_list): void
@@ -1320,7 +1224,7 @@ class PL_CC_Course_Save_Handler
         check_ajax_referer('pcg_creator_nonce', 'nonce');
 
         $args = [
-            'post_type' => 'sfwd-courses',
+            'post_type' => 'learni_course',
             'post_status' => 'publish',
             'posts_per_page' => -1,
             'orderby' => 'date',
@@ -1375,7 +1279,7 @@ class PL_CC_Course_Save_Handler
         );
         $pending_group_ids = array_values(array_unique(array_filter(array_map('absint', (array) $pending_group_ids))));
 
-        // Include groups where the current user is an approved participant (active roles table).
+        // Include specializations where the current user is an approved participant (active roles table).
         $participant_group_ids = [];
         $roles_table = $wpdb->prefix . 'politeia_course_roles';
         $participant_group_ids = $wpdb->get_col(
@@ -1390,7 +1294,7 @@ class PL_CC_Course_Save_Handler
         $participant_group_ids = array_values(array_unique(array_filter(array_map('absint', (array) $participant_group_ids))));
 
         $author_group_ids = get_posts([
-            'post_type' => 'groups',
+            'post_type' => 'learni_specialization',
             'post_status' => ['publish', 'draft'],
             'author' => $user_id,
             'posts_per_page' => -1,
@@ -1398,9 +1302,6 @@ class PL_CC_Course_Save_Handler
         ]);
 
         $leader_group_ids = [];
-        if (function_exists('learndash_get_administrators_group_ids')) {
-            $leader_group_ids = learndash_get_administrators_group_ids($user_id);
-        }
 
         $group_ids = array_values(array_unique(array_filter(array_map('absint', array_merge((array) $author_group_ids, (array) $leader_group_ids, (array) $pending_group_ids, (array) $participant_group_ids)))));
 
@@ -1412,7 +1313,7 @@ class PL_CC_Course_Save_Handler
         $groups = [];
         foreach ($group_ids as $gid) {
             $p = get_post($gid);
-            if (!$p || $p->post_type !== 'groups') {
+            if (!$p || $p->post_type !== 'learni_specialization') {
                 continue;
             }
             if (!in_array($p->post_status, ['publish', 'draft'], true)) {
@@ -1429,20 +1330,13 @@ class PL_CC_Course_Save_Handler
         foreach ($groups as $group) {
             $thumbnail_url = get_the_post_thumbnail_url($group->ID, 'medium');
 
-            $course_count = 0;
-            $course_titles = [];
-            if (function_exists('learndash_group_enrolled_courses')) {
-                $course_ids = learndash_group_enrolled_courses($group->ID);
-                if (is_array($course_ids)) {
-                    $course_count = count($course_ids);
-                    if (!empty($course_ids)) {
-                        $course_ids = array_values(array_filter(array_map('absint', $course_ids)));
-                        foreach ($course_ids as $course_id) {
-                            $title = get_the_title($course_id);
-                            if (is_string($title) && $title !== '') {
-                                $course_titles[] = $title;
-                            }
-                        }
+            $course_ids = get_post_meta($group->ID, 'learni_courses');
+            if (is_array($course_ids)) {
+                $course_count = count($course_ids);
+                foreach ($course_ids as $course_id) {
+                    $title = get_the_title($course_id);
+                    if (is_string($title) && $title !== '') {
+                        $course_titles[] = $title;
                     }
                 }
             }
@@ -1480,7 +1374,7 @@ class PL_CC_Course_Save_Handler
         check_ajax_referer('pcg_creator_nonce', 'nonce');
 
         $args = [
-            'post_type' => 'groups',
+            'post_type' => 'learni_specialization',
             'post_status' => 'publish',
             'posts_per_page' => -1,
             'orderby' => 'date',
@@ -1515,9 +1409,7 @@ class PL_CC_Course_Save_Handler
             wp_send_json_error(['message' => __('No autorizado.', 'politeia-learning')], 401);
         }
 
-        if (!function_exists('learndash_update_setting') || !function_exists('learndash_set_group_enrolled_courses')) {
-            wp_send_json_error(['message' => __('LearnDash no está activo.', 'politeia-learning')], 400);
-        }
+        // LearnDash removal - check removed.
 
         $data = $_POST['group_data'] ?? [];
         if (empty($data) || !is_array($data)) {
@@ -1545,7 +1437,7 @@ class PL_CC_Course_Save_Handler
             'post_title' => $title,
             'post_content' => $description,
             'post_status' => 'draft',
-            'post_type' => 'groups',
+            'post_type' => 'learni_specialization',
             'post_author' => get_current_user_id(),
         ];
 
@@ -1566,16 +1458,20 @@ class PL_CC_Course_Save_Handler
             wp_send_json_error(['message' => $group_id->get_error_message()], 500);
         }
 
-        // LearnDash access settings for group price.
-        learndash_update_setting($group_id, 'group_price_type', $price_type);
-        learndash_update_setting($group_id, 'group_price', $numeric_price);
+        // Learni access settings for specialization price.
+        update_post_meta($group_id, 'learni_price_type', $price_type);
+        update_post_meta($group_id, 'learni_price', $numeric_price);
 
-        // Assign courses to group.
+        // Assign courses to specialization using Learni meta.
         if (!is_array($course_ids)) {
             $course_ids = [];
         }
         $course_ids = array_values(array_unique(array_filter(array_map('absint', $course_ids))));
-        learndash_set_group_enrolled_courses($group_id, $course_ids);
+        
+        delete_post_meta($group_id, 'learni_courses');
+        foreach ($course_ids as $cid) {
+            add_post_meta($group_id, 'learni_courses', $cid);
+        }
 
         // Save learning categories/tags.
         $this->assign_learning_terms((int) $group_id, $category_ids, $tag_ids);
@@ -1609,7 +1505,7 @@ class PL_CC_Course_Save_Handler
         $required_user_ids = [];
         foreach ($course_ids as $cid) {
             $cid = absint($cid);
-            if (!$cid || get_post_type($cid) !== 'sfwd-courses') {
+            if (!$cid || get_post_type($cid) !== 'learni_course') {
                 continue;
             }
             $required_user_ids[] = (int) get_post_field('post_author', $cid);
@@ -1760,7 +1656,7 @@ class PL_CC_Course_Save_Handler
         if ($price_type === 'closed') {
             $product_url = $this->sync_group_to_woo_product($group_id, $data, $price_type, $snapshot['status'] === PL_CC_Inclusion_Approvals::STATUS_APPROVED ? 'publish' : 'draft');
         }
-        learndash_update_setting($group_id, 'custom_button_url', ($snapshot['status'] === PL_CC_Inclusion_Approvals::STATUS_APPROVED && $product_url) ? $product_url : '');
+        update_post_meta($group_id, 'learni_custom_button_url', ($snapshot['status'] === PL_CC_Inclusion_Approvals::STATUS_APPROVED && $product_url) ? $product_url : '');
 
         if ($snapshot['status'] === PL_CC_Inclusion_Approvals::STATUS_APPROVED) {
             $this->apply_inclusion_snapshot('group', $group_id, (int) $snapshot['snapshot_id']);
@@ -1789,27 +1685,21 @@ class PL_CC_Course_Save_Handler
         }
 
         $post = get_post($group_id);
-        if (!$post || $post->post_type !== 'groups') {
+        if (!$post || $post->post_type !== 'learni_specialization') {
             wp_send_json_error(['message' => __('No encontrado.', 'politeia-learning')], 404);
         }
 
-        $price = '';
-        if (function_exists('learndash_get_setting')) {
-            $price = (string) learndash_get_setting($group_id, 'group_price');
-        }
+        $price = (string) get_post_meta($group_id, 'learni_price', true);
 
-        $course_ids = [];
-        if (function_exists('learndash_group_enrolled_courses')) {
-            $course_ids = learndash_group_enrolled_courses($group_id);
-            if (!is_array($course_ids)) {
-                $course_ids = [];
-            }
+        $course_ids = get_post_meta($group_id, 'learni_courses');
+        if (!is_array($course_ids)) {
+            $course_ids = [];
         }
         $course_ids = array_values(array_unique(array_filter(array_map('absint', (array) $course_ids))));
 
         $included_authors = [];
         foreach ($course_ids as $cid) {
-            if (!$cid || get_post_type($cid) !== 'sfwd-courses') {
+            if (!$cid || get_post_type($cid) !== 'learni_course') {
                 continue;
             }
             $author_id = (int) get_post_field('post_author', $cid);
@@ -1893,9 +1783,7 @@ class PL_CC_Course_Save_Handler
         }
 
         $product_url = '';
-        if (function_exists('learndash_get_setting')) {
-            $product_url = (string) learndash_get_setting($group_id, 'custom_button_url');
-        }
+        $product_url = (string) get_post_meta($group_id, 'learni_custom_button_url', true);
 
         $meta_terms = $this->get_learning_terms_for_object((int) $group_id);
 
@@ -1933,9 +1821,7 @@ class PL_CC_Course_Save_Handler
             wp_send_json_error(['message' => __('No autorizado.', 'politeia-learning')], 403);
         }
 
-        if (function_exists('learndash_set_group_enrolled_courses')) {
-            learndash_set_group_enrolled_courses($group_id, []);
-        }
+        // LearnDash removal - logic removed.
 
         // Delete linked WooCommerce product if any.
         $product_id = (int) get_post_meta($group_id, '_pcg_woo_product_id', true);
@@ -1972,7 +1858,7 @@ class PL_CC_Course_Save_Handler
 
         // Own programs.
         $own_program_ids = get_posts([
-            'post_type' => 'course_program',
+            'post_type' => 'learni_program',
             'post_status' => ['publish', 'draft'],
             'author' => $user_id,
             'posts_per_page' => -1,
@@ -2023,7 +1909,7 @@ class PL_CC_Course_Save_Handler
         $programs = [];
         foreach ($program_ids as $pid) {
             $p = get_post($pid);
-            if (!$p || $p->post_type !== 'course_program') {
+            if (!$p || $p->post_type !== 'learni_program') {
                 continue;
             }
             if (!in_array($p->post_status, ['publish', 'draft'], true)) {
@@ -2039,20 +1925,13 @@ class PL_CC_Course_Save_Handler
         foreach ($programs as $post) {
             $thumbnail_url = get_the_post_thumbnail_url($post->ID, 'medium');
 
-            $raw_groups = get_post_meta($post->ID, 'politeia_program_groups', true);
-            $decoded = [];
-            if (is_string($raw_groups) && $raw_groups !== '') {
-                $decoded = json_decode($raw_groups, true);
-            } elseif (is_array($raw_groups)) {
-                $decoded = $raw_groups;
+            $group_ids = get_post_meta($post->ID, 'learni_specializations');
+            if (!is_array($group_ids)) {
+                $group_ids = [];
             }
+            $group_ids = array_values(array_unique(array_filter(array_map('absint', $group_ids))));
 
-            $group_ids = [];
-            if (is_array($decoded)) {
-                $group_ids = array_values(array_unique(array_filter(array_map('absint', $decoded))));
-            }
-
-            $price = get_post_meta($post->ID, 'politeia_program_price', true);
+            $price = get_post_meta($post->ID, 'learni_price', true);
             if (is_string($price)) {
                 $price = trim($price);
             }
@@ -2122,7 +2001,7 @@ class PL_CC_Course_Save_Handler
             'post_title' => $title,
             'post_content' => $description,
             'post_status' => 'draft',
-            'post_type' => 'course_program',
+            'post_type' => 'learni_program',
             'post_author' => get_current_user_id(),
         ];
 
@@ -2142,11 +2021,15 @@ class PL_CC_Course_Save_Handler
             wp_send_json_error(['message' => $programa_id->get_error_message()], 500);
         }
 
-        update_post_meta($programa_id, 'politeia_program_price', $price);
-        update_post_meta($programa_id, 'politeia_program_groups', wp_json_encode($group_ids));
+        update_post_meta($programa_id, 'learni_price', $numeric_price);
         update_post_meta($programa_id, '_pcg_program_access_mode', $price_type === 'closed' ? 'closed' : 'open');
         update_post_meta($programa_id, '_pcg_program_price_type', $price_type);
-        update_post_meta($programa_id, '_pcg_program_price', $numeric_price);
+
+        // Assign specializations to program.
+        delete_post_meta($programa_id, 'learni_specializations');
+        foreach ($group_ids as $gid) {
+            add_post_meta($programa_id, 'learni_specializations', $gid);
+        }
 
         // Save learning categories/tags.
         $this->assign_learning_terms((int) $programa_id, $category_ids, $tag_ids);
@@ -2179,7 +2062,7 @@ class PL_CC_Course_Save_Handler
         $required_user_ids = [];
         foreach ($group_ids as $gid) {
             $gid = absint($gid);
-            if (!$gid || get_post_type($gid) !== 'groups') {
+            if (!$gid || get_post_type($gid) !== 'learni_specialization') {
                 continue;
             }
             $required_user_ids[] = (int) get_post_field('post_author', $gid);
@@ -2356,36 +2239,24 @@ class PL_CC_Course_Save_Handler
         }
 
         $post = get_post($programa_id);
-        if (!$post || $post->post_type !== 'course_program') {
+        if (!$post || $post->post_type !== 'learni_program') {
             wp_send_json_error(['message' => __('No encontrado.', 'politeia-learning')], 404);
         }
 
-        $price = (string) get_post_meta($programa_id, 'politeia_program_price', true);
-        $price_numeric = preg_replace('/[^0-9]/', '', $price);
+        $price_numeric = (int) (float) get_post_meta($programa_id, 'learni_price', true);
 
-        $raw_groups = get_post_meta($programa_id, 'politeia_program_groups', true);
-        $decoded = [];
-        if (is_string($raw_groups) && $raw_groups !== '') {
-            $decoded = json_decode($raw_groups, true);
-        } elseif (is_array($raw_groups)) {
-            $decoded = $raw_groups;
-        }
-        $group_ids = [];
-        if (is_array($decoded)) {
-            $group_ids = array_values(array_unique(array_filter(array_map('absint', $decoded))));
+        $group_ids = get_post_meta($programa_id, 'learni_specializations');
+        if (!is_array($group_ids)) {
+            $group_ids = [];
         }
 
         $included_authors = [];
         foreach ($group_ids as $gid) {
-            if (!$gid || get_post_type($gid) !== 'groups') {
+            $gid = absint($gid);
+            if (!$gid || get_post_type($gid) !== 'learni_specialization') {
                 continue;
             }
             $author_id = (int) get_post_field('post_author', $gid);
-            if ($author_id <= 0) {
-                continue;
-            }
-            if (!isset($included_authors[$author_id])) {
-                $u = get_userdata($author_id);
                 $full_name = trim((string) ($u->first_name ?? '') . ' ' . (string) ($u->last_name ?? ''));
                 if ($full_name === '' && $u) {
                     $full_name = (string) $u->display_name;
@@ -2460,7 +2331,7 @@ class PL_CC_Course_Save_Handler
             }
         }
 
-        $product_url = (string) get_post_meta($programa_id, '_pcg_program_custom_button_url', true);
+        $product_url = (string) get_post_meta($programa_id, 'learni_program_custom_button_url', true);
 
         $meta_terms = $this->get_learning_terms_for_object((int) $programa_id);
 

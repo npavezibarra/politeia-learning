@@ -1,1 +1,0 @@
-// Politeia Course Group JS

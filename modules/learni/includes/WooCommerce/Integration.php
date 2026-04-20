@@ -63,23 +63,50 @@ final class Integration
     {
         $course_ids = [];
         foreach ($order->get_items('line_item') as $item) {
-            $product = $item->get_product();
-            if (!$product) {
-                continue;
-            }
-
-            $product_id = (int) $product->get_id();
+            $product_id = (int) $item->get_product_id();
             if ($product_id <= 0) {
                 continue;
             }
 
+            // 1. Direct course link.
             $course_id = (int) get_post_meta($product_id, self::PRODUCT_META_COURSE_ID, true);
             if ($course_id > 0) {
                 $course_ids[] = $course_id;
             }
+
+            // 2. Specialization link(s).
+            $spec_ids = get_post_meta($product_id, '_learni_related_specializations', true);
+            if (empty($spec_ids)) {
+                $spec_ids = (int) get_post_meta($product_id, '_learni_related_specialization', true);
+            }
+            $spec_ids = array_values(array_unique(array_filter(array_map('absint', (array) $spec_ids))));
+
+            foreach ($spec_ids as $sid) {
+                $cids = get_post_meta($sid, 'learni_courses');
+                if (is_array($cids)) {
+                    foreach ($cids as $cid) {
+                        $course_ids[] = (int) $cid;
+                    }
+                }
+            }
+
+            // 3. Program link.
+            $program_id = (int) get_post_meta($product_id, '_learni_related_program', true);
+            if ($program_id > 0) {
+                $program_spec_ids = get_post_meta($program_id, 'learni_specializations');
+                if (is_array($program_spec_ids)) {
+                    foreach ($program_spec_ids as $sid) {
+                        $cids = get_post_meta((int) $sid, 'learni_courses');
+                        if (is_array($cids)) {
+                            foreach ($cids as $cid) {
+                                $course_ids[] = (int) $cid;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        return array_values(array_unique(array_map('absint', $course_ids)));
+        return array_values(array_unique(array_filter(array_map('absint', $course_ids))));
     }
 }
-

@@ -46,7 +46,7 @@ final class ProductSync
 
         // Link product -> course (Learni) and maintain a compatibility link for existing Politeia modules.
         update_post_meta($product_id, Integration::PRODUCT_META_COURSE_ID, $course_id);
-        update_post_meta($product_id, '_related_course', [$course_id]);
+        update_post_meta($product_id, '_learni_related_course', [$course_id]);
 
         // Also store product id on the course for reuse.
         update_post_meta($course_id, Course::META_WC_PRODUCT_ID, $product_id);

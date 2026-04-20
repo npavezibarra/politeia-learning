@@ -122,16 +122,7 @@ function pl_get_user_full_name_or_display_name(int $user_id, string $fallback = 
 }
 
 add_filter('get_the_author_display_name', function ($display_name, $user_id) {
-    if (!is_singular('sfwd-courses') && !is_singular('learni_course')) {
-        return $display_name;
-    }
-
-    return pl_get_user_full_name_or_display_name((int) $user_id, (string) $display_name);
-}, 10, 2);
-
-// BuddyBoss/BuddyPress display name (if used by the theme on course pages).
-add_filter('bp_core_get_user_displayname', function ($display_name, $user_id) {
-    if (!is_singular('sfwd-courses') && !is_singular('learni_course')) {
+    if (!is_singular('learni_course')) {
         return $display_name;
     }
 
@@ -180,31 +171,20 @@ add_action('wp_enqueue_scripts', function () {
         }
     ";
 
-    // Legacy Course Typography enforcements (kept for backward compatibility)
-    if (is_singular('sfwd-courses') || is_singular('sfwd-lessons') || is_singular('learni_course') || is_singular('learni_lesson')) {
+    // Learni Course Typography enforcements
+    if (is_singular('learni_course') || is_singular('learni_lesson')) {
         $custom_css .= '
-            body.single-sfwd-courses,body.single-sfwd-lessons{font-family:"Poppins",sans-serif!important;}
             body.single-learni_course,body.single-learni_lesson{font-family:"Poppins",sans-serif!important;}
-            body.single-sfwd-courses button,
-            body.single-sfwd-courses input,
-            body.single-sfwd-courses select,
-            body.single-sfwd-courses textarea,
-            body.single-sfwd-courses h1,
-            body.single-sfwd-courses h2,
-            body.single-sfwd-courses h3,
-            body.single-sfwd-courses h4,
-            body.single-sfwd-courses h5,
-            body.single-sfwd-courses h6,
-            body.single-sfwd-lessons button,
-            body.single-sfwd-lessons input,
-            body.single-sfwd-lessons select,
-            body.single-sfwd-lessons textarea,
-            body.single-sfwd-lessons h1,
-            body.single-sfwd-lessons h2,
-            body.single-sfwd-lessons h3,
-            body.single-sfwd-lessons h4,
-            body.single-sfwd-lessons h5,
-            body.single-sfwd-lessons h6{
+            body.single-learni_course button,
+            body.single-learni_course input,
+            body.single-learni_course select,
+            body.single-learni_course textarea,
+            body.single-learni_course h1,
+            body.single-learni_course h2,
+            body.single-learni_course h3,
+            body.single-learni_course h4,
+            body.single-learni_course h5,
+            body.single-learni_course h6{
                 font-family:"Poppins",sans-serif!important;
             }
         ';
@@ -242,11 +222,8 @@ class PL_Module_Loader
         'menu-management' => true,
         'blog-post' => true,
         'login-register' => true,
-        'course-programs' => true,
-        'course-integration' => true,
         'course-creator' => true,
         'quiz-creator' => true,
-        'quiz-control' => true,
         'woo' => true,
         'member-profile' => true,
         'payments-subscriptions' => true,

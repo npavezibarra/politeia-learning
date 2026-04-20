@@ -7,14 +7,14 @@ if (!defined('ABSPATH')) {
  * Adds a "Programa" selector in WooCommerce product edit screen.
  *
  * When set, the product will:
- * - store `_pcg_related_program` = program ID
- * - sync LearnDash WooCommerce meta `_related_group` to all groups associated to the program
+ * - store `_learni_related_program` = program ID
+ * - sync `_learni_related_specializations` to all specializations associated to the program
  *
- * This allows program purchases to grant access to all linked LearnDash Groups.
+ * This allows program purchases to grant access to all linked Learni Specializations.
  */
 class PL_Woo_Product_Program_Selector
 {
-    const META_KEY = '_pcg_related_program';
+    const META_KEY = '_learni_related_program';
 
     public static function init(): void
     {
@@ -40,7 +40,7 @@ class PL_Woo_Product_Program_Selector
         ];
 
         $programs = get_posts([
-            'post_type' => 'course_program',
+            'post_type' => 'learni_program',
             'post_status' => ['publish', 'draft', 'pending', 'private'],
             'posts_per_page' => -1,
             'orderby' => 'title',
@@ -61,7 +61,7 @@ class PL_Woo_Product_Program_Selector
         woocommerce_wp_select([
             'id' => self::META_KEY,
             'label' => __('Programa', 'politeia-learning'),
-            'description' => __('Al asociar un programa, este producto dará acceso a todos los grupos (especializaciones) del programa.', 'politeia-learning'),
+            'description' => __('Al asociar un programa, este producto dará acceso a todas las especializaciones del programa.', 'politeia-learning'),
             'desc_tip' => true,
             'class' => 'select short',
             'value' => $current_program_id ? (string) $current_program_id : '',
@@ -80,36 +80,29 @@ class PL_Woo_Product_Program_Selector
         $raw = $_POST[self::META_KEY] ?? '';
         $program_id = absint(is_array($raw) ? '' : wp_unslash($raw));
 
-        if ($program_id > 0 && get_post_type($program_id) === 'course_program') {
+        if ($program_id > 0 && get_post_type($program_id) === 'learni_program') {
             $product->update_meta_data(self::META_KEY, $program_id);
 
-            $group_ids = self::get_program_group_ids($program_id);
-            update_post_meta($product->get_id(), '_related_group', $group_ids);
+            $specialization_ids = self::get_program_specialization_ids($program_id);
+            update_post_meta($product->get_id(), '_learni_related_specializations', $specialization_ids);
 
             // Back-link for convenience (used by creator dashboard).
             update_post_meta($program_id, '_pcg_woo_product_id', $product->get_id());
-            update_post_meta($program_id, '_pcg_program_custom_button_url', get_permalink($product->get_id()));
+            update_post_meta($program_id, 'learni_program_custom_button_url', get_permalink($product->get_id()));
         } else {
             $product->delete_meta_data(self::META_KEY);
         }
     }
 
-    private static function get_program_group_ids(int $program_id): array
+    private static function get_program_specialization_ids(int $program_id): array
     {
-        $raw_groups = get_post_meta($program_id, 'politeia_program_groups', true);
+        $raw_specializations = get_post_meta($program_id, 'learni_specializations');
 
-        if (is_string($raw_groups) && $raw_groups !== '') {
-            $decoded = json_decode($raw_groups, true);
-            if (is_array($decoded)) {
-                $raw_groups = $decoded;
-            }
-        }
-
-        if (!is_array($raw_groups)) {
+        if (!is_array($raw_specializations)) {
             return [];
         }
 
-        return array_values(array_unique(array_filter(array_map('absint', $raw_groups))));
+        return array_values(array_unique(array_filter(array_map('absint', $raw_specializations))));
     }
 }
 

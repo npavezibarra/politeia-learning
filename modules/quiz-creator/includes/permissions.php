@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 /**
  * Permission helpers for the Quiz Creator module.
  *
- * The course creator UI allows "customer"-like users to author LearnDash courses
+ * The course creator UI allows "customer"-like users to author Learni courses
  * without granting them broad WP capabilities like `edit_posts`.
  * These helpers allow course authors (and assigned course roles) to access
  * the Quiz Creator only for their own content.

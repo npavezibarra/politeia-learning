@@ -95,24 +95,33 @@ class PL_Woo_Order_Split_Snapshot
      */
     private static function resolve_container_from_product(int $product_id): array
     {
-        // Program has precedence over group because program products also store _related_group.
-        $program_id = (int) get_post_meta($product_id, '_pcg_related_program', true);
-        if ($program_id > 0 && get_post_type($program_id) === 'course_program') {
+        // Program has precedence over specialization.
+        $program_id = (int) get_post_meta($product_id, '_learni_related_program', true);
+        if ($program_id > 0 && get_post_type($program_id) === 'learni_program') {
             return ['program', $program_id];
         }
 
-        $groups = get_post_meta($product_id, '_related_group', true);
-        if (is_array($groups) && !empty($groups)) {
-            $gid = (int) ($groups[0] ?? 0);
-            if ($gid > 0 && get_post_type($gid) === 'groups') {
+        $specializations = get_post_meta($product_id, '_learni_related_specializations', true);
+        if (empty($specializations)) {
+            // Fallback to single specialization key if used.
+            $specializations = (int) get_post_meta($product_id, '_learni_related_specialization', true);
+        }
+
+        if (is_array($specializations) && !empty($specializations)) {
+            $gid = (int) ($specializations[0] ?? 0);
+            if ($gid > 0 && get_post_type($gid) === 'learni_specialization') {
                 return ['group', $gid];
+            }
+        } elseif (is_int($specializations) && $specializations > 0) {
+            if (get_post_type($specializations) === 'learni_specialization') {
+                return ['group', $specializations];
             }
         }
 
-        $courses = get_post_meta($product_id, '_related_course', true);
+        $courses = get_post_meta($product_id, '_learni_related_course', true);
         if (is_array($courses) && !empty($courses)) {
             $cid = (int) ($courses[0] ?? 0);
-            if ($cid > 0 && in_array(get_post_type($cid), ['sfwd-courses', 'learni_course'], true)) {
+            if ($cid > 0 && get_post_type($cid) === 'learni_course') {
                 return ['course', $cid];
             }
         }

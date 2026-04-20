@@ -4,7 +4,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Inclusion approvals for Especializaciones (LearnDash Groups) and Programas (course_program).
+ * Inclusion approvals for Specializations (learni_specialization) and Programs (learni_program).
  *
  * Implements a snapshot + per-person approval workflow:
  * - Creator submits a snapshot (participants + percentages + included items).
@@ -428,7 +428,7 @@ class PL_CC_Inclusion_Approvals
             if (!$id) {
                 return false;
             }
-            $post_type = $type === 'course' ? 'sfwd-courses' : ($type === 'group' ? 'groups' : '');
+            $post_type = $type === 'course' ? 'learni_course' : ($type === 'group' ? 'learni_specialization' : '');
             if ($post_type === '' || get_post_type($id) !== $post_type) {
                 return false;
             }

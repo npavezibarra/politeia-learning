@@ -568,7 +568,7 @@ class PL_MM_Menu_Manager
 
         $items[] = [
             'label' => 'Cursos',
-            'url' => (get_post_type_archive_link('sfwd-courses') ?: home_url('/courses/')),
+            'url' => (get_post_type_archive_link('learni_course') ?: home_url('/courses/')),
             'classes' => ['menu-item', 'menu-item-type-custom', 'menu-item-object-custom', 'pl-menu-item-courses'],
         ];
 

@@ -1,7 +1,7 @@
 <?php
 /**
  * Module: Learni (internal)
- * Description: Internal LMS engine used by Politeia Learning (courses, lessons, enrollments, progress, quizzes).
+ * Description: Internal LMS engine used by Politeia Learning (courses, lessons, specializations, programs, enrollments, progress, quizzes).
  *
  * NOTE: This module intentionally does NOT register Learni's full frontend routing layer yet.
  * Center (/center-2) is migrated first; public learner UX will be migrated incrementally.
@@ -35,6 +35,8 @@ require_once PL_LEARNI_PATH . 'includes/Courses/Outline.php';
 require_once PL_LEARNI_PATH . 'includes/Access/Access.php';
 require_once PL_LEARNI_PATH . 'includes/PostTypes/Course.php';
 require_once PL_LEARNI_PATH . 'includes/PostTypes/Lesson.php';
+require_once PL_LEARNI_PATH . 'includes/PostTypes/Specialization.php';
+require_once PL_LEARNI_PATH . 'includes/PostTypes/Program.php';
 require_once PL_LEARNI_PATH . 'includes/Frontend/Templates.php';
 require_once PL_LEARNI_PATH . 'includes/Frontend/CrossEvalPopup.php';
 require_once PL_LEARNI_PATH . 'includes/Certificates/CertificateCode.php';
@@ -77,6 +79,8 @@ final class PL_Learni_Module
     {
         \Learni\PostTypes\Course::register();
         \Learni\PostTypes\Lesson::register();
+        \Learni\PostTypes\Specialization::register();
+        \Learni\PostTypes\Program::register();
     }
 
     public static function register_frontend_templates(): void

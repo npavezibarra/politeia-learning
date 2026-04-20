@@ -50,17 +50,12 @@ if (function_exists('wc_get_orders') && is_user_logged_in()) {
 $courses = [];
 if (is_user_logged_in()) {
     $user_id = (int) get_current_user_id();
-    // Support Learni (Internal) and LearnDash
-    $course_ids = [];
-    if (function_exists('learndash_user_get_enrolled_courses')) {
-        $ld_ids = learndash_user_get_enrolled_courses($user_id, [], true);
-        if (is_array($ld_ids)) $course_ids = array_merge($course_ids, $ld_ids);
-    }
-    
-    // Also support our Learni module system if active
+    // Use our Learni module system for enrollments.
     if (class_exists('Learni\Database\Enrollments')) {
         $learni_enrollments = \Learni\Database\Enrollments::get_for_user($user_id);
-        foreach ($learni_enrollments as $e) { $course_ids[] = $e['courseId']; }
+        foreach ($learni_enrollments as $e) {
+            $course_ids[] = $e['courseId'];
+        }
     }
 
     $course_ids = array_values(array_unique(array_filter(array_map('intval', $course_ids))));

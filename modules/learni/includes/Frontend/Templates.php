@@ -2131,23 +2131,34 @@ final class PL_Learni_Frontend_Templates
             }
         }
 
-        if (!$eligible_final && is_array($final) && $baseline !== null) {
-            $fp = (int) ($final['percent'] ?? 0);
-            if ($fp < $baseline) {
-                $final_failed = true;
-                $submitted_at = (string) ($final['submittedAt'] ?? '');
-                $ts = $submitted_at !== '' ? (int) strtotime($submitted_at) : 0;
-                if ($ts > 0) {
-                    $cool_ts = $ts + (7 * 86400);
-                    $cooldown_until = date('Y-m-d H:i:s', $cool_ts);
-                    $now = (int) current_time('timestamp');
-                    $diff = $cool_ts - $now;
-                    if ($diff > 0) {
-                        $cooldown_days_remaining = (int) max(1, (int) ceil($diff / 86400));
-                    }
-                }
-            }
-        }
+	        if (!$eligible_final && is_array($final) && $baseline !== null) {
+	            $fp = (int) ($final['percent'] ?? 0);
+	            if ($fp < $baseline) {
+	                $final_failed = true;
+	                $submitted_at = (string) ($final['submittedAt'] ?? '');
+	                $ts = 0;
+	                if ($submitted_at !== '') {
+	                    $dt = date_create_immutable_from_format('Y-m-d H:i:s', $submitted_at, wp_timezone());
+	                    if ($dt instanceof \DateTimeImmutable) {
+	                        $ts = $dt->getTimestamp();
+	                    } else {
+	                        $ts = (int) strtotime($submitted_at);
+	                    }
+	                }
+	                if ($ts > 0) {
+	                    $cool_ts = $ts + (7 * DAY_IN_SECONDS);
+	                    $cooldown_until = wp_date('Y-m-d H:i:s', $cool_ts, wp_timezone());
+	                    $now = (int) current_time('timestamp');
+	                    $diff = $cool_ts - $now;
+	                    if ($diff > 0) {
+	                        // Cooldown based on *full days completed* since the last failed final attempt.
+	                        // Example: within the first 24h -> "7 días"; after 24h -> "6 días".
+	                        $days_since = intdiv(max(0, $now - $ts), DAY_IN_SECONDS);
+	                        $cooldown_days_remaining = (int) max(0, 7 - $days_since);
+	                    }
+	                }
+	            }
+	        }
 
         $needs_initial = !is_array($initial);
         $needs_final = is_array($initial) && !$eligible_final;
