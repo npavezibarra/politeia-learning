@@ -2257,6 +2257,8 @@ class PL_CC_Course_Save_Handler
                 continue;
             }
             $author_id = (int) get_post_field('post_author', $gid);
+            $u = get_userdata($author_id);
+            if ($u) {
                 $full_name = trim((string) ($u->first_name ?? '') . ' ' . (string) ($u->last_name ?? ''));
                 if ($full_name === '' && $u) {
                     $full_name = (string) $u->display_name;
