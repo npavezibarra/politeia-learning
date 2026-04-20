@@ -80,6 +80,8 @@ $bic = isset($bank_details['bic']) ? (string) $bank_details['bic'] : '';
                         <?php else : ?>
                             <div class="logo-text"><?php echo esc_html($site_name !== '' ? $site_name : 'Politeia'); ?></div>
                         <?php endif; ?>
+                        <!-- Logo Divider -->
+                        <div style="width: 170px; height: 4px; background-color: #000000; margin: 8px auto 0;"></div>
                     </div>
                     <div class="subheader"><?php echo esc_html__('Pedido recibido', 'politeia-learning'); ?></div>
                     <h1 class="order-title"><?php echo esc_html__('Tu pedido', 'politeia-learning'); ?> <strong>#<?php echo esc_html($order_number); ?></strong> <?php echo esc_html__('está en espera', 'politeia-learning'); ?></h1>

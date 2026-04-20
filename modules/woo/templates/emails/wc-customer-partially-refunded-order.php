@@ -53,6 +53,8 @@ if (isset($refund) && $refund instanceof WC_Order && method_exists($refund, 'get
             <?php else : ?>
                 <div class="logo-text"><?php echo esc_html($site_name !== '' ? $site_name : 'Politeia'); ?></div>
             <?php endif; ?>
+            <!-- Logo Divider -->
+            <div style="width: 170px; height: 4px; background-color: #000000; margin: 8px auto 0;"></div>
         </div>
         <div class="subheader"><?php echo esc_html__('Reembolso parcial', 'politeia-learning'); ?></div>
         <h1 class="title"><?php echo esc_html(sprintf(__('Pedido #%s', 'politeia-learning'), $order_number)); ?></h1>

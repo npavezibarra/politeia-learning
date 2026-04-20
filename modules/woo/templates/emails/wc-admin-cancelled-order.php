@@ -49,6 +49,8 @@ $admin_order_url = admin_url('post.php?post=' . $order->get_id() . '&action=edit
             <?php else : ?>
                 <div class="logo-text"><?php echo esc_html($site_name !== '' ? $site_name : 'Politeia'); ?></div>
             <?php endif; ?>
+            <!-- Logo Divider -->
+            <div style="width: 170px; height: 4px; background-color: #000000; margin: 8px auto 0;"></div>
         </div>
         <span class="pill"><?php echo esc_html__('Cancelado', 'politeia-learning'); ?></span>
         <p class="subheader"><?php echo esc_html__('Notificación de orden', 'politeia-learning'); ?></p>
