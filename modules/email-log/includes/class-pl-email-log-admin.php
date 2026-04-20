@@ -269,6 +269,13 @@ final class PL_Email_Log_Admin
             }
         }
 
+        return [
+            'subject' => $subject,
+            'message_html' => $message_html,
+            'message_text' => $message_text,
+        ];
+    }
+
     private function get_woo_custom_test_email_preview(string $key, array $item): array
     {
         $template_rel = isset($item['default_template']) ? (string) $item['default_template'] : '';
