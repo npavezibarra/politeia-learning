@@ -55,34 +55,37 @@ class PL_Core_Email_Assets {
                 $source_path = $attachment_id ? get_attached_file($attachment_id) : '';
                 $input_source = ($source_path && file_exists($source_path)) ? $source_path : $logo_url;
 
-                // 1. Setup SVG object
-                $svg = new Imagick();
-                $svg->setResolution(300, 300); // High res for sharp rendering
-                $svg->setBackgroundColor(new ImagickPixel('transparent'));
-                $svg->readImage($input_source);
+                $im = new Imagick();
+                
+                // 1. Moderate density (300 DPI) to avoid "thick font" artifacts
+                $im->setResolution(300, 300);
+                
+                // 2. Force white background early
+                $im->setBackgroundColor(new ImagickPixel('white'));
+                
+                $im->readImage($input_source);
 
-                // 2. Pre-scale to reference size (510px for 170px @3x)
-                $svg->scaleImage(510, 0);
-                $width = $svg->getImageWidth();
-                $height = $svg->getImageHeight();
+                // 3. Force sRGB Colorspace (Crucial for fixing dark gradients/gold colors)
+                $im->setImageColorspace(Imagick::COLORSPACE_SRGB);
+                if (method_exists($im, 'transformImageColorspace')) {
+                    $im->transformImageColorspace(Imagick::COLORSPACE_SRGB);
+                }
 
-                // 3. Create a solid white background canvas
-                $background = new Imagick();
-                $background->newImage($width, $height, new ImagickPixel('white'));
-                $background->setImageFormat('jpeg');
+                // 4. Flatten transparency against white
+                $im->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
+                $im = $im->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
 
-                // 4. Composite SVG onto white background
-                $background->compositeImage($svg, Imagick::COMPOSITE_OVER, 0, 0);
+                // 5. High-quality scaling to 510px width (for 170px @3x)
+                $im->resizeImage(510, 0, Imagick::FILTER_LANCZOS, 1);
 
-                // 5. Finalize JPG
-                $background->setImageCompressionQuality(95);
-                $background->writeImage($dest_file);
+                // 6. Output as high-quality JPG
+                $im->setImageFormat('jpeg');
+                $im->setImageCompressionQuality(95);
+                $im->writeImage($dest_file);
 
                 // Cleanup
-                $svg->clear();
-                $svg->destroy();
-                $background->clear();
-                $background->destroy();
+                $im->clear();
+                $im->destroy();
 
                 return $dest_url;
             } catch (Exception $e) {
