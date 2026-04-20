@@ -58,7 +58,7 @@ $site_name = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
                             <div class="logo-text"><?php echo esc_html($site_name !== '' ? $site_name : 'Politeia'); ?></div>
                         <?php endif; ?>
                         <!-- Logo Divider -->
-                        <div style="width: 170px; height: 4px; background-color: #000000; margin: 8px auto 0;"></div>
+                        <div style="width: 100%; height: 4px; background-color: #000000; margin: 8px auto 0;"></div>
                     </div>
                     <div class="subheader"><?php echo esc_html__('Notificación administrador', 'politeia-learning'); ?></div>
                     <h1 class="order-title"><?php echo esc_html__('Nueva venta', 'politeia-learning'); ?> <strong>#<?php echo esc_html($order_number); ?></strong></h1>
