@@ -210,6 +210,17 @@ final class PL_Email_Log_Ajax
 
         update_option(PL_Email_Log_Admin::TEST_EMAIL_TEMPLATES_OPTION, $templates);
 
+    public function ajax_save_email_logo(): void
+    {
+        check_ajax_referer(PL_Email_Log_Admin::TEST_EMAIL_NONCE_ACTION, 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error();
+        }
+
+        $logo_id = isset($_POST['logo_id']) ? absint($_POST['logo_id']) : 0;
+        update_option('pl_email_custom_logo_id', $logo_id);
+
         wp_send_json_success();
     }
 }
