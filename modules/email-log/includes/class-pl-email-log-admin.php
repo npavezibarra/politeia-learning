@@ -130,9 +130,79 @@ final class PL_Email_Log_Admin
     {
         $site_name = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
         $site_url = home_url();
+
         $user = wp_get_current_user();
-        $username = $user->user_login ?: 'usuario';
-        $user_email = $user->user_email ?: get_option('admin_email');
+        $username = $user && $user->user_login ? (string) $user->user_login : 'usuario';
+        $user_email = $user && $user->user_email ? (string) $user->user_email : (string) get_option('admin_email');
+
+        if ($key === 'new_user_user' && class_exists('PL_Email')) {
+            $switched_locale = switch_to_user_locale(get_current_user_id());
+            $token = bin2hex(random_bytes(32));
+            $verification_url = add_query_arg([
+                'pl_auth_action' => 'confirm',
+                'email' => $user_email,
+                'token' => $token,
+                'redirect_to' => home_url('/'),
+            ], home_url('/'));
+
+            $display_name = $user && !empty($user->display_name) ? (string) $user->display_name : $username;
+
+            $html = (string) PL_Email::render('auth-confirmation', [
+                'user_name' => $display_name,
+                'verification_url' => $verification_url,
+                'token' => $token,
+            ]);
+
+            if ($switched_locale) {
+                restore_previous_locale();
+            }
+
+            if ('' === trim($html)) {
+                $html = sprintf(
+                    '<p>%s</p><p><a href="%s">%s</a></p><p>%s: <code>%s</code></p>',
+                    esc_html(sprintf(__('Hi %s, please confirm your account.', 'politeia-learning'), $display_name !== '' ? $display_name : __('there', 'politeia-learning'))),
+                    esc_url($verification_url),
+                    esc_html__('Confirm account', 'politeia-learning'),
+                    esc_html__('Token', 'politeia-learning'),
+                    esc_html($token)
+                );
+            }
+
+            $allowed_html = $this->get_email_template_allowed_html();
+
+            return [
+                'subject' => __('Confirm your Politeia account', 'politeia-learning'),
+                'message_html' => wp_kses($html, $allowed_html),
+                'message_text' => wp_strip_all_tags($html),
+            ];
+        }
+
+        if ($key === 'password_reset' && class_exists('PL_Email')) {
+            $switched_locale = switch_to_user_locale(get_current_user_id());
+
+            $dummy_key = bin2hex(random_bytes(16));
+            $reset_url = add_query_arg([
+                'key' => $dummy_key,
+                'login' => $username,
+            ], home_url('/restablecer-contrasena/'));
+
+            $html = (string) PL_Email::render('password-reset', [
+                'user_login' => $username,
+                'reset_url' => $reset_url,
+            ]);
+
+            if ($switched_locale) {
+                restore_previous_locale();
+            }
+
+            $allowed_html = $this->get_email_template_allowed_html();
+
+            return [
+                'subject' => __('Reset Password', 'politeia-learning'),
+                'message_html' => wp_kses($html, $allowed_html),
+                'message_text' => wp_strip_all_tags($html),
+            ];
+        }
 
         $samples = [
             'new_user_admin' => [
@@ -155,21 +225,222 @@ final class PL_Email_Log_Admin
         ];
     }
 
+    private function get_wc_email_by_id(string $id)
+    {
+        $id = sanitize_key($id);
+        if ($id === '' || !function_exists('WC')) {
+            return null;
+        }
+
+        $wc = WC();
+        if (!$wc || !method_exists($wc, 'mailer')) {
+            return null;
+        }
+
+        $mailer = $wc->mailer();
+        if (!$mailer || !method_exists($mailer, 'get_emails')) {
+            return null;
+        }
+
+        $emails = $mailer->get_emails();
+        if (!is_array($emails)) {
+            return null;
+        }
+
+        foreach ($emails as $email) {
+            if (!is_object($email) || !isset($email->id)) {
+                continue;
+            }
+
+            if (sanitize_key((string) $email->id) === $id) {
+                return $email;
+            }
+        }
+
+        return null;
+    }
+
     private function get_woo_test_email_preview(string $key, array $item): array
     {
+        $email = $this->get_wc_email_by_id($key);
+
+        $subject = isset($item['label']) ? (string) $item['label'] : $key;
+        $message_html = '';
+        $message_text = '';
+
+        if ($email && is_object($email)) {
+            try {
+                if (method_exists($email, 'get_subject')) {
+                    $maybe_subject = (string) $email->get_subject();
+                    if ($maybe_subject !== '') {
+                        $subject = $maybe_subject;
+                    }
+                }
+            } catch (Throwable $e) {
+                unset($e);
+            }
+
+            try {
+                if (method_exists($email, 'get_content_html')) {
+                    $message_html = (string) $email->get_content_html();
+                }
+            } catch (Throwable $e) {
+                unset($e);
+                $message_html = '';
+            }
+
+            if ($message_html === '') {
+                try {
+                    if (method_exists($email, 'get_content_plain')) {
+                        $message_text = (string) $email->get_content_plain();
+                    }
+                } catch (Throwable $e) {
+                    unset($e);
+                    $message_text = '';
+                }
+            }
+        }
+
+        $template_path = isset($item['default_template']) ? trim((string) $item['default_template']) : '';
+
+        if ($message_html === '' && $message_text === '') {
+            $message_text = "WooCommerce email: {$key}\n"
+                . "Título: " . (isset($item['label']) ? (string) $item['label'] : $key) . "\n"
+                . "Template: " . ($template_path !== '' ? $template_path : __('No existe', 'politeia-learning')) . "\n\n"
+                . "Nota: este es un preview de referencia (no se cargó el contenido real del email).";
+        }
+
+        $allowed_html = $this->get_email_template_allowed_html();
+
+        $subject = $subject !== '' ? $subject : $key;
+        $subject = wp_strip_all_tags($subject);
+
+        if ($message_html !== '') {
+            $message_html = wp_kses($message_html, $allowed_html);
+            if ($message_text === '') {
+                $message_text = wp_strip_all_tags($message_html);
+            }
+        }
+
         return [
-            'subject' => isset($item['label']) ? $item['label'] : $key,
-            'message_text' => "Contenido de referencia para el correo de WooCommerce: {$key}",
+            'subject' => $subject,
+            'message_html' => $message_html,
+            'message_text' => $message_text,
         ];
     }
 
     private function get_learni_test_email_preview(string $key, array $item): array
     {
         $site_name = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
+        $site_url = home_url();
+
+        $user = wp_get_current_user();
+        $username = $user && $user->user_login ? (string) $user->user_login : 'usuario';
+
+        if (in_array($key, ['learni_partner_invitation_sent', 'learni_partner_invitation_received'], true) && class_exists('PL_Email')) {
+            $accept_url = add_query_arg(['pl_invite' => 'accept'], home_url('/'));
+            $course_name = __('Curso de prueba', 'politeia-learning');
+            $inviter_display = $user && !empty($user->display_name) ? (string) $user->display_name : $site_name;
+            $invitee_display = __('Partner', 'politeia-learning');
+
+            $template_slug = $key === 'learni_partner_invitation_sent'
+                ? 'learni_partner_invitation_sent'
+                : 'learni_partner_invitation_received';
+
+            $html = (string) PL_Email::render($template_slug, [
+                'invitee_name' => $invitee_display,
+                'inviter_name' => $inviter_display,
+                'course_name' => $course_name,
+                'accept_url' => $accept_url,
+            ]);
+
+            if ('' === trim($html)) {
+                $html = sprintf(
+                    '<p>%s</p><p><a href="%s">%s</a></p>',
+                    esc_html__('Te invitaron como partner de un curso.', 'politeia-learning'),
+                    esc_url($accept_url),
+                    esc_html__('Aceptar invitación', 'politeia-learning')
+                );
+            }
+
+            $allowed_html = $this->get_email_template_allowed_html();
+            $safe_html = wp_kses($html, $allowed_html);
+
+            return [
+                'subject' => sprintf('[%s] %s', $site_name, isset($item['label']) ? (string) $item['label'] : $key),
+                'message_html' => $safe_html,
+                'message_text' => wp_strip_all_tags($safe_html),
+            ];
+        }
+
+        if ($key === 'learni_final_quiz_completed') {
+            $percentage_first = random_int(0, 100);
+            $percentage_final = random_int(0, 100);
+
+            $delta = $percentage_final - $percentage_first;
+            $delta_abs = abs($delta);
+
+            if ($delta > 0) {
+                $subject = '¡Excelente progreso! Has superado tu marca inicial 🚀';
+                $variation_label = "+{$delta_abs}%";
+            } elseif ($delta === 0) {
+                $subject = 'Has mantenido tu nivel de conocimientos 📊';
+                $variation_label = '0%';
+            } else {
+                $subject = 'Evaluación final completada: analicemos tus resultados 🔍';
+                $variation_label = "-{$delta_abs}%";
+            }
+
+            return [
+                'subject' => $subject,
+                'percentage_first' => $percentage_first,
+                'percentage_final' => $percentage_final,
+                'message_text' => "First Quiz: {$percentage_first}%\nFinal Quiz: {$percentage_final}%\nVariación: {$variation_label}",
+            ];
+        }
+
+        if ($key === 'learni_first_quiz_completed') {
+            $percentage = random_int(0, 100);
+
+            if ($percentage >= 90) {
+                $subject = '¡Excelente desempeño en tu quiz! 🚀';
+            } elseif ($percentage >= 70) {
+                $subject = '¡Buen trabajo! Vas por muy buen camino 📈';
+            } else {
+                $subject = '¡Quiz completado! Sigue fortaleciendo tus conocimientos 📚';
+            }
+
+            return [
+                'subject' => $subject,
+                'percentage' => $percentage,
+                'message_text' => "First Quiz: {$percentage}%",
+            ];
+        }
+
+        $label = isset($item['label']) ? (string) $item['label'] : $key;
+
         return [
-            'subject' => sprintf('[%s] %s', $site_name, isset($item['label']) ? $item['label'] : $key),
-            'message_text' => "Este es un correo de prueba del sistema Learni para el evento: {$key}.",
+            'subject' => sprintf('[%s] %s', $site_name, $label),
+            'message_text' => "Evento Learni: {$key}\n\n"
+                . "Hola {$username},\n\n"
+                . "Este es un correo de prueba (registro/preview) para \"{$label}\".\n\n"
+                . $site_url,
         ];
+    }
+
+    private function get_email_template_allowed_html(): array
+    {
+        $allowed = wp_kses_allowed_html('post');
+        $allowed['style'] = [];
+        $allowed['html'] = ['lang' => true];
+        $allowed['head'] = [];
+        $allowed['body'] = ['style' => true, 'class' => true];
+        $allowed['meta'] = ['content' => true, 'name' => true, 'charset' => true, 'http-equiv' => true];
+        $allowed['title'] = [];
+        $allowed['link'] = ['rel' => true, 'href' => true, 'type' => true];
+        $allowed['center'] = [];
+        
+        return $allowed;
     }
 
     /**
@@ -186,6 +457,11 @@ final class PL_Email_Log_Admin
         $subject = isset($preview['subject']) ? $preview['subject'] : '';
         $message_text = isset($preview['message_text']) ? $preview['message_text'] : '';
         $message_html = isset($preview['message_html']) ? $preview['message_html'] : nl2br(esc_html($message_text));
+
+        // If it starts with <html it likely is a full document, just return it
+        if (strpos(trim($message_html), '<html') === 0 || strpos(trim($message_html), '<!DOCTYPE') === 0) {
+            return $message_html;
+        }
 
         return '<html><body style="font-family:sans-serif; padding:20px;">' .
                '<h3>' . esc_html($subject) . '</h3>' . 
