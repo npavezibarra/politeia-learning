@@ -50,38 +50,39 @@ class PL_Core_Email_Assets {
         // Try to convert using Imagick
         if (class_exists('Imagick')) {
             try {
-                $im = new Imagick();
-                
-                // Set resolution for better quality
-                $im->setResolution(300, 300);
-                
-                // Read the SVG
-                // Note: We might need to handle local vs remote paths. 
-                // Since it's usually a local media library item, we can try to find the absolute path.
+                // Determine source path
                 $attachment_id = attachment_url_to_postid($logo_url);
                 $source_path = $attachment_id ? get_attached_file($attachment_id) : '';
+                $input_source = ($source_path && file_exists($source_path)) ? $source_path : $logo_url;
 
-                if ($source_path && file_exists($source_path)) {
-                    $im->readImage($source_path);
-                } else {
-                    $im->readImage($logo_url);
-                }
+                // 1. Setup SVG object
+                $svg = new Imagick();
+                $svg->setResolution(300, 300); // High res for sharp rendering
+                $svg->setBackgroundColor(new ImagickPixel('transparent'));
+                $svg->readImage($input_source);
 
-                // Format as JPG
-                $im->setImageFormat('jpeg');
-                $im->setImageCompressionQuality(95);
+                // 2. Pre-scale to reference size (510px for 170px @3x)
+                $svg->scaleImage(510, 0);
+                $width = $svg->getImageWidth();
+                $height = $svg->getImageHeight();
 
-                // Add a white background (SVGs often have transparent backgrounds)
-                $im->setImageBackgroundColor('white');
-                $im = $im->flattenImages(); 
+                // 3. Create a solid white background canvas
+                $background = new Imagick();
+                $background->newImage($width, $height, new ImagickPixel('white'));
+                $background->setImageFormat('jpeg');
 
-                // Resize to a standard large size (e.g. 510px for 170px @3x)
-                $im->scaleImage(510, 0);
+                // 4. Composite SVG onto white background
+                $background->compositeImage($svg, Imagick::COMPOSITE_OVER, 0, 0);
 
-                // Write to cache
-                $im->writeImage($dest_file);
-                $im->clear();
-                $im->destroy();
+                // 5. Finalize JPG
+                $background->setImageCompressionQuality(95);
+                $background->writeImage($dest_file);
+
+                // Cleanup
+                $svg->clear();
+                $svg->destroy();
+                $background->clear();
+                $background->destroy();
 
                 return $dest_url;
             } catch (Exception $e) {
