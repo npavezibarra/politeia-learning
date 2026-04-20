@@ -210,6 +210,9 @@ final class PL_Email_Log_Ajax
 
         update_option(PL_Email_Log_Admin::TEST_EMAIL_TEMPLATES_OPTION, $templates);
 
+        wp_send_json_success();
+    }
+
     public function ajax_save_email_logo(): void
     {
         check_ajax_referer(PL_Email_Log_Admin::TEST_EMAIL_NONCE_ACTION, 'nonce');
