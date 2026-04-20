@@ -124,7 +124,7 @@ $bic = isset($bank_details['bic']) ? (string) $bank_details['bic'] : '';
 
                 <div style="padding: 0 32px 32px 32px;">
                     <header style="margin-bottom: 48px; text-align: center;">
-                        <h1 style="font-size: 30px; font-weight: 900; color: #000000; text-transform: uppercase; letter-spacing: -0.05em; margin: 0;"><?php echo esc_html__('Detalles del Pedido', 'politeia-learning'); ?></h1>
+                        <h1 style="font-size: 24px; font-weight: 300; color: #000000; letter-spacing: -0.025em; margin: 0; line-height: 1.2;"><?php echo esc_html__('Detalles del Pedido', 'politeia-learning'); ?></h1>
                         <div style="margin: 16px auto 0; border-bottom: 4px solid #000000; width: 64px;"></div>
                     </header>
 

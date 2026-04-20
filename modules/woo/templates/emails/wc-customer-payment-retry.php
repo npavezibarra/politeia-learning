@@ -60,7 +60,7 @@ $site_name = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
         <p class="muted"><?php echo esc_html(sprintf(__('Hola %s, tu pago no se completó. Puedes reintentar usando el botón de abajo.', 'politeia-learning'), $billing_first_name !== '' ? $billing_first_name : '')); ?></p>
         <div style="margin-top: 24px;">
             <header style="margin-bottom: 32px; text-align: center;">
-                <h2 style="font-size: 20px; font-weight: 900; color: #000000; text-transform: uppercase; letter-spacing: -0.05em; margin: 0;"><?php echo esc_html__('Detalles del Pago', 'politeia-learning'); ?></h2>
+                <h1 style="font-size: 24px; font-weight: 300; color: #000000; letter-spacing: -0.025em; margin: 0; line-height: 1.2;"><?php echo esc_html__('Detalles del Pago', 'politeia-learning'); ?></h1>
                 <div style="margin: 12px auto 0; border-bottom: 4px solid #000000; width: 48px;"></div>
             </header>
 
