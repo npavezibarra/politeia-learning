@@ -135,74 +135,39 @@ final class PL_Email_Log_Admin
         $username = $user && $user->user_login ? (string) $user->user_login : 'usuario';
         $user_email = $user && $user->user_email ? (string) $user->user_email : (string) get_option('admin_email');
 
-        if ($key === 'new_user_user' && class_exists('PL_Email')) {
-            $switched_locale = switch_to_user_locale(get_current_user_id());
-            $token = bin2hex(random_bytes(32));
-            $verification_url = add_query_arg([
-                'pl_auth_action' => 'confirm',
-                'email' => $user_email,
-                'token' => $token,
-                'redirect_to' => home_url('/'),
-            ], home_url('/'));
-
-            $display_name = $user && !empty($user->display_name) ? (string) $user->display_name : $username;
-
-            $html = (string) PL_Email::render('auth-confirmation', [
-                'user_name' => $display_name,
-                'verification_url' => $verification_url,
-                'token' => $token,
-            ]);
-
-            if ($switched_locale) {
-                restore_previous_locale();
+        // Check if a dedicated template exists
+        if (class_exists('PL_Email')) {
+            $html = PL_Email::render($key, $this->get_template_render_vars($key));
+            
+            if ($html !== '') {
+                return [
+                    'subject' => sprintf('[%s] %s', $site_name, $key),
+                    'message_html' => wp_kses($html, $this->get_email_template_allowed_html()),
+                    'message_text' => wp_strip_all_tags($html),
+                ];
             }
-
-            if ('' === trim($html)) {
-                $html = sprintf(
-                    '<p>%s</p><p><a href="%s">%s</a></p><p>%s: <code>%s</code></p>',
-                    esc_html(sprintf(__('Hi %s, please confirm your account.', 'politeia-learning'), $display_name !== '' ? $display_name : __('there', 'politeia-learning'))),
-                    esc_url($verification_url),
-                    esc_html__('Confirm account', 'politeia-learning'),
-                    esc_html__('Token', 'politeia-learning'),
-                    esc_html($token)
-                );
-            }
-
-            $allowed_html = $this->get_email_template_allowed_html();
-
-            return [
-                'subject' => __('Confirm your Politeia account', 'politeia-learning'),
-                'message_html' => wp_kses($html, $allowed_html),
-                'message_text' => wp_strip_all_tags($html),
-            ];
         }
 
-        if ($key === 'password_reset' && class_exists('PL_Email')) {
-            $switched_locale = switch_to_user_locale(get_current_user_id());
+        $samples = [
+            'new_user_admin' => [
+                'subject' => sprintf('[%s] Nuevo registro de usuario', $site_name),
+                'message_text' => "Se ha registrado un nuevo usuario en {$site_name}.\n\nUsuario: {$username}\nEmail: {$user_email}\n\n{$site_url}",
+            ],
+            'new_user_user' => [
+                'subject' => sprintf('[%s] Bienvenido/a', $site_name),
+                'message_text' => "Hola {$username},\n\nTu cuenta en {$site_name} fue creada.\n\nPuedes ingresar aquí:\n{$site_url}\n",
+            ],
+            'password_reset' => [
+                'subject' => sprintf('[%s] Reset de contraseña', $site_name),
+                'message_text' => "Hola {$username},\n\nRecibimos una solicitud para restablecer tu contraseña.\n\nSi fuiste tú, usa este enlace:\n{$site_url}/wp-login.php?action=rp\n\nSi no fuiste tú, ignora este correo.",
+            ],
+        ];
 
-            $dummy_key = bin2hex(random_bytes(16));
-            $reset_url = add_query_arg([
-                'key' => $dummy_key,
-                'login' => $username,
-            ], home_url('/restablecer-contrasena/'));
-
-            $html = (string) PL_Email::render('password-reset', [
-                'user_login' => $username,
-                'reset_url' => $reset_url,
-            ]);
-
-            if ($switched_locale) {
-                restore_previous_locale();
-            }
-
-            $allowed_html = $this->get_email_template_allowed_html();
-
-            return [
-                'subject' => __('Reset Password', 'politeia-learning'),
-                'message_html' => wp_kses($html, $allowed_html),
-                'message_text' => wp_strip_all_tags($html),
-            ];
-        }
+        return isset($samples[$key]) ? $samples[$key] : [
+            'subject' => sprintf('[%s] Notificación WP', $site_name),
+            'message_text' => "Este es un correo de prueba para el evento {$key}.",
+        ];
+    }
 
         $samples = [
             'new_user_admin' => [
@@ -336,95 +301,70 @@ final class PL_Email_Log_Admin
 
         $user = wp_get_current_user();
         $username = $user && $user->user_login ? (string) $user->user_login : 'usuario';
+        $label = isset($item['label']) ? (string) $item['label'] : $key;
 
-        if (in_array($key, ['learni_partner_invitation_sent', 'learni_partner_invitation_received'], true) && class_exists('PL_Email')) {
-            $accept_url = add_query_arg(['pl_invite' => 'accept'], home_url('/'));
-            $course_name = __('Curso de prueba', 'politeia-learning');
-            $inviter_display = $user && !empty($user->display_name) ? (string) $user->display_name : $site_name;
-            $invitee_display = __('Partner', 'politeia-learning');
-
-            $template_slug = $key === 'learni_partner_invitation_sent'
-                ? 'learni_partner_invitation_sent'
-                : 'learni_partner_invitation_received';
-
-            $html = (string) PL_Email::render($template_slug, [
-                'invitee_name' => $invitee_display,
-                'inviter_name' => $inviter_display,
-                'course_name' => $course_name,
-                'accept_url' => $accept_url,
-            ]);
-
-            if ('' === trim($html)) {
-                $html = sprintf(
-                    '<p>%s</p><p><a href="%s">%s</a></p>',
-                    esc_html__('Te invitaron como partner de un curso.', 'politeia-learning'),
-                    esc_url($accept_url),
-                    esc_html__('Aceptar invitación', 'politeia-learning')
-                );
+        // Proactively check for matching template files
+        if (class_exists('PL_Email')) {
+            $render_vars = $this->get_template_render_vars($key);
+            
+            // Special logic for quiz variations can still apply to vars before render
+            if ($key === 'learni_final_quiz_completed') {
+                $render_vars['percentage_first'] = random_int(0, 100);
+                $render_vars['percentage_final'] = random_int(0, 100);
+            } elseif ($key === 'learni_first_quiz_completed') {
+                $render_vars['percentage'] = random_int(0, 100);
             }
 
-            $allowed_html = $this->get_email_template_allowed_html();
-            $safe_html = wp_kses($html, $allowed_html);
-
-            return [
-                'subject' => sprintf('[%s] %s', $site_name, isset($item['label']) ? (string) $item['label'] : $key),
-                'message_html' => $safe_html,
-                'message_text' => wp_strip_all_tags($safe_html),
-            ];
+            $html = PL_Email::render($key, $render_vars);
+            
+            if ($html !== '') {
+                $safe_html = wp_kses($html, $this->get_email_template_allowed_html());
+                return [
+                    'subject' => sprintf('[%s] %s', $site_name, $label),
+                    'message_html' => $safe_html,
+                    'message_text' => wp_strip_all_tags($safe_html),
+                ];
+            }
         }
 
+        // Fallback for special keys with non-exact template names or complex logic
         if ($key === 'learni_final_quiz_completed') {
             $percentage_first = random_int(0, 100);
             $percentage_final = random_int(0, 100);
-
             $delta = $percentage_final - $percentage_first;
             $delta_abs = abs($delta);
-
-            if ($delta > 0) {
-                $subject = '¡Excelente progreso! Has superado tu marca inicial 🚀';
-                $variation_label = "+{$delta_abs}%";
-            } elseif ($delta === 0) {
-                $subject = 'Has mantenido tu nivel de conocimientos 📊';
-                $variation_label = '0%';
-            } else {
-                $subject = 'Evaluación final completada: analicemos tus resultados 🔍';
-                $variation_label = "-{$delta_abs}%";
-            }
-
+            $subject = ($delta > 0) ? '¡Excelente progreso! Has superado tu marca inicial 🚀' : (($delta === 0) ? 'Has mantenido tu nivel de conocimientos 📊' : 'Evaluación final completada: analicemos tus resultados 🔍');
+            
             return [
                 'subject' => $subject,
-                'percentage_first' => $percentage_first,
-                'percentage_final' => $percentage_final,
-                'message_text' => "First Quiz: {$percentage_first}%\nFinal Quiz: {$percentage_final}%\nVariación: {$variation_label}",
+                'message_text' => "First Quiz: {$percentage_first}%\nFinal Quiz: {$percentage_final}%\nVariación: " . ($delta > 0 ? "+{$delta_abs}%" : ($delta < 0 ? "-{$delta_abs}%" : "0%")),
             ];
         }
-
-        if ($key === 'learni_first_quiz_completed') {
-            $percentage = random_int(0, 100);
-
-            if ($percentage >= 90) {
-                $subject = '¡Excelente desempeño en tu quiz! 🚀';
-            } elseif ($percentage >= 70) {
-                $subject = '¡Buen trabajo! Vas por muy buen camino 📈';
-            } else {
-                $subject = '¡Quiz completado! Sigue fortaleciendo tus conocimientos 📚';
-            }
-
-            return [
-                'subject' => $subject,
-                'percentage' => $percentage,
-                'message_text' => "First Quiz: {$percentage}%",
-            ];
-        }
-
-        $label = isset($item['label']) ? (string) $item['label'] : $key;
 
         return [
             'subject' => sprintf('[%s] %s', $site_name, $label),
-            'message_text' => "Evento Learni: {$key}\n\n"
-                . "Hola {$username},\n\n"
-                . "Este es un correo de prueba (registro/preview) para \"{$label}\".\n\n"
-                . $site_url,
+            'message_text' => "Evento Learni: {$key}\n\nHola {$username},\n\nEste es un correo de prueba para \"{$label}\".\n\n{$site_url}",
+        ];
+    }
+
+    private function get_template_render_vars(string $key): array
+    {
+        $user = wp_get_current_user();
+        $site_name = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
+        
+        return [
+            'user_name' => $user->display_name ?: 'Nicolas',
+            'user_login' => $user->user_login ?: 'nicolas',
+            'user_email' => $user->user_email ?: get_option('admin_email'),
+            'site_name' => $site_name,
+            'site_url' => home_url(),
+            'invitee_name' => 'Partner Juan',
+            'inviter_name' => $user->display_name ?: 'Politeia',
+            'course_name' => 'Curso de Marketing Digital',
+            'accept_url' => add_query_arg(['pl_invite' => 'accept'], home_url('/')),
+            'reset_url' => add_query_arg(['key' => 'dummy', 'login' => 'dummy'], home_url('/restablecer-contrasena/')),
+            'verification_url' => add_query_arg(['pl_auth_action' => 'confirm', 'token' => 'dummy'], home_url('/')),
+            'token' => 'ABCD-1234',
         ];
     }
 
@@ -432,13 +372,17 @@ final class PL_Email_Log_Admin
     {
         $allowed = wp_kses_allowed_html('post');
         $allowed['style'] = [];
-        $allowed['html'] = ['lang' => true];
+        $allowed['html'] = ['lang' => true, 'xmlns' => true];
         $allowed['head'] = [];
-        $allowed['body'] = ['style' => true, 'class' => true];
+        $allowed['body'] = ['style' => true, 'class' => true, 'bgcolor' => true];
         $allowed['meta'] = ['content' => true, 'name' => true, 'charset' => true, 'http-equiv' => true];
         $allowed['title'] = [];
         $allowed['link'] = ['rel' => true, 'href' => true, 'type' => true];
         $allowed['center'] = [];
+        $allowed['table'] = ['width' => true, 'border' => true, 'cellpadding' => true, 'cellspacing' => true, 'style' => true, 'align' => true, 'bgcolor' => true];
+        $allowed['tr'] = ['style' => true, 'align' => true, 'valign' => true];
+        $allowed['td'] = ['width' => true, 'style' => true, 'align' => true, 'valign' => true, 'colspan' => true, 'rowspan' => true];
+        $allowed['img'] = ['src' => true, 'alt' => true, 'width' => true, 'height' => true, 'border' => true, 'style' => true];
         
         return $allowed;
     }
