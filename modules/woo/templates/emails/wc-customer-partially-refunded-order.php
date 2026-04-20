@@ -40,7 +40,7 @@ if (isset($refund) && $refund instanceof WC_Order && method_exists($refund, 'get
         .k { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color:#9ca3af; margin: 0 0 6px; }
         .v { font-size: 14px; font-weight: 800; margin: 0; }
         .muted { color:#6b7280; font-size: 13px; margin: 10px 0 0; line-height: 1.6; }
-        .logo { width: 140px; height: auto; display: inline-block; }
+        .logo { width: 170px; height: auto; display: inline-block; }
         .logo-text { display: inline-block; border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 8px; text-transform: uppercase; font-weight: 900; font-size: 18px; letter-spacing: -0.04em; }
     </style>
 </head>
@@ -49,7 +49,7 @@ if (isset($refund) && $refund instanceof WC_Order && method_exists($refund, 'get
     <div class="header">
         <div style="margin-bottom: 24px;">
             <?php if (!empty($logo_url)) : ?>
-                <img src="<?php echo esc_url((string) $logo_url); ?>" alt="<?php echo esc_attr($site_name); ?>" class="logo">
+                <img src="<?php echo esc_url((string) $logo_url); ?>" alt="<?php echo esc_attr($site_name); ?>" class="logo" width="170">
             <?php else : ?>
                 <div class="logo-text"><?php echo esc_html($site_name !== '' ? $site_name : 'Politeia'); ?></div>
             <?php endif; ?>

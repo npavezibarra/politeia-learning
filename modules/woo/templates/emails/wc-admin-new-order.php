@@ -41,7 +41,7 @@ $site_name = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
         .receipt-total-row { background-color: #f9fafb; }
         .receipt-total-value { color: #000000; font-size: 18px; font-weight: 800; }
         .footer { padding: 24px 32px; text-align: center; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: #d1d5db; }
-        .logo { width: 140px; height: auto; display: inline-block; }
+        .logo { width: 170px; height: auto; display: inline-block; }
         .logo-text { display: inline-block; border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 8px; text-transform: uppercase; font-weight: 900; font-size: 18px; letter-spacing: -0.04em; }
     </style>
 </head>
@@ -53,7 +53,7 @@ $site_name = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
                 <div class="header">
                     <div style="margin-bottom: 24px;">
                         <?php if (!empty($logo_url)) : ?>
-                            <img src="<?php echo esc_url((string) $logo_url); ?>" alt="<?php echo esc_attr($site_name); ?>" class="logo">
+                            <img src="<?php echo esc_url((string) $logo_url); ?>" alt="<?php echo esc_attr($site_name); ?>" class="logo" width="170">
                         <?php else : ?>
                             <div class="logo-text"><?php echo esc_html($site_name !== '' ? $site_name : 'Politeia'); ?></div>
                         <?php endif; ?>

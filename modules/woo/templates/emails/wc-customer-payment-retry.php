@@ -36,7 +36,7 @@ $site_name = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
         .v { font-size: 14px; font-weight: 800; margin: 0; }
         .btn { display:block; width:100%; background:#000; color:#fff !important; text-decoration:none; text-align:center; padding: 12px 0; border-radius: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; margin-top: 16px; }
         .muted { color:#6b7280; font-size: 13px; margin: 10px 0 0; line-height: 1.6; }
-        .logo { width: 140px; height: auto; display: inline-block; }
+        .logo { width: 170px; height: auto; display: inline-block; }
         .logo-text { display: inline-block; border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 8px; text-transform: uppercase; font-weight: 900; font-size: 18px; letter-spacing: -0.04em; }
     </style>
 </head>
@@ -45,7 +45,7 @@ $site_name = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
     <div class="header">
         <div style="margin-bottom: 18px;">
             <?php if (!empty($logo_url)) : ?>
-                <img src="<?php echo esc_url((string) $logo_url); ?>" alt="<?php echo esc_attr($site_name); ?>" class="logo">
+                <img src="<?php echo esc_url((string) $logo_url); ?>" alt="<?php echo esc_attr($site_name); ?>" class="logo" width="170">
             <?php else : ?>
                 <div class="logo-text"><?php echo esc_html($site_name !== '' ? $site_name : 'Politeia'); ?></div>
             <?php endif; ?>

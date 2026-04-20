@@ -339,12 +339,15 @@ final class PL_Email_Log_Admin
 
     private function get_site_logo_url(): string
     {
-        $logo_id = function_exists('get_theme_mod') ? absint(get_theme_mod('custom_logo')) : 0;
-        if ($logo_id > 0 && function_exists('wp_get_attachment_image_url')) {
-            $url = wp_get_attachment_image_url($logo_id, 'full');
-            if (is_string($url) && $url !== '') return $url;
+        $logo_id = get_theme_mod('custom_logo');
+        $url = $logo_id ? wp_get_attachment_image_url($logo_id, 'full') : '';
+        
+        // Rasterize SVG logos for email compatibility if conversion is possible
+        if (!empty($url) && class_exists('PL_Core_Email_Assets')) {
+            $url = PL_Core_Email_Assets::get_rasterized_logo_url($url);
         }
-        return '';
+        
+        return $url;
     }
 
     private function get_bank_details(WC_Order $order): array
