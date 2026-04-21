@@ -323,8 +323,31 @@ class PL_CC_Creator_Dashboard
             ";
             wp_add_inline_style('pcg-creator-css', $custom_css);
 
+            wp_enqueue_script('pcg-dashboard-utils', PL_CC_URL . 'assets/js/parts/_utils.js', [], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-shared', PL_CC_URL . 'assets/js/parts/_shared-logic.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-ui-nav', PL_CC_URL . 'assets/js/parts/_ui-nav.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-specs', PL_CC_URL . 'assets/js/parts/_specializations.js', ['jquery', 'pcg-dashboard-shared', 'pcg-dashboard-utils', 'jquery-ui-sortable'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-programs', PL_CC_URL . 'assets/js/parts/_programs.js', ['jquery', 'pcg-dashboard-shared', 'pcg-dashboard-utils'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-escritos', PL_CC_URL . 'assets/js/parts/_escritos.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-lessons', PL_CC_URL . 'assets/js/parts/_lessons.js', ['jquery', 'pcg-dashboard-utils', 'jquery-ui-sortable'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-evaluation', PL_CC_URL . 'assets/js/parts/_evaluation.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-media', PL_CC_URL . 'assets/js/parts/_media-handlers.js', ['jquery', 'pcg-dashboard-utils', 'pcg-cropper-js'], $creator_js_ver, true);
+
             wp_enqueue_script('pcg-cropper-js', PL_CC_URL . 'assets/js/pcg-course-cropper.js', ['jquery', 'cropperjs'], '1.0.0', true);
-            wp_enqueue_script('pcg-creator-js', PL_CC_URL . 'assets/js/creator-dashboard.js', ['jquery', 'jquery-ui-sortable', 'pcg-cropper-js'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-creator-js', PL_CC_URL . 'assets/js/creator-dashboard.js', [
+                'jquery', 
+                'jquery-ui-sortable', 
+                'pcg-cropper-js', 
+                'pcg-dashboard-utils', 
+                'pcg-dashboard-shared', 
+                'pcg-dashboard-ui-nav',
+                'pcg-dashboard-specs',
+                'pcg-dashboard-programs',
+                'pcg-dashboard-escritos',
+                'pcg-dashboard-lessons',
+                'pcg-dashboard-evaluation',
+                'pcg-dashboard-media'
+            ], $creator_js_ver, true);
             wp_enqueue_script('pcg-chartjs', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', [], '4.4.1', true);
             wp_enqueue_script('pcg-sales-dashboard', PL_CC_URL . 'assets/js/pcg-sales-dashboard.js', ['pcg-chartjs'], '1.0.0', true);
             wp_enqueue_script('pcg-sales-list', PL_CC_URL . 'assets/js/pcg-sales-list.js', [], '1.0.2', true);
