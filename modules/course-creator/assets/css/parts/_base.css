@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&display=swap');
+
+:root {
+    --pcg-gold-primary: #C79F32;
+    --pcg-gold-grad: linear-gradient(135deg, #C79F32 0%, #A67C1F 100%);
+    --pcg-obsidian: #09090b;
+    --pcg-pure-black: #000000;
+    --pcg-deep-gray: #171717;
+    --pcg-border-modern: #e5e5e5;
+    --pcg-radius-modern: 12px;
+    --pcg-subtle-gray: #fafafa;
+    --pcg-light-gray: #737373;
+}
+
+/* ───────────────────────────────────────────────────────────
+   Template Center-2 Specific Styles
+   ─────────────────────────────────────────────────────────── */
+
+/* Remove site footer on Center-2 screens */
+body.pcg-template-center-2-active #colophon,
+body.pcg-template-center-2-active footer.wp-block-template-part,
+body.pcg-template-center-2-active .wp-site-blocks > footer,
+body.pcg-template-center-2-active footer#colophon,
+body.pcg-template-center-2-active footer.site-footer {
+    display: none !important;
+}
+
+/* Reset outer header/footer to full width */
+body.pcg-template-center-2-active #masthead,
+body.pcg-template-center-2-active #colophon {
+    max-width: none !important;
+    width: 100% !important;
+}
+
+/* Constrain inner containers and dashboard content to 1280px and center them */
+body.pcg-template-center-2-active #masthead .container,
+body.pcg-template-center-2-active #colophon .container,
+body.pcg-template-center-2-active .pcg-creator-container {
+    max-width: 1280px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 100% !important;
+    float: none !important;
+}
+
+/* Enforce Poppins everywhere inside Center screens. */
+body.pcg-template-center-active .pcg-creator-dashboard-wrapper,
+body.pcg-template-center-active .pcg-creator-dashboard-wrapper *,
+body.pcg-template-center-2-active .pcg-creator-dashboard-wrapper,
+body.pcg-template-center-2-active .pcg-creator-dashboard-wrapper * {
+    font-family: 'Poppins', sans-serif !important;
+}
+
+/* Preserve icon fonts. */
+body.pcg-template-center-active .pcg-creator-dashboard-wrapper .dashicons,
+body.pcg-template-center-2-active .pcg-creator-dashboard-wrapper .dashicons {
+    font-family: dashicons !important;
+}
+
+body.pcg-template-center-active .pcg-creator-dashboard-wrapper .material-symbols-outlined,
+body.pcg-template-center-2-active .pcg-creator-dashboard-wrapper .material-symbols-outlined {
+    font-family: 'Material Symbols Outlined' !important;
+}
+
+body.pcg_creator_user header#masthead {
+    border-bottom: 1px solid #e3e3e3 !important;
+}
+
+.pcg-creator-dashboard-wrapper {
+    background: #fafafa;
+    min-height: 100vh;
+    font-family: 'Poppins', sans-serif;
+    color: var(--pcg-deep-gray);
+    padding: 0;
+}

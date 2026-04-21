@@ -1,0 +1,142 @@
+[
+    {
+        "title": "Who is considered the father of political science?",
+        "question_text": "Which ancient Greek philosopher is widely regarded as the founder of political science?",
+        "answer_type": "single",
+        "points": 5,
+        "answers": [
+            {
+                "text": "Aristotle",
+                "correct": true,
+                "points": 0
+            },
+            {
+                "text": "Plato",
+                "correct": false,
+                "points": 0
+            },
+            {
+                "text": "Socrates",
+                "correct": false,
+                "points": 0
+            },
+            {
+                "text": "Thucydides",
+                "correct": false,
+                "points": 0
+            }
+        ]
+    },
+    {
+        "title": "What is democracy?",
+        "question_text": "Democracy is best defined as:",
+        "answer_type": "single",
+        "points": 5,
+        "answers": [
+            {
+                "text": "Rule by the people",
+                "correct": true,
+                "points": 0
+            },
+            {
+                "text": "Rule by the wealthy",
+                "correct": false,
+                "points": 0
+            },
+            {
+                "text": "Rule by one person",
+                "correct": false,
+                "points": 0
+            },
+            {
+                "text": "Rule by military force",
+                "correct": false,
+                "points": 0
+            }
+        ]
+    },
+    {
+        "title": "Separation of powers",
+        "question_text": "The concept of separation of powers divides government into how many branches?",
+        "answer_type": "single",
+        "points": 5,
+        "answers": [
+            {
+                "text": "Three",
+                "correct": true,
+                "points": 0
+            },
+            {
+                "text": "Two",
+                "correct": false,
+                "points": 0
+            },
+            {
+                "text": "Four",
+                "correct": false,
+                "points": 0
+            },
+            {
+                "text": "Five",
+                "correct": false,
+                "points": 0
+            }
+        ]
+    },
+    {
+        "title": "Political ideologies",
+        "question_text": "Which of the following are major political ideologies? (Select all that apply)",
+        "answer_type": "multiple",
+        "points": 10,
+        "answers": [
+            {
+                "text": "Liberalism",
+                "correct": true,
+                "points": 0
+            },
+            {
+                "text": "Conservatism",
+                "correct": true,
+                "points": 0
+            },
+            {
+                "text": "Socialism",
+                "correct": true,
+                "points": 0
+            },
+            {
+                "text": "Capitalism",
+                "correct": false,
+                "points": 0
+            }
+        ]
+    },
+    {
+        "title": "The Social Contract",
+        "question_text": "Who wrote 'The Social Contract'?",
+        "answer_type": "single",
+        "points": 5,
+        "answers": [
+            {
+                "text": "Jean-Jacques Rousseau",
+                "correct": true,
+                "points": 0
+            },
+            {
+                "text": "John Locke",
+                "correct": false,
+                "points": 0
+            },
+            {
+                "text": "Thomas Hobbes",
+                "correct": false,
+                "points": 0
+            },
+            {
+                "text": "Montesquieu",
+                "correct": false,
+                "points": 0
+            }
+        ]
+    }
+]

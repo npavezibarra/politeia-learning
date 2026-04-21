@@ -1,0 +1,1133 @@
+/* Sales page uses pcg-form-nav as a generic header bar */
+.pcg-sales-nav {
+    /* padding-right: 20px; */
+    margin-bottom: 25px;
+}
+
+.pcg-form-nav.pcg-sales-nav {
+    position: -webkit-sticky !important;
+    position: sticky !important;
+    top: 76px !important;
+    left: 0;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid #f3f4f6;
+    z-index: 99 !important;
+    padding: 0px;
+    margin-bottom: 30px;
+}
+
+.admin-bar .pcg-form-nav.pcg-sales-nav {
+    top: 108px !important;
+}
+
+.pcg-form-nav.pcg-sales-nav .pcg-sales-nav-inner {
+    max-width: 1180px;
+    width: 100%;
+    /* margin: 0 auto; */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+.pcg-sales-dashboard {
+    max-width: 1180px;
+    padding: 0px 20px;
+}
+
+.pcg-sales-dashboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.pcg-sales-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.pcg-sales-title {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: #000;
+}
+
+.pcg-sales-subtitle {
+    margin: 4px 0 0 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
+}
+
+.pcg-sales-timeframes {
+    display: inline-flex;
+    gap: 0;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    padding: 2px;
+    border-radius: 6px;
+}
+
+.pcg-sales-tf-btn {
+    border: none;
+    background: transparent;
+    color: #333;
+    cursor: pointer;
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 6px;
+    transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.pcg-sales-tf-btn:hover {
+    opacity: 0.92;
+    background: rgba(0, 0, 0, .04);
+    color: #333;
+    box-shadow: none;
+    outline: none;
+}
+
+.pcg-sales-tf-btn.active {
+    color: #fff;
+    background: #000;
+}
+
+.pcg-sales-tf-btn:focus,
+.pcg-sales-tf-btn:focus-visible,
+.pcg-sales-tf-btn:active {
+    background: rgba(0, 0, 0, .04);
+    color: #333;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.pcg-sales-tf-btn.active:hover,
+.pcg-sales-tf-btn.active:focus,
+.pcg-sales-tf-btn.active:focus-visible,
+.pcg-sales-tf-btn.active:active {
+    background: #000 !important;
+    color: #fff !important;
+}
+
+.pcg-sales-custom-range {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    justify-content: flex-end;
+}
+
+.pcg-sales-list-topbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.pcg-sales-list-tabs {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, .12);
+    padding: 6px;
+    border-radius: 6px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .10);
+}
+
+.pcg-sales-list-tab {
+    border: 0;
+    background: transparent;
+    color: #333;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: .2px;
+}
+
+.pcg-sales-list-tab[aria-selected="true"] {
+    background: #000;
+    color: #fff;
+}
+
+/* Override any theme button styling (e.g. blue hovers/focus fills) */
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab:hover,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab:focus,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab:focus-visible,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab:active {
+    background: transparent !important;
+    color: #333 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border: 0 !important;
+}
+
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab[aria-selected="true"],
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab[aria-selected="true"]:hover,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab[aria-selected="true"]:focus,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab[aria-selected="true"]:focus-visible,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-tab[aria-selected="true"]:active {
+    background: #000 !important;
+    color: #fff !important;
+    box-shadow: none !important;
+}
+
+.pcg-sales-list-pagination {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border: 1px solid rgba(0, 0, 0, .12);
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .10);
+    white-space: nowrap;
+}
+
+.pcg-sales-list-page-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #000;
+}
+
+.pcg-sales-list-page-btn {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0, 0, 0, .12);
+    border-radius: 6px;
+    background: #fff;
+    color: #000;
+    cursor: pointer;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0;
+}
+
+.pcg-sales-list-page-btn:hover {
+    background: rgba(0, 0, 0, .03);
+}
+
+.pcg-sales-list-page-btn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.pcg-sales-list-panel {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, .12);
+    border-radius: 6px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .10);
+    overflow: hidden;
+}
+
+.pcg-sales-list-panel+.pcg-sales-list-panel {
+    margin-top: 16px;
+}
+
+.pcg-sales-list-panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 14px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, .12);
+    background: #fff;
+}
+
+.pcg-sales-list-panel-title {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pcg-sales-list-panel-title h3 {
+    margin: 0;
+    font-size: 15px;
+    letter-spacing: .2px;
+    font-weight: 600;
+}
+
+.pcg-sales-list-hint {
+    margin: 0;
+    font-size: 12px;
+    color: #333;
+}
+
+.pcg-sales-list-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.pcg-sales-list-search {
+    position: relative;
+    min-width: 280px;
+    flex: 1 1 280px;
+    max-width: 420px;
+}
+
+.pcg-sales-list-search input {
+    width: 100%;
+    padding: 10px 36px 10px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, .12);
+    outline: none;
+    background: #fff;
+    color: #000;
+    font-size: 13px;
+}
+
+.pcg-sales-list-search input::placeholder {
+    color: rgba(0, 0, 0, .55);
+}
+
+.pcg-sales-list-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    color: rgba(0, 0, 0, .60);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 6px;
+    border-radius: 6px;
+}
+
+.pcg-sales-list-clear:hover {
+    background: rgba(0, 0, 0, .05);
+}
+
+.pcg-sales-list-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, .12);
+    background: #fff;
+    color: #333;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.pcg-sales-list-pill strong {
+    color: #000;
+    font-weight: 600;
+}
+
+.pcg-sales-list-table-wrap {
+    overflow: auto;
+}
+
+.pcg-sales-list-panel strong {
+    font-weight: 600;
+}
+
+.pcg-sales-list-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 880px;
+    border: none;
+}
+
+.pcg-sales-list-table thead th {
+    text-align: left;
+    font-size: 14px !important;
+    color: rgba(0, 0, 0, .70);
+    letter-spacing: .22px;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, .12);
+    background: #f7f7f7;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-weight: 600;
+}
+
+.pcg-sales-list-table tbody td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, .12);
+    vertical-align: middle;
+    font-size: 14px !important;
+}
+
+.pcg-sales-list-table tbody tr:hover {
+    background: rgba(0, 0, 0, .03);
+}
+
+.pcg-sales-list-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 260px;
+}
+
+.pcg-sales-list-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #000;
+    border: 1px solid rgba(0, 0, 0, .15);
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    font-weight: 600;
+    color: #fff;
+    font-size: 12px;
+    letter-spacing: .3px;
+}
+
+.pcg-sales-list-user-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pcg-sales-list-user-name {
+    font-weight: 600;
+    color: #000;
+    line-height: 1.15;
+}
+
+.pcg-sales-list-user-name--link {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.pcg-sales-list-user-name--link:hover {
+    text-decoration: underline;
+}
+
+.pcg-sales-list-user-name--link:focus,
+.pcg-sales-list-user-name--link:focus-visible {
+    outline: none;
+    text-decoration: underline;
+}
+
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-user-name--link,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-user-name--link:hover,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-user-name--link:focus,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-user-name--link:focus-visible,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-user-name--link:active,
+.pcg-creator-dashboard-wrapper button.pcg-sales-list-user-name--link:visited {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    color: #000 !important;
+}
+
+.pcg-sales-list-user-email {
+    font-size: 12px;
+    color: #333;
+}
+
+.pcg-sales-list-money {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+.pcg-sales-list-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, .18);
+    background: #fff;
+    font-size: 12px;
+    color: rgba(0, 0, 0, .85);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.pcg-sales-list-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, .35);
+}
+
+.pcg-sales-list-dot.good {
+    background: #0a7a3d;
+}
+
+.pcg-sales-list-dot.warn {
+    background: #8a6500;
+}
+
+.pcg-sales-list-dot.bad {
+    background: #b00020;
+}
+
+.pcg-sales-list-muted {
+    color: #333;
+}
+
+.pcg-sales-list-empty {
+    padding: 18px 14px;
+    color: #333;
+    font-size: 13px;
+}
+
+.pcg-sales-date {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pcg-sales-date label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: #333;
+}
+
+.pcg-sales-date input[type="date"] {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    outline: none;
+}
+
+.pcg-sales-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.pcg-sales-metrics.pcg-students-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 980px) {
+    .pcg-sales-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pcg-sales-dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .pcg-sales-controls {
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .pcg-sales-custom-range {
+        justify-content: flex-start;
+        width: 100%;
+    }
+
+    .pcg-sales-section [data-sales-panel="list"] .pcg-sales-dashboard-header {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .pcg-sales-section [data-sales-panel="list"] .pcg-sales-dashboard-header>div:first-child {
+        min-width: 0;
+    }
+
+    .pcg-sales-section [data-sales-panel="list"] .pcg-sales-list-pagination {
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+}
+
+.pcg-metric-card {
+    border-radius: 6px;
+    padding: 18px;
+    min-height: 176px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 1px solid #e5e5e5;
+    background: #fff;
+}
+
+.pcg-metric-gold {
+    border: none;
+    background: var(--pcg-gold-grad);
+    color: #fff;
+}
+
+.pcg-metric-silver {
+    background: #fff;
+}
+
+.pcg-metric-copper {
+    background: #fff;
+}
+
+.pcg-metric-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.pcg-metric-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+}
+
+.pcg-metric-gold .pcg-metric-icon {
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.pcg-metric-tag {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.85;
+}
+
+.pcg-metric-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-top: 12px;
+    line-height: 18px;
+}
+
+.pcg-metric-main {
+    display: block;
+}
+
+.pcg-metric-value {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-top: 6px;
+}
+
+.pcg-students-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pcg-students-delta .dashicons {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+    margin-top: -1px;
+}
+
+.pcg-students-delta--positive {
+    color: #0a7a3b;
+}
+
+.pcg-students-delta--negative {
+    color: #b42318;
+}
+
+.pcg-students-delta--neutral {
+    color: #000;
+}
+
+.pcg-metric-foot {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-top: 10px;
+    opacity: 0.85;
+}
+
+.pcg-metric-silver .pcg-metric-label,
+.pcg-metric-copper .pcg-metric-label {
+    color: #333;
+}
+
+.pcg-metric-silver .pcg-metric-value,
+.pcg-metric-copper .pcg-metric-value {
+    color: #000;
+}
+
+.pcg-metric-silver .pcg-metric-foot,
+.pcg-metric-copper .pcg-metric-foot,
+.pcg-metric-silver .pcg-metric-tag,
+.pcg-metric-copper .pcg-metric-tag {
+    color: #a8a8a8;
+    opacity: 1;
+}
+
+.pcg-sales-chart-card {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    padding: 20px;
+}
+
+.pcg-sales-chart-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.pcg-students-chart-head-mobile {
+    display: none;
+}
+
+.pcg-students-chart-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #000;
+}
+
+.pcg-students-chart-legend {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.pcg-students-chart-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #a8a8a8;
+}
+
+.pcg-students-chart-legend-swatch {
+    width: 10px;
+    height: 10px;
+    display: inline-block;
+}
+
+.pcg-students-chart-legend-swatch--courses {
+    background: #C79F32;
+}
+
+.pcg-students-chart-legend-swatch--books {
+    background: #D1D1D1;
+}
+
+.pcg-students-range-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.pcg-students-range-overlay__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.pcg-students-range-overlay--hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.pcg-students-range-modal {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    background: #fff;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    box-shadow: 0 -15px 30px -5px rgba(0, 0, 0, 0.1), 0 -8px 15px -8px rgba(0, 0, 0, 0.05);
+    padding: 18px;
+    transform: translateY(0);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pcg-students-range-overlay--hidden .pcg-students-range-modal {
+    transform: translateY(100%);
+}
+
+.pcg-students-range-modal__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.pcg-students-range-modal__title {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #000;
+}
+
+.pcg-students-range-modal__close {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.pcg-students-range-modal__close .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: #000;
+}
+
+.pcg-students-range-modal__options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.pcg-students-range-modal__option {
+    width: 100%;
+    text-align: left;
+    padding: 14px 14px;
+    border: 1px solid #000;
+    border-radius: 0;
+    background: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    cursor: pointer;
+}
+
+.pcg-students-range-modal__option.is-active {
+    background: #000;
+    color: #fff;
+}
+
+.pcg-students-range-modal__apply {
+    width: 100%;
+    height: 48px;
+    background: #000;
+    color: #fff;
+    border: 1px solid #000;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    cursor: pointer;
+}
+
+.pcg-sales-range-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.pcg-sales-range-overlay__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.pcg-sales-range-overlay--hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.pcg-sales-range-modal {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    background: #fff;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    box-shadow: 0 -15px 30px -5px rgba(0, 0, 0, 0.1), 0 -8px 15px -8px rgba(0, 0, 0, 0.05);
+    padding: 18px;
+    transform: translateY(0);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pcg-sales-range-overlay--hidden .pcg-sales-range-modal {
+    transform: translateY(100%);
+}
+
+.pcg-sales-range-modal__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.pcg-sales-range-modal__title {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #000;
+}
+
+.pcg-sales-range-modal__close {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.pcg-sales-range-modal__close .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: #000;
+}
+
+.pcg-sales-range-modal__options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.pcg-sales-range-modal__option {
+    width: 100%;
+    text-align: left;
+    padding: 14px 14px;
+    border: 1px solid #000;
+    border-radius: 0;
+    background: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    cursor: pointer;
+}
+
+.pcg-sales-range-modal__option.is-active {
+    background: #000;
+    color: #fff;
+}
+
+.pcg-sales-range-modal__apply {
+    width: 100%;
+    height: 48px;
+    background: #000;
+    color: #fff;
+    border: 1px solid #000;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    cursor: pointer;
+}
+
+@media (max-width: 850px) {
+    /* Ventas mobile layout (match Estudiantes look) */
+    .pcg-sales-section .pcg-form-nav.pcg-sales-nav {
+        display: none !important;
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-sales-dashboard {
+        max-width: 1180px;
+        padding: 0px;
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-sales-dashboard-header {
+        display: none !important;
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-sales-metrics {
+        display: block;
+        gap: 0;
+        margin: 0;
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-metric-card {
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+        border-top: 0;
+        border-bottom: 1px solid #f3f4f6;
+        min-height: 112px;
+        padding: 16px 18px;
+        justify-content: flex-start;
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-metric-gold {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-metric-main {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-top: 8px;
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-metric-label {
+        margin: 0;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        line-height: 16px;
+        max-width: 220px;
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-metric-value {
+        margin: 0;
+        font-size: 36px;
+        letter-spacing: -0.03em;
+        white-space: nowrap;
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-metric-gold .pcg-metric-value {
+        font-size: 40px;
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-metric-foot {
+        display: none;
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-sales-chart-card {
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+        border-bottom: 1px solid #f3f4f6;
+        border-top: 0;
+        padding: 16px 18px 18px;
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-sales-chart-legend {
+        gap: 12px;
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-sales-chart-wrap {
+        height: 144px;
+        margin-top: 12px;
+    }
+
+    .pcg-sales-section .pcg-sales-range-modal {
+        max-width: none;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+}
+
+.pcg-sales-chart-head h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #000;
+}
+
+.pcg-sales-chart-head p {
+    margin: 6px 0 0 0;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: #a8a8a8;
+}
+
+.pcg-sales-chart-legend {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 18px;
+    padding-top: 2px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.pcg-sales-chart-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #000;
+}
+
+.pcg-sales-chart-legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: #000;
+}
+
+.pcg-sales-nav .pcg-current-course-label {
+    font-weight: 600;
+}
+
+.pcg-sales-chart-wrap {
+    height: 252px;
+    margin-top: 16px;
+}
+
+/* Estudiantes: shorter chart (20% less) */
+.pcg-students-section .pcg-sales-chart-wrap {
+    height: 202px;
+}
+
+/* Ventas: match Estudiantes chart height */
+.pcg-sales-section .pcg-sales-chart-wrap {
+    height: 202px;
+}

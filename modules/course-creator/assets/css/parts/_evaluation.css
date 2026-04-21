@@ -1,0 +1,98 @@
+/* Evaluation mode container + empty state */
+div#pcg-mode-evaluacion {
+    padding: 24px;
+    background: #fafafa;
+}
+
+#pcg-mode-evaluacion .pcg-eval-editor__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 28px;
+    align-items: start;
+}
+
+@media (min-width: 1024px) {
+    #pcg-mode-evaluacion .pcg-eval-editor__grid {
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+        gap: 32px;
+    }
+}
+
+#pcg-mode-evaluacion #pcg-quiz-not-created-msg {
+    display: none;
+    padding: 48px 24px;
+    text-align: center;
+    background: #fafafa;
+    border-radius: 12px;
+    border: 2px dashed #e4e4e7;
+}
+
+#pcg-mode-evaluacion #pcg-quiz-not-created-msg p {
+    margin: 0;
+    font-weight: 500;
+    color: #71717a;
+}
+
+#pcg-mode-evaluacion .pcg-sidecard {
+    background: transparent;
+    color: #111827;
+    padding: 22px;
+    border-radius: 6px;
+    border: 1px solid #e4e4e7;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+#pcg-mode-evaluacion .pcg-sidecard__eyebrow {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: #71717a;
+    margin-bottom: 10px;
+}
+
+#pcg-mode-evaluacion .pcg-sidecard__price {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+#pcg-mode-evaluacion .pcg-sidecard__currency {
+    position: absolute;
+    left: 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: #737373;
+    pointer-events: none;
+}
+
+#pcg-mode-evaluacion .pcg-sidecard__price-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #e0e0e0;
+    border-radius: 0;
+    padding: 10px 0 10px 26px;
+    font-size: 22px;
+    font-weight: 500;
+    color: #171717;
+    letter-spacing: -0.02em;
+    outline: none;
+    transition: border-color 0.2s ease;
+    box-shadow: none;
+}
+
+#pcg-mode-evaluacion .pcg-sidecard__price-input:focus {
+    border-bottom-color: #737373;
+}
+
+#pcg-mode-evaluacion .pcg-price-free-indicator {
+    margin-top: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #22c55e;
+    font-style: normal;
+}

@@ -1,0 +1,320 @@
+/* Prevent browser/theme focus/tap highlight from applying blue backgrounds/borders */
+.pcg-creator-dashboard-wrapper button,
+.pcg-creator-dashboard-wrapper [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.pcg-creator-dashboard-wrapper button:focus,
+.pcg-creator-dashboard-wrapper button:focus-visible,
+.pcg-creator-dashboard-wrapper button:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+}
+
+/* Hard reset: prevent theme "blue" focus/hover styles inside dashboard */
+.pcg-creator-dashboard-wrapper a,
+.pcg-creator-dashboard-wrapper a:visited {
+    color: inherit;
+}
+
+.pcg-creator-dashboard-wrapper a:hover,
+.pcg-creator-dashboard-wrapper a:focus,
+.pcg-creator-dashboard-wrapper a:focus-visible {
+    color: #000 !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.pcg-creator-dashboard-wrapper input,
+.pcg-creator-dashboard-wrapper textarea,
+.pcg-creator-dashboard-wrapper select,
+.pcg-creator-dashboard-wrapper button {
+    accent-color: #000;
+}
+
+.pcg-creator-dashboard-wrapper input:focus,
+.pcg-creator-dashboard-wrapper input:focus-visible,
+.pcg-creator-dashboard-wrapper textarea:focus,
+.pcg-creator-dashboard-wrapper textarea:focus-visible,
+.pcg-creator-dashboard-wrapper select:focus,
+.pcg-creator-dashboard-wrapper select:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: rgba(0, 0, 0, .12) !important;
+}
+
+/* Global Table Font Size Override */
+.pcg-creator-dashboard-wrapper table td,
+.pcg-creator-dashboard-wrapper table th,
+.pcg-escrito-content-editor table td,
+.pcg-escrito-content-editor table th {
+    font-size: 14px !important;
+}
+
+
+.pcg-creator-container {
+    display: flex;
+    max-width: 1400px;
+    margin: 0 auto;
+    min-height: 100vh;
+}
+
+/* Sidebar Styling */
+.pcg-creator-sidebar {
+    width: 230px;
+    background: #fff;
+    border-right: 1px solid #e5e5e5;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: visible !important;
+}
+
+.pcg-user-info-link {
+    text-decoration: none !important;
+    color: inherit !important;
+    display: block;
+    transition: background 0.2s ease;
+}
+
+.pcg-user-info-link:hover .pcg-user-info {
+    background: #fafafa;
+}
+
+.pcg-user-info {
+    text-align: center;
+    padding: 20px;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 0px;
+    transition: background 0.2s ease;
+}
+
+.pcg-user-info img {
+    border-radius: 50%;
+    border: 1px solid #f5f5f5;
+    margin-bottom: 3px;
+}
+
+.pcg-user-info h2 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+}
+
+.pcg-user-info .user-role {
+    font-size: 0.75rem;
+    color: var(--pcg-light-gray);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+.pcg-creator-nav {
+    position: sticky;
+    top: 76px;
+    /* Sticks below Politeia header + small margin */
+    transition: top 0.3s ease;
+}
+
+.admin-bar .pcg-creator-nav {
+    top: 108px;
+}
+
+.pcg-creator-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.pcg-creator-nav li a {
+    display: flex;
+    align-items: center;
+    padding: 0.875rem 1.5rem;
+    color: #525252;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+    gap: 12px;
+    font-size: 12px;
+    letter-spacing: 2px;
+}
+
+.pcg-creator-nav li a .dashicons {
+    color: #a3a3a3;
+    transition: color 0.2s ease;
+}
+
+.pcg-creator-nav li.active a {
+    background: var(--pcg-subtle-gray);
+    color: var(--pcg-pure-black);
+    border-left-color: var(--pcg-deep-gray);
+}
+
+.pcg-creator-nav li.active a .dashicons {
+    color: var(--pcg-pure-black);
+}
+
+.pcg-creator-nav li a:hover:not(.active) {
+    background: #fafafa;
+    color: #262626;
+}
+
+/* Sidebar collapse (tablet/small laptop) */
+@media (max-width: 1230px) {
+    .pcg-user-info {
+        display: none;
+    }
+
+    .pcg-creator-sidebar {
+        width: 70px;
+        min-width: 70px;
+        max-width: 70px;
+        flex: 0 0 70px;
+    }
+
+    .pcg-creator-nav li a {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+        gap: 0;
+        font-size: 0;
+        letter-spacing: 0;
+    }
+
+    .pcg-creator-nav li a .dashicons {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+    }
+}
+
+/* Main Content Styling */
+.pcg-creator-content {
+    flex: 1;
+    padding: 0;
+}
+
+/* Template Center-2 Specific Styles */
+.pcg-template-center-2 main#pcg-creator-content {
+    border-right: 1px solid #e5e5e5;
+}
+
+.pcg-btn-back {
+    background: none;
+    border: none;
+    color: var(--pcg-light-gray);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0;
+    transition: none;
+}
+
+.pcg-creator-dashboard-wrapper button.pcg-btn-back,
+.pcg-creator-dashboard-wrapper button.pcg-btn-back:hover,
+.pcg-creator-dashboard-wrapper button.pcg-btn-back:focus,
+.pcg-creator-dashboard-wrapper button.pcg-btn-back:focus-visible,
+.pcg-creator-dashboard-wrapper button.pcg-btn-back:active {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.pcg-btn-back:hover {
+    color: var(--pcg-light-gray);
+}
+
+.pcg-btn-back:focus,
+.pcg-btn-back:focus-visible,
+.pcg-btn-back:active,
+.pcg-btn-back:visited {
+    color: var(--pcg-light-gray);
+    background: none !important;
+    background-color: transparent !important;
+    box-shadow: none;
+    outline: none;
+}
+
+.pcg-btn-back .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.pcg-nav-right {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+}
+
+.pcg-current-course-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--pcg-deep-gray);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.pcg-btn-preview {
+    background: none !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    color: var(--pcg-light-gray);
+    width: 36px;
+    height: 36px;
+    border-radius: 0px !important;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.pcg-btn-preview:hover,
+.pcg-btn-preview:focus,
+.pcg-btn-preview:active {
+    background: none !important;
+    background-color: transparent !important;
+    color: var(--pcg-pure-black);
+    transform: none;
+}
+
+.pcg-btn-preview .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.pcg-form-divider {
+    height: 1px;
+    background: #e5e5e5;
+    margin-bottom: 10px;
+}
+
+.pcg-form-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0px;
+    padding: 0px 0px 0px 20px;
+    border-bottom: 1px solid #e5e5e5;
+    min-height: 40px;
+}
+
+.pcg-nav-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}

@@ -223,6 +223,7 @@ class PL_Module_Loader
         'blog-post' => true,
         'login-register' => true,
         'course-creator' => true,
+        'quiz-creator' => true,
         'woo' => true,
         'member-profile' => true,
         'payments-subscriptions' => true,

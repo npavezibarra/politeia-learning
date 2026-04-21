@@ -1,0 +1,151 @@
+/* Lessons Mode Styles */
+.pcg-lessons-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding: 0 20px;
+}
+
+.pcg-lessons-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #171717;
+}
+
+#pcg-mode-lecciones {
+    padding: 24px;
+}
+
+.pcg-lessons-list {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 40px;
+    padding: 0 20px;
+}
+
+.pcg-lesson-item {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 12px;
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    transition: all 0.2s ease;
+    cursor: grab;
+}
+
+.pcg-lesson-item:hover {
+    border-color: #e5e5e5;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.pcg-lesson-item.ui-sortable-placeholder {
+    visibility: visible !important;
+    background: #fafafa;
+    border: 1px dashed #e5e5e5;
+}
+
+.pcg-lesson-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+}
+
+.pcg-lesson-drag {
+    color: #d4d4d8;
+    cursor: grab;
+}
+
+.pcg-lesson-number {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #a1a1aa;
+    min-width: 24px;
+}
+
+.pcg-lesson-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #171717;
+}
+
+.pcg-lesson-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pcg-btn-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #f0f0f0;
+    border-radius: 10px;
+    background: #fff;
+    color: #737373;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pcg-btn-icon:hover {
+    background: #fafafa;
+    color: #171717;
+    border-color: #e5e5e5;
+}
+
+.pcg-btn-icon--danger:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fca5a5;
+}
+
+/* Lesson detail Mode (editing a single lesson) */
+.pcg-lesson-editor-mode {
+    padding: 0;
+}
+
+.pcg-lesson-editor-header {
+    margin-bottom: 25px;
+    padding: 20px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pcg-escrito-toolbar {
+    background: #fff;
+    border-bottom: 1px solid #f0f0f0;
+    padding: 12px 20px;
+    position: sticky;
+    top: 76px;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.admin-bar .pcg-escrito-toolbar {
+    top: 108px;
+}
+
+/* Course lessons refinements for drag & drop and minimalist actions */
+.pcg-lesson-item .pcg-card-action-edit {
+    font-size: 11px !important;
+    letter-spacing: 0.15em !important;
+}
+
+.pcg-lesson-item .pcg-card-action-delete svg {
+    color: #a3a3a3;
+}
+
+.pcg-lesson-item:hover .pcg-card-action-delete svg {
+    color: #ef4444;
+}

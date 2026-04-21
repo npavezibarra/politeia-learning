@@ -1,0 +1,413 @@
+/* ───────────────────────────────────────────────────────────
+   Mobile shell (enabled at <= 850px)
+   ─────────────────────────────────────────────────────────── */
+.pcg-mobile-nav,
+.pcg-mobile-footer {
+    display: none;
+}
+
+.pcg-mobile-topbar {
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.pcg-mobile-subbar {
+    display: grid;
+    grid-template-columns: 48px 1fr 48px;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 6px;
+    border-bottom: 0;
+}
+
+.pcg-mobile-icon-btn {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    height: 48px;
+    width: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #000;
+    box-shadow: none !important;
+    text-decoration: none;
+}
+
+button#pcg-mobile-sectionmenu-btn {
+    padding: 0;
+}
+
+.pcg-mobile-icon-btn:visited,
+.pcg-mobile-icon-btn:hover,
+.pcg-mobile-icon-btn:focus {
+    text-decoration: none;
+    color: #000;
+}
+
+.pcg-mobile-icon-btn .dashicons {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+}
+
+.pcg-mobile-icon-btn .material-symbols-outlined {
+    font-size: 20px;
+    line-height: 1;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.pcg-mobile-page-title {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    padding: 0 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #000;
+}
+
+.pcg-mobile-drawer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--pcg-mobile-drawer-top, 160px);
+    background: #fff;
+    border-bottom: 1px solid #000;
+    transform: translateY(-110%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 1095;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.pcg-mobile-drawer-inner {
+    display: flex;
+    flex-direction: column;
+}
+
+.pcg-mobile-drawer-item {
+    display: flex;
+    align-items: center;
+    padding: 16px 22px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    border-bottom: 1px solid #f3f4f6;
+    text-decoration: none;
+    color: #000;
+}
+
+.pcg-mobile-drawer-item:last-child {
+    border-bottom: 0;
+}
+
+.pcg-mobile-drawer-item.active {
+    background: transparent !important;
+}
+
+.pcg-mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 1090;
+}
+
+.pcg-mobile-footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #fff;
+    /* border-top: 1px solid #000; */
+    padding: 12px 18px;
+    z-index: 1100;
+    border-top: 1px solid #dfdfdf !important;
+    box-shadow: 0 -15px 30px -5px rgba(0, 0, 0, 0.1), 0 -8px 15px -8px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
+}
+
+.pcg-mobile-action-btn {
+    width: 100%;
+    height: 44px;
+    background: #000;
+    color: #fff;
+    border: 1px solid #000;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.pcg-mobile-nav.pcg-mobile-main-open #pcg-mobile-main-drawer,
+.pcg-mobile-nav.pcg-mobile-section-open #pcg-mobile-section-drawer {
+    transform: translateY(0);
+}
+
+.pcg-mobile-nav.pcg-mobile-main-open .pcg-mobile-overlay,
+.pcg-mobile-nav.pcg-mobile-section-open .pcg-mobile-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+@media (max-width: 850px) {
+    .site-header {
+        border-bottom: 1px solid #dfdfdf !important;
+    }
+
+    body.bp-search .site-header {
+        z-index: 1096 !important;
+    }
+
+    .pcg-mobile-nav,
+    .pcg-mobile-footer {
+        display: block;
+    }
+
+    .pcg-mobile-topbar {
+        position: fixed;
+        top: var(--pcg-mobile-top, 0px);
+        left: 0;
+        right: 0;
+        z-index: 1100;
+        border-bottom: 0;
+    }
+
+    .pcg-mobile-subbar {
+        border-bottom: 1px solid #dfdfdf;
+    }
+
+    /* Align this hamburger with BuddyBoss mobile header hamburger */
+    .pcg-mobile-subbar #pcg-mobile-mainmenu-btn.bb-left-panel-mobile {
+        margin-left: 14px;
+        /* match BuddyBoss mobile header */
+        justify-content: flex-start;
+        /* avoid centering inside the 48px grid column */
+        padding-left: 0;
+    }
+
+    .pcg-creator-container {
+        max-width: none;
+        min-height: auto;
+        padding-top: 54px;
+        padding-bottom: 110px;
+    }
+
+    .pcg-creator-sidebar {
+        display: none !important;
+    }
+
+    .pcg-creator-content {
+        padding: 0;
+    }
+
+    .pcg-section-container {
+        padding-top: 0px;
+    }
+
+    /* Hide the form navigation bar in mobile view as it's redundant */
+    .pcg-form-nav {
+        display: none !important;
+    }
+
+    /* Disable transform animation on mobile to allow position: fixed for children */
+    .pcg-create-course-container {
+        animation: none !important;
+        transform: none !important;
+    }
+
+    /* Mobile menu: no hover/active backgrounds anywhere */
+    .pcg-mobile-nav a,
+    .pcg-mobile-nav button,
+    .pcg-mobile-nav [role="button"] {
+        background: transparent !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+        -webkit-tap-highlight-color: transparent;
+        outline: none !important;
+        border-color: transparent !important;
+    }
+
+    .pcg-mobile-nav * {
+        outline-color: transparent !important;
+    }
+
+    .pcg-mobile-nav a:hover,
+    .pcg-mobile-nav a:active,
+    .pcg-mobile-nav a:focus,
+    .pcg-mobile-nav a:focus-visible,
+    .pcg-mobile-nav button:hover,
+    .pcg-mobile-nav button:active,
+    .pcg-mobile-nav button:focus,
+    .pcg-mobile-nav button:focus-visible,
+    .pcg-mobile-nav [role="button"]:hover,
+    .pcg-mobile-nav [role="button"]:active,
+    .pcg-mobile-nav [role="button"]:focus,
+    .pcg-mobile-nav [role="button"]:focus-visible,
+    .pcg-mobile-drawer-item:hover,
+    .pcg-mobile-drawer-item:active,
+    .pcg-mobile-drawer-item:focus,
+    .pcg-mobile-drawer-item:focus-visible {
+        background: transparent !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+        outline: none !important;
+        border-color: transparent !important;
+    }
+
+    /* Buttons inside drawers inherit theme focus rings; hard-disable them */
+    .pcg-mobile-drawer-item {
+        border: 0 !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    .pcg-mobile-drawer,
+    .pcg-mobile-drawer * {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    .pcg-section-header {
+        display: none !important;
+    }
+
+    .pcg-section-header .pcg-btn-intro-create {
+        display: none !important;
+    }
+
+    /* Sidecard transformation to Floating Bottom Bar */
+	    [id^="pcg-mode-"] .pcg-sidecard {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        z-index: 1099 !important;
+	        background: #fafafa !important;
+        padding: 12px 18px 14px 18px !important;
+        margin: 0 !important;
+        border-top: 1px solid #dfdfdf !important;
+        border-radius: 0 !important;
+        box-shadow: 0 -15px 30px -5px rgba(0, 0, 0, 0.1) !important;
+        display: block !important;
+    }
+
+    [id^="pcg-mode-"] .pcg-sidecard__section {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+        border: none !important;
+    }
+
+	    [id^="pcg-mode-"] .pcg-sidecard__eyebrow {
+	        display: block !important;
+	        margin-top: 10px !important;
+	        margin-bottom: 8px !important;
+	    }
+
+	    [id^="pcg-mode-"] .pcg-sidecard__price,
+	    [id^="pcg-mode-"] .pcg-price-free-indicator {
+	        display: block !important;
+	    }
+
+	    [id^="pcg-mode-"] .pcg-sidecard__actions {
+	        display: flex !important;
+	        flex-direction: column !important;
+	        align-items: stretch !important;
+	        gap: 12px !important;
+	        width: 100% !important;
+	        margin: 0 !important;
+	        padding: 0 !important;
+	    }
+
+    /* Save Button: Big and Primary */
+	    [id^="pcg-mode-"] .pcg-sidecard__actions .pcg-btn-save-course {
+        flex: 1 !important;
+        margin: 0 !important;
+        height: 44px !important;
+        padding: 0 16px !important;
+	        background: #000 !important;
+	        color: #fff !important;
+        box-shadow: none !important;
+        border-radius: 6px !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.14em !important;
+        text-transform: uppercase !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+	    [id^="pcg-mode-"] .pcg-sidecard__actions .pcg-btn-save-course span.dashicons {
+	        color: #fff !important;
+        font-size: 18px !important;
+        width: 18px !important;
+        height: 18px !important;
+        margin-right: 8px !important;
+    }
+
+	    /* Secondary row: Eye + Publish */
+	    [id^="pcg-mode-"] .pcg-sidecard__secondary-row {
+	        display: flex !important;
+	        gap: 12px !important;
+	        width: 100% !important;
+	    }
+
+	    /* Preview Button: Small and Secondary (Eye button) */
+	    [id^="pcg-mode-"] .pcg-sidecard__actions .pcg-btn-preview {
+	        flex: 0 0 44px !important;
+	        width: 44px !important;
+	        height: 44px !important;
+	        min-width: 44px !important;
+	        margin: 0 !important;
+	        padding: 0 !important;
+	        background: #f5f5f5 !important;
+	        color: #000 !important;
+	        border: 1px solid #dfdfdf !important;
+	        border-radius: 6px !important;
+	        box-shadow: none !important;
+	        display: inline-flex !important;
+	        align-items: center !important;
+	        justify-content: center !important;
+	    }
+
+	    [id^="pcg-mode-"] .pcg-sidecard__actions .pcg-btn-preview .pcg-sidecard__btn-text {
+	        display: none !important;
+	    }
+
+    [id^="pcg-mode-"] .pcg-sidecard__actions .pcg-btn-preview .dashicons {
+        margin: 0 !important;
+        color: #000 !important;
+        font-size: 20px !important;
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    /* Hide the default mobile footer when sidecard bar is present to avoid overlap */
+    .pcg-mobile-footer {
+        display: none !important;
+    }
+
+    .pcg-checklist-slot,
+    .pcg-checklist-card {
+        display: none !important;
+    }
+
+    /* Extra bottom padding for the content container so it's not hidden behind the bar */
+    .pcg-creator-container {
+        padding-bottom: 80px !important;
+    }
+}
