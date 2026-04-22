@@ -177,7 +177,7 @@ class PL_CC_Creator_Dashboard
         $op_template = get_option('pcg_operation_template', '/center');
         $template_name = ($op_template === '/center-2') ? 'main-dashboard-2.php' : 'main-dashboard.php';
         
-        $template = PL_CC_PATH . 'templates/' . $template_name;
+        $template = PL_CC_PATH . 'templates/dashboard/' . $template_name;
         if (file_exists($template)) {
             load_template($template);
             exit;
@@ -218,7 +218,7 @@ class PL_CC_Creator_Dashboard
                     $op_template = get_option('pcg_operation_template', '/center');
                     $template_name = ($op_template === '/center-2') ? 'main-dashboard-2.php' : 'main-dashboard.php';
                     
-                    $custom_template = PL_CC_PATH . 'templates/' . $template_name;
+                    $custom_template = PL_CC_PATH . 'templates/dashboard/' . $template_name;
                     if (file_exists($custom_template)) {
                         return $custom_template;
                     }
@@ -254,6 +254,6 @@ class PL_CC_Creator_Dashboard
         $op_template = get_option('pcg_operation_template', '/center');
         $template_name = ($op_template === '/center-2') ? 'main-dashboard-2.php' : 'main-dashboard.php';
 
-        include PL_CC_PATH . 'templates/' . $template_name;
+        include PL_CC_PATH . 'templates/dashboard/' . $template_name;
     }
 }

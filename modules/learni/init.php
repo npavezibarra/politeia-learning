@@ -14,6 +14,10 @@ if (!defined('ABSPATH')) {
 define('PL_LEARNI_PATH', plugin_dir_path(__FILE__));
 define('PL_LEARNI_URL', plugin_dir_url(__FILE__));
 
+// Compatibility constants for migrated Course Creator logic.
+define('PL_CC_PATH', PL_LEARNI_PATH);
+define('PL_CC_URL', PL_LEARNI_URL);
+
 // Learni constants expected by the ported classes.
 if (!defined('LEARNI_VERSION')) {
     define('LEARNI_VERSION', '0.1.15');
@@ -38,6 +42,11 @@ require_once PL_LEARNI_PATH . 'includes/PostTypes/Lesson.php';
 require_once PL_LEARNI_PATH . 'includes/PostTypes/Specialization.php';
 require_once PL_LEARNI_PATH . 'includes/PostTypes/Program.php';
 require_once PL_LEARNI_PATH . 'includes/Frontend/Templates.php';
+require_once PL_LEARNI_PATH . 'includes/Frontend/Certificates.php';
+require_once PL_LEARNI_PATH . 'includes/Frontend/Actions.php';
+require_once PL_LEARNI_PATH . 'includes/Frontend/Assessment.php';
+require_once PL_LEARNI_PATH . 'includes/Frontend/ViewCourse.php';
+require_once PL_LEARNI_PATH . 'includes/Frontend/ViewLesson.php';
 require_once PL_LEARNI_PATH . 'includes/Frontend/CrossEvalPopup.php';
 require_once PL_LEARNI_PATH . 'includes/Certificates/CertificateCode.php';
 require_once PL_LEARNI_PATH . 'includes/Rest/Routes.php';
@@ -65,8 +74,43 @@ final class PL_Learni_Module
         add_action('plugins_loaded', [__CLASS__, 'maybe_init_woocommerce'], 20);
         add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_cross_eval_popup'], 25);
 
+        // Dashboard (ex-Course Creator) initialization.
+        add_action('init', [__CLASS__, 'init_dashboard'], 0);
+
         if (is_admin()) {
             \Learni\Admin\UserProfile::init();
+        }
+
+        // Legacy PL_CC autoloader for migrated classes.
+        spl_autoload_register([__CLASS__, 'autoload_dashboard_classes']);
+    }
+
+    /**
+     * Legacy autoloader for PL_CC classes migrated to Dashboard subfolder.
+     */
+    public static function autoload_dashboard_classes(string $class): void
+    {
+        if (strpos($class, 'PL_CC_') === 0) {
+            $file = PL_LEARNI_PATH . 'includes/Dashboard/class-' . strtolower(str_replace(['PL_CC_', '_'], ['', '-'], $class)) . '.php';
+            if (file_exists($file)) {
+                require_once $file;
+            }
+        }
+    }
+
+    /**
+     * Initialize Dashboard components.
+     */
+    public static function init_dashboard(): void
+    {
+        if (class_exists('PL_CC_Creator_Dashboard')) {
+            new PL_CC_Creator_Dashboard();
+        }
+        if (class_exists('PL_CC_Course_Save_Handler')) {
+            new PL_CC_Course_Save_Handler();
+        }
+        if (class_exists('PL_CC_Inclusion_Approvals')) {
+            PL_CC_Inclusion_Approvals::init();
         }
     }
 

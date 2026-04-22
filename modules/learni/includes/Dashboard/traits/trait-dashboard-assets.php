@@ -32,9 +32,9 @@ trait PL_CC_Dashboard_Assets_Trait
     public function enqueue_escrito_frontend_assets(): void
     {
         if (is_single() && get_post_type() === 'post') {
-            $frontend_css_path = PL_CC_PATH . 'assets/css/escrito-frontend.css';
+            $frontend_css_path = PL_CC_PATH . 'assets/dashboard/css/escrito-frontend.css';
             $frontend_css_ver = file_exists($frontend_css_path) ? (string) filemtime($frontend_css_path) : '1.0.10';
-            wp_enqueue_style('pcg-escrito-frontend-css', PL_CC_URL . 'assets/css/escrito-frontend.css', [], $frontend_css_ver);
+            wp_enqueue_style('pcg-escrito-frontend-css', PL_CC_URL . 'assets/dashboard/css/escrito-frontend.css', [], $frontend_css_ver);
         }
     }
 
@@ -87,13 +87,13 @@ trait PL_CC_Dashboard_Assets_Trait
                 true
             );
 
-            $creator_css_path = PL_CC_PATH . 'assets/css/creator-dashboard.css';
-            $creator_js_path = PL_CC_PATH . 'assets/js/creator-dashboard.js';
+            $creator_css_path = PL_CC_PATH . 'assets/dashboard/css/creator-dashboard.css';
+            $creator_js_path = PL_CC_PATH . 'assets/dashboard/js/creator-dashboard.js';
             $creator_css_ver = file_exists($creator_css_path) ? (string) filemtime($creator_css_path) : '1.0.19';
             $creator_js_ver = file_exists($creator_js_path) ? (string) filemtime($creator_js_path) : '1.0.15';
 
-            wp_enqueue_style('pcg-creator-css', PL_CC_URL . 'assets/css/creator-dashboard.css', [], $creator_css_ver);
-            wp_enqueue_style('pcg-cropper-css', PL_CC_URL . 'assets/css/pcg-cropper.css', ['cropperjs'], '1.0.0');
+            wp_enqueue_style('pcg-creator-css', PL_CC_URL . 'assets/dashboard/css/creator-dashboard.css', [], $creator_css_ver);
+            wp_enqueue_style('pcg-cropper-css', PL_CC_URL . 'assets/dashboard/css/pcg-cropper.css', ['cropperjs'], '1.0.0');
 
             // Inject Custom Styles from Admin Options
             $creator_max_width = get_option('pcg_creator_max_width', '1400px');
@@ -107,20 +107,20 @@ trait PL_CC_Dashboard_Assets_Trait
             ";
             wp_add_inline_style('pcg-creator-css', $custom_css);
 
-            wp_enqueue_script('pcg-dashboard-utils', PL_CC_URL . 'assets/js/parts/_utils.js', [], $creator_js_ver, true);
-            wp_enqueue_script('pcg-dashboard-shared', PL_CC_URL . 'assets/js/parts/_shared-logic.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
-            wp_enqueue_script('pcg-dashboard-ui-nav', PL_CC_URL . 'assets/js/parts/_ui-nav.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
-            wp_enqueue_script('pcg-dashboard-specs', PL_CC_URL . 'assets/js/parts/_specializations.js', ['jquery', 'pcg-dashboard-shared', 'pcg-dashboard-utils', 'jquery-ui-sortable'], $creator_js_ver, true);
-            wp_enqueue_script('pcg-dashboard-programs', PL_CC_URL . 'assets/js/parts/_programs.js', ['jquery', 'pcg-dashboard-shared', 'pcg-dashboard-utils'], $creator_js_ver, true);
-            wp_enqueue_script('pcg-dashboard-escritos', PL_CC_URL . 'assets/js/parts/_escritos.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
-            wp_enqueue_script('pcg-dashboard-lessons', PL_CC_URL . 'assets/js/parts/_lessons.js', ['jquery', 'pcg-dashboard-utils', 'jquery-ui-sortable'], $creator_js_ver, true);
-            wp_enqueue_script('pcg-dashboard-evaluation', PL_CC_URL . 'assets/js/parts/_evaluation.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
-            wp_enqueue_script('pcg-dashboard-media', PL_CC_URL . 'assets/js/parts/_media-handlers.js', ['jquery', 'pcg-dashboard-utils', 'pcg-cropper-js'], $creator_js_ver, true);
-            wp_enqueue_script('pcg-dashboard-profile', PL_CC_URL . 'assets/js/parts/_profile-ui.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
-            wp_enqueue_script('pcg-dashboard-students', PL_CC_URL . 'assets/js/parts/_students-ui.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-utils', PL_CC_URL . 'assets/dashboard/js/parts/_utils.js', [], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-shared', PL_CC_URL . 'assets/dashboard/js/parts/_shared-logic.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-ui-nav', PL_CC_URL . 'assets/dashboard/js/parts/_ui-nav.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-specs', PL_CC_URL . 'assets/dashboard/js/parts/_specializations.js', ['jquery', 'pcg-dashboard-shared', 'pcg-dashboard-utils', 'jquery-ui-sortable'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-programs', PL_CC_URL . 'assets/dashboard/js/parts/_programs.js', ['jquery', 'pcg-dashboard-shared', 'pcg-dashboard-utils'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-escritos', PL_CC_URL . 'assets/dashboard/js/parts/_escritos.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-lessons', PL_CC_URL . 'assets/dashboard/js/parts/_lessons.js', ['jquery', 'pcg-dashboard-utils', 'jquery-ui-sortable'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-evaluation', PL_CC_URL . 'assets/dashboard/js/parts/_evaluation.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-media', PL_CC_URL . 'assets/dashboard/js/parts/_media-handlers.js', ['jquery', 'pcg-dashboard-utils', 'pcg-cropper-js'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-profile', PL_CC_URL . 'assets/dashboard/js/parts/_profile-ui.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
+            wp_enqueue_script('pcg-dashboard-students', PL_CC_URL . 'assets/dashboard/js/parts/_students-ui.js', ['jquery', 'pcg-dashboard-utils'], $creator_js_ver, true);
 
-            wp_enqueue_script('pcg-cropper-js', PL_CC_URL . 'assets/js/pcg-course-cropper.js', ['jquery', 'cropperjs'], '1.0.0', true);
-            wp_enqueue_script('pcg-creator-js', PL_CC_URL . 'assets/js/creator-dashboard.js', [
+            wp_enqueue_script('pcg-cropper-js', PL_CC_URL . 'assets/dashboard/js/pcg-course-cropper.js', ['jquery', 'cropperjs'], '1.0.0', true);
+            wp_enqueue_script('pcg-creator-js', PL_CC_URL . 'assets/dashboard/js/creator-dashboard.js', [
                 'jquery', 
                 'jquery-ui-sortable', 
                 'pcg-cropper-js', 
@@ -137,10 +137,10 @@ trait PL_CC_Dashboard_Assets_Trait
                 'pcg-dashboard-students'
             ], $creator_js_ver, true);
             wp_enqueue_script('pcg-chartjs', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', [], '4.4.1', true);
-            wp_enqueue_script('pcg-sales-dashboard', PL_CC_URL . 'assets/js/pcg-sales-dashboard.js', ['pcg-chartjs'], '1.0.0', true);
-            wp_enqueue_script('pcg-sales-list', PL_CC_URL . 'assets/js/pcg-sales-list.js', [], '1.0.2', true);
-            wp_enqueue_script('pcg-students-dashboard', PL_CC_URL . 'assets/js/pcg-students-dashboard.js', ['pcg-chartjs'], '1.0.2', true);
-            wp_enqueue_script('pcg-students-rankings', PL_CC_URL . 'assets/js/pcg-students-rankings.js', [], '1.0.0', true);
+            wp_enqueue_script('pcg-sales-dashboard', PL_CC_URL . 'assets/dashboard/js/pcg-sales-dashboard.js', ['pcg-chartjs'], '1.0.0', true);
+            wp_enqueue_script('pcg-sales-list', PL_CC_URL . 'assets/dashboard/js/pcg-sales-list.js', [], '1.0.2', true);
+            wp_enqueue_script('pcg-students-dashboard', PL_CC_URL . 'assets/dashboard/js/pcg-students-dashboard.js', ['pcg-chartjs'], '1.0.2', true);
+            wp_enqueue_script('pcg-students-rankings', PL_CC_URL . 'assets/dashboard/js/pcg-students-rankings.js', [], '1.0.0', true);
 
             wp_localize_script('pcg-sales-dashboard', 'pcgSalesData', [
                 'ajaxUrl' => admin_url('admin-ajax.php'),

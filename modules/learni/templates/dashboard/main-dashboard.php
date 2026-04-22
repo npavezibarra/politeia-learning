@@ -146,7 +146,7 @@ pl_template_open();
 
             <div class="pcg-section-container">
                 <?php
-                $template_file = PL_CC_PATH . 'templates/sections/' . $current_section . '.php';
+                $template_file = PL_CC_PATH . 'templates/dashboard/sections/' . $current_section . '.php';
                 if (file_exists($template_file)) {
                     include $template_file;
                 } else {

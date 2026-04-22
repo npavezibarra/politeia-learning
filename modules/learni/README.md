@@ -1,61 +1,66 @@
-## Learni: Binomial Quiz + Certificado
+# Learni: El motor LMS de Politeia
 
-Este módulo implementa el flujo de evaluación **binomial** (Evaluación Inicial + Evaluación Final) y el desbloqueo del **Certificado**.
+Learni es el ecosistema central de gestión de aprendizaje (LMS) de Politeia. Este módulo integra de forma unificada la experiencia del estudiante (LMS) y la del instructor (**Creator Dashboard / Center-2**), gestionando programas, especializaciones, evaluaciones binomiales, certificados y partnerships.
 
-### Flujos
+## 🚀 Responsabilidades del Módulo
 
-1) **Curso single-user (sin partner)**
-- Usuario compra/obtiene acceso.
-- Rinde **Evaluación Inicial**.
-- Completa **100% lecciones**.
-- Rinde **Evaluación Final**.
-- Obtiene certificado **solo si** el puntaje final es **≥** al inicial (ver regla).
+- **LMS Core**: Gestión de cursos, lecciones y tracking de progreso.
+- **Evaluación Binomial**: Flujo de validación de conocimientos mediante Evaluación Inicial (baseline) y Final.
+- **Test Partner (Cross Evaluation)**: Sistema único de evaluación mutua entre socios de estudio.
+- **Creator Dashboard**: Interfaz premium para la gestión de contenidos, ventas y analíticas de estudiantes.
+- **Certificación**: Motor de generación de certificados dinámicos basados en mérito y progreso.
 
-2) **Curso con partner (Evaluación Cruzada / Test Partner)**
-- Cada curso puede tener un partner (owner + partner).
-- Ambos rinden **Evaluación Inicial** y completan **100% lecciones**.
-- La **Evaluación Final** se rinde vía **TEST PARTNER** (cross evaluation):
-  - El evaluador hace clic en `TEST PARTNER`.
-  - El testeado acepta (popup global).
-  - Se responde el mismo quiz final, pero el attempt se guarda en la cuenta del testeado.
-- Certificado se habilita **solo cuando ambos** cumplen la regla del certificado (mutuo).
+---
 
-### Regla del certificado
+## 🏗️ Arquitectura Técnica
 
-Para un usuario en un curso:
+El módulo sigue un diseño orientado a dominios (Domain-Driven Design) para garantizar que la lógica permanezca desacoplada y escalable.
 
-- Debe tener **Evaluación Inicial** (baseline `X`).
-- Debe existir al menos una **Evaluación Final** con puntaje **≥ X**.
-- Debe tener **100% lecciones** completadas.
-- Debe existir plantilla de certificado configurada.
+### Estructura de Directorios (includes/)
+- **`Access/`**: Reglas de negocio para el acceso y permisos.
+- **`Dashboard/`**: (Anteriormente `course-creator`) Dashboard Center-2 para instructores.
+- **`Database/`**: Abstracción de datos y persistencia (Enrollments, Progress, Attempts).
+- **`PostTypes/`**: Definición de CPTs (Course, Quiz, Program).
+- **`Rest/`**: API REST modularizada en controladores específicos:
+    - `Binomial`: Lógica de estados y gating de quices.
+    - `CrossEval`: Handshake y sesiones de evaluación compartida.
+    - `Attempts`: Procesamiento de respuestas y cálculo de puntajes.
+    - `Certificates`: Generación de metadatos y plantillas de certificación.
 
-En cursos con partner:
-- Lo anterior debe cumplirse para **ambos usuarios** (owner y partner).
+---
 
-### Cooldown de reintento (Final < Initial)
+## 📏 Reglas de Oro del Desarrollo
 
-Si el usuario rinde la **Evaluación Final** y obtiene un puntaje **< X**:
+Para asegurar la mantenibilidad a largo plazo, todo desarrollo en Learni debe adherirse a los siguientes estándares:
 
-- **No obtiene certificado**.
-- El botón para rendir la Evaluación Final permanece visible, pero queda **deshabilitado**.
-- Se habilita nuevamente después de **7 días** desde la fecha del **último final fallido**.
-- El cálculo se hace cada vez que se consulta el estado del curso/quiz.
+### 1. Regla de las 500 Líneas (Mandatoria)
+- Ningún archivo de lógica o clase debe exceder las **500 líneas**.
+- Si un archivo se acerca a este límite, **debe ser refactorizado** en sub-módulos o clases de dominio más pequeñas.
 
-Esto aplica tanto para:
-- Single-user (`TAKE FINAL QUIZ`)
-- Partnered (`TEST PARTNER`, basado en la elegibilidad/cooldown del usuario testeado)
+### 2. Estética Premium (Aesthetics First)
+- Las interfaces deben usar **Vanilla CSS** con variables de diseño coherentes.
+- Se priorizan micro-animaciones, modos oscuros/ligeros elegantes y una tipografía moderna (Inter/Outfit).
+- **No usar Placeholders**: Todas las imágenes deben ser activos reales o generados específicamente para el contexto.
 
-### Datos persistidos en attempts
+### 3. Modularidad REST
+- Las rutas en `Routes.php` solo deben actuar como registro y delegación.
+- La implementación reside siempre en la clase de dominio correspondiente dentro de `Rest/`.
 
-Los intentos se guardan en `wp_learni_quiz_attempts.answers_json` incluyendo:
-- `phase`: `"initial"` o `"final"` (en datos legacy se infiere por orden histórico).
-- `percent`, `score`, `total`, `submittedAt`
-- En cross-eval: `crossEval.sessionId` y `crossEval.initiatorUserId`
+---
 
-### REST (resumen)
+## 🔄 Flujo de Evaluación Binomial
 
-- `GET /learni/v1/courses/{id}/binomial`
-  - Devuelve `attempts.initial`, `attempts.final` y `ui.*` incluyendo:
-    - `ui.finalEligible`, `ui.finalCooldownDaysRemaining`, `ui.canTakeFinal`
-  - En cursos con partner, incluye `partner.other*` para representar el estado del “otro usuario” (y habilitar/inhabilitar `TEST PARTNER`).
+1. **Baseline**: El alumno rinde la **Evaluación Inicial** antes de comenzar.
+2. **Progreso**: Completa el **100% de las lecciones**.
+3. **Validación**: Rinde la **Evaluación Final**.
+4. **Criterio de Éxito**: El certificado se emite **solo si** el puntaje final es mayor o igual al inicial.
+5. **Cooldown**: Si falla (Final < Inicial), se aplica un bloqueo de **7 días** para fomentar el repaso.
 
+---
+
+## 🤝 Test Partner (Evaluación Cruzada)
+
+Diseñado para fomentar el aprendizaje colaborativo:
+- Un usuario inicia la sesión de evaluación para su partner.
+- El partner recibe una notificación global en tiempo real.
+- El examen es validado bajo la cuenta del partner evaluado, permitiendo que ambos obtengan sus certificados mediante la validación mutua.
