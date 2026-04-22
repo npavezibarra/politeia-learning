@@ -1,4 +1,48 @@
-/* Smartphone menu overlay (<= 599px)
+/**
+ * Navigation JS - Handles Dropdowns and Toggles
+ */
+(function() {
+    var selector = ".pl-user-menu-item";
+
+    function closeAll(except) {
+        document.querySelectorAll(selector + ".is-open").forEach(function(item) {
+            if (except && item === except) { return; }
+            item.classList.remove("is-open");
+            var toggle = item.querySelector(".pl-user-menu__toggle");
+            if (toggle) { 
+                toggle.setAttribute("aria-expanded", "false"); 
+            }
+        });
+    }
+
+    document.addEventListener("click", function(event) {
+        var item = event.target.closest(selector);
+        var toggle = event.target.closest(".pl-user-menu__toggle");
+
+        if (toggle && item) {
+            event.preventDefault();
+            var isOpen = item.classList.contains("is-open");
+            closeAll(item);
+            if (!isOpen) {
+                item.classList.add("is-open");
+                toggle.setAttribute("aria-expanded", "true");
+            }
+            return;
+        }
+
+        // Close if clicking outside the dropdown
+        if (!event.target.closest(".pl-user-menu__dropdown")) {
+            closeAll();
+        }
+    });
+
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "Escape") { 
+            closeAll(); 
+        }
+    });
+})();
+/* Smartphone menu overlay (<= 850px)
    - Opens from the subbar hamburger
    - Shows context-aware submenu items (course editor, specialization, programa, sales, students)
 */
@@ -7,7 +51,7 @@
   'use strict';
 
   function isMobile() {
-    return window.matchMedia && window.matchMedia('(max-width: 599px)').matches;
+    return window.matchMedia && window.matchMedia('(max-width: 850px)').matches;
   }
 
   function qs(sel, root) {
@@ -25,9 +69,10 @@
 
   function getSectionFromUrl() {
     try {
-      return new URLSearchParams(window.location.search).get('section') || '';
+      const section = new URLSearchParams(window.location.search).get('section') || '';
+      return section === '' ? 'create-course' : section;
     } catch (_) {
-      return '';
+      return 'create-course';
     }
   }
 
@@ -65,10 +110,28 @@
 
     const sources = getSources();
     if (!sources.length) {
-      const empty = document.createElement('div');
-      empty.className = 'pl-smartphone-menu-panel__empty';
-      empty.textContent = 'Sin opciones disponibles.';
-      itemsRoot.appendChild(empty);
+      const sectionLabels = [
+        { id: 'create-course', label: 'MIS CURSOS' },
+        { id: 'mis-escritos', label: 'MIS ESCRITOS' },
+        { id: 'especializacion', label: 'ESPECIALIZACIÓN' },
+        { id: 'create-group', label: 'PROGRAMAS' },
+        { id: 'sales', label: 'VENTAS' },
+        { id: 'students', label: 'ESTUDIANTES' },
+        { id: 'profile', label: 'PERFIL' }
+      ];
+      const currentSection = getSectionFromUrl() || 'create-course';
+
+      sectionLabels.forEach((sec) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'pl-smartphone-menu-panel__item';
+        if (sec.id === currentSection) btn.classList.add('is-active');
+        btn.textContent = sec.label;
+        btn.addEventListener('click', function () {
+            window.location.href = '?section=' + sec.id;
+        });
+        itemsRoot.appendChild(btn);
+      });
     } else {
       sources.forEach((src) => {
         const label = (src.textContent || '').trim();
@@ -200,14 +263,68 @@
     }, 180);
   }
 
+  function openMainPanel() {
+    if (!isMobile()) return;
+
+    const overlay = qs('[data-pl-smartphone-main-overlay]');
+    const panel = qs('[data-pl-smartphone-main-panel]');
+    if (!overlay || !panel) return;
+
+    overlay.hidden = false;
+    panel.hidden = false;
+    panel.setAttribute('aria-hidden', 'false');
+    document.documentElement.classList.add('pl-smartphone-menu-open');
+    window.setTimeout(() => {
+      overlay.classList.add('is-open');
+      panel.classList.add('is-open');
+    }, 0);
+  }
+
+  function closeMainPanel() {
+    const overlay = qs('[data-pl-smartphone-main-overlay]');
+    const panel = qs('[data-pl-smartphone-main-panel]');
+    if (!overlay || !panel) return;
+
+    overlay.classList.remove('is-open');
+    panel.classList.remove('is-open');
+    panel.setAttribute('aria-hidden', 'true');
+    document.documentElement.classList.remove('pl-smartphone-menu-open');
+    window.setTimeout(() => {
+      overlay.hidden = true;
+      panel.hidden = true;
+    }, 180);
+  }
+
   function init() {
-    const trigger = qs('.pl-smartphone-header__subbar-hamburger');
+    const trigger = qs('#pl-hamburger-sub');
     const overlay = qs('[data-pl-smartphone-menu-overlay]');
     const closeBtn = qs('[data-pl-smartphone-menu-close]');
+    const backBtn = qs('[data-pl-subbar-back]');
+
+    if (backBtn) {
+      backBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          // Fallback if opened in a new tab
+          const section = getSectionFromUrl() || 'create-course';
+          window.location.href = '?section=' + section;
+        }
+      });
+    }
 
     if (trigger) trigger.addEventListener('click', openPanel);
     if (overlay) overlay.addEventListener('click', closePanel);
     if (closeBtn) closeBtn.addEventListener('click', closePanel);
+
+    const mainTrigger = qs('#pl-hamburger-main');
+    const mainOverlay = qs('[data-pl-smartphone-main-overlay]');
+    const mainCloseBtn = qs('[data-pl-smartphone-main-close]');
+
+    if (mainTrigger) mainTrigger.addEventListener('click', openMainPanel);
+    if (mainOverlay) mainOverlay.addEventListener('click', closeMainPanel);
+    if (mainCloseBtn) mainCloseBtn.addEventListener('click', closeMainPanel);
 
     // Create action bar visibility
     syncActionBar();
@@ -238,7 +355,10 @@
     }
 
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closePanel();
+      if (e.key === 'Escape') {
+        closePanel();
+        closeMainPanel();
+      }
     });
   }
 

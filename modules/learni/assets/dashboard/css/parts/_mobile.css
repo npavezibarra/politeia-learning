@@ -421,11 +421,11 @@ button#pcg-mobile-sectionmenu-btn {
 }
 
 /* ───────────────────────────────────────────────────────────
-   Smartphone header override (<= 599px)
+   Smartphone header override (<= 850px)
    Hide the standard WordPress navigation so we can render a custom mobile header.
    Scope: Center dashboards only.
    ─────────────────────────────────────────────────────────── */
-@media (max-width: 599px) {
+@media (max-width: 850px) {
     /* Hide the entire standard theme header on smartphones (custom mobile header will replace it). */
     body.pcg-template-center-active #masthead,
     body.pcg-template-center-2-active #masthead,

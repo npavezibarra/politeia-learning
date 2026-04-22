@@ -219,11 +219,10 @@ class PL_Module_Loader
     private static $modules = [
         'learni' => true,
         'core' => true,
-        'menu-management' => true,
+        'navigation' => true,
         'blog-post' => true,
         'login-register' => true,
         'course-creator' => true,
-        'smartphone' => true,
         'quiz-creator' => true,
         'woo' => true,
         'member-profile' => true,
