@@ -96,8 +96,12 @@ class VerificationHandler
      */
     public static function requires_verification(int $user_id): bool
     {
-        return get_user_meta($user_id, self::VERIFIED_META, true) !== '' || 
-               get_user_meta($user_id, self::TOKEN_HASH_META, true) !== '';
+        // If they are already verified, they definitely don't require verification anymore
+        if (self::is_verified($user_id)) {
+            return false;
+        }
+
+        return get_user_meta($user_id, self::TOKEN_HASH_META, true) !== '';
     }
 
     /**
@@ -105,6 +109,13 @@ class VerificationHandler
      */
     public static function is_verified(int $user_id): bool
     {
-        return (string) get_user_meta($user_id, self::VERIFIED_META, true) === '1';
+        static $cache = [];
+        if (isset($cache[$user_id])) {
+            return $cache[$user_id];
+        }
+
+        $verified = (bool) get_user_meta($user_id, self::VERIFIED_META, true);
+        $cache[$user_id] = $verified;
+        return $verified;
     }
 }

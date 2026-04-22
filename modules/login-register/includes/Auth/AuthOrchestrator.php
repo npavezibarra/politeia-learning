@@ -8,6 +8,7 @@ use Learni\Auth\Handlers\VerificationHandler;
 use Learni\Auth\Handlers\PasswordHandler;
 use Learni\Auth\UI\Renderer;
 use Learni\Auth\Utilities\AuthUtils;
+use Learni\Auth\PasswordPage;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -57,9 +58,7 @@ final class AuthOrchestrator
         add_shortcode('pl_auth_links', [$this, 'render_auth_links_shortcode']);
 
         // Sub-modules
-        if (class_exists('\PL_Auth_Reset_Password_Page')) {
-            \PL_Auth_Reset_Password_Page::init();
-        }
+        PasswordPage::init();
     }
 
     public function enqueue_assets(): void
@@ -98,6 +97,26 @@ final class AuthOrchestrator
                 'password_mismatch' => __('The passwords do not match.', 'politeia-learning'),
             ]
         ]);
+
+        // Unverified popup assets (only for logged in users)
+        if (is_user_logged_in()) {
+            $user_id = (int) get_current_user_id();
+            if (!VerificationHandler::is_verified($user_id) && VerificationHandler::requires_verification($user_id)) {
+                wp_enqueue_style(
+                    'pl-auth-unverified-css',
+                    PL_AUTH_URL . 'assets/css/unverified-popup.css',
+                    [],
+                    filemtime(PL_AUTH_PATH . 'assets/css/unverified-popup.css')
+                );
+                wp_enqueue_script(
+                    'pl-auth-unverified-js',
+                    PL_AUTH_URL . 'assets/js/unverified-popup.js',
+                    [],
+                    filemtime(PL_AUTH_PATH . 'assets/js/unverified-popup.js'),
+                    true
+                );
+            }
+        }
     }
 
     private function get_localization_labels(bool $is_spanish): array

@@ -51,6 +51,11 @@ class Renderer
             return '';
         }
 
+        // Optimization: check if user dismissed the popup in this session
+        if (isset($_COOKIE['pl_auth_unverified_dismissed']) && !isset($_GET['pl_auth_unverified'])) {
+            return '';
+        }
+
         $user_id = (int) get_current_user_id();
         if ($user_id <= 0 || VerificationHandler::is_verified($user_id) || !VerificationHandler::requires_verification($user_id)) {
             return '';

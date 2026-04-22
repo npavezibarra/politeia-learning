@@ -1,19 +1,23 @@
 <?php
-/**
- * Custom Reset Password page for Politeia Learning.
- *
- * Route: /restablecer-contrasena/?key=...&login=...
- */
+
+namespace Learni\Auth;
+
+use Learni\Auth\Utilities\AuthUtils;
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-final class PL_Auth_Reset_Password_Page
+/**
+ * Custom Reset Password page handling.
+ * 
+ * Route: /restablecer-contrasena/
+ */
+final class PasswordPage
 {
     private const QUERY_VAR = 'pl_auth_reset_password';
     private const SLUG = 'restablecer-contrasena';
-    private const FLUSH_OPTION = 'pl_auth_reset_password_rewrite_v1';
+    private const FLUSH_OPTION = 'pl_auth_reset_password_rewrite_v2';
 
     public static function init(): void
     {
@@ -45,7 +49,7 @@ final class PL_Auth_Reset_Password_Page
         }
 
         global $wp_query;
-        if ($wp_query instanceof WP_Query) {
+        if ($wp_query instanceof \WP_Query) {
             $wp_query->is_404 = false;
             $wp_query->is_page = true;
         }
@@ -53,7 +57,7 @@ final class PL_Auth_Reset_Password_Page
         status_header(200);
         nocache_headers();
 
-        $file = PL_PATH . 'templates/pages/restablecer-contrasena.php';
+        $file = PL_AUTH_PATH . 'templates/auth/reset-password-page.php';
         return file_exists($file) ? $file : $template;
     }
 
@@ -67,4 +71,3 @@ final class PL_Auth_Reset_Password_Page
         update_option(self::FLUSH_OPTION, 1, true);
     }
 }
-
