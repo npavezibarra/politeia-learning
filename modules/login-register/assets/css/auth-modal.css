@@ -1,0 +1,286 @@
+	    #pl-auth-overlay {
+	        position: fixed;
+	        inset: 0;
+	        display: flex;
+	        align-items: center;
+	        justify-content: center;
+	        padding: 24px;
+	        background: rgba(15, 23, 42, 0.68);
+	        backdrop-filter: blur(10px);
+	        z-index: 9999;
+	        opacity: 0;
+	        visibility: hidden;
+	        transition: opacity 180ms ease, visibility 180ms ease;
+	        font-family: Poppins, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	        box-sizing: border-box;
+	    }
+
+    #pl-auth-overlay * {
+        box-sizing: border-box;
+    }
+
+    #pl-auth-overlay.is-open {
+        opacity: 1;
+        visibility: visible;
+    }
+
+	    #pl-auth-card {
+	        position: relative;
+	        width: min(100%, 400px);
+	        background: #ffffff;
+	        border: none;
+	        border-radius: 14px;
+	        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+	        overflow: hidden;
+	        transform: translateY(12px) scale(0.98);
+	        transition: transform 180ms ease;
+	    }
+
+    .pl-auth-loading {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 14px;
+        padding: 26px;
+        background: rgba(248, 250, 252, 0.92);
+        backdrop-filter: blur(6px);
+        z-index: 2;
+        text-align: center;
+    }
+
+    #pl-auth-overlay.is-loading .pl-auth-loading {
+        display: flex;
+    }
+
+    .pl-auth-loading__spinner {
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        border: 3px solid rgba(15, 23, 42, 0.14);
+        border-top-color: rgba(15, 23, 42, 0.78);
+        animation: plAuthSpin 0.8s linear infinite;
+    }
+
+    .pl-auth-loading__text {
+        font-size: 14px;
+        line-height: 1.4;
+        color: #0f172a;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    @keyframes plAuthSpin {
+        to { transform: rotate(360deg); }
+    }
+
+    #pl-auth-overlay.is-open #pl-auth-card {
+        transform: translateY(0) scale(1);
+    }
+
+	    .pl-auth-shell {
+	        padding: 40px;
+	    }
+
+	    .pl-auth-eyebrow {
+	        display: none;
+	    }
+
+	    .pl-auth-title {
+	        margin: 0 0 8px;
+	        font-size: 1.75rem;
+	        line-height: 1.05;
+	        color: #000000;
+	        font-weight: 600;
+	        text-transform: uppercase;
+	        letter-spacing: -0.02em;
+	    }
+
+	    .pl-auth-copy {
+	        margin: 0 0 40px;
+	        color: #666666;
+	        font-size: 0.85rem;
+	        line-height: 1.45;
+	    }
+
+	    .pl-auth-tabs {
+	        display: none;
+	    }
+
+    .pl-auth-tab {
+        appearance: none;
+        border: 0;
+        border-radius: 6px;
+        padding: 11px 14px;
+        background: transparent;
+        color: #475569;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .pl-auth-tab.is-active {
+        background: #111827;
+        color: #ffffff;
+        box-shadow: 0 10px 20px rgba(17, 24, 39, 0.2);
+    }
+
+	    .pl-auth-form {
+	        display: block;
+	    }
+
+	    .pl-auth-grid {
+	        display: grid;
+	        grid-template-columns: 1fr;
+	        gap: 0;
+	    }
+
+	    .pl-auth-field {
+	        position: relative;
+	        margin-bottom: 30px;
+	    }
+
+	    .pl-auth-field label {
+	        display: block;
+	        font-size: 0.7rem;
+	        font-weight: 600;
+	        color: #000000;
+	        margin-bottom: 2px;
+	        letter-spacing: 0.05em;
+	        text-transform: uppercase;
+	    }
+
+	    .pl-auth-field input {
+	        width: 100%;
+	        border: none;
+	        border-bottom: 2px solid #e0e0e0;
+	        border-radius: 0;
+	        padding: 8px 0;
+	        background: transparent;
+	        color: #000000;
+	        font-size: 0.95rem;
+	        outline: none;
+	        transition: border-color 0.2s ease;
+	    }
+
+	    .pl-auth-field input:focus {
+	        border-bottom-color: #000000;
+	        box-shadow: none;
+	    }
+
+    .pl-auth-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+	    .pl-auth-remember {
+	        display: inline-flex;
+	        align-items: center;
+	        gap: 8px;
+	        color: #666666;
+	        font-size: 0.8rem;
+	    }
+
+	    .pl-auth-message {
+	        display: none;
+	        margin: 20px 0 0;
+	        padding: 12px;
+	        text-align: center;
+	        font-size: 0.8rem;
+	        font-weight: 500;
+	        border: 1px solid #000000;
+	        text-transform: uppercase;
+	        border-radius: 8px;
+	    }
+
+    .pl-auth-message.is-visible {
+        display: block;
+    }
+
+	    .pl-auth-message.is-error {
+	        background: #ffffff;
+	        color: #000000;
+	        border-style: dashed;
+	    }
+
+	    .pl-auth-message.is-notice {
+	        background: #000000;
+	        color: #ffffff;
+	    }
+
+	    .pl-auth-submit {
+	        width: 100%;
+	        padding: 16px;
+	        background-color: #000000;
+	        color: #ffffff;
+	        border: 1px solid #000000;
+	        border-radius: 6px;
+	        font-weight: 600;
+	        font-size: 0.9rem;
+	        letter-spacing: 0.1em;
+	        text-transform: uppercase;
+	        cursor: pointer;
+	        transition: all 0.2s ease;
+	        margin-top: 10px;
+	    }
+
+	    .pl-auth-submit:hover {
+	        background-color: #ffffff;
+	        color: #000000;
+	    }
+
+	    .pl-auth-footer {
+	        text-align: center;
+	        margin-top: 30px;
+	        font-size: 0.75rem;
+	        color: #666666;
+	        text-transform: uppercase;
+	        letter-spacing: 0.05em;
+	        border-top: 0;
+	        padding-top: 0;
+	    }
+
+	    .pl-auth-footer a {
+	        color: #000000;
+	        text-decoration: underline;
+	        font-weight: 600;
+	        cursor: pointer;
+	    }
+
+	    .pl-auth-close {
+	        position: absolute;
+	        top: 14px;
+	        right: 14px;
+	        width: 40px;
+	        height: 40px;
+	        border: 0;
+	        border-radius: 999px;
+	        background: rgba(0, 0, 0, 0.04);
+	        color: #000000;
+	        cursor: pointer;
+	    }
+
+    .pl-auth-hidden {
+        display: none !important;
+    }
+
+	    @media (max-width: 640px) {
+	        .pl-auth-shell {
+	            padding: 22px;
+	        }
+
+	        .pl-auth-title {
+	            font-size: 1.5rem;
+	        }
+
+	        .pl-auth-grid {
+	            grid-template-columns: 1fr;
+	        }
+	    }

@@ -12,8 +12,8 @@ $pcg_is_editing_quiz = isset($_GET['edit_quiz']) && !empty($_GET['edit_quiz']);
 $pcg_active_segment = $pcg_is_editing_quiz ? 'evaluacion' : 'curso';
 
 $current_course_id = 0;
-if ($pcg_is_editing_quiz && class_exists('PQC_Quiz_Creator') && method_exists('PQC_Quiz_Creator', 'get_course_id_by_quiz_id')) {
-    $current_course_id = (int) PQC_Quiz_Creator::get_course_id_by_quiz_id((int) $_GET['edit_quiz']);
+if ($pcg_is_editing_quiz && class_exists('\Learni\QuizEditor\QuizRepository')) {
+    $current_course_id = (int) \Learni\QuizEditor\QuizRepository::get_course_id_by_quiz_id((int) $_GET['edit_quiz']);
 }
 ?>
 

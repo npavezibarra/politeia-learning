@@ -1,66 +1,41 @@
-# Learni: El motor LMS de Politeia
+# Learni: El Motor LMS de Politeia
 
-Learni es el ecosistema central de gestión de aprendizaje (LMS) de Politeia. Este módulo integra de forma unificada la experiencia del estudiante (LMS) y la del instructor (**Creator Dashboard / Center-2**), gestionando programas, especializaciones, evaluaciones binomiales, certificados y partnerships.
+Learni es el núcleo unificado de gestión de aprendizaje de Politeia. Integra la experiencia del estudiante (LMS) con un dashboard premium para instructores (**Center-2**), gestionando el ciclo completo de formación: desde la creación de contenidos hasta la certificación.
 
-## 🚀 Responsabilidades del Módulo
+## 🚀 Módulos Core
 
-- **LMS Core**: Gestión de cursos, lecciones y tracking de progreso.
-- **Evaluación Binomial**: Flujo de validación de conocimientos mediante Evaluación Inicial (baseline) y Final.
-- **Test Partner (Cross Evaluation)**: Sistema único de evaluación mutua entre socios de estudio.
-- **Creator Dashboard**: Interfaz premium para la gestión de contenidos, ventas y analíticas de estudiantes.
-- **Certificación**: Motor de generación de certificados dinámicos basados en mérito y progreso.
+- **LMS Engine**: Control de cursos, lecciones (video/texto) y tracking de progreso.
+- **QuizEditor (Nuevo)**: Motor de evaluaciones modular que reemplaza al antiguo `quiz-creator`.
+    - **IA Assisted**: Integración nativa para generar preguntas vía LLM (ChatGPT/Claude).
+    - **Multi-formato**: Importación masiva desde JSON, CSV, XML y texto plano.
+    - **Real-time Editor**: Interfaz slide-based para edición rápida sin recargas.
+- **Creator Dashboard (Dashboard/)**: Centro de comando para instructores que unifica la gestión de cursos, ventas y analíticas de estudiantes.
+- **Evaluación Binomial**: Sistema de validación (Baseline vs Final) con reglas de cooldown y emisión de certificados por mérito.
+- **Test Partner**: Sistema de evaluación cruzada entre pares para aprendizaje colaborativo.
 
----
+## 🏗️ Arquitectura y Organización
 
-## 🏗️ Arquitectura Técnica
+El módulo sigue un diseño desacoplado orientado a dominios:
 
-El módulo sigue un diseño orientado a dominios (Domain-Driven Design) para garantizar que la lógica permanezca desacoplada y escalable.
+- **`includes/QuizEditor/`**: Lógica de exámenes (Repository, Editor, Parser, Permissions).
+- **`includes/Dashboard/`**: Orquestación del Center-2 e interfaces de creación.
+- **`includes/Database/`**: Capa de persistencia (Enrollments, Progress, Attempts).
+- **`includes/Rest/`**: API modularizada por funcionalidades (Binomial, Certificates, Sales).
+- **`assets/`**: Recursos estáticos (CSS/JS) organizados por sub-módulo.
+- **`templates/`**: Vistas PHP modulares siguiendo la regla de <500 líneas.
 
-### Estructura de Directorios (includes/)
-- **`Access/`**: Reglas de negocio para el acceso y permisos.
-- **`Dashboard/`**: (Anteriormente `course-creator`) Dashboard Center-2 para instructores.
-- **`Database/`**: Abstracción de datos y persistencia (Enrollments, Progress, Attempts).
-- **`PostTypes/`**: Definición de CPTs (Course, Quiz, Program).
-- **`Rest/`**: API REST modularizada en controladores específicos:
-    - `Binomial`: Lógica de estados y gating de quices.
-    - `CrossEval`: Handshake y sesiones de evaluación compartida.
-    - `Attempts`: Procesamiento de respuestas y cálculo de puntajes.
-    - `Certificates`: Generación de metadatos y plantillas de certificación.
+## 📏 Reglas de Oro
 
----
+1.  **Mantenibilidad**: Ningún archivo de lógica debe exceder las **500 líneas**. Refactorizar en sub-clases si es necesario.
+2.  **Estética Premium**: Uso estricto de **Vanilla CSS**, tipografía moderna (Outfit/Inter) y micro-animaciones.
+3.  **Namespace Único**: Todo nuevo código debe usar `Learni\` como namespace raíz.
+4.  **I18n**: Uso mandatorio del textdomain `politeia-learning`.
 
-## 📏 Reglas de Oro del Desarrollo
+## 🤝 Integraciones
 
-Para asegurar la mantenibilidad a largo plazo, todo desarrollo en Learni debe adherirse a los siguientes estándares:
-
-### 1. Regla de las 500 Líneas (Mandatoria)
-- Ningún archivo de lógica o clase debe exceder las **500 líneas**.
-- Si un archivo se acerca a este límite, **debe ser refactorizado** en sub-módulos o clases de dominio más pequeñas.
-
-### 2. Estética Premium (Aesthetics First)
-- Las interfaces deben usar **Vanilla CSS** con variables de diseño coherentes.
-- Se priorizan micro-animaciones, modos oscuros/ligeros elegantes y una tipografía moderna (Inter/Outfit).
-- **No usar Placeholders**: Todas las imágenes deben ser activos reales o generados específicamente para el contexto.
-
-### 3. Modularidad REST
-- Las rutas en `Routes.php` solo deben actuar como registro y delegación.
-- La implementación reside siempre en la clase de dominio correspondiente dentro de `Rest/`.
+- **WooCommerce**: Sincronización automática de cursos como productos.
+- **BuddyBoss**: Integración de perfiles y navegación en el Center del miembro.
+- **Politeia PPS**: Motor de suscripciones y tiers de membresía para creadores.
 
 ---
-
-## 🔄 Flujo de Evaluación Binomial
-
-1. **Baseline**: El alumno rinde la **Evaluación Inicial** antes de comenzar.
-2. **Progreso**: Completa el **100% de las lecciones**.
-3. **Validación**: Rinde la **Evaluación Final**.
-4. **Criterio de Éxito**: El certificado se emite **solo si** el puntaje final es mayor o igual al inicial.
-5. **Cooldown**: Si falla (Final < Inicial), se aplica un bloqueo de **7 días** para fomentar el repaso.
-
----
-
-## 🤝 Test Partner (Evaluación Cruzada)
-
-Diseñado para fomentar el aprendizaje colaborativo:
-- Un usuario inicia la sesión de evaluación para su partner.
-- El partner recibe una notificación global en tiempo real.
-- El examen es validado bajo la cuenta del partner evaluado, permitiendo que ambos obtengan sus certificados mediante la validación mutua.
+*Learni: Diseñado para escalar la educación con elegancia técnica.*

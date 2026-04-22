@@ -54,6 +54,14 @@ require_once PL_LEARNI_PATH . 'includes/WooCommerce/Integration.php';
 require_once PL_LEARNI_PATH . 'includes/WooCommerce/ProductSync.php';
 require_once PL_LEARNI_PATH . 'includes/Admin/UserProfile.php';
 
+// Quiz Editor (New Modular Structure)
+require_once PL_LEARNI_PATH . 'includes/QuizEditor/QuizRepository.php';
+require_once PL_LEARNI_PATH . 'includes/QuizEditor/QuizEditor.php';
+require_once PL_LEARNI_PATH . 'includes/QuizEditor/Permissions.php';
+require_once PL_LEARNI_PATH . 'includes/QuizEditor/FileParser.php';
+require_once PL_LEARNI_PATH . 'includes/QuizEditor/AjaxHandler.php';
+require_once PL_LEARNI_PATH . 'includes/QuizEditor/Shortcode.php';
+
 final class PL_Learni_Module
 {
     /**
@@ -80,6 +88,10 @@ final class PL_Learni_Module
         if (is_admin()) {
             \Learni\Admin\UserProfile::init();
         }
+
+        // Initialize Quiz Editor
+        \Learni\QuizEditor\AjaxHandler::get_instance();
+        \Learni\QuizEditor\Shortcode::get_instance();
 
         // Legacy PL_CC autoloader for migrated classes.
         spl_autoload_register([__CLASS__, 'autoload_dashboard_classes']);

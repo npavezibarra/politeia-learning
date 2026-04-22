@@ -381,12 +381,12 @@ class PL_Rest_Partnerships
 
             $redirect_back = add_query_arg(['token' => $raw_token], home_url(self::ACCEPT_INVITE_PATH));
 
-            if (class_exists('PL_Auth_Login_Register') && method_exists('PL_Auth_Login_Register', 'build_modal_url')) {
+            if (class_exists('\Learni\Auth\Utilities\AuthUtils')) {
                 $args = [];
                 if ($invite_email !== '') {
                     $args['invite_email'] = $invite_email;
                 }
-                wp_safe_redirect(PL_Auth_Login_Register::build_modal_url('login', $redirect_back, $args));
+                wp_safe_redirect(\Learni\Auth\Utilities\AuthUtils::build_modal_url('login', $redirect_back, $args));
                 exit;
             }
 

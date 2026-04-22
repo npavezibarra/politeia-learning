@@ -1,0 +1,98 @@
+<?php
+
+namespace Learni\Auth\UI;
+
+use Learni\Auth\Utilities\AuthUtils;
+use Learni\Auth\Handlers\VerificationHandler;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Handles rendering of Authentication UI components.
+ */
+class Renderer
+{
+    /**
+     * Returns the markup for the authentication modal.
+     */
+    public static function get_auth_modal_markup(): string
+    {
+        static $rendered = false;
+        if ($rendered || is_admin() || is_user_logged_in()) {
+            return '';
+        }
+        $rendered = true;
+
+        $view = AuthUtils::sanitize_view((string) wp_unslash($_GET['pl_auth_view'] ?? 'login'));
+        $notice = (string) sanitize_key((string) wp_unslash($_GET['pl_auth_notice'] ?? ''));
+        $error = (string) sanitize_key((string) wp_unslash($_GET['pl_auth_error'] ?? ''));
+        $redirect_to = AuthUtils::resolve_redirect_to((string) wp_unslash($_GET['redirect_to'] ?? ''));
+        $auto_open = isset($_GET['pl_auth_view']) || isset($_GET['pl_auth_notice']) || isset($_GET['pl_auth_error']);
+        $action_url = admin_url('admin-post.php');
+        $nonce = wp_create_nonce('pl_auth_submit');
+
+        ob_start();
+        $template = PL_AUTH_PATH . 'templates/auth-modal.php';
+        if (file_exists($template)) {
+            include $template;
+        }
+        return (string) ob_get_clean();
+    }
+
+    /**
+     * Returns the markup for the unverified account popup.
+     */
+    public static function get_unverified_popup_markup(): string
+    {
+        static $rendered = false;
+        if ($rendered || is_admin() || !is_user_logged_in()) {
+            return '';
+        }
+
+        $user_id = (int) get_current_user_id();
+        if ($user_id <= 0 || VerificationHandler::is_verified($user_id) || !VerificationHandler::requires_verification($user_id)) {
+            return '';
+        }
+        $rendered = true;
+
+        $notice_code = (string) sanitize_key((string) wp_unslash($_GET['pl_auth_notice'] ?? ''));
+        $error_code = (string) sanitize_key((string) wp_unslash($_GET['pl_auth_error'] ?? ''));
+        $force_open = isset($_GET['pl_auth_unverified']) && sanitize_key((string) wp_unslash($_GET['pl_auth_unverified'])) === '1';
+        $open_after_quiz = isset($_GET['pl_auth_unverified_after_quiz']) && sanitize_key((string) wp_unslash($_GET['pl_auth_unverified_after_quiz'])) === '1';
+        $action_url = admin_url('admin-post.php');
+        $nonce = wp_create_nonce('pl_auth_resend_confirmation');
+        
+        $redirect_to = AuthUtils::resolve_redirect_to((string) wp_unslash($_GET['redirect_to'] ?? ''));
+        $redirect_to_for_form = remove_query_arg([
+            'pl_auth_unverified_after_quiz',
+            'pl_auth_unverified',
+            'pl_auth_notice',
+            'pl_auth_error',
+        ], $redirect_to);
+
+        $is_spanish = strpos(get_locale(), 'es') === 0;
+        
+        // Data for the template
+        $data = [
+            'title' => $is_spanish ? 'Aún no has verificado tu cuenta' : 'Your account is not verified yet',
+            'body' => $is_spanish ? 'Para mayor seguridad revisa tu correo y verifica la creación de tu cuenta en Politeia.' : 'For your security, please check your email and verify the creation of your Politeia account.',
+            'cta' => $is_spanish ? 'Enviar correo de confirmación' : 'Send confirmation email',
+            'sent' => $is_spanish ? 'Te enviamos un correo de confirmación. Por favor revisa tu bandeja de entrada.' : 'We sent a confirmation email. Please check your inbox.',
+            'throttled' => $is_spanish ? 'Espera un momento antes de reenviar el correo.' : 'Please wait a moment before resending.',
+            'generic_err' => $is_spanish ? 'Algo salió mal. Por favor, inténtalo de nuevo.' : 'Something went wrong. Please try again.',
+            'action_url' => $action_url,
+            'nonce' => $nonce,
+            'redirect_to' => $redirect_to_for_form,
+            'should_open' => $force_open || $open_after_quiz || ($error_code === 'resend_throttled' || $error_code === 'invalid_nonce')
+        ];
+
+        ob_start();
+        $template = PL_AUTH_PATH . 'templates/auth/unverified-popup.php';
+        if (file_exists($template)) {
+            include $template;
+        }
+        return (string) ob_get_clean();
+    }
+}

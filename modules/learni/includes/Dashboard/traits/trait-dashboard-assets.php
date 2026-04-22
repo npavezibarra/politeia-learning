@@ -136,6 +136,12 @@ trait PL_CC_Dashboard_Assets_Trait
                 'pcg-dashboard-profile',
                 'pcg-dashboard-students'
             ], $creator_js_ver, true);
+
+            // Enqueue QuizEditor Assets (New Modular Structure)
+            if (class_exists('\Learni\QuizEditor\Shortcode')) {
+                \Learni\QuizEditor\Shortcode::get_instance()->enqueue_assets();
+            }
+
             wp_enqueue_script('pcg-chartjs', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', [], '4.4.1', true);
             wp_enqueue_script('pcg-sales-dashboard', PL_CC_URL . 'assets/dashboard/js/pcg-sales-dashboard.js', ['pcg-chartjs'], '1.0.0', true);
             wp_enqueue_script('pcg-sales-list', PL_CC_URL . 'assets/dashboard/js/pcg-sales-list.js', [], '1.0.2', true);
