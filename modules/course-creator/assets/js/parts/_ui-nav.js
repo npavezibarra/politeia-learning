@@ -2,6 +2,53 @@
  * Mobile Navigation and Global UI Logic
  */
 jQuery(document).ready(function ($) {
+    (function initMobileHeaderSpacer() {
+        function isMobileLayout() {
+            return window.matchMedia && window.matchMedia('(max-width: 850px)').matches;
+        }
+
+        function findHeader() {
+            return (
+                document.getElementById('masthead') ||
+                document.querySelector('header.site-header') ||
+                document.querySelector('.site-header') ||
+                document.querySelector('.wp-site-blocks > header') ||
+                document.querySelector('header.wp-block-template-part')
+            );
+        }
+
+        function sync() {
+            if (!isMobileLayout()) {
+                document.documentElement.style.setProperty('--pcg-site-header-h', '0px');
+                return;
+            }
+
+            const header = findHeader();
+            if (!header) {
+                document.documentElement.style.setProperty('--pcg-site-header-h', '0px');
+                return;
+            }
+
+            const rect = header.getBoundingClientRect();
+            const visibleHeight = Math.max(0, Math.round(Math.min(rect.bottom, rect.height)));
+            document.documentElement.style.setProperty('--pcg-site-header-h', `${visibleHeight}px`);
+        }
+
+        let raf = 0;
+        const schedule = function () {
+            if (raf) return;
+            raf = window.requestAnimationFrame(() => {
+                raf = 0;
+                sync();
+            });
+        };
+
+        // Initial sync + keep it fresh as sticky headers change height on scroll.
+        sync();
+        window.addEventListener('resize', schedule, { passive: true });
+        window.addEventListener('scroll', schedule, { passive: true });
+    })();
+
     (function initMobileNav() {
         const $nav = $('[data-pcg-mobile-nav]');
         if (!$nav.length) return;
@@ -19,13 +66,21 @@ jQuery(document).ready(function ($) {
         }
 
         function syncHeaderOffset() {
-            const masthead = document.getElementById('masthead');
-            if (!masthead) {
+            const header =
+                document.getElementById('masthead') ||
+                document.querySelector('header.site-header') ||
+                document.querySelector('.site-header') ||
+                document.querySelector('.wp-site-blocks > header') ||
+                document.querySelector('header.wp-block-template-part');
+
+            if (!header) {
                 document.documentElement.style.setProperty('--pcg-mobile-top', '0px');
                 return;
             }
 
-            const rect = masthead.getBoundingClientRect();
+            // We want the mobile nav to always live *below* the main site header.
+            // Use the *visible* bottom edge (accounts for sticky headers that shrink on scroll).
+            const rect = header.getBoundingClientRect();
             const bottom = Math.round(rect.bottom);
             const top = bottom > 0 && bottom < window.innerHeight ? bottom : 0;
             document.documentElement.style.setProperty('--pcg-mobile-top', `${top}px`);

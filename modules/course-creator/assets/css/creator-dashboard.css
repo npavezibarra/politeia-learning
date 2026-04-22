@@ -21,6 +21,7 @@
 @import "parts/_escritos.css";
 @import "parts/_certificate.css";
 @import "parts/_sales-dashboard.css";
+@import "parts/_profile.css";
 
 /* 5. Device-specific overrides (Mobile, tablet) */
 @import "parts/_mobile.css";

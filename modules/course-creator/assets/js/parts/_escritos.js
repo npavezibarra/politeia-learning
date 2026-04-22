@@ -257,7 +257,8 @@ jQuery(document).ready(function($) {
             handlePlaceholder();
         }
 
-        $('#pcg-show-escritos-form').on('click', function () {
+        // Expose create handler for smartphone action bar (mobile custom UI)
+        window.pcgOpenEscritoCreate = function () {
             $('#pcg-my-escritos-section').fadeOut(300, function () {
                 resetEscritoForm();
                 $('#pcg-escritos-form-section').fadeIn(300, function () {
@@ -265,9 +266,16 @@ jQuery(document).ready(function($) {
                     normalizeInlineImages(getEditorEl());
                 });
             });
+        };
+
+        // Delegated: section can be re-rendered
+        $(document).on('click', '#pcg-show-escritos-form', function (e) {
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
+            if (typeof window.pcgOpenEscritoCreate === 'function') window.pcgOpenEscritoCreate();
         });
 
-        $('#pcg-btn-back-to-escritos').on('click', function () {
+        $(document).on('click', '#pcg-btn-back-to-escritos', function (e) {
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
             $('#pcg-escritos-form-section').fadeOut(300, function () {
                 $('#pcg-my-escritos-section').fadeIn();
                 resetEscritoForm();
@@ -840,6 +848,47 @@ jQuery(document).ready(function($) {
                 document.execCommand('insertHTML', false, cleanHTML);
             }
         });
+
+        // Export render functions for the main orchestrator
+        window.renderEscritos = function (escritos) {
+            const $grid = $('#pcg-my-escritos-grid');
+            if (!$grid.length) return;
+            $grid.empty();
+
+            if (!escritos || escritos.length === 0) {
+                $grid.append(`<p class="pcg-empty-msg">${t('noPublishedEscritosYet') || 'No tienes escritos publicados aún.'}</p>`);
+                return;
+            }
+
+            escritos.forEach(escrito => {
+                const thumb = escrito.thumbnail_url || '';
+                const thumbClass = thumb ? '' : ' pcg-course-thumb--no-image';
+                const cardHtml = `
+                    <div class="pcg-course-card pcg-escrito-card" data-id="${escrito.id}">
+                        <div class="pcg-course-thumb${thumbClass}">
+                            ${thumb ? `<img src="${thumb}" alt="${escrito.title}">` : ''}
+                            <div class="pcg-course-badges">
+                                <span class="pcg-badge pcg-badge-date">${escrito.date}</span>
+                                ${escrito.status === 'draft' ? `<span class="pcg-badge pcg-badge-draft">${t('draft') || 'Borrador'}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="pcg-course-content">
+                            <h4>${escrito.title}</h4>
+                            <div class="pcg-course-meta">
+                                <span class="pcg-course-status">${escrito.status === 'publish' ? (t('published') || 'Publicado') : (t('draft') || 'Borrador')}</span>
+                                <div class="pcg-course-actions">
+                                    <button class="pcg-btn-edit-escrito pcg-card-action-edit" title="${t('edit')}" type="button">EDITAR</button>
+                                    <button class="pcg-btn-delete-escrito pcg-card-action-delete" aria-label="Delete" title="${t('delete')}" type="button">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $grid.append(cardHtml);
+            });
+        };
 
     })();
 

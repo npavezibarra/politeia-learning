@@ -361,15 +361,23 @@ jQuery(document).ready(function ($) {
             };
         }
 
-        $('#pcg-show-specialization-form').on('click', function () {
+        // Expose create handler for smartphone action bar (mobile custom UI)
+        window.pcgOpenSpecializationCreate = function () {
             $('#pcg-my-specializations-section').fadeOut(300, function () {
                 resetSpecializationForm();
                 $('#pcg-specialization-form-section').fadeIn(400);
                 loadCoursesForSpecialization();
             });
+        };
+
+        // Delegated: section can be re-rendered
+        $(document).on('click', '#pcg-show-specialization-form', function (e) {
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
+            if (typeof window.pcgOpenSpecializationCreate === 'function') window.pcgOpenSpecializationCreate();
         });
 
-        $('#pcg-btn-back-to-specializations').on('click', function () {
+        $(document).on('click', '#pcg-btn-back-to-specializations', function (e) {
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
             $('#pcg-specialization-form-section').fadeOut(300, function () {
                 $('#pcg-my-specializations-section').fadeIn();
                 resetSpecializationForm();
@@ -529,5 +537,65 @@ jQuery(document).ready(function ($) {
                 }
             });
         });
+        // Global Exposure for Orchestrator
+        window.loadMySpecializations = function () {
+            $.ajax({
+                url: pcgCreatorData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'pcg_get_my_specializations',
+                    nonce: pcgCreatorData.nonce
+                },
+                success: function (response) {
+                    if (response.success) {
+                        window.renderSpecializations(response.data);
+                    }
+                }
+            });
+        };
+
+        window.renderSpecializations = function (specializations) {
+            const $grid = $('#specialization-grid');
+            if (!$grid.length) return;
+            $grid.empty();
+
+            if (!specializations || specializations.length === 0) {
+                $grid.append(`<p class="pcg-empty-msg">${t('noSpecializationsYet') || 'No tienes especializaciones creadas aún.'}</p>`);
+                return;
+            }
+
+            specializations.forEach(spec => {
+                const thumb = spec.thumbnail_url || '';
+                const thumbClass = thumb ? '' : ' pcg-course-thumb--no-image';
+                const isPending = spec.is_pending_approval;
+                const statusLabel = isPending ? (t('pendingApproval') || 'Pendiente de Aprobación') : (spec.post_status === 'publish' ? (t('published') || 'Publicada') : (t('draft') || 'Borrador'));
+                
+                const cardHtml = `
+                    <div class="pcg-course-card pcg-specialization-card" data-id="${spec.id}">
+                        <div class="pcg-course-thumb${thumbClass}">
+                            ${thumb ? `<img src="${thumb}" alt="${spec.title}">` : ''}
+                            <div class="pcg-course-badges">
+                                <span class="pcg-badge pcg-badge-count">${spec.course_count} ${t('courses') || 'Cursos'}</span>
+                                ${isPending ? `<span class="pcg-badge pcg-badge-pending">${t('pending') || 'Pendiente'}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="pcg-course-content">
+                            <h4>${spec.title}</h4>
+                            <div class="pcg-course-meta">
+                                <span class="pcg-course-status">${statusLabel}</span>
+                                <div class="pcg-course-actions">
+                                    <button class="pcg-btn-edit-specialization pcg-card-action-edit" title="${t('edit')}" type="button">EDITAR</button>
+                                    <button class="pcg-btn-delete-specialization pcg-card-action-delete" aria-label="Delete" title="${t('delete')}" type="button">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $grid.append(cardHtml);
+            });
+        };
+
     })();
 });

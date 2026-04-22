@@ -166,6 +166,61 @@ window.plLearningMeta = (function () {
         state[entity].categoryIds = id ? [id] : [];
     }
 
+    function normalizeTagsInput(tags) {
+        const out = [];
+        (Array.isArray(tags) ? tags : []).forEach(tg => {
+            if (tg == null) return;
+            const id = Number(typeof tg === 'object' ? tg.id : tg) || 0;
+            if (!id) return;
+            if (out.some(x => Number(x.id) === id)) return;
+
+            if (typeof tg === 'object') {
+                const name = String(tg.name || '').trim();
+                out.push({
+                    id,
+                    name: name || (cache.tagsById.get(id)?.name || ''),
+                    slug: String(tg.slug || cache.tagsById.get(id)?.slug || ''),
+                });
+            } else {
+                const cached = cache.tagsById.get(id);
+                out.push({
+                    id,
+                    name: String(cached?.name || ''),
+                    slug: String(cached?.slug || ''),
+                });
+            }
+        });
+        return out.filter(tg => tg.id && tg.name);
+    }
+
+    function setSelection(entity, categoryIds, tags) {
+        if (!state[entity]) return jQuery.Deferred().resolve().promise();
+        const catId = (Array.isArray(categoryIds) ? categoryIds : []).map(x => Number(x) || 0).find(x => x > 0) || 0;
+
+        return ensureLoaded().done(() => {
+            state[entity].categoryIds = catId ? [catId] : [];
+            state[entity].tags = normalizeTagsInput(tags);
+            renderCategories(entity);
+            renderTags(entity);
+        });
+    }
+
+    function reset(entity) {
+        if (!state[entity]) return;
+        state[entity].categoryIds = [];
+        state[entity].tags = [];
+        renderCategories(entity);
+        renderTags(entity);
+    }
+
+    function getPayload(entity) {
+        if (!state[entity]) return { category_ids: [], tag_ids: [] };
+        return {
+            category_ids: (state[entity].categoryIds || []).map(x => Number(x) || 0).filter(Boolean),
+            tag_ids: (state[entity].tags || []).map(tg => Number(tg.id) || 0).filter(Boolean),
+        };
+    }
+
     function renderCategoryLevel($wrap, nodes, name, selectedId) {
         if (!$wrap || !$wrap.length) return;
         if (!Array.isArray(nodes) || nodes.length === 0) {

@@ -26,13 +26,57 @@ class PQC_Quiz_Creator
 
         global $wpdb;
         $table = $wpdb->prefix . self::TABLE_QUIZZES;
-
-        return (int) $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT id FROM {$table} WHERE course_post_id = %d AND (lesson_post_id IS NULL OR lesson_post_id = 0) ORDER BY id DESC LIMIT 1",
-                $course_id
-            )
+        $question_table = $wpdb->prefix . self::TABLE_QUESTIONS;
+        $rows = $wpdb->get_results(
+            "SELECT q.id, q.title, COUNT(qq.id) AS question_count
+             FROM {$table} q
+             LEFT JOIN {$question_table} qq ON qq.quiz_id = q.id
+             WHERE (q.lesson_post_id IS NULL OR q.lesson_post_id = 0)
+             GROUP BY q.id
+             ORDER BY question_count DESC, q.id DESC",
+            ARRAY_A
         );
+        if (empty($rows)) {
+            return 0;
+        }
+
+        $course_title = trim((string) get_the_title($course_id));
+        $course_slug = function_exists('sanitize_title') ? sanitize_title($course_title) : strtolower(trim($course_title));
+        $best_id = 0;
+        $best_score = -1;
+
+        foreach ((array) $rows as $row) {
+            $candidate_id = (int) ($row['id'] ?? 0);
+            if ($candidate_id <= 0) {
+                continue;
+            }
+
+            $question_count = (int) ($row['question_count'] ?? 0);
+            $candidate_title = trim((string) ($row['title'] ?? ''));
+            $candidate_slug = function_exists('sanitize_title') ? sanitize_title($candidate_title) : strtolower($candidate_title);
+
+            $score = $question_count;
+
+            if ((int) ($row['course_post_id'] ?? 0) === $course_id) {
+                $score += 10;
+            }
+
+            if ($course_slug !== '' && $candidate_slug !== '' && $candidate_slug === $course_slug) {
+                $score += 5;
+            }
+
+            if ($question_count <= 1 && $course_slug !== '' && $candidate_slug !== '' && $candidate_slug === $course_slug) {
+                // Low-confidence stub: keep it available, but let any richer match win.
+                $score -= 5;
+            }
+
+            if ($score > $best_score || ($score === $best_score && $candidate_id > $best_id)) {
+                $best_id = $candidate_id;
+                $best_score = $score;
+            }
+        }
+
+        return $best_id > 0 ? $best_id : 0;
     }
 
     public static function get_course_id_by_quiz_id(int $quiz_id): int
@@ -54,7 +98,22 @@ class PQC_Quiz_Creator
 
     public static function quiz_exists(int $quiz_id): bool
     {
-        return self::get_course_id_by_quiz_id($quiz_id) > 0;
+        if ($quiz_id <= 0) {
+            return false;
+        }
+
+        global $wpdb;
+        if (!$wpdb) {
+            return false;
+        }
+
+        $table = $wpdb->prefix . self::TABLE_QUIZZES;
+        return (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT id FROM {$table} WHERE id = %d LIMIT 1",
+                $quiz_id
+            )
+        ) > 0;
     }
 
     /**
@@ -87,13 +146,8 @@ class PQC_Quiz_Creator
 
         $quizzes_table = $wpdb->prefix . self::TABLE_QUIZZES;
 
-        // One evaluation quiz per course (overwrite existing).
-        $existing_id = (int) $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT id FROM {$quizzes_table} WHERE course_post_id = %d AND (lesson_post_id IS NULL OR lesson_post_id = 0) LIMIT 1",
-                $course_id
-            )
-        );
+        // One evaluation quiz per course (overwrite the best matching existing one).
+        $existing_id = self::get_quiz_id_by_course($course_id);
 
         $question_order = isset($settings['questionOrder']) ? sanitize_text_field((string) $settings['questionOrder']) : '';
         if ($question_order !== 'random' && $question_order !== 'in_order') {

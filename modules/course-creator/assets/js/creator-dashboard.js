@@ -109,6 +109,26 @@ jQuery(document).ready(function ($) {
     // Form & Data Orchestration
     // ───────────────────────────────────────────────────────────
 
+    function setCourseMode(mode) {
+        const m = String(mode || 'curso');
+        const $seg = $(`#pcg-course-form-section .pcg-segment[data-value="${m}"]`);
+        $('.pcg-segment').removeClass('active');
+        if ($seg.length) $seg.addClass('active');
+
+        $('.pcg-mode-content').removeClass('is-visible').hide();
+        const $target = $(`#pcg-mode-${m}`);
+        if ($target.length) {
+            $target.show();
+            if ($target[0]) $target[0].offsetHeight;
+            $target.addClass('is-visible');
+        }
+
+        placeCourseSidebar(m);
+
+        if (m === 'lecciones' && typeof window.initSortableLessons === 'function') window.initSortableLessons();
+        if (m === 'meta' && typeof plLearningMeta !== 'undefined') plLearningMeta.render('course');
+    }
+
     function resetForm() {
         window.pcgCourseState.id = 0;
         window.pcgCourseState.thumbnailId = 0;
@@ -146,11 +166,7 @@ jQuery(document).ready(function ($) {
         if (typeof plLearningMeta !== 'undefined') plLearningMeta.reset('course');
 
         // Reset Tabs to "CURSO"
-        $('.pcg-segment').removeClass('active');
-        $('.pcg-segment[data-value="curso"]').addClass('active');
-        $('.pcg-mode-content').hide();
-        $('#pcg-mode-curso').show();
-        placeCourseSidebar('curso');
+        setCourseMode('curso');
 
         $('.pcg-desc-tab').removeClass('active');
         $('.pcg-desc-tab[data-target="pcg-tab-description"]').addClass('active');
@@ -158,8 +174,8 @@ jQuery(document).ready(function ($) {
         $('#pcg-tab-description').addClass('active');
     }
 
-    // CREATE COURSE
-    $('#pcg-show-creator-form').on('click', function () {
+    // Expose create handler for smartphone action bar (mobile custom UI)
+    window.pcgOpenCourseCreate = function () {
         $('#pcg-my-courses-section').fadeOut(300, function () {
             resetForm();
             if (typeof window.addTeacherItem === 'function') {
@@ -174,10 +190,17 @@ jQuery(document).ready(function ($) {
             }
             $('#pcg-course-form-section').fadeIn(400);
         });
+    };
+
+    // CREATE COURSE (delegated: the list section can be re-rendered via AJAX)
+    $(document).on('click', '#pcg-show-creator-form', function (e) {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof window.pcgOpenCourseCreate === 'function') window.pcgOpenCourseCreate();
     });
 
     // CANCEL / BACK
-    $('#pcg-btn-back-to-list, #pcg-btn-cancel-edit').on('click', function () {
+    $(document).on('click', '#pcg-btn-back-to-list, #pcg-btn-cancel-edit', function (e) {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
         $('#pcg-course-form-section').fadeOut(300, function () {
             $('#pcg-my-courses-section').fadeIn();
             resetForm();
@@ -574,25 +597,12 @@ jQuery(document).ready(function ($) {
     // Segments navigation logic
     $(document).on('click', '#pcg-course-form-section .pcg-segment', function () {
         const mode = $(this).data('value');
-        $('.pcg-segment').removeClass('active');
-        $(this).addClass('active');
-        
-        $('.pcg-mode-content').removeClass('is-visible').hide();
-        const $target = $(`#pcg-mode-${mode}`);
-        $target.show();
-        // Trigger reflow for CSS transition
-        $target[0].offsetHeight; 
-        $target.addClass('is-visible');
-        
-        placeCourseSidebar(mode);
-        
-        if (mode === 'lecciones' && typeof window.initSortableLessons === 'function') window.initSortableLessons();
-        if (mode === 'meta' && typeof plLearningMeta !== 'undefined') plLearningMeta.render('course');
+        setCourseMode(mode);
     });
 
     initChecklistObservers();
     $(document).on('input change', 'input, textarea, select', updateCourseChecklist);
     updateCourseChecklist();
-    loadMyCourses();
+    refreshActiveList();
 
 });

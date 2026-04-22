@@ -303,15 +303,23 @@ jQuery(document).ready(function ($) {
             };
         }
 
-        $('#pcg-show-programa-form').on('click', function () {
+        // Expose create handler for smartphone action bar (mobile custom UI)
+        window.pcgOpenProgramaCreate = function () {
             $('#pcg-my-programas-section').fadeOut(300, function () {
                 resetProgramaForm();
                 $('#pcg-programa-form-section').fadeIn(400);
                 loadSpecializationsForPrograma();
             });
+        };
+
+        // Delegated: section can be re-rendered
+        $(document).on('click', '#pcg-show-programa-form', function (e) {
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
+            if (typeof window.pcgOpenProgramaCreate === 'function') window.pcgOpenProgramaCreate();
         });
 
-        $('#pcg-btn-back-to-programas').on('click', function () {
+        $(document).on('click', '#pcg-btn-back-to-programas', function (e) {
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
             $('#pcg-programa-form-section').fadeOut(300, function () {
                 $('#pcg-my-programas-section').fadeIn();
                 resetProgramaForm();
@@ -468,5 +476,65 @@ jQuery(document).ready(function ($) {
                 }
             });
         });
+        // Global Exposure for Orchestrator
+        window.loadMyProgramas = function () {
+            $.ajax({
+                url: pcgCreatorData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'pcg_get_my_programas',
+                    nonce: pcgCreatorData.nonce
+                },
+                success: function (response) {
+                    if (response.success) {
+                        window.renderProgramas(response.data);
+                    }
+                }
+            });
+        };
+
+        window.renderProgramas = function (programs) {
+            const $grid = $('#programas-grid');
+            if (!$grid.length) return;
+            $grid.empty();
+
+            if (!programs || programs.length === 0) {
+                $grid.append(`<p class="pcg-empty-msg">${t('noProgramasYet') || 'No tienes programas creados aún.'}</p>`);
+                return;
+            }
+
+            programs.forEach(prog => {
+                const thumb = prog.thumbnail_url || '';
+                const thumbClass = thumb ? '' : ' pcg-course-thumb--no-image';
+                const isPending = prog.is_pending_approval;
+                const statusLabel = isPending ? (t('pendingApproval') || 'Pendiente de Aprobación') : (prog.post_status === 'publish' ? (t('published') || 'Publicado') : (t('draft') || 'Borrador'));
+
+                const cardHtml = `
+                    <div class="pcg-course-card pcg-programa-card" data-id="${prog.id}">
+                        <div class="pcg-course-thumb${thumbClass}">
+                            ${thumb ? `<img src="${thumb}" alt="${prog.title}">` : ''}
+                            <div class="pcg-course-badges">
+                                <span class="pcg-badge pcg-badge-count">${prog.group_count} ${t('specializations') || 'Especializaciones'}</span>
+                                ${isPending ? `<span class="pcg-badge pcg-badge-pending">${t('pending') || 'Pendiente'}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="pcg-course-content">
+                            <h4>${prog.title}</h4>
+                            <div class="pcg-course-meta">
+                                <span class="pcg-course-status">${statusLabel}</span>
+                                <div class="pcg-course-actions">
+                                    <button class="pcg-btn-edit-programa pcg-card-action-edit" title="${t('edit')}" type="button">EDITAR</button>
+                                    <button class="pcg-btn-delete-programa pcg-card-action-delete" aria-label="Delete" title="${t('delete')}" type="button">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $grid.append(cardHtml);
+            });
+        };
+
     })();
 });

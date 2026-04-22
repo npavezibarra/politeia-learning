@@ -131,13 +131,13 @@ class PL_Member_Profile_Portfolio_Manager
         $term = sanitize_text_field($_POST['term'] ?? '');
         $type = sanitize_text_field($_POST['type'] ?? 'courses');
 
-        $post_type = 'sfwd-courses';
+        $post_type = 'learni_course';
         if ($type === 'writings') {
             $post_type = 'post';
         } elseif ($type === 'specializations') {
-            $post_type = 'groups';
+            $post_type = 'learni_specialization';
         } elseif ($type === 'programs') {
-            $post_type = 'course_program';
+            $post_type = 'learni_program';
         }
 
         $args = [
@@ -181,13 +181,13 @@ class PL_Member_Profile_Portfolio_Manager
         $paged = max(1, intval($_POST['paged'] ?? 1));
         $posts_per_page = 10;
 
-        $post_type = 'sfwd-courses';
+        $post_type = 'learni_course';
         if ($type === 'writings') {
             $post_type = 'post';
         } elseif ($type === 'specializations') {
-            $post_type = 'groups';
+            $post_type = 'learni_specialization';
         } elseif ($type === 'programs') {
-            $post_type = 'course_program';
+            $post_type = 'learni_program';
         }
 
         $args = [
@@ -235,10 +235,10 @@ class PL_Member_Profile_Portfolio_Manager
         $results = [];
 
         foreach ($sections as $type) {
-            $post_type = 'sfwd-courses';
+            $post_type = 'learni_course';
             if ($type === 'writings') $post_type = 'post';
-            elseif ($type === 'specializations') $post_type = 'groups';
-            elseif ($type === 'programs') $post_type = 'course_program';
+            elseif ($type === 'specializations') $post_type = 'learni_specialization';
+            elseif ($type === 'programs') $post_type = 'learni_program';
 
             $args = [
                 'post_type' => $post_type,
