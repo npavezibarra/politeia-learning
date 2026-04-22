@@ -555,9 +555,58 @@ final class PL_Learni_Frontend_Templates
 
 	        if (is_singular('learni_course') || is_singular('learni_lesson')) {
 	            wp_enqueue_script(
+	                'pl-learni-quiz-utils',
+	                PL_LEARNI_URL . 'assets/quiz-parts/quiz-utils.js',
+	                [],
+	                defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0',
+	                true
+	            );
+	            wp_enqueue_script(
+	                'pl-learni-quiz-ui',
+	                PL_LEARNI_URL . 'assets/quiz-parts/quiz-ui-modals.js',
+	                ['pl-learni-quiz-utils'],
+	                defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0',
+	                true
+	            );
+	            wp_enqueue_script(
+	                'pl-learni-quiz-binomial',
+	                PL_LEARNI_URL . 'assets/quiz-parts/quiz-binomial-logic.js',
+	                ['pl-learni-quiz-utils', 'pl-learni-quiz-ui'],
+	                defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0',
+	                true
+	            );
+	            wp_enqueue_script(
+	                'pl-learni-quiz-certs',
+	                PL_LEARNI_URL . 'assets/quiz-parts/quiz-certificates.js',
+	                ['pl-learni-quiz-utils', 'pl-learni-quiz-ui'],
+	                defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0',
+	                true
+	            );
+	            wp_enqueue_script(
+	                'pl-learni-quiz-cross',
+	                PL_LEARNI_URL . 'assets/quiz-parts/quiz-cross-eval.js',
+	                ['pl-learni-quiz-utils', 'pl-learni-quiz-ui', 'pl-learni-quiz-binomial'],
+	                defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0',
+	                true
+	            );
+	            wp_enqueue_script(
+	                'pl-learni-quiz-sidebars',
+	                PL_LEARNI_URL . 'assets/quiz-parts/quiz-sidebars.js',
+	                ['pl-learni-quiz-utils', 'pl-learni-quiz-ui', 'pl-learni-quiz-binomial', 'pl-learni-quiz-certs', 'pl-learni-quiz-cross'],
+	                defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0',
+	                true
+	            );
+	            wp_enqueue_script(
+	                'pl-learni-quiz-auth',
+	                PL_LEARNI_URL . 'assets/quiz-parts/quiz-auth.js',
+	                ['pl-learni-quiz-utils', 'pl-learni-quiz-ui'],
+	                defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0',
+	                true
+	            );
+	            wp_enqueue_script(
 	                'pl-learni-quiz',
 	                PL_LEARNI_URL . 'assets/learner-quiz.js',
-	                [],
+	                ['pl-learni-quiz-utils', 'pl-learni-quiz-ui', 'pl-learni-quiz-binomial', 'pl-learni-quiz-certs', 'pl-learni-quiz-cross', 'pl-learni-quiz-sidebars', 'pl-learni-quiz-auth'],
 	                defined('LEARNI_VERSION') ? (string) LEARNI_VERSION : '0.0.0',
 	                true
 	            );
