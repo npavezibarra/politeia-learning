@@ -3439,6 +3439,22 @@ div#pcg-prog-mode-especializaciones {
     }
 }
 
+@media (max-width: 850px) {
+    /* Center (smartphone): add top padding everywhere except Ventas/Estudiantes,
+       which have their own mobile layout. */
+    body.pcg-template-center-active .pcg-creator-dashboard-wrapper .pcg-section-container,
+    body.pcg-template-center-2-active .pcg-creator-dashboard-wrapper .pcg-section-container {
+        padding-top: 20px;
+    }
+
+    body.pcg-template-center-active .pcg-creator-dashboard-wrapper .pcg-section-container > .pcg-sales-section,
+    body.pcg-template-center-2-active .pcg-creator-dashboard-wrapper .pcg-section-container > .pcg-sales-section,
+    body.pcg-template-center-active .pcg-creator-dashboard-wrapper .pcg-section-container > .pcg-students-section,
+    body.pcg-template-center-2-active .pcg-creator-dashboard-wrapper .pcg-section-container > .pcg-students-section {
+        margin-top: -20px;
+    }
+}
+
 .round {
     border-radius: 6px !important;
 }

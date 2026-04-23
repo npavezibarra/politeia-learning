@@ -40,7 +40,16 @@
             setActive(tab);
         }, true);
 
-        setActive('general');
+        // Allow deep-linking into a specific Students tab.
+        let initialTab = 'general';
+        try {
+            const p = new URLSearchParams(window.location.search);
+            const t = (p.get('students_tab') || '').trim();
+            if (t && tabs.querySelector('.pcg-segment[data-students-tab="' + t + '"]')) initialTab = t;
+        } catch (_) {
+            // ignore
+        }
+        setActive(initialTab);
     }
 
     /**

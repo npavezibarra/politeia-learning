@@ -531,12 +531,13 @@
     margin-bottom: 16px;
 }
 
-.pcg-sales-metrics.pcg-students-metrics {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
 @media (max-width: 980px) {
     .pcg-sales-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* Estudiantes uses the same metrics grid but previously forced 4 cols; keep it responsive. */
+    .pcg-sales-metrics.pcg-students-metrics {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -986,10 +987,28 @@
     .pcg-sales-section [data-sales-panel="general"] .pcg-sales-dashboard {
         max-width: 1180px;
         padding: 0px;
+        padding-bottom: calc(84px + env(safe-area-inset-bottom));
     }
 
-    .pcg-sales-section [data-sales-panel="general"] .pcg-sales-dashboard-header {
+    /* Keep the controls (timeframes) but hide the desktop header text. */
+    .pcg-sales-section [data-sales-panel="general"] .pcg-sales-dashboard-header > div:first-child {
         display: none !important;
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-sales-controls {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1190;
+        background: #fff;
+        border-top: 1px solid #dfdfdf;
+        padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+        box-sizing: border-box;
+    }
+
+    .pcg-sales-section [data-sales-panel="general"] .pcg-sales-custom-range {
+        margin-top: 10px;
     }
 
     .pcg-sales-section [data-sales-panel="general"] .pcg-sales-metrics {
@@ -1063,6 +1082,114 @@
     }
 
     .pcg-sales-section .pcg-sales-range-modal {
+        max-width: none;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+
+    /* Estudiantes mobile layout (match Ventas look) */
+    .pcg-students-section .pcg-form-nav.pcg-sales-nav {
+        display: none !important;
+    }
+
+    .pcg-students-section [data-students-panel="general"] .pcg-sales-dashboard {
+        max-width: 1180px;
+        padding: 0px;
+        padding-bottom: calc(84px + env(safe-area-inset-bottom));
+    }
+
+    /* Keep the controls (timeframes) but hide the desktop header text. */
+    .pcg-students-section [data-students-panel="general"] .pcg-sales-dashboard-header > div:first-child {
+        display: none !important;
+    }
+
+    .pcg-students-section [data-students-panel="general"] .pcg-sales-controls {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1190;
+        background: #fff;
+        border-top: 1px solid #dfdfdf;
+        padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+        box-sizing: border-box;
+    }
+
+    .pcg-students-section [data-students-panel="general"] .pcg-sales-custom-range {
+        margin-top: 10px;
+    }
+
+    .pcg-students-section [data-students-panel="general"] .pcg-sales-metrics {
+        display: block;
+        gap: 0;
+        margin: 0;
+    }
+
+    .pcg-students-section [data-students-panel="general"] .pcg-metric-card {
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+        border-top: 0;
+        border-bottom: 1px solid #f3f4f6;
+        min-height: 112px;
+        padding: 16px 18px;
+        justify-content: flex-start;
+    }
+
+    .pcg-students-section [data-students-panel="general"] .pcg-metric-gold {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .pcg-students-section [data-students-panel="general"] .pcg-metric-main {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-top: 8px;
+    }
+
+    .pcg-students-section [data-students-panel="general"] .pcg-metric-label {
+        margin: 0;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        line-height: 16px;
+        max-width: 220px;
+    }
+
+    .pcg-students-section [data-students-panel="general"] .pcg-metric-value {
+        margin: 0;
+        font-size: 36px;
+        letter-spacing: -0.03em;
+        white-space: nowrap;
+    }
+
+    .pcg-students-section [data-students-panel="general"] .pcg-metric-gold .pcg-metric-value {
+        font-size: 40px;
+    }
+
+    .pcg-students-section [data-students-panel="general"] .pcg-metric-foot {
+        display: none;
+    }
+
+    .pcg-students-section [data-students-panel="general"] .pcg-sales-chart-card {
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+        border-bottom: 1px solid #f3f4f6;
+        border-top: 0;
+        padding: 16px 18px 18px;
+    }
+
+    .pcg-students-section [data-students-panel="general"] .pcg-sales-chart-legend {
+        gap: 12px;
+    }
+
+    .pcg-students-section [data-students-panel="general"] .pcg-sales-chart-wrap {
+        height: 144px;
+        margin-top: 12px;
+    }
+
+    .pcg-students-section .pcg-students-range-modal {
         max-width: none;
         border-top-left-radius: 0;
         border-top-right-radius: 0;

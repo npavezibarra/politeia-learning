@@ -63,7 +63,6 @@ if (!defined('ABSPATH')) {
 <div class="pl-smartphone-menu-overlay" data-pl-smartphone-menu-overlay hidden></div>
 <aside class="pl-smartphone-menu-panel" data-pl-smartphone-menu-panel aria-hidden="true" hidden>
     <header class="pl-smartphone-menu-panel__header">
-        <div class="pl-smartphone-menu-panel__title"><?php echo esc_html($section_label); ?></div>
         <button type="button" class="pl-smartphone-menu-panel__close" data-pl-smartphone-menu-close
             aria-label="<?php esc_attr_e('Cerrar', 'politeia-learning'); ?>">
             <span aria-hidden="true">×</span>

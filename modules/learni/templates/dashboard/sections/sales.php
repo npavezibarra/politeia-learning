@@ -239,6 +239,17 @@
             if (!seg) return;
             setActive(seg.getAttribute('data-sales-tab'));
         }, true);
+
+        // Allow deep-linking into a specific Sales tab.
+        let initialTab = 'general';
+        try {
+            const p = new URLSearchParams(window.location.search);
+            const t = (p.get('sales_tab') || '').trim();
+            if (t && tabs.querySelector(`.pcg-segment[data-sales-tab="${t}"]`)) initialTab = t;
+        } catch (_) {
+            // ignore
+        }
+        setActive(initialTab);
     })();
 </script>
 

@@ -262,8 +262,6 @@ jQuery(document).ready(function ($) {
                 'mis-escritos': { label: 'ESCRIBIR', target: '#pcg-show-escritos-form', visibleRoot: '#pcg-my-escritos-section' },
                 'especializacion': { label: '+ ESPECIALIZACIÓN', target: '#pcg-show-specialization-form', visibleRoot: '#pcg-my-specializations-section' },
                 'create-group': { label: '+ PROGRAMA', target: '#pcg-show-programa-form', visibleRoot: '#pcg-my-programas-section' },
-                'sales': { label: 'DATE RANGE', event: 'pcg:sales-open-range', visibleRoot: '[data-sales-panel="general"] [data-pcg-sales-dashboard]' },
-                'students': { label: 'DATE RANGE', event: 'pcg:students-open-range', visibleRoot: '[data-pcg-students-dashboard]' },
             };
 
             const cfg = actions[section];
@@ -314,16 +312,6 @@ jQuery(document).ready(function ($) {
 
         $actionBtn.on('click', function () {
             const section = String($nav.data('pcgSection') || '').trim();
-            if (section === 'students') {
-                window.dispatchEvent(new CustomEvent('pcg:students-open-range'));
-                closeAll();
-                return;
-            }
-            if (section === 'sales') {
-                window.dispatchEvent(new CustomEvent('pcg:sales-open-range'));
-                closeAll();
-                return;
-            }
             const map = {
                 'create-course': '#pcg-show-creator-form',
                 'mis-escritos': '#pcg-show-escritos-form',

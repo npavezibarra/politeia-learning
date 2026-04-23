@@ -251,7 +251,7 @@ ul.pl-user-menu__dropdown {
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #94a3b8;
+        color: #000000;
         transition: color 0.2s ease;
         margin-right: 16px;
         padding: 0 16px 0 0;
@@ -356,6 +356,7 @@ ul.pl-user-menu__dropdown {
         left: 12px;
         right: 12px;
         bottom: 12px;
+        font-family: 'Poppins', sans-serif;
         background: #fff;
         border-radius: 12px;
         border: 1px solid #e5e5e5;
@@ -369,6 +370,11 @@ ul.pl-user-menu__dropdown {
         display: flex;
         flex-direction: column;
         overflow: hidden;
+    }
+
+    .pl-smartphone-menu-panel *,
+    .pl-smartphone-menu-panel * {
+        font-family: inherit;
     }
 
     .pl-smartphone-menu-panel.is-open,
@@ -407,6 +413,7 @@ ul.pl-user-menu__dropdown {
         background: transparent;
         width: 36px;
         height: 36px;
+        margin-left: auto;
         border-radius: 10px;
         cursor: pointer;
         display: inline-flex;
@@ -443,6 +450,108 @@ ul.pl-user-menu__dropdown {
         letter-spacing: 0.12em;
         color: #000;
         cursor: pointer;
+    }
+
+    /* Expandable parent items (Center sections) */
+    .pl-smartphone-menu-panel__group,
+    .pl-smartphone-menu-panel__group {
+        border-top: 1px solid #f4f4f5;
+    }
+
+    .pl-smartphone-menu-panel__items > .pl-smartphone-menu-panel__group:first-child,
+    .pl-smartphone-menu-panel__items > .pl-smartphone-menu-panel__group:first-child {
+        border-top: none;
+    }
+
+    .pl-smartphone-menu-panel__group-head,
+    .pl-smartphone-menu-panel__group-head {
+        display: flex;
+        align-items: stretch;
+    }
+
+    .pl-smartphone-menu-panel__group-parent,
+    .pl-smartphone-menu-panel__group-parent {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        text-align: left;
+        padding: 14px 16px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: #000;
+        cursor: pointer;
+        flex: 1;
+    }
+
+    .pl-smartphone-menu-panel__group-toggle,
+    .pl-smartphone-menu-panel__group-toggle {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        width: 56px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #000;
+        cursor: pointer;
+        border-left: 1px solid #f4f4f5;
+    }
+
+    .pl-smartphone-menu-panel__group-toggle svg,
+    .pl-smartphone-menu-panel__group-toggle svg {
+        width: 18px;
+        height: 18px;
+        transition: transform 0.18s ease;
+    }
+
+    .pl-smartphone-menu-panel__group.is-open .pl-smartphone-menu-panel__group-toggle svg,
+    .pl-smartphone-menu-panel__group.is-open .pl-smartphone-menu-panel__group-toggle svg {
+        transform: rotate(180deg);
+    }
+
+    .pl-smartphone-menu-panel__children,
+    .pl-smartphone-menu-panel__children {
+        display: flex;
+        flex-direction: column;
+        background: #fafafa;
+        border-top: 1px solid #f4f4f5;
+    }
+
+    .pl-smartphone-menu-panel__children[hidden],
+    .pl-smartphone-menu-panel__children[hidden] {
+        display: none !important;
+    }
+
+    .pl-smartphone-menu-panel__child,
+    .pl-smartphone-menu-panel__child {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        text-align: left;
+        padding: 12px 16px 12px 34px;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: #111;
+        cursor: pointer;
+    }
+
+    .pl-smartphone-menu-panel__child + .pl-smartphone-menu-panel__child,
+    .pl-smartphone-menu-panel__child + .pl-smartphone-menu-panel__child {
+        border-top: 1px solid #f4f4f5;
+    }
+
+    .pl-smartphone-menu-panel__group-parent.is-active,
+    .pl-smartphone-menu-panel__group-parent.is-active {
+        background: #f4f4f5;
+    }
+
+    .pl-smartphone-menu-panel__child.is-active,
+    .pl-smartphone-menu-panel__child.is-active {
+        background: #f4f4f5;
     }
 
     /* Main Menu Mobile List Styles */
@@ -669,4 +778,3 @@ ul.pl-user-menu__dropdown {
         top: 7px;
     }
 }
-

@@ -108,31 +108,13 @@
 
     itemsRoot.innerHTML = '';
 
+    const section = getSectionFromUrl() || 'create-course';
+    const ctx = getVisibleFormContext();
     const sources = getSources();
-    if (!sources.length) {
-      const sectionLabels = [
-        { id: 'create-course', label: 'MIS CURSOS' },
-        { id: 'mis-escritos', label: 'MIS ESCRITOS' },
-        { id: 'especializacion', label: 'ESPECIALIZACIÓN' },
-        { id: 'create-group', label: 'PROGRAMAS' },
-        { id: 'sales', label: 'VENTAS' },
-        { id: 'students', label: 'ESTUDIANTES' },
-        { id: 'profile', label: 'PERFIL' }
-      ];
-      const currentSection = getSectionFromUrl() || 'create-course';
 
-      sectionLabels.forEach((sec) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'pl-smartphone-menu-panel__item';
-        if (sec.id === currentSection) btn.classList.add('is-active');
-        btn.textContent = sec.label;
-        btn.addEventListener('click', function () {
-            window.location.href = '?section=' + sec.id;
-        });
-        itemsRoot.appendChild(btn);
-      });
-    } else {
+    // If we're inside a form/editor with its own segmented navigation, keep the panel focused
+    // on those segments (courses, specialization, programa).
+    if (ctx && sources.length) {
       sources.forEach((src) => {
         const label = (src.textContent || '').trim();
         if (!label) return;
@@ -143,11 +125,139 @@
         if (src.classList.contains('active')) btn.classList.add('is-active');
         btn.textContent = label;
         btn.addEventListener('click', function () {
-          // Trigger underlying tab/segment
           src.click();
           closePanel();
         });
         itemsRoot.appendChild(btn);
+      });
+    } else {
+      const centerMenu = [
+        { id: 'create-course', label: 'MIS CURSOS' },
+        { id: 'mis-escritos', label: 'MIS ESCRITOS' },
+        { id: 'especializacion', label: 'ESPECIALIZACIÓN' },
+        { id: 'create-group', label: 'PROGRAMAS' },
+        {
+          id: 'sales',
+          label: 'VENTAS',
+          children: [
+            { id: 'general', label: 'GENERAL', param: 'sales_tab', sourceAttr: 'data-sales-tab' },
+            { id: 'list', label: 'LIST', param: 'sales_tab', sourceAttr: 'data-sales-tab' },
+          ],
+        },
+        {
+          id: 'students',
+          label: 'ESTUDIANTES',
+          children: [
+            { id: 'general', label: 'GENERAL', param: 'students_tab', sourceAttr: 'data-students-tab' },
+            { id: 'ranking', label: 'RANKING', param: 'students_tab', sourceAttr: 'data-students-tab' },
+            { id: 'profile', label: 'PROFILE', param: 'students_tab', sourceAttr: 'data-students-tab' },
+          ],
+        },
+        { id: 'profile', label: 'PERFIL' },
+      ];
+
+      centerMenu.forEach((item) => {
+        const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+
+        if (!hasChildren) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pl-smartphone-menu-panel__item';
+          if (item.id === section) btn.classList.add('is-active');
+          btn.textContent = item.label;
+          btn.addEventListener('click', function () {
+            if (item.id === section) {
+              closePanel();
+              return;
+            }
+            window.location.href = '?section=' + item.id;
+          });
+          itemsRoot.appendChild(btn);
+          return;
+        }
+
+        const group = document.createElement('div');
+        group.className = 'pl-smartphone-menu-panel__group';
+        if (item.id === section) group.classList.add('is-active');
+        if (item.id === section) group.classList.add('is-open');
+
+        const head = document.createElement('div');
+        head.className = 'pl-smartphone-menu-panel__group-head';
+
+        const parentBtn = document.createElement('button');
+        parentBtn.type = 'button';
+        parentBtn.className = 'pl-smartphone-menu-panel__group-parent';
+        if (item.id === section) parentBtn.classList.add('is-active');
+        parentBtn.textContent = item.label;
+        parentBtn.addEventListener('click', function () {
+          if (item.id === section) {
+            closePanel();
+            return;
+          }
+          window.location.href = '?section=' + item.id;
+        });
+
+        const childrenId = 'pl-center-children-' + item.id;
+        const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'pl-smartphone-menu-panel__group-toggle';
+        toggleBtn.setAttribute('aria-controls', childrenId);
+        toggleBtn.setAttribute('aria-expanded', item.id === section ? 'true' : 'false');
+        toggleBtn.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M5.5 7.5 10 12l4.5-4.5" /></svg>';
+
+        const children = document.createElement('div');
+        children.className = 'pl-smartphone-menu-panel__children';
+        children.id = childrenId;
+        if (item.id !== section) {
+          children.setAttribute('hidden', 'hidden');
+        }
+
+        toggleBtn.addEventListener('click', function (e) {
+          if (e && typeof e.preventDefault === 'function') e.preventDefault();
+          if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+          const isOpen = group.classList.toggle('is-open');
+          toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+          if (isOpen) children.removeAttribute('hidden');
+          else children.setAttribute('hidden', 'hidden');
+        });
+
+        // Child items
+        item.children.forEach((child) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pl-smartphone-menu-panel__child';
+          btn.textContent = child.label;
+
+          const isCurrentParent = item.id === section;
+          if (isCurrentParent && sources.length) {
+            const src = sources.find((el) => el && el.getAttribute && el.getAttribute(child.sourceAttr) === child.id);
+            if (src && src.classList.contains('active')) {
+              btn.classList.add('is-active');
+            }
+          }
+
+          btn.addEventListener('click', function () {
+            const isCurrent = item.id === section;
+            if (isCurrent && sources.length) {
+              const src = sources.find((el) => el && el.getAttribute && el.getAttribute(child.sourceAttr) === child.id);
+              if (src) {
+                src.click();
+                closePanel();
+                return;
+              }
+            }
+
+            window.location.href = '?section=' + item.id + '&' + child.param + '=' + child.id;
+          });
+
+          children.appendChild(btn);
+        });
+
+        head.appendChild(parentBtn);
+        head.appendChild(toggleBtn);
+        group.appendChild(head);
+        group.appendChild(children);
+        itemsRoot.appendChild(group);
       });
     }
 
