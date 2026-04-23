@@ -289,8 +289,6 @@ class PL_Rest_Partnerships
             return rest_ensure_response([]);
         }
 
-        // BuddyBoss/BuddyPress friends integration is optional. If it's not present (or user has no friends),
-        // fall back to searching all platform users by display name / login.
         $query_args = [
             'search' => '*' . $term . '*',
             'search_columns' => ['display_name', 'user_login', 'user_email'],
@@ -299,14 +297,6 @@ class PL_Rest_Partnerships
             'order' => 'ASC',
             'exclude' => [$current_user],
         ];
-
-        if (function_exists('friends_get_friend_user_ids')) {
-            $friend_ids = friends_get_friend_user_ids($current_user);
-            $friend_ids = array_values(array_unique(array_filter(array_map('absint', (array) $friend_ids))));
-            if (!empty($friend_ids)) {
-                $query_args['include'] = $friend_ids;
-            }
-        }
 
         $users = get_users($query_args);
 
@@ -1222,11 +1212,6 @@ class PL_Rest_Partnerships
             } catch (\Throwable $e) {
                 // ignore
             }
-        }
-
-        // Learner access (LearnDash legacy): if the user is enrolled and has access to the course, allow managing their partner.
-        if ($post_type === self::COURSE_POST_TYPE && function_exists('sfwd_lms_has_access') && (bool) sfwd_lms_has_access($course_id, $user_id)) {
-            return true;
         }
 
         return false;

@@ -2,8 +2,6 @@
 /**
  * Module: Payments Subscriptions
  * Description: Creator-defined paid subscriptions (Mercado Pago / Flow) merged from politeia-payments-subscriptions.
- *
- * IMPORTANT: Pure WordPress (no BuddyBoss/BuddyPress).
  */
 
 if (!defined('ABSPATH')) {

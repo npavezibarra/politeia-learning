@@ -57,7 +57,7 @@ trait PL_CC_Dashboard_Assets_Trait
         if (get_query_var(self::REWRITE_TAG)) {
             wp_enqueue_media();
 
-            // Load Cropper.js from a stable CDN instead of the BuddyBoss path.
+            // Load Cropper.js from a stable CDN.
             wp_enqueue_style(
                 'cropperjs',
                 'https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.css',
@@ -207,8 +207,8 @@ trait PL_CC_Dashboard_Assets_Trait
                 'currentUserName' => $full_name . ' (' . $current_user->user_email . ')',
                 'currentUserAvatar' => get_avatar_url($current_user->ID, ['size' => 64]),
                 'currentUserFullNameEmail' => $full_name . ' (' . $current_user->user_email . ')',
-                'avatarFullWidth' => function_exists('bp_core_avatar_full_width') ? bp_core_avatar_full_width() : 150,
-                'avatarFullHeight' => function_exists('bp_core_avatar_full_height') ? bp_core_avatar_full_height() : 150,
+                'avatarFullWidth' => 150,
+                'avatarFullHeight' => 150,
                 'i18n' => [
                     'loadingCourses' => __('Cargando cursos...', 'politeia-learning'),
                     'loading' => __('Cargando...', 'politeia-learning'),

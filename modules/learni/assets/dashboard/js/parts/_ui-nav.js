@@ -394,7 +394,6 @@ jQuery(document).ready(function ($) {
             }, 0);
         });
 
-        // Keep the fixed topbar locked under BuddyBoss header while scrolling.
         (function bindScrollSync() {
             let raf = 0;
             const onScroll = () => {

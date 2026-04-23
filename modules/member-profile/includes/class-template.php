@@ -14,7 +14,6 @@ class PL_Member_Profile_Template
     public function __construct()
     {
         // Lower priority (9) allows specialized routes (at 10+) to override this template.
-        // IMPORTANT: Pure WordPress only (no BuddyBoss/BuddyPress dependencies).
         add_filter('template_include', [$this, 'load_profile_template'], 9);
     }
 

@@ -26,7 +26,6 @@ class PL_CC_Creator_Dashboard
         add_filter('template_include', [$this, 'load_dashboard_template']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_assets']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_escrito_frontend_assets'], 999);
-        add_action('bp_setup_nav', [$this, 'add_bp_nav_item'], 100);
         add_action('admin_post_pl_cc_save_membership_tier', [$this, 'handle_save_membership_tier']);
 
         // Shortcode as fallback or alternative
@@ -138,50 +137,6 @@ class PL_CC_Creator_Dashboard
         }
 
         return '';
-    }
-
-    /**
-     * Register BuddyBoss profile tab
-     */
-    public function add_bp_nav_item()
-    {
-        if (!function_exists('bp_core_new_nav_item')) {
-            return;
-        }
-
-        $op_template = get_option('pcg_operation_template', '/center');
-        $slug = ltrim($op_template, '/');
-
-        bp_core_new_nav_item([
-            'name' => __('Center', 'politeia-learning'),
-            'slug' => $slug,
-            'position' => 10,
-            'screen_function' => [$this, 'dashboard_screen'],
-            'default_subnav_slug' => 'create-course',
-            'item_css_id' => 'pcg-center'
-        ]);
-    }
-
-    /**
-     * Screen function for BuddyBoss tab
-     */
-    public function dashboard_screen()
-    {
-        $user_slug = bp_get_displayed_user_username();
-        set_query_var(self::REWRITE_TAG, $user_slug);
-
-        add_action('bp_template_content', function () {
-            $this->render_dashboard_content();
-        });
-
-        $op_template = get_option('pcg_operation_template', '/center');
-        $template_name = ($op_template === '/center-2') ? 'main-dashboard-2.php' : 'main-dashboard.php';
-        
-        $template = PL_CC_PATH . 'templates/dashboard/' . $template_name;
-        if (file_exists($template)) {
-            load_template($template);
-            exit;
-        }
     }
 
     /**

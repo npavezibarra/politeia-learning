@@ -21,8 +21,7 @@ class PL_Taxonomy
 
     public static function register_taxonomies(): void
     {
-        // Keep LearnDash types for legacy screens, but also support internal Learni courses.
-        $object_types = ['sfwd-courses', 'learni_course', 'groups', 'course_program'];
+        $object_types = ['learni_course', 'learni_lesson', 'learni_specialization', 'learni_program', 'course_program'];
 
         // Categories (hierarchical).
         if (!taxonomy_exists(self::CATEGORY_TAXONOMY)) {

@@ -1,13 +1,18 @@
-# Politeia Course Group Plugin
+# Politeia Learning (Plugin)
 
-## Purpose
-The purpose of this plugin is to create all the custom functionalities for the Politeia website related to courses, grouping courses, selling courses, and creating courses.
+Plugin principal de funcionalidades educativas de Politeia: LMS interno, dashboard de creadores, navegación, perfiles y extensiones de comercio.
 
-## Note (BuddyBoss)
-We are no longer using **BuddyBoss Theme** nor **BuddyBoss Platform (Plugin)** as a dependency for the Politeia Learning experience. Any navigation, profile/center routing, and UI pieces that previously relied on BuddyBoss should be provided by our own plugins/modules (e.g. menu management).
+## Arquitectura
 
-## Architecture
-The plugin follows a modular architecture. Main functionalities are encapsulated within the `modules/` directory. Each module is designed to be standalone, allowing them to be enabled or disabled without affecting the rest of the plugin.
+El plugin sigue una arquitectura modular: la mayoría de las funcionalidades viven en `modules/` y se inicializan desde sus respectivos `init.php`.
 
-### Modules
-- **course-programs**: Manages the high-level "Philosophical Programs" that group LearnDash course groups.
+### Módulos
+
+- `core`: configuración global + UI de administración.
+- `learni`: motor LMS interno (post types, DB, REST, dashboard y quiz editor).
+- `login-register`: autenticación/registro en frontend con modales.
+- `navigation`: navegación unificada (desktop + mobile) y overrides de menú.
+- `member-profile`: perfiles públicos `/profile/{username}` + portfolio.
+- `payments-subscriptions`: suscripciones pagadas (PPS) + marketplace/shortcodes.
+- `email-log`: log de correos enviados (tabla + UI admin).
+- `woo`: ajustes/extensiones WooCommerce (métricas, templates, emails, etc.).

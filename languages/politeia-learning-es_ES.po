@@ -312,7 +312,6 @@ msgstr "Distribución de ingresos"
 msgid "Patrocinio"
 msgstr "Patrocinio"
 
-#: modules/course-programs/templates/learndash/ld30/modern/group/content.php:29
 msgid "Sobre la especialización"
 msgstr "Sobre la especialización"
 
@@ -407,8 +406,8 @@ msgid "Módulo Cargado"
 msgstr "Módulo cargado"
 
 #: modules/core/templates/dashboard.php:73
-msgid "Integración avanzada WooCommerce + LearnDash + Politeia."
-msgstr "Integración avanzada WooCommerce + LearnDash + Politeia."
+msgid "Integración avanzada WooCommerce + Politeia Learning."
+msgstr "Integración avanzada WooCommerce + Politeia Learning."
 
 #: modules/core/templates/style-options.php:15
 msgid "Personaliza la apariencia del panel de creador y otros elementos de la interfaz."
@@ -450,7 +449,7 @@ msgid "No autorizado."
 msgstr ""
 
 #: modules/course-creator/includes/class-course-save-handler.php:574
-msgid "LearnDash no está activo."
+msgid "El LMS no está activo."
 msgstr ""
 
 #: modules/course-creator/includes/class-course-save-handler.php:579
@@ -535,7 +534,6 @@ msgstr ""
 
 #: modules/course-creator/templates/main-dashboard.php:50
 #: modules/course-creator/templates/sections/especializacion.php:26
-#: modules/course-programs/templates/template-parts/learndash/group-topbar.php:19
 msgid "ESPECIALIZACIÓN"
 msgstr ""
 

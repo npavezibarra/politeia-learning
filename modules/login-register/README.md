@@ -1,17 +1,16 @@
-# Módulo Login-Register (Learni Auth)
+# Módulo: Login-Register (Auth)
 
-Módulo avanzado de autenticación y registro para Politeia Learning. Este módulo implementa un flujo de usuario premium basado en modales dinámicos, verificación de correo electrónico y una arquitectura modular desacoplada.
+Autenticación y registro en frontend para Politeia Learning. Implementa login, registro, recuperación de contraseña y confirmación/verificación de email, con UI basada en modales y endpoints AJAX.
 
-## 🚀 Características principales
+## Qué hace
 - **Modal All-in-One**: Interfaz única para Login, Registro y Recuperación de contraseña.
-- **Arquitectura Modular**: Basada en el estándar Learni con namespace `Learni\Auth`.
-- **Regla de Oro**: Ningún archivo supera las 500 líneas de código para máxima mantenibilidad.
-- **Verificación de Email**: Bloqueo opcional de funcionalidades para usuarios no verificados con popup de reenvío.
+- **Arquitectura modular**: namespace `Learni\\Auth` + orquestador (`AuthOrchestrator`).
+- **Verificación de email**: tokens/estado de verificación y UI de reenvío (según configuración).
 - **Assets Desacoplados**: CSS y JS externos (sin scripts inline) con carga condicional.
 - **SEO & UX**: URLs amigables para modales (`?pl_auth_view=login`) y manejo inteligente de redirecciones.
 
-## 🏗️ Estructura del Módulo
-El módulo se organiza bajo el namespace `Learni\Auth` y sigue una estructura de responsabilidades claras:
+## Estructura del módulo
+El módulo se organiza bajo el namespace `Learni\\Auth` y separa handlers/UI/utilidades:
 
 ```text
 login-register/
@@ -31,7 +30,7 @@ login-register/
 └── init.php               # Punto de entrada y Autoloader PSR-4
 ```
 
-## 🛠️ Cómo funciona
+## Cómo funciona
 
 ### 1. Inicialización
 El módulo se inicializa a través de `AuthOrchestrator`. Este orquestador gestiona:
@@ -48,7 +47,7 @@ El módulo se inicializa a través de `AuthOrchestrator`. Este orquestador gesti
 ### 3. Interfaz (UI/Renderer)
 El `Renderer` es el encargado de procesar las plantillas en `templates/`. Utiliza un sistema de buffers para devolver el markup que luego el Orchestrator inyecta en el footer o mediante shortcodes.
 
-## ⌨️ Uso Técnico
+## Uso técnico
 
 ### Shortcodes
 - `[pl_auth_links]`: Genera botones automáticos de Ingresar/Registrarse que abren el modal.
@@ -69,4 +68,4 @@ El módulo respeta el parámetro `redirect_to`. Si se encuentra en un flujo de a
 - Validación de redirecciones mediante `wp_validate_redirect`.
 
 ---
-*Mantenido por el equipo de Politeia Learning - Estándar Modular Learni v2.0*
+*Nota: este módulo está diseñado para funcionar en WordPress puro.*

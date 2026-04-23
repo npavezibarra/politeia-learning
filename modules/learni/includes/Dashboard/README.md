@@ -37,7 +37,7 @@ Toda la lógica pesada ha sido extraída a **Traits** para mantener los archivos
 Para mantener la calidad del motor de **Learni**, se deben seguir estas reglas en futuras expansiones:
 
 1.  **Límite de Líneas**: Ningún archivo PHP debe exceder las **500 líneas**. Si una funcionalidad crece más allá de este punto, debe fragmentarse en un nuevo Trait o clase especializada.
-2.  **Nativización total**: No usar lógica ni comentarios residuales de LearnDash. Toda la interacción con la base de datos debe usar las constantes nativas de `\Learni\PostTypes\...`.
+2.  **Nativización total**: No usar lógica ni comentarios residuales de integraciones legacy. Toda la interacción con la base de datos debe usar las constantes nativas de `\Learni\PostTypes\...`.
 3.  **Separación de Responsabilidades**: Las clases principales (Orquestadores) solo deben contener registros de hooks y delegación. La lógica de negocio debe residir en los Traits.
 
 ---

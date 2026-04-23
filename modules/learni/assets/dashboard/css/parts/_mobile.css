@@ -183,10 +183,6 @@ button#pcg-mobile-sectionmenu-btn {
         display: none !important;
     }
 
-    body.bp-search .site-header {
-        z-index: 1096 !important;
-    }
-
     .pcg-creator-container {
         max-width: none;
         min-height: auto;

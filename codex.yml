@@ -1,7 +1,7 @@
-name: Politeia Course Group
+name: Politeia Learning
 description: >
-  Extiende LearnDash añadiendo el nivel jerárquico "Programas Filosóficos",
-  agrupando varios grupos de cursos bajo una misma estructura de programa.
+  Plugin principal de funcionalidades educativas de Politeia: LMS interno,
+  dashboard de creadores, navegación, perfiles y extensiones de comercio.
 version: 1.0.0
 entrypoint: politeia-learning.php
 language: php

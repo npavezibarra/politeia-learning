@@ -1,6 +1,6 @@
 /**
  * Specializations Module
- * Handles Specialization (LearnDash Group) Creator UI.
+ * Handles specialization creator UI.
  */
 jQuery(document).ready(function ($) {
     (function initSpecializationCreator() {

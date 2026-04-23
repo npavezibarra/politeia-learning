@@ -40,7 +40,7 @@ final class Course
                     'show_in_rest' => true,
                     'has_archive' => true,
                     'supports' => ['title', 'editor', 'excerpt', 'thumbnail', 'revisions'],
-                    // Preserve common Politeia/LearnDash archive slug expectations.
+                    // Preserve common Politeia archive slug expectations.
                     'rewrite' => ['slug' => 'courses', 'with_front' => false],
                 ]
             );

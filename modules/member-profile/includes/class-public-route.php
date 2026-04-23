@@ -1,6 +1,6 @@
 <?php
 /**
- * Public profile route for pure WordPress (no BuddyBoss/BuddyPress).
+ * Public profile route for pure WordPress.
  *
  * URL:
  *   /profile/{username}

@@ -1,6 +1,6 @@
 <?php
 /**
- * Especialización: create/manage LearnDash Groups for the current user.
+ * Especialización: create/manage specializations for the current user.
  */
 
 if (!defined('ABSPATH')) {

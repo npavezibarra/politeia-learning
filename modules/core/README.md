@@ -1,27 +1,21 @@
-# Module: Core
+# Módulo: Core
 
-The `core` module is the **central administrative hub** and configuration layer for the Politeia Learning plugin. It manages the global settings that govern how the platform behaves.
+El módulo `core` concentra la **configuración global** y la **UI de administración** del plugin Politeia Learning. Aquí viven los ajustes que el resto de módulos consulta para resolver rutas, plantillas y comportamiento general.
 
-## 🚀 Key Responsibilities
+## Qué hace
 
-1.  **Admin Menu & Structure**: Registers the primary "Politeia Learning" menu in the WordPress sidebar, providing a unified location for all plugin management.
-2.  **Global Settings**:
-    - **Style Options**: Manages global layout constraints like the maximum width for the Course Creator and general containers.
-    - **Profile Templates**: Controls which frontend template is used for user profiles (`politeia-profile`, etc.).
-    - **Operation Template**: Defines the base slug for the dashboard (e.g., `/center` vs `/center-2`).
-3.  **Module Visibility**: Handles the high-level toggle for which functionalities (Ventas, Estudiantes, Escritos, etc.) are enabled for both administrators and end-users.
-4.  **Health Check**: Monitors the status of required integrations (WooCommerce, Learni/LMS) to ensure the platform is fully operational.
-5.  **Unified Taxonomies**: Provides the management interface for categories and tags used across all learning objects.
+- Registra el menú principal de administración de Politeia Learning (vía `PL_Core_Admin`).
+- Guarda/lee opciones globales (WordPress Options API), por ejemplo:
+  - Plantilla de perfil seleccionada (usada por `member-profile`).
+  - Slug/base del dashboard/Center (usado por `navigation` y módulos de dashboard).
+  - Flags de habilitación/visibilidad de secciones para distintos roles.
+- Centraliza pantallas administrativas en `templates/` para mantener separada la lógica del markup.
 
-## 🛠 Tech Stack & Integration
+## Puntos de entrada
 
--   **Admin Engine**: Managed by the `PL_Core_Admin` class, which handles all `admin_menu` and `admin_init` hooks.
--   **Settings API**: Uses the standard WordPress Options API to store critical platform constants.
--   **Templating**: Admin views are kept separate in the `templates/` directory to maintain a clean MVC-style separation of concerns.
+- `init.php`: registra el autoloader `PL_Core_*` y crea `PL_Core_Admin` en `plugins_loaded`.
 
-## ⚠️ Importance
+## Dependencias
 
-This module is **ABSOLUTELY CRITICAL**. Deleting this folder would:
--   Remove the entire administrative interface from the WordPress sidebar.
--   Reset global layout widths and branding options.
--   **Break all dashboard links**: Since the `/center-2` slug is stored in this module's settings, removing it would cause the platform's primary navigation to fail.
+- WordPress core (admin hooks + Options API).
+- Otros módulos consumen sus opciones; por eso es el lugar “fuente de verdad” para settings globales.

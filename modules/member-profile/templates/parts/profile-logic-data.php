@@ -53,7 +53,7 @@ $instagram = get_user_meta($user_id, 'instagram_url', true);
 // Rank
 $rank = get_user_meta($user_id, 'pl_profile_rank', true) ?: 'Premium Member';
 
-// Header + BuddyBoss context helpers.
+// Header context helpers.
 $logged_in_user_id = (int) get_current_user_id();
 $is_own_profile = is_user_logged_in() && $logged_in_user_id > 0 && $logged_in_user_id === (int) $user_id;
 

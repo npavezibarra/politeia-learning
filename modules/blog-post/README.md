@@ -1,19 +1,17 @@
-# Module: Blog Post (Escritos)
+# Módulo: Blog Post (Escritos)
 
-This module manages the custom frontend presentation of standard WordPress posts, which are referred to within the Politeia ecosystem as **"Escritos"**.
+El módulo `blog-post` personaliza la presentación de los posts estándar de WordPress (en Politeia, “Escritos”) para una lectura más cuidada y consistente con el look & feel del resto de la plataforma.
 
-## 🚀 Key Responsibilities
+## Qué hace
 
-1.  **Custom Single Template**: Overrides the default theme's `single.php` with a specialized `templates/single-post.php` layout optimized for long-form reading.
-2.  **Premium Typography**: Enforces high-quality academic typography using **EB Garamond** (for body text) and **Inter** (for UI/Headings) to ensure a scholarly reading experience.
-3.  **Visual Consistency**: Applies the `pl-bp-blog-post-body` class and custom CSS to ensure that blog content matches the refined aesthetic of the rest of the learning platform.
+- Reemplaza el template single de posts por `templates/single-post.php` (sin afectar otros post types).
+- Encola estilos/recursos propios del módulo para controlar tipografía, anchos de lectura y espaciado.
 
-## 🛠 Tech Stack & Integration
+## Puntos de entrada
 
--   **Frontend Injection**: Uses the `template_include` filter to surgicaly replace the post template without affecting other post types.
--   **LMS Connection**: While technically standard WP posts, these "Escritos" are the primary source of reading material for **Learni** lessons.
--   **Assets**: Uses specialized CSS in `assets/css/blog-post.css` to handle margins, line-heights, and responsive reading widths.
+- `init.php`: registra autoloader `PL_BP_*` e instancia `PL_BP_Blog_Post_Template` en `plugins_loaded`.
 
-## ⚠️ Importance
+## Archivos relevantes
 
-This module is **IMPORTANT** for the content integrity of the platform. Since "Escritos" are a core part of the curriculum, deleting this folder would cause all scholarly articles to lose their professional formatting, specialized fonts, and custom layout, making them much harder for students to read and less visually "premium."
+- `assets/`: CSS/JS del módulo (estilos de lectura).
+- `templates/single-post.php`: layout de post.

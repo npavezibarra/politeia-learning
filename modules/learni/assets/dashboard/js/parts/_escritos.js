@@ -862,20 +862,23 @@ jQuery(document).ready(function($) {
 
             escritos.forEach(escrito => {
                 const thumb = escrito.thumbnail_url || '';
-                const thumbClass = thumb ? '' : ' pcg-course-thumb--no-image';
+                const statusLabel = escrito.status === 'publish'
+                    ? (t('published') || 'Publicado')
+                    : (t('draft') || 'Borrador');
                 const cardHtml = `
                     <div class="pcg-course-card pcg-escrito-card" data-id="${escrito.id}">
-                        <div class="pcg-course-thumb${thumbClass}">
-                            ${thumb ? `<img src="${thumb}" alt="${escrito.title}">` : ''}
-                            <div class="pcg-course-badges">
-                                <span class="pcg-badge pcg-badge-date">${escrito.date}</span>
-                                ${escrito.status === 'draft' ? `<span class="pcg-badge pcg-badge-draft">${t('draft') || 'Borrador'}</span>` : ''}
+                        ${thumb ? `
+                            <div class="pcg-course-thumb">
+                                <img src="${thumb}" alt="${escrito.title}">
                             </div>
-                        </div>
+                        ` : ''}
                         <div class="pcg-course-content">
+                            <div class="pcg-escrito-meta-top">
+                                <span class="pcg-escrito-date">${escrito.date}</span>
+                                <span class="pcg-escrito-state${escrito.status === 'draft' ? ' is-draft' : ''}">${statusLabel}</span>
+                            </div>
                             <h4>${escrito.title}</h4>
                             <div class="pcg-course-meta">
-                                <span class="pcg-course-status">${escrito.status === 'publish' ? (t('published') || 'Publicado') : (t('draft') || 'Borrador')}</span>
                                 <div class="pcg-course-actions">
                                     <button class="pcg-btn-edit-escrito pcg-card-action-edit" title="${t('edit')}" type="button">EDITAR</button>
                                     <button class="pcg-btn-delete-escrito pcg-card-action-delete" aria-label="Delete" title="${t('delete')}" type="button">

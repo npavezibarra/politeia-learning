@@ -66,16 +66,9 @@ if (!defined('ABSPATH')) exit;
         // --- Core Logic ---
         let currentTab = <?php echo json_encode($initial_tab); ?>;
 
-        function ensureNotificationsSubnavId() {
-            if (serverView !== 'notifications') return;
-            const ul = document.querySelector('#buddypress .notifications-header nav#subnav ul.subnav');
-            if (!ul) return;
-            if (!ul.id) ul.id = 'pcg-notifications-subnav';
-        }
-
-        window.toggleSidebar = function() {
-            document.getElementById('politeia-profile-sidebar').classList.toggle('open');
-        };
+	        window.toggleSidebar = function() {
+	            document.getElementById('politeia-profile-sidebar').classList.toggle('open');
+	        };
 
         window.showToast = function(message) {
             const t = document.getElementById('pcg-toast');
@@ -135,12 +128,6 @@ if (!defined('ABSPATH')) exit;
 
             // Set dynamic background for thoughts feed
             container.style.backgroundColor = (currentTab === 'thoughts') ? '#f1f1f1' : 'white';
-
-            // Preserve server-rendered views (BuddyBoss pages like /friends/ and /notifications/).
-            if (serverView && container.dataset && container.dataset.serverView === serverView && currentTab === serverView) {
-                if (window.lucide) lucide.createIcons();
-                return;
-            }
 
 	            container.innerHTML = '';
 	            
@@ -619,19 +606,17 @@ if (!defined('ABSPATH')) exit;
             if (window.lucide) lucide.createIcons();
         }
 
-        function init() {
-            ensureNotificationsSubnavId();
-            renderSidebar();
-            renderContent();
-            if (window.lucide) lucide.createIcons();
-        }
+	        function init() {
+	            renderSidebar();
+	            renderContent();
+	            if (window.lucide) lucide.createIcons();
+	        }
 
         // Use DOMContentLoaded to ensure we run after standard WP init if needed
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-            document.addEventListener('DOMContentLoaded', ensureNotificationsSubnavId);
-        } else {
-            init();
-        }
+	        if (document.readyState === 'loading') {
+	            document.addEventListener('DOMContentLoaded', init);
+	        } else {
+	            init();
+	        }
     })();
 </script>

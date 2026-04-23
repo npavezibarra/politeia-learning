@@ -70,7 +70,7 @@ if (!defined('ABSPATH'))
             <div class="pcg-module-item">
                 <h3><?php esc_html_e('Course Integration', 'politeia-learning'); ?></h3>
                 <p>
-                    <?php _e('Integración avanzada WooCommerce + LearnDash + Politeia.', 'politeia-learning'); ?>
+                    <?php _e('Integración avanzada WooCommerce + Politeia Learning.', 'politeia-learning'); ?>
                 </p>
                 <span class="status-badge active">
                     <?php _e('Módulo Cargado', 'politeia-learning'); ?>

@@ -5,7 +5,7 @@ Este directorio contiene la lógica de frontend para el Dashboard de Creadores d
 ## 🏗️ Organización de Archivos
 
 ### 1. Orquestador Principal
-- **[creator-dashboard.js](file:///Users/nicolaspavez/Local%20Sites/nupoliteia/app/public/wp-content/plugins/politeia-learning/modules/course-creator/assets/js/creator-dashboard.js)**: Es el núcleo del sistema. Se encarga de:
+- `creator-dashboard.js`: Es el núcleo del sistema. Se encarga de:
   - Inicializar el estado global (`window.pcgCourseState`).
   - Gestionar la navegación principal entre modos del curso.
   - Orquestar el guardado y publicación del curso.
@@ -15,14 +15,15 @@ Este directorio contiene la lógica de frontend para el Dashboard de Creadores d
 Para mejorar la mantenibilidad, la lógica se ha dividido en módulos independientes cargados bajo demanda:
 
 - **[_utils.js](file:///Users/nicolaspavez/Local%20Sites/nupoliteia/app/public/wp-content/plugins/politeia-learning/modules/course-creator/assets/js/parts/_utils.js)**: Ayudantes globales como traducciones (`t()`), formateo y el sistema de **Notificaciones Toast**.
-- **[_shared-logic.js](file:///Users/nicolaspavez/Local%20Sites/nupoliteia/app/public/wp-content/plugins/politeia-learning/modules/course-creator/assets/js/parts/_shared-logic.js)**: Lógica compartida de metadatos (Categorías/Etiquetas) y gestión de Profesores/Colaboradores.
-- **[_ui-nav.js](file:///Users/nicolaspavez/Local%20Sites/nupoliteia/app/public/wp-content/plugins/politeia-learning/modules/course-creator/assets/js/parts/_ui-nav.js)**: Lógica específica para la navegación móvil y drawers laterales.
-- **[_escritos.js](file:///Users/nicolaspavez/Local%20Sites/nupoliteia/app/public/wp-content/plugins/politeia-learning/modules/course-creator/assets/js/parts/_escritos.js)**: Gestión completa del editor de artículos e imágenes inline.
-- **[_lessons.js](file:///Users/nicolaspavez/Local%20Sites/nupoliteia/app/public/wp-content/plugins/politeia-learning/modules/course-creator/assets/js/parts/_lessons.js)**: Constructor de la malla curricular, lecciones y secciones.
-- **[_evaluation.js](file:///Users/nicolaspavez/Local%20Sites/nupoliteia/app/public/wp-content/plugins/politeia-learning/modules/course-creator/assets/js/parts/_evaluation.js)**: Integración reactiva con el motor de cuestionarios (PQC).
-- **[_media-handlers.js](file:///Users/nicolaspavez/Local%20Sites/nupoliteia/app/public/wp-content/plugins/politeia-learning/modules/course-creator/assets/js/parts/_media-handlers.js)**: Controladores para la subida, previsualización y recorte de imágenes de portada y certificados.
-- **[_specializations.js](file:///Users/nicolaspavez/Local%20Sites/nupoliteia/app/public/wp-content/plugins/politeia-learning/modules/course-creator/assets/js/parts/_specializations.js)**: Interfaz de creación de Especializaciones (Grupos LearnDash).
-- **[_programs.js](file:///Users/nicolaspavez/Local%20Sites/nupoliteia/app/public/wp-content/plugins/politeia-learning/modules/course-creator/assets/js/parts/_programs.js)**: Interfaz de creación de Programas avanzados.
+- `_utils.js`: Ayudantes globales como traducciones (`t()`), formateo y el sistema de **Notificaciones Toast**.
+- `_shared-logic.js`: Lógica compartida de metadatos (Categorías/Etiquetas) y gestión de Profesores/Colaboradores.
+- `_ui-nav.js`: Lógica específica para la navegación móvil y drawers laterales.
+- `_escritos.js`: Gestión completa del editor de artículos e imágenes inline.
+- `_lessons.js`: Constructor de la malla curricular, lecciones y secciones.
+- `_evaluation.js`: Integración reactiva con el motor de cuestionarios (PQC).
+- `_media-handlers.js`: Controladores para la subida, previsualización y recorte de imágenes de portada y certificados.
+- `_specializations.js`: Interfaz de creación de especializaciones.
+- `_programs.js`: Interfaz de creación de programas.
 
 ### 3. Otros Dashboards
 - `pcg-sales-dashboard.js`: Lógica de analíticas y reportes de ventas.

@@ -77,7 +77,7 @@ if (!defined('ABSPATH')) exit;
 
         <div class="p-4 border-t border-neutral-200">
             <?php $op_template = get_option('pcg_operation_template', '/center'); ?>
-            <a href="<?php echo esc_url(function_exists('bp_core_get_user_domain') ? bp_core_get_user_domain($user_id) . ltrim($op_template, '/') . '/' : $op_template); ?>" class="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-[6px] shadow-sm hover:bg-neutral-50 transition-colors">
+            <a href="<?php echo esc_url($op_template); ?>" class="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-[6px] shadow-sm hover:bg-neutral-50 transition-colors">
                 <span class="material-symbols-outlined text-[20px] text-neutral-500">space_dashboard</span>
                 <span class="text-[10px] text-neutral-500 font-semibold uppercase tracking-widest">
                     <?php echo (strpos(get_locale(), 'es') !== false) ? 'OPERACIONES' : 'OPERATIONS'; ?>
@@ -92,7 +92,7 @@ if (!defined('ABSPATH')) exit;
 	        <header class="pcg-dashboard-header h-16 border-b border-neutral-200 bg-white flex items-center justify-between px-5 shrink-0">
             <div class="flex items-center gap-4">
                 <button onclick="toggleSidebar()" class="lg:hidden pcg-minimal-button text-neutral-900 !text-[24px]">
-                    <i class="bb-icon-l bb-icon-bars"></i>
+                    <i data-lucide="menu" size="20"></i>
                 </button>
                 <h2 class="text-sm font-medium text-neutral-400">
                     Profile / <span id="pcg-current-tab-label" class="text-neutral-900 font-semibold"><?php echo esc_html($initial_label); ?></span>
@@ -197,17 +197,7 @@ if (!defined('ABSPATH')) exit;
                 data-server-view="<?php echo esc_attr($server_view); ?>"
             <?php endif; ?>
 	        >
-	            <?php if ($server_view === 'notifications' && function_exists('bp_get_template_part')) : ?>
-	                <div class="<?php echo esc_attr($pl_profile_content_container_class); ?>">
-	                    <?php bp_get_template_part('members/single/notifications'); ?>
-	                </div>
-	            <?php elseif ($server_view === 'friends' && function_exists('bp_get_template_part')) : ?>
-	                <div class="<?php echo esc_attr($pl_profile_content_container_class); ?>">
-	                    <!-- Student Friends (BuddyPress removed) -->
-	                </div>
-	            <?php else : ?>
-	                <!-- JS will inject content here -->
-	            <?php endif; ?>
+	            <!-- JS will inject content here -->
 	        </div>
     </main>
 </div>

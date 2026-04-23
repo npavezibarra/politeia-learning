@@ -3321,6 +3321,42 @@ div#pcg-prog-mode-especializaciones {
     gap: 10px;
 }
 
+.pcg-escrito-card .pcg-escrito-meta-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.pcg-escrito-card .pcg-escrito-date {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #a8a8a8;
+}
+
+.pcg-escrito-card .pcg-escrito-state {
+    font-size: 8px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #000;
+    background: #f4f4f5;
+    border: 1px solid #f0f0f0;
+    border-radius: 999px;
+    padding: 4px 8px;
+    line-height: 1;
+    white-space: nowrap;
+    margin-left: auto;
+    text-align: right;
+}
+
+.pcg-escrito-card .pcg-course-meta {
+    justify-content: flex-end;
+}
+
 .pcg-btn-icon {
     width: 35px;
     height: 35px;
@@ -4057,14 +4093,12 @@ div#pcg-prog-mode-meta {
 
 /* Internal Toolbar (Sticky to the form container) */
 
-/* Force sticky context through BuddyBoss DOM tree */
 html,
 body,
 #page,
 #content,
 .site-content,
 .container,
-.bb-grid,
 #primary,
 #main,
 .pcg-creator-dashboard-wrapper,

@@ -103,7 +103,7 @@ add_action('plugins_loaded', function () {
 }, 5);
 
 /**
- * Prefer "FirstName LastName" on LearnDash course pages when templates ask for display_name.
+ * Prefer "FirstName LastName" on course pages when templates ask for display_name.
  * Keeps global display_name unchanged, only affects rendering.
  */
 function pl_get_user_full_name_or_display_name(int $user_id, string $fallback = ''): string

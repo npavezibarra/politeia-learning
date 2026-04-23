@@ -1,2 +1,2 @@
-=== Politeia Course Group ===
-Conecta y organiza cursos de LearnDash en jerarquías de Programas Filosóficos.
+=== Politeia Learning ===
+Funcionalidades educativas de Politeia: LMS interno, dashboard de creadores, navegación, perfiles y extensiones de comercio.
