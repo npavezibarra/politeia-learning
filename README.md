@@ -2,6 +2,13 @@
 
 Plugin principal de funcionalidades educativas de Politeia: LMS interno, dashboard de creadores, navegación, perfiles y extensiones de comercio.
 
+## Para agentes (dónde partir)
+
+- Reglas operativas y convenciones: `AGENTS.md`.
+- Bootstrap del plugin: `politeia-learning.php`.
+- La lógica vive en módulos: `modules/<module>/init.php`.
+- Cada módulo documenta su propósito/entrypoints en: `modules/<module>/README.md`.
+
 ## Arquitectura
 
 El plugin sigue una arquitectura modular: la mayoría de las funcionalidades viven en `modules/` y se inicializan desde sus respectivos `init.php`.
