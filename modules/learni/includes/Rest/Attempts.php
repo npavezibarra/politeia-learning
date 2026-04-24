@@ -172,7 +172,7 @@ final class Attempts
             }
         }
 
-        return [
+        $res = [
             'ok' => true,
             'attemptId' => $attempt_id,
             'score' => $score,
@@ -180,5 +180,15 @@ final class Attempts
             'percent' => $percent,
             'passed' => $passed,
         ];
+
+        if ($phase === 'initial' && $course_id > 0) {
+            $has_access = Access::user_can_access_course($user_id, $course_id);
+            $res['hasAccess'] = $has_access;
+            if (!$has_access && class_exists('PL_Learni_Frontend_Templates')) {
+                $res['checkoutUrl'] = \PL_Learni_Frontend_Templates::checkout_course_url($course_id);
+            }
+        }
+
+        return $res;
     }
 }

@@ -77,14 +77,7 @@ class NavEngine
             'classes' => ['menu-item', 'pl-menu-item-courses'],
         ];
 
-        // 2. Members
-        $items[] = [
-            'label' => __('Members', 'politeia-learning'),
-            'url' => home_url('/members/'),
-            'classes' => ['menu-item', 'pl-menu-item-members'],
-        ];
-
-        // 3. My Books
+        // 2. My Books
         $items[] = [
             'label' => __('My Books', 'politeia-learning'),
             'url' => home_url('/my-books/'),

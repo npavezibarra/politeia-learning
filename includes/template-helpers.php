@@ -36,7 +36,15 @@ function pl_template_open(): void
     // Pre-render block theme template parts BEFORE wp_head so their assets are enqueued in the correct place.
     if (function_exists('do_blocks')) {
         $pl_theme_header_html = (string) do_blocks('<!-- wp:template-part {"slug":"header","area":"header"} /-->');
-        $pl_theme_footer_html = (string) do_blocks('<!-- wp:template-part {"slug":"footer","area":"footer"} /-->');
+        
+        $should_suppress = false;
+        if (class_exists('\\Learni\\Navigation\\NavOrchestrator')) {
+            $should_suppress = \Learni\Navigation\NavOrchestrator::get_instance()->is_politeia_page();
+        }
+
+        if (!$should_suppress) {
+            $pl_theme_footer_html = (string) do_blocks('<!-- wp:template-part {"slug":"footer","area":"footer"} /-->');
+        }
     }
 
     ?><!doctype html>
@@ -68,7 +76,18 @@ function pl_template_close(): void
     global $pl_theme_footer_html;
 
     if (!pl_is_block_theme()) {
-        get_footer();
+        $should_suppress = false;
+        if (class_exists('\\Learni\\Navigation\\NavOrchestrator')) {
+            $should_suppress = \Learni\Navigation\NavOrchestrator::get_instance()->is_politeia_page();
+        }
+
+        if (!$should_suppress) {
+            get_footer();
+        } else {
+            wp_footer(); // Always call wp_footer() for script enqueuing
+            echo '</body></html>';
+            return;
+        }
         return;
     }
 

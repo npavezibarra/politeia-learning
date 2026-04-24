@@ -78,6 +78,11 @@
     return arr;
   }
 
+  function getCourseIdFromDom() {
+    var el = document.getElementById("learni-course");
+    return el ? (el.getAttribute("data-course-id") || "") : "";
+  }
+
   // Expose to window.LearniQuiz
   window.LearniQuiz.getConfig = getConfig;
   window.LearniQuiz.i18n = i18n;
@@ -87,4 +92,5 @@
   window.LearniQuiz.escapeHtml = escapeHtml;
   window.LearniQuiz.hash32 = hash32;
   window.LearniQuiz.stableShuffleBySeed = stableShuffleBySeed;
+  window.LearniQuiz.getCourseIdFromDom = getCourseIdFromDom;
 })();

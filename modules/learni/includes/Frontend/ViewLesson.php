@@ -12,11 +12,11 @@ final class PL_Learni_Frontend_ViewLesson
     public static function render(): string
     {
         $lesson_id = (int) get_the_ID();
-        $user_id = (int) get_current_user_id();
         if ($lesson_id <= 0) {
             return '';
         }
 
+        $user_id = (int) get_current_user_id();
         $course_id = 0;
         global $wpdb;
         if ($wpdb) {
@@ -36,14 +36,23 @@ final class PL_Learni_Frontend_ViewLesson
         $is_logged_in = $user_id > 0;
         $has_access = class_exists('\\Learni\\Access\\Access') && \Learni\Access\Access::user_can_access_course($user_id, $course_id);
 
-        $summary = class_exists('\\Learni\\Database\\Progress') ? \Learni\Database\Progress::course_summary($user_id, $course_id) : ['percent' => 0];
+        $summary = class_exists('\\Learni\\Database\\Progress') ? \Learni\Database\Progress::course_summary($user_id, $course_id) : ['total' => 0, 'completed' => 0, 'percent' => 0];
         $percent = (int) ($summary['percent'] ?? 0);
 
-        $items = class_exists('\\Learni\\Courses\\Outline') ? \Learni\Courses\Outline::get($course_id) : [];
+        $price = (float) get_post_meta($course_id, 'learni_price', true);
+        $product_id = (int) get_post_meta($course_id, 'learni_wc_product_id', true);
+        $is_free = $price <= 0 && $product_id <= 0;
+        $can_view = $has_access || $is_free;
+
+        if (!$can_view) {
+            return '<div class="learni-lesson-restricted">' . esc_html__('Compra el curso para acceder a esta lección.', 'politeia-learning') . '</div>';
+        }
+
+        $items = class_exists('\\Learni\\Courses\\Outline') ? \Learni\Courses\Outline::get_items($course_id) : [];
         $lesson_ids = [];
         foreach ($items as $it) {
-            if (isset($it['item_type']) && (string) $it['item_type'] === 'lesson' && isset($it['item_ref_id'])) {
-                $lesson_ids[] = (int) $it['item_ref_id'];
+            if (isset($it['type']) && (string) $it['type'] === 'lesson' && isset($it['refId'])) {
+                $lesson_ids[] = (int) $it['refId'];
             }
         }
         $completed = array_flip(class_exists('\\Learni\\Database\\Progress') ? \Learni\Database\Progress::completed_lesson_ids($user_id, $course_id) : []);
@@ -75,29 +84,126 @@ final class PL_Learni_Frontend_ViewLesson
             }
         }
 
-        $processed = apply_filters('the_content', get_the_content(null, false, $lesson_id));
-
-        $html = '<div id="learni-lesson" class="learni-lesson">';
-
-        $html .= '<section class="learni-lesson-main">';
-        $html .= '<header class="learni-lesson-header">';
-        $html .= '<div class="learni-lesson-header-left">';
-        $html .= '<a class="learni-lesson-back" href="' . esc_url((string) get_permalink($course_id)) . '"><span class="material-symbols-outlined">arrow_back</span> ' . esc_html__('Course', 'politeia-learning') . '</a>';
-        $html .= '</div>';
-        $html .= '<div class="learni-lesson-header-right">';
-        if ($is_completed) {
-            $html .= '<div class="learni-lesson-status-badge is-completed"><span class="material-symbols-outlined">check_circle</span> ' . esc_html__('Completed', 'politeia-learning') . '</div>';
-        } else {
-            $html .= '<form action="' . esc_url(admin_url('admin-post.php')) . '" method="POST">';
-            $html .= '<input type="hidden" name="action" value="pl_learni_mark_lesson_complete">';
-            $html .= '<input type="hidden" name="lesson_id" value="' . esc_attr((string) $lesson_id) . '">';
-            $html .= '<input type="hidden" name="redirect_to" value="' . esc_attr((string) get_permalink($lesson_id)) . '">';
-            $html .= wp_nonce_field('pl_learni_complete_lesson_' . $lesson_id, '_wpnonce', true, false);
-            $html .= '<button type="submit" class="learni-btn primary">' . esc_html__('COMPLETE LESSON', 'politeia-learning') . '</button>';
-            $html .= '</form>';
+        // Sourcing content from linked "Escrito" post if available.
+        $src_meta_key = class_exists('\\Learni\\PostTypes\\Lesson') ? \Learni\PostTypes\Lesson::META_SOURCE_POST_ID : 'learni_source_post_id';
+        $source_post_id = (int) get_post_meta($lesson_id, $src_meta_key, true);
+        $content_to_process = (string) get_post_field('post_content', $lesson_id);
+        if ($source_post_id > 0) {
+            $content_to_process = (string) get_post_field('post_content', $source_post_id);
         }
-        $html .= '</div>';
-        $html .= '</header>';
+        $processed = apply_filters('the_content', $content_to_process);
+
+        $course_url = (string) get_permalink($course_id);
+        $course_title = (string) get_the_title($course_id);
+        $total = count($lesson_ids);
+        $step = $pos >= 0 ? $pos + 1 : 0;
+
+        $html = '<main class="learni-learner learni-lesson-layout alignwide" data-learni-course-id="' . esc_attr((string) $course_id) . '">';
+        $html .= '<div class="learni-lesson-shell">';
+        
+        // Sidebar
+        $html .= '<aside class="learni-lesson-aside" aria-label="' . esc_attr__('Course navigation', 'politeia-learning') . '">';
+        if ($course_url !== '') {
+            $html .= '<a class="learni-lesson-back" href="' . esc_url($course_url) . '"><span class="learni-lesson-back-label">' . esc_html__('VOLVER A CURSO', 'politeia-learning') . '</span></a>';
+        }
+        if ($course_title !== '') {
+            $html .= '<h2 class="learni-lesson-course-title">' . esc_html($course_title) . '</h2>';
+        }
+        if ($course_id > 0) {
+            $html .= '<div class="learni-lesson-course-progress" aria-label="' . esc_attr__('Course progress', 'politeia-learning') . '">';
+            $html .= '<div class="learni-lesson-course-progress-label">' . esc_html(sprintf(__('%d%% COMPLETO', 'politeia-learning'), $percent)) . '</div>';
+            $html .= '<div class="learni-lesson-course-progress-bar" role="progressbar" aria-valuenow="' . esc_attr((string) $percent) . '" aria-valuemin="0" aria-valuemax="100">';
+            $html .= '<span class="learni-lesson-course-progress-fill" style="width:' . esc_attr((string) $percent) . '%"></span>';
+            $html .= '</div>';
+            $html .= '</div>';
+        }
+
+        $html .= '<nav id="learni-lesson-outline" class="learni-lesson-outline" aria-label="' . esc_attr__('Lessons', 'politeia-learning') . '">';
+        $html .= '<ul class="learni-lesson-outline-list">';
+        foreach ($items as $it) {
+            $type = (string) ($it['type'] ?? '');
+            if ($type === 'header') {
+                $html .= '<li class="learni-lesson-outline-header">' . esc_html((string) ($it['label'] ?? '')) . '</li>';
+                continue;
+            }
+            if ($type !== 'lesson') continue;
+            
+            $rid = (int) ($it['refId'] ?? 0);
+            if ($rid <= 0) continue;
+            
+            $it_is_done = isset($completed[$rid]);
+            $it_pos = isset($lesson_index[$rid]) ? (int) $lesson_index[$rid] : -1;
+            $it_locked = ($linear_order && $it_pos >= 0 && $max_unlocked >= 0 && $it_pos > $max_unlocked) || !$can_view;
+            $it_active = ($rid === $lesson_id);
+            
+            $classes = 'learni-lesson-outline-item';
+            if ($it_active) $classes .= ' is-active';
+            if ($it_is_done) $classes .= ' is-complete';
+            if ($it_locked) $classes .= ' is-locked';
+            
+            $it_url = get_permalink($rid);
+            
+            $html .= '<li class="' . esc_attr($classes) . '">';
+            if ($it_url && !$it_locked) {
+                $html .= '<a href="' . esc_url($it_url) . '">';
+            } else {
+                $html .= '<span>';
+            }
+            $html .= '<span class="learni-lesson-outline-label">' . esc_html(get_the_title($rid)) . '</span>';
+            $html .= '<span class="learni-lesson-outline-status" aria-hidden="true">' . ($it_is_done ? '✓' : '') . '</span>';
+            if ($it_url && !$it_locked) {
+                $html .= '</a>';
+            } else {
+                $html .= '</span>';
+            }
+            $html .= '</li>';
+        }
+        $html .= '</ul>';
+        $html .= '</nav>';
+        $html .= '</aside>';
+
+        // Main Content
+        $html .= '<section class="learni-lesson-main" aria-label="' . esc_attr__('Lesson content', 'politeia-learning') . '">';
+        $html .= '<div class="learni-lesson-top">';
+        $html .= '<div class="learni-lesson-step">' . esc_html(sprintf(__('LECCIÓN %1$d DE %2$d', 'politeia-learning'), $step, $total)) . '</div>';
+        $html .= '<div class="learni-lesson-top-actions">';
+        
+        $btn_label = __('FINALIZADO', 'politeia-learning');
+        $btn_disabled = ($user_id <= 0) || $is_completed || $is_locked;
+        $requires_video_gate = (!$btn_disabled && $video_provider === 'youtube' && $video_html !== '');
+        
+        $html .= '<form class="learni-lesson-complete-form" method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+        $html .= '<input type="hidden" name="action" value="pl_learni_mark_lesson_complete">';
+        $html .= '<input type="hidden" name="lesson_id" value="' . esc_attr((string) $lesson_id) . '">';
+        $html .= '<input type="hidden" name="redirect_to" value="' . esc_attr((string) get_permalink($lesson_id)) . '">';
+        $html .= wp_nonce_field('pl_learni_complete_lesson_' . $lesson_id, '_wpnonce', true, false);
+        
+        if ($requires_video_gate) {
+            $html .= '<span class="learni-lesson-complete-wrap" data-learni-tooltip="' . esc_attr__('Finaliza el video para declarar la lección como finalizada.', 'politeia-learning') . '">';
+        }
+        
+        $html .= '<button type="submit" class="learni-lesson-complete-btn' . ($is_completed ? ' is-complete' : '') . '"' . ($requires_video_gate ? ' data-learni-video-gate="1"' : '') . ($btn_disabled ? ' disabled' : '') . '>';
+        $html .= '<span class="learni-lesson-complete-icon" aria-hidden="true"></span>';
+        $html .= '<span class="learni-lesson-complete-text">' . esc_html($btn_label) . '</span>';
+        $html .= '</button>';
+        
+        if ($requires_video_gate) {
+            $html .= '<span class="learni-tooltip" role="tooltip">' . esc_html__('Finaliza el video para declarar la lección como finalizada.', 'politeia-learning') . '</span>';
+            $html .= '</span>';
+        }
+        $html .= '</form>';
+
+        // Next Link
+        $next_idx = $pos + 1;
+        if (isset($lesson_ids[$next_idx])) {
+            $next_id = $lesson_ids[$next_idx];
+            $next_locked = ($linear_order && $next_idx > $max_unlocked) || !$can_view;
+            if (!$next_locked && (!$linear_order || $is_completed)) {
+                $html .= '<a class="learni-lesson-next-btn" href="' . esc_url(get_permalink($next_id)) . '" aria-label="' . esc_attr__('Next lesson', 'politeia-learning') . '">→</a>';
+            }
+        }
+        $html .= '</div>'; // top actions
+        $html .= '</div>'; // lesson top
 
         $html .= '<h1 class="learni-lesson-title">' . esc_html(get_the_title($lesson_id)) . '</h1>';
         $html .= '<div class="learni-lesson-body">';
@@ -108,8 +214,9 @@ final class PL_Learni_Frontend_ViewLesson
         $html .= '</div>';
         $html .= '</section>';
 
+        // FAB + Overlay
         $html .= '<button type="button" class="learni-outline-fab" aria-label="' . esc_attr__('Open lessons', 'politeia-learning') . '" aria-controls="learni-lesson-outline-overlay" aria-expanded="false">';
-        $html .= self::outline_fab_icon_svg();
+        $html .= '<svg class="learni-outline-fab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 2H8c-1.1 0-2 .9-2 2v15c0 .55.45 1 1 1h12v-2H8V4h11v16h2V4c0-1.1-.9-2-2-2zM3 6c-.55 0-1 .45-1 1v14c0 .55.45 1 1 1h14v-2H4V7c0-.55-.45-1-1-1z"></path></svg>';
         $html .= '</button>';
 
         $html .= '<div id="learni-lesson-outline-overlay" class="learni-outline-overlay" aria-hidden="true">';
@@ -117,47 +224,40 @@ final class PL_Learni_Frontend_ViewLesson
         $html .= '<div class="learni-outline-overlay-panel" role="dialog" tabindex="-1" aria-modal="true" aria-label="' . esc_attr__('Lessons', 'politeia-learning') . '">';
         $html .= '<div class="learni-outline-overlay-handle" aria-hidden="true"></div>';
         $html .= '<nav class="learni-lesson-outline learni-lesson-outline-overlay" aria-label="' . esc_attr__('Lessons', 'politeia-learning') . '">';
-        if (empty($items)) {
-            $html .= '<div class="learni-lesson-outline-empty">' . esc_html__('No lessons yet.', 'politeia-learning') . '</div>';
-        } else {
-            $html .= '<div class="learni-lesson-outline-head"><h3>' . esc_html__('Lessons', 'politeia-learning') . '</h3></div>';
-            $html .= '<ul>';
-            foreach ($items as $it) {
-                $type = (string) ($it['item_type'] ?? '');
-                $ref_id = (int) ($it['item_ref_id'] ?? 0);
-                if ($type !== 'lesson' || $ref_id <= 0) {
-                    continue;
-                }
-
-                $is_cur_completed = isset($completed[$ref_id]);
-                $pos_cur = isset($lesson_index[$ref_id]) ? (int) $lesson_index[$ref_id] : -1;
-                $is_cur_locked = ($linear_order && $pos_cur > $max_unlocked) && !$has_access;
-                $url = get_permalink($ref_id);
-
-                $html .= '<li class="learni-lesson-outline-item' . ($is_cur_completed ? ' is-completed' : '') . ($is_cur_locked ? ' is-locked' : '') . ($ref_id === $lesson_id ? ' is-active' : '') . '">';
-                if ($is_cur_locked) {
-                    $html .= '<div class="learni-lesson-outline-link">';
-                } else {
-                    $html .= '<a class="learni-lesson-outline-link" href="' . esc_url((string) $url) . '">';
-                }
-
-                $html .= '<span class="material-symbols-outlined">' . ($is_cur_completed ? 'check_circle' : ($is_cur_locked ? 'lock' : 'play_circle')) . '</span>';
-                $html .= '<span>' . esc_html(get_the_title($ref_id)) . '</span>';
-
-                if ($is_cur_locked) {
-                    $html .= '</div>';
-                } else {
-                    $html .= '</a>';
-                }
-                $html .= '</li>';
+        $html .= '<ul class="learni-lesson-outline-list">';
+        // Repeat outline for mobile (same structure)
+        foreach ($items as $it) {
+            $type = (string) ($it['type'] ?? '');
+            if ($type === 'header') {
+                $html .= '<li class="learni-lesson-outline-header">' . esc_html((string) ($it['label'] ?? '')) . '</li>';
+                continue;
             }
-            $html .= '</ul>';
+            if ($type !== 'lesson') continue;
+            $rid = (int) ($it['refId'] ?? 0);
+            if ($rid <= 0) continue;
+            $it_is_done = isset($completed[$rid]);
+            $it_pos = isset($lesson_index[$rid]) ? (int) $lesson_index[$rid] : -1;
+            $it_locked = ($linear_order && $it_pos >= 0 && $max_unlocked >= 0 && $it_pos > $max_unlocked) || !$can_view;
+            $it_active = ($rid === $lesson_id);
+            $classes = 'learni-lesson-outline-item';
+            if ($it_active) $classes .= ' is-active';
+            if ($it_is_done) $classes .= ' is-complete';
+            if ($it_locked) $classes .= ' is-locked';
+            $it_url = get_permalink($rid);
+            $html .= '<li class="' . esc_attr($classes) . '">';
+            if ($it_url && !$it_locked) $html .= '<a href="' . esc_url($it_url) . '">'; else $html .= '<span>';
+            $html .= '<span class="learni-lesson-outline-label">' . esc_html(get_the_title($rid)) . '</span>';
+            $html .= '<span class="learni-lesson-outline-status" aria-hidden="true">' . ($it_is_done ? '✓' : '') . '</span>';
+            if ($it_url && !$it_locked) $html .= '</a>'; else $html .= '</span>';
+            $html .= '</li>';
         }
+        $html .= '</ul>';
         $html .= '</nav>';
         $html .= '</div>';
         $html .= '</div>';
 
-        $html .= '</div>'; // #learni-lesson
+        $html .= '</div>'; // learni-lesson-shell
+        $html .= '</main>';
 
         return $html;
     }

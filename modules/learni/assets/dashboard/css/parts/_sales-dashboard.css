@@ -292,6 +292,7 @@
     padding: 10px 36px 10px 12px;
     border-radius: 6px;
     border: 1px solid rgba(0, 0, 0, .12);
+    box-sizing: border-box;
     outline: none;
     background: #fff;
     color: #000;
@@ -352,6 +353,21 @@
     border-spacing: 0;
     min-width: 880px;
     border: none;
+}
+
+@media (max-width: 1040px) {
+    /* In card mode we must allow the table to shrink to the viewport. */
+    .pcg-sales-list-table-wrap {
+        overflow: visible;
+    }
+
+    .pcg-sales-list-table {
+        min-width: 0;
+    }
+
+    .pcg-sales-list-user {
+        min-width: 0;
+    }
 }
 
 .pcg-sales-list-table thead th {
@@ -569,6 +585,26 @@
     .pcg-sales-section [data-sales-panel="list"] .pcg-sales-list-pagination {
         margin-left: auto;
         flex-shrink: 0;
+    }
+}
+
+@media (max-width: 600px) {
+    .pcg-sales-dashboard {
+        padding: 0 12px;
+    }
+
+    .pcg-sales-list-panel-head {
+        padding: 12px 10px 10px;
+    }
+
+    .pcg-sales-list-topbar {
+        flex-wrap: wrap;
+    }
+
+    .pcg-sales-list-search {
+        min-width: 0;
+        flex: 1 1 auto;
+        max-width: none;
     }
 }
 
@@ -986,13 +1022,18 @@
 
     .pcg-sales-section [data-sales-panel="general"] .pcg-sales-dashboard {
         max-width: 1180px;
-        padding: 0px;
+        padding: 18px 0 0;
         padding-bottom: calc(84px + env(safe-area-inset-bottom));
     }
 
     /* Keep the controls (timeframes) but hide the desktop header text. */
     .pcg-sales-section [data-sales-panel="general"] .pcg-sales-dashboard-header > div:first-child {
         display: none !important;
+    }
+
+    /* Sales list header needs the same top spacing as Students profile on phones. */
+    .pcg-sales-section [data-sales-panel="list"] > .pcg-sales-dashboard:first-child {
+        padding-top: 18px;
     }
 
     .pcg-sales-section [data-sales-panel="general"] .pcg-sales-controls {

@@ -294,14 +294,29 @@
             var total = data && typeof data.total === "number" ? data.total : state.questions.length;
 
             setQuizModalTitle("Resultados");
+            var ctaLabel = i18n("quizResultsContinue", "Continuar");
+            var isCheckout = false;
+            if (state.phase === "initial") {
+              if (data.hasAccess) {
+                ctaLabel = "COMENZAR CURSO";
+              } else {
+                ctaLabel = "COMPRAR CURSO";
+                isCheckout = true;
+              }
+            }
+
             var html = '<div class="learni-quiz-results"><div class="learni-quiz-results__kicker">Evaluación inicial</div>' +
               '<div class="learni-quiz-results__chart">' + ringChartSvg(pct, "learniGoldGradientResults", "learni-quiz-results__chart-svg") + "</div>" +
               '<div class="learni-quiz-results__meta">' + score + " de " + total + " correctas</div>" +
               '<div class="learni-quiz-results__text">Felicitaciones: obtuviste <strong>' + pct + '%</strong> de respuestas correctas en la Evaluación Inicial. Ahora completa todas las lecciones de este curso. Al finalizar, podrás rendir la Evaluación Final y compararemos tu resultado inicial con el final para ver tu progreso.</div>' +
-              '<div class="learni-quiz-actions"><button type="button" class="learni-btn" id="learni-quiz-results-continue">Continuar</button></div></div>';
+              '<div class="learni-quiz-actions"><button type="button" class="learni-btn" id="learni-quiz-results-continue">' + escapeHtml(ctaLabel) + '</button></div></div>';
             setQuizModalBody(html);
             var cont = document.getElementById("learni-quiz-results-continue");
             if (cont) cont.addEventListener("click", function () {
+              if (isCheckout && data.checkoutUrl) {
+                window.location.href = data.checkoutUrl;
+                return;
+              }
               hideQuizModal();
               try { var url = new URL(window.location.href); url.searchParams.set("pl_auth_unverified_after_quiz", "1"); window.location.href = url.toString(); } catch (e) { window.location.reload(); }
             });

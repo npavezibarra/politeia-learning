@@ -207,11 +207,16 @@ button#pcg-mobile-sectionmenu-btn {
         display: none !important;
     }
 
-    /* Disable transform animation on mobile to allow position: fixed for children */
-    .pcg-create-course-container {
-        animation: none !important;
-        transform: none !important;
-    }
+	    /* Disable transform animation on mobile to allow position: fixed for children */
+	    .pcg-mode-content,
+	    .pcg-mode-content.is-visible {
+	        transform: none !important;
+	    }
+
+	    .pcg-create-course-container {
+	        animation: none !important;
+	        transform: none !important;
+	    }
 
     /* Mobile menu: no hover/active backgrounds anywhere */
     .pcg-mobile-nav a,
@@ -302,10 +307,9 @@ button#pcg-mobile-sectionmenu-btn {
 	        margin-bottom: 8px !important;
 	    }
 
-	    [id^="pcg-mode-"] .pcg-sidecard__price,
-	    [id^="pcg-mode-"] .pcg-price-free-indicator {
-	        display: block !important;
-	    }
+		    [id^="pcg-mode-"] .pcg-sidecard__price {
+		        display: block !important;
+		    }
 
 	    [id^="pcg-mode-"] .pcg-sidecard__actions {
 	        display: flex !important;

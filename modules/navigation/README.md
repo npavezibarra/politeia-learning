@@ -1,6 +1,6 @@
 # Módulo: Navigation
 
-El módulo `navigation` implementa un sistema de navegación unificado (desktop + mobile) y “toma control” de menús WordPress para asegurar consistencia visual y funcional en el frontend de Politeia Learning.
+El módulo `navigation` implementa un sistema de navegación y pie de página (footer) unificado (desktop + mobile) y “toma control” de los menús y bloques del tema para asegurar consistencia visual y funcional en el frontend de Politeia Learning.
 
 ## Qué hace
 
@@ -16,6 +16,8 @@ El módulo `navigation` implementa un sistema de navegación unificado (desktop 
   - `render_block_core/navigation`
 - Render móvil:
   - `wp_body_open` (header mobile)
+- Gestión de Footers:
+  - Inyecta o reemplaza los footers del sitio (desktop + mobile) para asegurar que no se utilicen los que vienen por defecto en el tema y mantener la identidad visual unificada.
 
 ## Puntos de extensión (para otros módulos)
 

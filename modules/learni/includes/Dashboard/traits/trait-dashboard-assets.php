@@ -74,7 +74,7 @@ trait PL_CC_Dashboard_Assets_Trait
 
             wp_enqueue_style(
                 'pcg-material-symbols-outlined',
-                'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=more_horiz',
+                'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=more_horiz&display=block',
                 [],
                 null
             );

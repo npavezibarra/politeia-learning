@@ -52,7 +52,7 @@ add_action('wp_enqueue_scripts', function (): void {
     // Google Material Symbols (icons). Load the full set to avoid "missing icon" fallbacks.
     wp_enqueue_style(
         'politeia-material-symbols-outlined',
-        'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap',
+        'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block',
         [],
         null
     );

@@ -2701,34 +2701,72 @@ div#specialization-grid {
         white-space: nowrap;
     }
 
-    .pcg-sales-list-table tbody,
-    .pcg-students-profile__table tbody,
-    .pcg-sales-list-table tbody tr,
-    .pcg-students-profile__table tbody tr,
-    .pcg-sales-list-table tbody td,
-    .pcg-students-profile__table tbody td {
-        display: block;
-        width: 100%;
-    }
+	    .pcg-sales-list-table tbody,
+	    .pcg-students-profile__table tbody,
+	    .pcg-sales-list-table tbody tr,
+	    .pcg-students-profile__table tbody tr,
+	    .pcg-sales-list-table tbody td,
+	    .pcg-students-profile__table tbody td {
+	        display: block;
+	        width: 100%;
+	    }
 
-    .pcg-sales-list-table tbody tr,
-    .pcg-students-profile__table tbody tr {
-        background: #fff;
-        overflow: hidden;
-        border-bottom: 1px solid #e0e0e0;
-        padding: 10px;
-    }
+	    .pcg-sales-list-table tbody,
+	    .pcg-sales-list-table tbody tr,
+	    .pcg-sales-list-table tbody td {
+	        box-sizing: border-box;
+	        max-width: 100%;
+	    }
 
-    .pcg-sales-list-table tbody td,
-    .pcg-students-profile__table tbody td {
-        padding: 10px 14px;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        text-align: left !important;
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 12px;
-    }
+		    .pcg-sales-list-table tbody tr,
+		    .pcg-students-profile__table tbody tr {
+		        background: #fff;
+		        overflow: hidden;
+		        border-bottom: 1px solid #e0e0e0;
+	        padding: 10px;
+	    }
+
+		    .pcg-sales-list-table tbody td,
+		    .pcg-students-profile__table tbody td {
+	        padding: 10px 14px;
+	        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+	        text-align: left !important;
+	        display: flex;
+	        align-items: flex-start;
+	        justify-content: space-between;
+	        gap: 12px;
+	        min-width: 0;
+		        overflow-wrap: anywhere;
+		        word-break: break-word;
+		    }
+
+	    /* Sales list card mode: use grid so values can shrink/wrap (prevents right-side clipping). */
+	    .pcg-sales-list-table tbody tr {
+	        overflow: visible;
+	    }
+
+	    .pcg-sales-list-table tbody td:not(:first-child) {
+	        display: grid;
+	        grid-template-columns: minmax(0, 140px) minmax(0, 1fr);
+	        align-items: flex-start;
+	        column-gap: 12px;
+	        justify-content: stretch;
+	        justify-items: end;
+	        text-align: right;
+	    }
+
+	    .pcg-sales-list-table tbody td:not(:first-child)::before {
+	        grid-column: 1;
+	        justify-self: start;
+	        text-align: left;
+	        white-space: nowrap;
+	        overflow-wrap: normal;
+	        word-break: normal;
+	    }
+
+	    .pcg-sales-list-table .pcg-sales-list-badge {
+	        white-space: normal;
+	    }
 
     .pcg-sales-list-table tbody td:last-child,
     .pcg-students-profile__table tbody td:last-child {
@@ -2768,10 +2806,29 @@ div#specialization-grid {
         text-align: left !important;
     }
 
-    .pcg-students-profile__progress-bar {
-        width: 100%;
-    }
-}
+	    .pcg-students-profile__progress-bar {
+	        width: 100%;
+	    }
+	}
+
+		@media (max-width: 420px) {
+		    .pcg-students-profile__table tbody td {
+		        flex-direction: column;
+		        align-items: flex-start;
+		        gap: 6px;
+		    }
+
+		    .pcg-students-profile__table tbody td::before {
+		        flex: 0 0 auto;
+		        max-width: 100%;
+		    }
+
+		    .pcg-sales-list-table tbody td {
+		        grid-template-columns: 1fr;
+		        row-gap: 6px;
+		        text-align: left;
+		    }
+		}
 
 .pcg-students-profile__value-grid {
     display: grid;
@@ -4158,12 +4215,15 @@ body,
     display: flex;
     align-items: center;
     justify-content: space-between;
+    width: 100%;
 }
 
 .pcg-escrito-tools-group {
     display: flex;
     align-items: center;
     gap: 4px;
+    margin-right: auto;
+    min-width: 0;
 }
 
 .pcg-escrito-divider {

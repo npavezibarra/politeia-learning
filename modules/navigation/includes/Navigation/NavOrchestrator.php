@@ -37,11 +37,53 @@ class NavOrchestrator
         add_filter('pre_wp_nav_menu', [$this, 'override_classic_menu'], 1, 2);
         add_filter('wp_nav_menu_items', [$this, 'override_menu_items'], 1, 2);
 
-        // Gutenberg / Block Navigation
+        // Gutenberg / Block Navigation & Footer
         add_filter('render_block_core/navigation', [GutenbergRenderer::class, 'filter_block'], 1, 2);
+        add_filter('render_block_core/template-part', [$this, 'suppress_footer_block'], 1, 2);
 
         // Mobile / Smartphone Specific
         add_action('wp_body_open', [MobileRenderer::class, 'render_header'], 1);
+    }
+
+    /**
+     * Suppresses the footer template part block on Politeia pages.
+     */
+    public function suppress_footer_block(string $block_content, array $block): string
+    {
+        if (isset($block['attrs']['slug']) && $block['attrs']['slug'] === 'footer') {
+            if ($this->is_politeia_page()) {
+                return '';
+            }
+        }
+        return $block_content;
+    }
+
+    /**
+     * Detects if the current page is a Politeia Learning managed page.
+     */
+    public function is_politeia_page(): bool
+    {
+        // Custom Post Types and Managed Core Types
+        if (is_singular(['learni_course', 'learni_lesson', 'learni_specialization', 'learni_program', 'pl_member_profile', 'post', 'product'])) {
+            return true;
+        }
+        
+        // Archives
+        if (is_post_type_archive(['learni_course', 'learni_specialization', 'learni_program', 'product'])) {
+            return true;
+        }
+
+        // Member Profile custom route
+        if (get_query_var('pl_profile_username')) {
+            return true;
+        }
+
+        // Auth pages
+        if (isset($_GET['pl_auth_action']) || is_page(['login', 'register', 'lost-password', 'mi-cuenta', 'checkout-curso'])) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

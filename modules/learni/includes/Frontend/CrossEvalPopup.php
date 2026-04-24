@@ -38,7 +38,7 @@ class PL_Learni_Cross_Eval_Popup
         // This is safe because scripts/CSS are scoped to `.learni-*` classes and no-op on non-course pages.
         wp_enqueue_style(
             'pl-learni-material-symbols',
-            'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap',
+            'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block',
             [],
             null
         );

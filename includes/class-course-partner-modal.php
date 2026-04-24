@@ -38,7 +38,7 @@ class PL_Course_Partner_Modal
         wp_enqueue_style(
             'pl-course-partner-material-symbols',
             // Use the full font (no `icon_names` subsetting) to avoid glyph fallback showing text like "CLOSE".
-            'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap',
+            'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block',
             [],
             null
         );

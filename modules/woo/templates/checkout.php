@@ -58,7 +58,7 @@ $shop_url = function_exists('wc_get_page_permalink') ? (string) wc_get_page_perm
 pl_template_open();
 ?>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=private_connectivity" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=private_connectivity&display=block" />
 	<style>
 	    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@400;600;700&display=swap');
 			    html, body { height: 100%; }

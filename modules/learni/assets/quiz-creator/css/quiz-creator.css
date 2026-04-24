@@ -1676,6 +1676,34 @@
     height: 16px;
 }
 
+@media (max-width: 640px) {
+    #pcg-mode-evaluacion .pqc-container {
+        max-width: 420px;
+        padding: 0 12px;
+    }
+
+    #pcg-mode-evaluacion .pqc-slide-controls-row {
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px;
+    }
+
+    #pcg-mode-evaluacion .pqc-slide-nav-mini {
+        flex-wrap: wrap;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    #pcg-mode-evaluacion .pqc-delete-quiz-btn {
+        margin-left: 0;
+    }
+
+    #pcg-mode-evaluacion .pqc-slide-content-card {
+        padding: 18px;
+    }
+}
+
 /* Field labels */
 #pcg-mode-evaluacion .pqc-field label,
 #pcg-mode-evaluacion .pqc-answers-section label {

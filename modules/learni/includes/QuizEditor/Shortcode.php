@@ -106,7 +106,7 @@ final class Shortcode
         wp_enqueue_style('pqc-styles', PL_LEARNI_URL . 'assets/quiz-creator/css/quiz-creator.css', ['pqc-poppins'], '1.0.0');
         
         if (defined('PL_LEARNI_URL')) {
-            wp_enqueue_style('pl-learni-material-symbols', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=auto_stories&display=swap', [], null);
+            wp_enqueue_style('pl-learni-material-symbols', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=auto_stories&display=block', [], null);
             wp_enqueue_style('pl-learni-learner', PL_LEARNI_URL . 'assets/learner.css', ['pl-learni-material-symbols'], '1.0.0');
         }
 

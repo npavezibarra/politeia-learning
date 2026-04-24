@@ -120,6 +120,23 @@
     align-items: center;
 }
 
+@media (max-width: 640px) {
+    .pcg-lessons-list {
+        display: grid;
+        gap: 16px;
+        margin-bottom: 40px;
+        padding: 0px;
+    }
+
+    .pcg-lessons-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        padding: 0px;
+    }
+}
+
 .pcg-escrito-toolbar {
     background: #fff;
     border-bottom: 1px solid #f0f0f0;

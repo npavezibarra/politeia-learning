@@ -73,17 +73,23 @@ if (!defined('ABSPATH')) exit;
         <!-- Navigation Menu -->
         <nav class="flex-1 py-4 overflow-y-auto" id="pcg-nav-menu">
             <!-- JS will inject items here -->
-        </nav>
+	        </nav>
 
-        <div class="p-4 border-t border-neutral-200">
-            <?php $op_template = get_option('pcg_operation_template', '/center'); ?>
-            <a href="<?php echo esc_url($op_template); ?>" class="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-[6px] shadow-sm hover:bg-neutral-50 transition-colors">
-                <span class="material-symbols-outlined text-[20px] text-neutral-500">space_dashboard</span>
-                <span class="text-[10px] text-neutral-500 font-semibold uppercase tracking-widest">
-                    <?php echo (strpos(get_locale(), 'es') !== false) ? 'OPERACIONES' : 'OPERATIONS'; ?>
-                </span>
-            </a>
-        </div>
+	        <div class="p-4 border-t border-neutral-200">
+	            <?php
+	            $center_slug = 'center-2';
+	            $center_user = wp_get_current_user();
+	            $center_url = ($center_user && 0 !== (int) $center_user->ID)
+	                ? home_url(sprintf('/members/%s/%s', rawurlencode($center_user->user_login), rawurlencode($center_slug)))
+	                : home_url('/' . $center_slug);
+	            ?>
+	            <a id="pcg-profile-operations-btn" href="<?php echo esc_url($center_url); ?>" class="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-[6px] shadow-sm hover:bg-neutral-50 transition-colors">
+	                <span class="material-symbols-outlined text-[20px] text-neutral-500">space_dashboard</span>
+	                <span class="text-[10px] text-neutral-500 font-semibold uppercase tracking-widest">
+	                    <?php echo (strpos(get_locale(), 'es') !== false) ? 'OPERACIONES' : 'OPERATIONS'; ?>
+	                </span>
+	            </a>
+	        </div>
     </aside>
 
     <!-- Main Content Area -->

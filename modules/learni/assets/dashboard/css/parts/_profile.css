@@ -744,7 +744,100 @@
         align-items: stretch;
     }
 
-    .pcg-identity-topbar .pcg-profile-save-btn {
-        width: fit-content;
+    /* Tablet/phone: Save becomes a fixed bottom action bar. */
+    .pcg-profile-container--identity .pcg-profile-form {
+        padding-bottom: calc(84px + env(safe-area-inset-bottom));
+    }
+
+    .pcg-profile-container--identity .pcg-profile-form::after {
+        content: "";
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: calc(64px + env(safe-area-inset-bottom));
+        background: #fafafa;
+        border-top: 1px solid #dfdfdf;
+        box-shadow: 0 -15px 30px -5px rgba(0, 0, 0, 0.1);
+        z-index: 1099;
+        pointer-events: none;
+    }
+
+    .pcg-profile-container--identity .pcg-profile-save-btn {
+        position: fixed;
+        left: 18px;
+        right: 18px;
+        bottom: calc(12px + env(safe-area-inset-bottom));
+        z-index: 1100;
+        width: auto;
+        height: 40px;
+        min-height: 40px;
+        max-height: 40px;
+        line-height: 40px;
+        margin: 0;
+        border-radius: 6px;
+        background: #000;
+        color: #fff;
+        border-color: #000;
+    }
+
+    .pcg-profile-container--identity .pcg-profile-save-btn:hover,
+    .pcg-profile-container--identity .pcg-profile-save-btn:focus,
+    .pcg-profile-container--identity .pcg-profile-save-btn:focus-visible,
+    .pcg-profile-container--identity .pcg-profile-save-btn:active {
+        background: #000;
+        color: #fff;
+        border-color: #000;
+    }
+
+    .pcg-profile-container--identity .pcg-profile-save-btn i,
+    .pcg-profile-container--identity .pcg-profile-save-btn svg {
+        color: #fff;
+        stroke: currentColor;
+    }
+
+    .pcg-profile-container--identity .pcg-profile-save-btn .pcg-profile-loader {
+        border-color: rgba(255, 255, 255, 0.3);
+        border-top-color: #fff;
+    }
+
+    .pcg-profile-container--identity .pcg-profile-save-btn::before {
+        content: none;
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .pcg-profile-form {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    /* Smartphone profile: center avatar/name/email and move Save into a bottom action bar. */
+    .pcg-profile-container--identity .pcg-identity-topbar {
+        position: static;
+        padding: 0;
+        border-bottom: 0;
+        margin-bottom: 24px;
+        align-items: center;
+        text-align: center;
+    }
+
+    .pcg-profile-container--identity .pcg-identity-header {
+        width: 100%;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+    }
+
+    .pcg-profile-container--identity .pcg-avatar-container {
+        display: block;
+    }
+
+    .pcg-profile-container--identity .pcg-identity-text h1,
+    .pcg-profile-container--identity .pcg-identity-text .pcg-email {
+        text-align: center;
     }
 }

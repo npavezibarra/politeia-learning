@@ -85,7 +85,8 @@ jQuery(document).ready(function ($) {
     // Mirror price inputs across tabs
     $(document).on('input change', '#pcg-course-price', function () {
         const val = $(this).val();
-        const price = parseFloat(val) || 0;
+        const digits = String(val || '').replace(/[^\d]/g, '');
+        const price = parseInt(digits, 10) || 0;
         
         // Sync values to secondary price inputs
         $('[id^="pcg-course-price-"]').each(function() {

@@ -254,6 +254,10 @@ jQuery(document).ready(function($) {
             $('#pcg-escrito-upload-ui').show();
             $('#pcg-current-escrito-label').text('').hide();
             $('#pcg-btn-preview-escrito').hide();
+
+            // Ensure mode content is reset
+            $('.pcg-mode-content').removeClass('is-visible').hide();
+
             handlePlaceholder();
         }
 
@@ -262,6 +266,12 @@ jQuery(document).ready(function($) {
             $('#pcg-my-escritos-section').fadeOut(300, function () {
                 resetEscritoForm();
                 $('#pcg-escritos-form-section').fadeIn(300, function () {
+                    const $target = $('.pcg-escritos-editor-mode');
+                    $target.show();
+                    // Trigger reflow for transition
+                    if ($target[0]) $target[0].offsetHeight;
+                    $target.addClass('is-visible');
+
                     initInlineImageMicroText();
                     normalizeInlineImages(getEditorEl());
                 });
@@ -276,6 +286,10 @@ jQuery(document).ready(function($) {
 
         $(document).on('click', '#pcg-btn-back-to-escritos', function (e) {
             if (e && typeof e.preventDefault === 'function') e.preventDefault();
+            
+            // Remove visibility class
+            $('.pcg-mode-content').removeClass('is-visible');
+
             $('#pcg-escritos-form-section').fadeOut(300, function () {
                 $('#pcg-my-escritos-section').fadeIn();
                 resetEscritoForm();
@@ -358,6 +372,11 @@ jQuery(document).ready(function($) {
             resetEscritoForm();
             $('#pcg-my-escritos-section').hide();
             $('#pcg-escritos-form-section').show();
+
+            const $target = $('.pcg-escritos-editor-mode');
+            $target.show();
+            if ($target[0]) $target[0].offsetHeight;
+            $target.addClass('is-visible');
 
             $.ajax({
                 url: pcgCreatorData.ajaxUrl,

@@ -238,7 +238,7 @@
   // Capture phase to avoid other scripts stopping propagation on the button.
   document.addEventListener('click', (e) => {
     const btn = e.target && e.target.closest ? e.target.closest('.addPartnerBtn') : null;
-    if (!btn) return;
+    if (!btn || btn.disabled) return;
     e.preventDefault();
     openModal();
   }, true);
