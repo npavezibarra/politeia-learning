@@ -29,6 +29,7 @@ final class QuizEditor
             'questions_per_attempt' => 0,
             'questions_subset_random' => 0,
             'questionOrder' => 'in_order',
+            'restartCooldownDays' => 0,
         ];
 
         if (!empty($quiz['settings_json'])) {
@@ -308,6 +309,7 @@ final class QuizEditor
             'run_once' => 'bool',
             'force_solve' => 'bool',
             'show_points' => 'bool',
+            'restartCooldownDays' => 'int',
         ];
 
         foreach ($allowed as $key => $type) {

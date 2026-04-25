@@ -9,6 +9,34 @@ if (!defined('ABSPATH')) {
 
 final class PL_Learni_Frontend_Assessment
 {
+    private const RESTART_CYCLE_META_PREFIX = 'learni_binomial_cycle_after_attempt_';
+
+    private static function restart_cycle_meta_key(int $course_id, int $quiz_id): string
+    {
+        return self::RESTART_CYCLE_META_PREFIX . $course_id . '_' . $quiz_id;
+    }
+
+    private static function restart_cycle_cutoff_attempt_id(int $user_id, int $course_id, int $quiz_id): int
+    {
+        if ($user_id <= 0 || $course_id <= 0 || $quiz_id <= 0) {
+            return 0;
+        }
+        return (int) get_user_meta($user_id, self::restart_cycle_meta_key($course_id, $quiz_id), true);
+    }
+
+    private static function parse_mysql_timestamp(string $submitted_at): int
+    {
+        $submitted_at = trim($submitted_at);
+        if ($submitted_at === '') {
+            return 0;
+        }
+        $dt = date_create_immutable_from_format('Y-m-d H:i:s', $submitted_at, wp_timezone());
+        if ($dt instanceof \DateTimeImmutable) {
+            return (int) $dt->getTimestamp();
+        }
+        return (int) strtotime($submitted_at);
+    }
+
     public static function binomial_course_state(int $course_id, int $user_id, int $lesson_percent): array
     {
         if ($course_id <= 0 || $user_id <= 0 || !class_exists('\\Learni\\Database\\Progress')) {
@@ -37,6 +65,7 @@ final class PL_Learni_Frontend_Assessment
 
         $quiz_id = 0;
         $fallback_id = 0;
+        $restart_cooldown_days = 0;
         foreach ($rows as $row) {
             $settings = [];
             if (!empty($row['settings_json'])) {
@@ -47,6 +76,7 @@ final class PL_Learni_Frontend_Assessment
             }
             if (isset($settings['role']) && (string) $settings['role'] === 'binomial') {
                 $quiz_id = (int) ($row['id'] ?? 0);
+                $restart_cooldown_days = max(0, (int) ($settings['restartCooldownDays'] ?? 0));
                 break;
             }
             if ($fallback_id <= 0 && empty($row['lesson_post_id'])) {
@@ -68,20 +98,40 @@ final class PL_Learni_Frontend_Assessment
             ];
         }
 
+        $restart_cooldown_days = isset($restart_cooldown_days) ? (int) $restart_cooldown_days : 0;
+        $cutoff_attempt_id = self::restart_cycle_cutoff_attempt_id($user_id, $course_id, $quiz_id);
+
         $attempts_table = $wpdb->prefix . 'learni_quiz_attempts';
-        $rows = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT id, score, submitted_at, answers_json
-                 FROM {$attempts_table}
-                 WHERE quiz_id = %d AND user_id = %d AND status = %s
-                 ORDER BY submitted_at ASC, id ASC
-                 LIMIT 200",
-                $quiz_id,
-                $user_id,
-                'submitted'
-            ),
-            ARRAY_A
-        );
+        if ($cutoff_attempt_id > 0) {
+            $rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT id, score, submitted_at, answers_json
+                     FROM {$attempts_table}
+                     WHERE quiz_id = %d AND user_id = %d AND status = %s AND id > %d
+                     ORDER BY submitted_at ASC, id ASC
+                     LIMIT 200",
+                    $quiz_id,
+                    $user_id,
+                    'submitted',
+                    $cutoff_attempt_id
+                ),
+                ARRAY_A
+            );
+        } else {
+            $rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT id, score, submitted_at, answers_json
+                     FROM {$attempts_table}
+                     WHERE quiz_id = %d AND user_id = %d AND status = %s
+                     ORDER BY submitted_at ASC, id ASC
+                     LIMIT 200",
+                    $quiz_id,
+                    $user_id,
+                    'submitted'
+                ),
+                ARRAY_A
+            );
+        }
 
         $series = [];
         $idx = 0;
@@ -136,6 +186,8 @@ final class PL_Learni_Frontend_Assessment
         $final_failed = false;
         $cooldown_until = '';
         $cooldown_days_remaining = 0;
+        $restart_cooldown_until = '';
+        $restart_cooldown_days_remaining = 0;
 
         $baseline = is_array($initial) ? (int) ($initial['percent'] ?? 0) : null;
         if ($baseline !== null) {
@@ -153,15 +205,7 @@ final class PL_Learni_Frontend_Assessment
             if ($fp < $baseline) {
                 $final_failed = true;
                 $submitted_at = (string) ($final['submittedAt'] ?? '');
-                $ts = 0;
-                if ($submitted_at !== '') {
-                    $dt = date_create_immutable_from_format('Y-m-d H:i:s', $submitted_at, wp_timezone());
-                    if ($dt instanceof \DateTimeImmutable) {
-                        $ts = $dt->getTimestamp();
-                    } else {
-                        $ts = (int) strtotime($submitted_at);
-                    }
-                }
+                $ts = self::parse_mysql_timestamp($submitted_at);
                 if ($ts > 0) {
                     $cool_ts = $ts + (7 * DAY_IN_SECONDS);
                     $cooldown_until = wp_date('Y-m-d H:i:s', $cool_ts, wp_timezone());
@@ -171,6 +215,22 @@ final class PL_Learni_Frontend_Assessment
                         $days_since = intdiv(max(0, $now - $ts), DAY_IN_SECONDS);
                         $cooldown_days_remaining = (int) max(0, 7 - $days_since);
                     }
+                }
+            }
+        }
+
+        $can_restart_now = $eligible_final;
+        if ($eligible_final && is_array($final) && $restart_cooldown_days > 0) {
+            $ts = self::parse_mysql_timestamp((string) ($final['submittedAt'] ?? ''));
+            if ($ts > 0) {
+                $cool_ts = $ts + ($restart_cooldown_days * DAY_IN_SECONDS);
+                $restart_cooldown_until = wp_date('Y-m-d H:i:s', $cool_ts, wp_timezone());
+                $now = (int) current_time('timestamp');
+                $diff = $cool_ts - $now;
+                if ($diff > 0) {
+                    $days_since = intdiv(max(0, $now - $ts), DAY_IN_SECONDS);
+                    $restart_cooldown_days_remaining = (int) max(0, $restart_cooldown_days - $days_since);
+                    $can_restart_now = false;
                 }
             }
         }
@@ -186,13 +246,15 @@ final class PL_Learni_Frontend_Assessment
             'needsInitial' => $needs_initial,
             'needsFinal' => $needs_final,
             'canTakeFinal' => $can_take_final,
-            'canRestart' => $eligible_final && $lesson_percent >= 100 && $has_access,
+            'canRestart' => $eligible_final && $has_access && $restart_cooldown_days_remaining <= 0 && $can_restart_now,
             'initial' => $initial,
             'final' => $final,
             'eligibleFinal' => $eligible_final,
             'finalFailed' => $final_failed,
             'cooldownUntil' => $cooldown_until,
             'cooldownDaysRemaining' => $cooldown_days_remaining,
+            'restartCooldownUntil' => $restart_cooldown_until,
+            'restartCooldownDaysRemaining' => $restart_cooldown_days_remaining,
         ];
     }
 

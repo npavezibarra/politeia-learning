@@ -251,8 +251,16 @@ final class PL_Learni_Frontend_ViewCourse
             $first_lesson_url = $first_slug !== '' ? home_url('/?learni_lesson=' . rawurlencode($first_slug)) : '';
         }
 
-        if ($has_access && !empty($binomial['canRestart'])) {
-            $html .= '<button id="learni-course-restart" class="learni-btn learni-course-primary-btn" type="button" data-course-id="' . esc_attr((string) $course_id) . '">' . esc_html__('REINICIAR CURSO', 'politeia-learning') . '</button>';
+        if ($has_access && !empty($binomial['eligibleFinal'])) {
+            $r_days = (int) ($binomial['restartCooldownDaysRemaining'] ?? 0);
+            $disabled = $r_days > 0 ? ' disabled' : '';
+            $title = $r_days > 0
+                ? ' title="' . esc_attr(sprintf(_n('Disponible en %d día.', 'Disponible en %d días.', $r_days, 'politeia-learning'), $r_days)) . '"'
+                : '';
+            $label = $r_days > 0
+                ? sprintf(_n('%d DÍA PARA REINICIAR', '%d DÍAS PARA REINICIAR', $r_days, 'politeia-learning'), $r_days)
+                : __('REINICIAR CURSO', 'politeia-learning');
+            $html .= '<button id="learni-course-restart" class="learni-btn learni-course-primary-btn" type="button" data-course-id="' . esc_attr((string) $course_id) . '"' . $disabled . $title . '>' . esc_html($label) . '</button>';
         } elseif (!$is_enrolled && !$is_free) {
             $checkout_url = $product_id > 0 ? (string) add_query_arg(['action' => 'pl_learni_checkout_course', 'course_id' => (string) $course_id], admin_url('admin-post.php')) : '#';
             $product_url = ($user_id <= 0 && $checkout_url !== '#') ? wp_login_url($checkout_url) : $checkout_url;

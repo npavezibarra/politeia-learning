@@ -186,10 +186,10 @@
       });
   }
 
-  function renderBinomialQuizFromData(courseId, phase, data, initialScore, opts) {
-    opts = opts || {};
-    var mode = opts.mode || "self";
-    var submitAttempt = opts.submitAttempt;
+	  function renderBinomialQuizFromData(courseId, phase, data, initialScore, opts) {
+	    opts = opts || {};
+	    var mode = opts.mode || "self";
+	    var submitAttempt = opts.submitAttempt;
 
     var attemptId = data && data.attempt && data.attempt.id ? String(data.attempt.id) : "";
     var title = data && data.quiz && data.quiz.title ? data.quiz.title : "Quiz";
@@ -215,8 +215,8 @@
       questions: questions, slide: "intro", index: 0, answers: {}, answerOrders: {},
     };
 
-    function render() {
-      if (state.slide === "intro") {
+	    function render() {
+	      if (state.slide === "intro") {
         var phaseLabel = state.mode === "cross" ? i18n("quizCrossKicker", "Test Partner") : (state.phase === "final" ? i18n("quizFinalKicker", "Final Quiz") : i18n("quizInitialKicker", "First Quiz"));
         var prep = "";
         if (state.mode === "cross") {
@@ -238,29 +238,70 @@
         return;
       }
 
-      var q = state.questions[state.index];
-      if (!q) { setQuizModalBody('<div class="learni-quiz-modal__error">No questions found.</div>'); return; }
+	      var q = state.questions[state.index];
+	      if (!q) { setQuizModalBody('<div class="learni-quiz-modal__error">No questions found.</div>'); return; }
 
-      var isLast = state.index === state.questions.length - 1;
-      var qid = String(q.id || "");
-      if (qid && !state.answerOrders[qid]) state.answerOrders[qid] = (q.answers || []).slice();
-      var answers = state.answerOrders[qid] || [];
+	      function getImageUrl(obj) {
+	        if (!obj || typeof obj !== "object") return "";
+	        return String(obj.imageUrl || obj.image_url || obj.image || "");
+	      }
 
-      var answersHtml = "";
-      answers.forEach(function (a, idx) {
-        var aid = String(a.id);
-        var checked = (qid && String(state.answers[qid]) === aid) ? ' checked="checked"' : "";
-        answersHtml += '<label class="learni-quiz-a"><input type="radio" name="q" value="' + escapeHtml(aid) + '"' + checked + ">" +
-          '<span class="learni-quiz-a__label">' + escapeHtml(indexToLabel(idx)) + "</span>" +
-          '<span class="learni-quiz-a__text">' + escapeHtml(String(a.text || "")) + "</span></label>";
-      });
+	      var isLast = state.index === state.questions.length - 1;
+	      var qid = String(q.id || "");
+	      if (qid && !state.answerOrders[qid]) state.answerOrders[qid] = (q.answers || []).slice();
+	      var answers = state.answerOrders[qid] || [];
 
-      var htmlQ = '<form id="learni-quiz-slide" class="learni-quiz-form" data-attempt-id="' + escapeHtml(state.attemptId) + '">' +
-        '<div class="learni-quiz-q"><div class="learni-quiz-q__meta">' + escapeHtml(formatTemplate(i18n("quizQuestionOf", "Question {current} of {total}"), { current: state.index + 1, total: state.questions.length })) + "</div>" +
-        '<div class="learni-quiz-q__text">' + escapeHtml(String(q.prompt || "")) + "</div></div>" +
-        '<div class="learni-quiz-a-list">' + answersHtml + "</div>" +
-        '<div class="learni-quiz-actions">' + (state.index > 0 ? '<button type="button" class="learni-btn secondary" id="learni-quiz-prev">' + escapeHtml(i18n("quizBack", "Back")) + "</button>" : "") +
-        '<button type="submit" class="learni-btn" id="learni-quiz-next">' + escapeHtml(isLast ? i18n("quizSubmit", "Submit") : i18n("quizNext", "Next")) + "</button></div></form>";
+	      var hasImageAnswers = false;
+	      for (var i = 0; i < answers.length; i++) {
+	        if (getImageUrl(answers[i])) { hasImageAnswers = true; break; }
+	      }
+
+	      var answersHtml = "";
+	      if (hasImageAnswers) {
+	        answers.forEach(function (a) {
+	          var aid = String(a.id);
+	          var checked = (qid && String(state.answers[qid]) === aid) ? ' checked="checked"' : "";
+	          var img = getImageUrl(a);
+	          var thumb = img
+	            ? '<img src="' + escapeHtml(img) + '" alt="" loading="lazy">'
+	            : '<span class="learni-quiz-img-a__thumb-placeholder" aria-hidden="true"></span>';
+	          answersHtml +=
+	            '<label class="learni-quiz-img-a">' +
+	            '<input type="radio" name="q" value="' + escapeHtml(aid) + '"' + checked + ">" +
+	            '<span class="learni-quiz-img-a__inner">' +
+	            '<span class="learni-quiz-img-a__thumb">' + thumb + "</span>" +
+	            '<span class="learni-quiz-img-a__text">' + escapeHtml(String(a.text || "")) + "</span>" +
+	            '<span class="learni-quiz-img-a__check" aria-hidden="true"><span class="material-symbols-outlined">check</span></span>' +
+	            "</span>" +
+	            "</label>";
+	        });
+	      } else {
+	        answers.forEach(function (a, idx) {
+	          var aid = String(a.id);
+	          var checked = (qid && String(state.answers[qid]) === aid) ? ' checked="checked"' : "";
+	          answersHtml += '<label class="learni-quiz-a"><input type="radio" name="q" value="' + escapeHtml(aid) + '"' + checked + ">" +
+	            '<span class="learni-quiz-a__label">' + escapeHtml(indexToLabel(idx)) + "</span>" +
+	            '<span class="learni-quiz-a__text">' + escapeHtml(String(a.text || "")) + "</span></label>";
+	        });
+	      }
+
+	      var qImgUrl = getImageUrl(q);
+	      var qImgHtml = qImgUrl
+	        ? '<div class="learni-quiz-q__img"><img src="' + escapeHtml(qImgUrl) + '" alt="" loading="lazy"></div>'
+	        : "";
+
+	      var pickerKicker = hasImageAnswers
+	        ? '<div class="learni-quiz-a-kicker">' + escapeHtml(i18n("quizPickOne", "Selecciona la opción correcta")) + "</div>"
+	        : "";
+
+	      var htmlQ = '<form id="learni-quiz-slide" class="learni-quiz-form" data-attempt-id="' + escapeHtml(state.attemptId) + '">' +
+	        '<div class="learni-quiz-q"><div class="learni-quiz-q__meta">' + escapeHtml(formatTemplate(i18n("quizQuestionOf", "Question {current} of {total}"), { current: state.index + 1, total: state.questions.length })) + "</div>" +
+	        qImgHtml +
+	        '<div class="learni-quiz-q__text">' + escapeHtml(String(q.prompt || "")) + "</div></div>" +
+	        pickerKicker +
+	        '<div class="learni-quiz-a-list' + (hasImageAnswers ? " learni-quiz-a-list--grid" : "") + '">' + answersHtml + "</div>" +
+	        '<div class="learni-quiz-actions">' + (state.index > 0 ? '<button type="button" class="learni-btn secondary" id="learni-quiz-prev">' + escapeHtml(i18n("quizBack", "Back")) + "</button>" : "") +
+	        '<button type="submit" class="learni-btn" id="learni-quiz-next">' + escapeHtml(isLast ? i18n("quizSubmit", "Submit") : i18n("quizNext", "Next")) + "</button></div></form>";
 
       setQuizModalBody(htmlQ);
       var form = document.getElementById("learni-quiz-slide");

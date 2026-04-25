@@ -182,6 +182,34 @@
     }
   }
 
+  function ensureRestartCta(container, courseId, shouldShow) {
+    if (!container) return;
+    var existing = document.getElementById("learni-course-restart");
+    if (!shouldShow) {
+      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+      return;
+    }
+    if (!existing) {
+      existing = document.createElement("button");
+      existing.id = "learni-course-restart";
+      existing.className = "learni-btn learni-course-primary-btn";
+      existing.type = "button";
+      existing.textContent = i18n("restartCourse", "REINICIAR CURSO");
+      existing.setAttribute("data-base-label", existing.textContent);
+    }
+    existing.setAttribute("data-course-id", String(courseId));
+
+    var anchor =
+      (container.querySelector && container.querySelector("#learni-course-final-quiz")) ||
+      (container.querySelector && container.querySelector(".learni-course-primary-btn")) ||
+      null;
+    if (anchor && anchor.parentNode === container) {
+      if (existing.parentNode !== container) container.insertBefore(existing, anchor);
+    } else if (existing.parentNode !== container) {
+      container.appendChild(existing);
+    }
+  }
+
   function wrapWithTooltip(btn, title) {
     if (!btn || !btn.parentNode) return;
     var p = btn.parentNode;
@@ -286,6 +314,36 @@
         updatePartnerSectionFromApi(data);
         updateTestPartnerCtaFromApi(data, courseId);
         updateFinalQuizCtaFromApi(data, courseId);
+
+        var showRestart = !!(ui && ui.finalEligible);
+        ensureRestartCta(container, courseId, showRestart);
+
+        var restartBtn = document.getElementById("learni-course-restart");
+        if (restartBtn) {
+          var rDays = ui && typeof ui.restartCooldownDaysRemaining === "number" ? ui.restartCooldownDaysRemaining : 0;
+          rDays = Math.max(0, Math.round(Number(rDays || 0)));
+          if (!restartBtn.getAttribute("data-base-label")) {
+            restartBtn.setAttribute("data-base-label", i18n("restartCourse", "REINICIAR CURSO"));
+          }
+          restartBtn.disabled = rDays > 0;
+          // When restart is relevant (final eligible), hide "CONTINUE/START/BUY" and show the restart CTA,
+          // even if it's disabled due to cooldown.
+          var primary = container.querySelectorAll ? container.querySelectorAll(".learni-course-primary-btn") : [];
+          for (var j = 0; j < primary.length; j++) {
+            var p = primary[j];
+            if (!p || p === restartBtn) continue;
+            if (!p.style) continue;
+            p.style.display = showRestart ? "none" : "";
+          }
+          if (rDays > 0) {
+            var dayLabel = rDays === 1 ? "d\xEDa" : "d\xEDas";
+            restartBtn.textContent = String(rDays) + " " + dayLabel.toUpperCase() + " PARA REINICIAR";
+            wrapWithTooltip(restartBtn, "En " + String(rDays) + " d\xEDas podr\xE1s reiniciar el curso.");
+          } else {
+            restartBtn.textContent = restartBtn.getAttribute("data-base-label") || i18n("restartCourse", "REINICIAR CURSO");
+            unwrapTooltip(restartBtn);
+          }
+        }
       })
       .catch(function () {});
   }
@@ -327,6 +385,7 @@
       var restartBtn = t.closest("#learni-course-restart");
       if (restartBtn) {
         e.preventDefault();
+        if (restartBtn.disabled) return;
         var courseId2 = restartBtn.getAttribute("data-course-id") || "";
         if (!courseId2) return;
         if (!window.confirm("\xBFReiniciar curso? Esto reiniciar\xE1 tu progreso de lecciones.")) return;

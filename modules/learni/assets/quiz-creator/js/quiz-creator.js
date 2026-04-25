@@ -1575,7 +1575,7 @@
                 '<div class="learni-quiz-modal__panel" role="dialog" aria-modal="true" aria-label="Quiz">' +
                 '<div class="learni-quiz-modal__head">' +
                 '<div class="learni-quiz-modal__title" id="pqc-quiz-preview-modal-title">Quiz</div>' +
-                '<button type="button" class="learni-quiz-modal__close" data-learni-quiz-close="1">Close</button>' +
+                '<button type="button" class="learni-quiz-modal__close" data-learni-quiz-close="1" aria-label="Close">×</button>' +
                 '</div>' +
                 '<div class="learni-quiz-modal__body" id="pqc-quiz-preview-modal-body"></div>' +
                 '</div>';
@@ -1613,14 +1613,26 @@
             const questions = [];
             $('.pqc-slide').each(function () {
                 const prompt = String($(this).find('.pqc-editable-text-area').text() || '').trim().replace(/\s+/g, ' ');
+                const qImageUrl = String($(this).find('.pqc-question-image-thumb').attr('src') || '').trim();
+                const hasQuestionImage = !!qImageUrl;
                 const answers = [];
                 $(this).find('.pqc-answer-edit-row').each(function () {
                     const text = String($(this).find('.pqc-answer-text-wrap').text() || '').trim();
-                    if (text) answers.push(text);
+                    if (!text) return;
+                    const aImageUrl = String($(this).find('.pqc-answer-thumb img').attr('src') || '').trim();
+                    const hasAnswerImage = !!aImageUrl;
+                    answers.push({
+                        text,
+                        imageUrl: hasAnswerImage ? aImageUrl : ''
+                    });
                 });
                 if (!prompt) return;
                 if (answers.length < 2) return;
-                questions.push({ prompt, answers });
+                questions.push({
+                    prompt,
+                    imageUrl: hasQuestionImage ? qImageUrl : '',
+                    answers
+                });
             });
             return questions;
         };
@@ -1641,26 +1653,51 @@
 
         const renderQuestion = (q, index, total, seed, checkedValue) => {
             let answersHtml = '';
-            stableShuffleAnswers(q.answers || [], String(seed || '') + ':q:' + String(index)).forEach((a) => {
-                const checked =
-                    checkedValue !== undefined && checkedValue !== null && String(checkedValue) === String(a.value)
-                        ? ' checked="checked"'
-                        : '';
-                answersHtml +=
-                    '<label class="learni-quiz-a">' +
-                    '<input type="radio" name="q" value="' + escapeHtml(String(a.value)) + '"' + checked + '>' +
-                    '<span class="learni-quiz-a__text">' + escapeHtml(a.text) + '</span>' +
-                    '</label>';
-            });
+            const shuffled = stableShuffleAnswers(q.answers || [], String(seed || '') + ':q:' + String(index));
+            const hasImageAnswers = shuffled.some((a) => !!(a && a.imageUrl));
+            if (hasImageAnswers) {
+                shuffled.forEach((a) => {
+                    const checked =
+                        checkedValue !== undefined && checkedValue !== null && String(checkedValue) === String(a.value)
+                            ? ' checked="checked"'
+                            : '';
+                    const thumb = a.imageUrl
+                        ? '<img src="' + escapeHtml(a.imageUrl) + '" alt="" loading="lazy">'
+                        : '<span class="learni-quiz-img-a__thumb-placeholder" aria-hidden="true"></span>';
+                    answersHtml +=
+                        '<label class="learni-quiz-img-a">' +
+                        '<input type="radio" name="q" value="' + escapeHtml(String(a.value)) + '"' + checked + '>' +
+                        '<span class="learni-quiz-img-a__inner">' +
+                        '<span class="learni-quiz-img-a__thumb">' + thumb + '</span>' +
+                        '<span class="learni-quiz-img-a__text">' + escapeHtml(a.text) + '</span>' +
+                        '<span class="learni-quiz-img-a__check" aria-hidden="true">✓</span>' +
+                        '</span>' +
+                        '</label>';
+                });
+            } else {
+                shuffled.forEach((a) => {
+                    const checked =
+                        checkedValue !== undefined && checkedValue !== null && String(checkedValue) === String(a.value)
+                            ? ' checked="checked"'
+                            : '';
+                    answersHtml +=
+                        '<label class="learni-quiz-a">' +
+                        '<input type="radio" name="q" value="' + escapeHtml(String(a.value)) + '"' + checked + '>' +
+                        '<span class="learni-quiz-a__text">' + escapeHtml(a.text) + '</span>' +
+                        '</label>';
+                });
+            }
 
             const isLast = index === total - 1;
             return (
                 '<form id="pqc-quiz-preview-slide" class="learni-quiz-form">' +
                 '<div class="learni-quiz-q">' +
                 '<div class="learni-quiz-q__meta">Question ' + (index + 1) + ' of ' + total + '</div>' +
+                (q.imageUrl ? '<div class="learni-quiz-q__img"><img src="' + escapeHtml(q.imageUrl) + '" alt="" loading="lazy"></div>' : '') +
                 '<div class="learni-quiz-q__text">' + escapeHtml(q.prompt || '') + '</div>' +
                 '</div>' +
-                '<div class="learni-quiz-a-list">' + answersHtml + '</div>' +
+                (hasImageAnswers ? '<div class="learni-quiz-a-kicker">Selecciona la opción correcta</div>' : '') +
+                '<div class="learni-quiz-a-list' + (hasImageAnswers ? ' learni-quiz-a-list--grid' : '') + '">' + answersHtml + '</div>' +
                 '<div class="learni-quiz-actions">' +
                 (index > 0
                     ? '<button type="button" class="learni-btn secondary" id="pqc-quiz-preview-prev">Back</button>'
@@ -1702,14 +1739,24 @@
         };
 
         const stableShuffleAnswers = (answers, seed) => {
-            const items = (Array.isArray(answers) ? answers : []).map((t, i) => ({
-                text: String(t || ''),
-                value: String(i),
-            }));
+            const items = (Array.isArray(answers) ? answers : []).map((raw, i) => {
+                if (raw && typeof raw === 'object') {
+                    return {
+                        text: String(raw.text || ''),
+                        imageUrl: String(raw.imageUrl || ''),
+                        value: String(i),
+                    };
+                }
+                return {
+                    text: String(raw || ''),
+                    imageUrl: '',
+                    value: String(i),
+                };
+            });
             const s = String(seed || '');
             items.sort((a, b) => {
-                const ha = hash32(s + ':' + a.value + ':' + a.text);
-                const hb = hash32(s + ':' + b.value + ':' + b.text);
+                const ha = hash32(s + ':' + a.value + ':' + a.text + ':' + a.imageUrl);
+                const hb = hash32(s + ':' + b.value + ':' + b.text + ':' + b.imageUrl);
                 if (ha === hb) return 0;
                 return ha < hb ? -1 : 1;
             });
@@ -1817,13 +1864,14 @@
             }
         };
 
-        const applySettingsToUi = (settings) => {
-            const total = getTotalQuestions();
-            const perAttempt = Number(settings.questions_per_attempt || 0) || 0;
-            const subsetRandom = Number(settings.questions_subset_random || 0) ? 1 : 0;
-            const orderMode = String(settings.questionOrder || '');
-            const randomQuestions = Number(settings.random_questions || 0) ? 1 : 0;
-            const respectOrder = orderMode ? (orderMode !== 'random') : !randomQuestions;
+	        const applySettingsToUi = (settings) => {
+	            const total = getTotalQuestions();
+	            const perAttempt = Number(settings.questions_per_attempt || 0) || 0;
+	            const subsetRandom = Number(settings.questions_subset_random || 0) ? 1 : 0;
+	            const restartCooldownDays = Number(settings.restartCooldownDays || 0) || 0;
+	            const orderMode = String(settings.questionOrder || '');
+	            const randomQuestions = Number(settings.random_questions || 0) ? 1 : 0;
+	            const respectOrder = orderMode ? (orderMode !== 'random') : !randomQuestions;
 
             $('#pqc-respect-question-order-editor').prop('checked', Boolean(respectOrder));
 
@@ -1839,11 +1887,16 @@
                 // UI currently only supports random subset if a number is provided.
             }
 
-            const $hint = $('#pqc-questions-per-attempt-hint');
-            if ($hint.length) {
-                $hint.text(total ? `(total: ${total})` : '');
-            }
-        };
+	            const $hint = $('#pqc-questions-per-attempt-hint');
+	            if ($hint.length) {
+	                $hint.text(total ? `(total: ${total})` : '');
+	            }
+
+	            const $restart = $('#pqc-restart-cooldown-days');
+	            if ($restart.length) {
+	                $restart.val(String(Math.max(0, Math.round(restartCooldownDays))));
+	            }
+	        };
 
         const openSettings = () => {
             const $panel = $('.pqc-quiz-settings-panel');
@@ -1917,13 +1970,20 @@
             syncModeUi();
         });
 
-        $(document).on('input', '#pqc-questions-per-attempt', function () {
-            const total = getTotalQuestions();
-            let v = Number($(this).val() || 0) || 0;
-            if (v < 1) v = 1;
-            if (total && v > total) v = total;
-            $(this).val(String(v));
-        });
+	        $(document).on('input', '#pqc-questions-per-attempt', function () {
+	            const total = getTotalQuestions();
+	            let v = Number($(this).val() || 0) || 0;
+	            if (v < 1) v = 1;
+	            if (total && v > total) v = total;
+	            $(this).val(String(v));
+	        });
+
+	        $(document).on('input', '#pqc-restart-cooldown-days', function () {
+	            let v = Number($(this).val() || 0) || 0;
+	            if (v < 0) v = 0;
+	            if (v > 3650) v = 3650;
+	            $(this).val(String(Math.round(v)));
+	        });
 
         $(document).on('click', '.pqc-quiz-settings-save-btn', function () {
             const quizId = Number($('.pqc-editor-container').data('quiz-id') || 0) || 0;
@@ -1933,19 +1993,23 @@
             const total = getTotalQuestions();
             const respectOrder = $('#pqc-respect-question-order-editor').is(':checked') ? 1 : 0;
 
-            let questionsPerAttempt = 0;
-            let subsetRandom = 0;
-            if (mode === 'random') {
-                questionsPerAttempt = Number($('#pqc-questions-per-attempt').val() || 0) || 0;
-                if (questionsPerAttempt < 1) questionsPerAttempt = 1;
-                if (total && questionsPerAttempt > total) questionsPerAttempt = total;
-                subsetRandom = 1;
-            }
+	            let questionsPerAttempt = 0;
+	            let subsetRandom = 0;
+	            if (mode === 'random') {
+	                questionsPerAttempt = Number($('#pqc-questions-per-attempt').val() || 0) || 0;
+	                if (questionsPerAttempt < 1) questionsPerAttempt = 1;
+	                if (total && questionsPerAttempt > total) questionsPerAttempt = total;
+	                subsetRandom = 1;
+	            }
 
-            if (!window.pqcData || !pqcData.ajaxUrl || !pqcData.nonce) {
-                setStatus('Error: configuración AJAX no disponible (pqcData).', 'error');
-                return;
-            }
+	            let restartCooldownDays = Number($('#pqc-restart-cooldown-days').val() || 0) || 0;
+	            if (restartCooldownDays < 0) restartCooldownDays = 0;
+	            if (restartCooldownDays > 3650) restartCooldownDays = 3650;
+
+	            if (!window.pqcData || !pqcData.ajaxUrl || !pqcData.nonce) {
+	                setStatus('Error: configuración AJAX no disponible (pqcData).', 'error');
+	                return;
+	            }
 
             setStatus('Guardando…');
             $('.pqc-quiz-settings-save-btn').prop('disabled', true);
@@ -1958,12 +2022,13 @@
                     action: 'pqc_save_quiz_settings',
                     nonce: pqcData.nonce,
                     quiz_id: quizId,
-                    settings: JSON.stringify({
-                        questionOrder: respectOrder ? 'in_order' : 'random',
-                        questions_per_attempt: questionsPerAttempt,
-                        questions_subset_random: subsetRandom
-                    })
-                },
+	                    settings: JSON.stringify({
+	                        questionOrder: respectOrder ? 'in_order' : 'random',
+	                        questions_per_attempt: questionsPerAttempt,
+	                        questions_subset_random: subsetRandom,
+	                        restartCooldownDays: restartCooldownDays
+	                    })
+	                },
                 success: function (response) {
                     if (response && response.success) {
                         const s = response.data && response.data.settings ? response.data.settings : null;

@@ -103,14 +103,20 @@ final class Shortcode
         wp_enqueue_style('pqc-poppins', 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap', [], null);
         
         // Use PL_LEARNI_URL for assets
-        wp_enqueue_style('pqc-styles', PL_LEARNI_URL . 'assets/quiz-creator/css/quiz-creator.css', ['pqc-poppins'], '1.0.0');
+        $pqc_css_path = PL_LEARNI_PATH . 'assets/quiz-creator/css/quiz-creator.css';
+        $pqc_css_ver = file_exists($pqc_css_path) ? (string) filemtime($pqc_css_path) : '1.0.0';
+        wp_enqueue_style('pqc-styles', PL_LEARNI_URL . 'assets/quiz-creator/css/quiz-creator.css', ['pqc-poppins'], $pqc_css_ver);
         
         if (defined('PL_LEARNI_URL')) {
             wp_enqueue_style('pl-learni-material-symbols', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=auto_stories&display=block', [], null);
-            wp_enqueue_style('pl-learni-learner', PL_LEARNI_URL . 'assets/learner.css', ['pl-learni-material-symbols'], '1.0.0');
+            $learner_css_path = PL_LEARNI_PATH . 'assets/learner.css';
+            $learner_css_ver = file_exists($learner_css_path) ? (string) filemtime($learner_css_path) : '1.0.0';
+            wp_enqueue_style('pl-learni-learner', PL_LEARNI_URL . 'assets/learner.css', ['pl-learni-material-symbols'], $learner_css_ver);
         }
 
-        wp_enqueue_script('pqc-scripts', PL_LEARNI_URL . 'assets/quiz-creator/js/quiz-creator.js', ['jquery'], '1.0.0', true);
+        $pqc_js_path = PL_LEARNI_PATH . 'assets/quiz-creator/js/quiz-creator.js';
+        $pqc_js_ver = file_exists($pqc_js_path) ? (string) filemtime($pqc_js_path) : '1.0.0';
+        wp_enqueue_script('pqc-scripts', PL_LEARNI_URL . 'assets/quiz-creator/js/quiz-creator.js', ['jquery'], $pqc_js_ver, true);
 
         wp_localize_script('pqc-scripts', 'pqcData', [
             'ajaxUrl' => admin_url('admin-ajax.php'),

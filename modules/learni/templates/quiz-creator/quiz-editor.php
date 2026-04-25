@@ -170,20 +170,28 @@ if (!$quiz_data) {
                 </div>
             </div>
 
-            <div class="pqc-quiz-settings-panel__row">
-                <div class="pqc-quiz-settings-panel__label"><?php _e('Orden de las preguntas', 'politeia-learning'); ?></div>
-                <div class="pqc-quiz-settings-panel__control">
-                    <label class="pqc-quiz-settings-panel__check">
-                        <input type="checkbox" id="pqc-respect-question-order-editor" checked>
-                        <span><?php _e('Respetar orden (si se desactiva, las preguntas se muestran aleatoriamente)', 'politeia-learning'); ?></span>
-                    </label>
-                </div>
-            </div>
+	            <div class="pqc-quiz-settings-panel__row">
+	                <div class="pqc-quiz-settings-panel__label"><?php _e('Orden de las preguntas', 'politeia-learning'); ?></div>
+	                <div class="pqc-quiz-settings-panel__control">
+	                    <label class="pqc-quiz-settings-panel__check">
+	                        <input type="checkbox" id="pqc-respect-question-order-editor" checked>
+	                        <span><?php _e('Respetar orden (si se desactiva, las preguntas se muestran aleatoriamente)', 'politeia-learning'); ?></span>
+	                    </label>
+	                </div>
+	            </div>
 
-            <div class="pqc-quiz-settings-panel__actions">
-                <button type="button" class="pqc-btn-primary pqc-quiz-settings-save-btn"><?php _e('GUARDAR', 'politeia-learning'); ?></button>
-                <div class="pqc-quiz-settings-panel__status" aria-live="polite"></div>
-            </div>
+	            <div class="pqc-quiz-settings-panel__row">
+	                <div class="pqc-quiz-settings-panel__label"><?php _e('Días para reiniciar', 'politeia-learning'); ?></div>
+	                <div class="pqc-quiz-settings-panel__control">
+	                    <input type="number" class="pqc-quiz-settings-panel__num" id="pqc-restart-cooldown-days" min="0" step="1" placeholder="0">
+	                    <span class="pqc-quiz-settings-panel__hint"><?php _e('0 = reinicio inmediato. Aplica después de completar Inicial + Final.', 'politeia-learning'); ?></span>
+	                </div>
+	            </div>
+
+	            <div class="pqc-quiz-settings-panel__actions">
+	                <button type="button" class="pqc-btn-primary pqc-quiz-settings-save-btn"><?php _e('GUARDAR', 'politeia-learning'); ?></button>
+	                <div class="pqc-quiz-settings-panel__status" aria-live="polite"></div>
+	            </div>
         </div>
     </div>
 
