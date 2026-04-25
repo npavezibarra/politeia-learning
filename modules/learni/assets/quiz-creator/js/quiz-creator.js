@@ -485,16 +485,192 @@
         $('.pqc-prev-slide').prop('disabled', current === 0);
         $('.pqc-next-slide').prop('disabled', current === total - 1);
 
-        const $counter = $('#pqc-editor-counter');
-        if ($counter.length) {
-            const oldText = $counter.text();
-            // Match "Pregunta 1/10" or "Question 1/10" or any similar pattern with numbers
-            const newText = oldText.replace(/(\d+)\s*\/\s*(\d+)/, (match, p1, p2) => {
-                return `${current + 1} / ${total}`;
-            });
-            $counter.text(newText);
+        const $counterText = $('#pqc-editor-counter-text');
+        if ($counterText.length) {
+            const oldText = $counterText.text();
+            const newText = oldText.replace(/(\d+)\s*\/\s*(\d+)/, () => `${current + 1} / ${total}`);
+            $counterText.text(newText);
+        } else {
+            const $counter = $('#pqc-editor-counter');
+            if ($counter.length) {
+                const oldText = $counter.text();
+                const newText = oldText.replace(/(\d+)\s*\/\s*(\d+)/, () => `${current + 1} / ${total}`);
+                $counter.text(newText);
+            }
         }
     }
+
+    // ───────────────────────────────────────────────────────────
+    // Mobile: Question Selector (iOS-safe reorder via Up/Down)
+    // ───────────────────────────────────────────────────────────
+
+    function pqcIsSmartphoneView() {
+        try {
+            return window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function pqcLockScroll(locked) {
+        $('body').toggleClass('pqc-scroll-locked', !!locked);
+    }
+
+    function pqcGetSlideTitle($slide) {
+        const raw = String($slide.find('.pqc-editable-text-area').text() || '').replace(/\s+/g, ' ').trim();
+        if (!raw) return '';
+        const maxLen = 80;
+        return raw.length > maxLen ? (raw.slice(0, maxLen).trim() + '…') : raw;
+    }
+
+    function pqcUpdateSlideIndexes() {
+        $('.pqc-editor-container .pqc-slide').each(function (idx) {
+            $(this).attr('data-index', idx);
+        });
+    }
+
+    function pqcSetCurrentSlideByQuestionId(questionId) {
+        const $container = $('.pqc-editor-container');
+        if (!$container.length) return;
+        const $slides = $('.pqc-editor-container .pqc-slide');
+        const idx = $slides.index($slides.filter(`[data-question-id="${questionId}"]`).first());
+        if (idx >= 0) {
+            goToEditorSlide(idx);
+        }
+    }
+
+    function pqcMoveSlide(fromIndex, toIndex) {
+        const $slidesContainer = $('.pqc-editor-container .pqc-slides-container');
+        if (!$slidesContainer.length) return false;
+
+        const $slides = $slidesContainer.children('.pqc-slide');
+        const $from = $slides.eq(fromIndex);
+        const $to = $slides.eq(toIndex);
+        if (!$from.length || !$to.length) return false;
+
+        if (toIndex < fromIndex) $from.insertBefore($to);
+        else $from.insertAfter($to);
+
+        pqcUpdateSlideIndexes();
+        return true;
+    }
+
+    function pqcRenderQuestionSelectorList() {
+        const $root = $('#pqc-question-selector');
+        const $list = $('#pqc-question-selector-list');
+        const $total = $('#pqc-question-selector-total');
+        const $container = $('.pqc-editor-container');
+        if (!$root.length || !$list.length || !$container.length) return;
+
+        const $slides = $('.pqc-editor-container .pqc-slide');
+        const total = $slides.length;
+        const currentIndex = Number($container.data('current-slide') || 0) || 0;
+
+        $total.text(`${total} TOTAL`);
+        $list.empty();
+
+        $slides.each(function (idx) {
+            const $slide = $(this);
+            const questionId = $slide.data('question-id');
+            const isCurrent = idx === currentIndex;
+            const title = pqcGetSlideTitle($slide) || `Pregunta ${idx + 1}`;
+
+            const $item = $('<div class="pqc-qsel-item"></div>').attr('data-index', idx).attr('data-question-id', questionId);
+            if (isCurrent) $item.addClass('is-current');
+
+            const $main = $('<button type="button" class="pqc-qsel-item__main"></button>');
+            $main.append(`<span class="pqc-qsel-item__num">${idx + 1}</span>`);
+            $main.append($('<span class="pqc-qsel-item__text"></span>').text(title));
+
+            const $actions = $('<div class="pqc-qsel-item__actions"></div>');
+            const $up = $('<button type="button" class="pqc-qsel-item__move" data-dir="-1" aria-label="Mover arriba">↑</button>');
+            const $down = $('<button type="button" class="pqc-qsel-item__move" data-dir="1" aria-label="Mover abajo">↓</button>');
+            $up.prop('disabled', idx === 0);
+            $down.prop('disabled', idx === total - 1);
+            $actions.append($up, $down);
+
+            $item.append($main, $actions);
+            $list.append($item);
+        });
+    }
+
+    function pqcOpenQuestionSelector() {
+        if (!pqcIsSmartphoneView()) return;
+        const $root = $('#pqc-question-selector');
+        const $toggle = $('#pqc-editor-counter');
+        if (!$root.length) return;
+        pqcRenderQuestionSelectorList();
+        $root.addClass('is-open').attr('aria-hidden', 'false');
+        $toggle.attr('aria-expanded', 'true');
+        pqcLockScroll(true);
+    }
+
+    function pqcCloseQuestionSelector() {
+        const $root = $('#pqc-question-selector');
+        const $toggle = $('#pqc-editor-counter');
+        if (!$root.length) return;
+        $root.removeClass('is-open').attr('aria-hidden', 'true');
+        $toggle.attr('aria-expanded', 'false');
+        pqcLockScroll(false);
+    }
+
+    function pqcToggleQuestionSelector() {
+        const $root = $('#pqc-question-selector');
+        if (!$root.length) return;
+        if ($root.hasClass('is-open')) pqcCloseQuestionSelector();
+        else pqcOpenQuestionSelector();
+    }
+
+    $(document).on('click', '#pqc-editor-counter', function () {
+        if (!pqcIsSmartphoneView()) return;
+        pqcToggleQuestionSelector();
+    });
+
+    $(document).on('click', '#pqc-question-selector [data-action=\"close\"], #pqc-question-selector .pqc-question-selector__close', function () {
+        pqcCloseQuestionSelector();
+    });
+
+    $(document).on('click', '#pqc-question-selector .pqc-qsel-item__main', function () {
+        const idx = Number($(this).closest('.pqc-qsel-item').attr('data-index') || 0) || 0;
+        goToEditorSlide(idx);
+        pqcCloseQuestionSelector();
+    });
+
+    $(document).on('click', '#pqc-question-selector .pqc-qsel-item__move', function (e) {
+        e.preventDefault();
+        if (!pqcIsSmartphoneView()) return;
+
+        const $container = $('.pqc-editor-container');
+        const currentIndex = Number($container.data('current-slide') || 0) || 0;
+        const $currentSlide = $('.pqc-editor-container .pqc-slide').eq(currentIndex);
+        const currentQuestionId = $currentSlide.data('question-id');
+
+        const $item = $(this).closest('.pqc-qsel-item');
+        const fromIndex = Number($item.attr('data-index') || 0) || 0;
+        const dir = Number($(this).attr('data-dir') || 0) || 0;
+        const toIndex = fromIndex + dir;
+        if (toIndex < 0) return;
+
+        const moved = pqcMoveSlide(fromIndex, toIndex);
+        if (!moved) return;
+
+        pqcSetCurrentSlideByQuestionId(currentQuestionId);
+        pqcRenderQuestionSelectorList();
+    });
+
+    $(document).on('click', '#pqc-question-selector .pqc-question-selector__add', function () {
+        if (!pqcIsSmartphoneView()) return;
+        pqcCloseQuestionSelector();
+        $('.pqc-add-question-btn').first().trigger('click');
+    });
+
+    $(document).on('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        const $root = $('#pqc-question-selector');
+        if ($root.length && $root.hasClass('is-open')) {
+            pqcCloseQuestionSelector();
+        }
+    });
 
     $(document).on('click', '.pqc-save-quiz-btn', function () {
         saveQuizChanges();
@@ -640,11 +816,18 @@
 
         const nextIndex = $list.find('.pqc-answer-edit-row').length;
         const newRow = `
-            <div class="pqc-answer-edit-row" data-answer-index="${nextIndex}">
+            <div class="pqc-answer-edit-row" data-answer-index="${nextIndex}" data-image-id="0">
                 <div class="pqc-answer-check-wrap">
                     <input type="checkbox" class="pqc-answer-correct-check" title="Mark as correct">
                 </div>
+                <div class="pqc-answer-thumb">
+                    <img src="" alt="" style="display:none;" />
+                    <button type="button" class="pqc-answer-image-remove-btn" title="Quitar imagen" style="display:none;">×</button>
+                </div>
                 <div class="pqc-answer-text-wrap" contenteditable="true" data-field="answer_text" data-placeholder="Nueva respuesta..."></div>
+                <button type="button" class="pqc-answer-image-btn" title="Adjuntar imagen">
+                    <span class="dashicons dashicons-format-image"></span>
+                </button>
                 <button type="button" class="pqc-remove-answer-btn" title="Remove answer">
                     <span class="dashicons dashicons-no-alt"></span>
                 </button>
@@ -675,6 +858,198 @@
                 });
             });
         }
+    });
+
+    $(document).on('click', '.pqc-answer-image-btn', function (e) {
+        e.preventDefault();
+        const $row = $(this).closest('.pqc-answer-edit-row');
+        if (!$row.length) return;
+
+        const toast = (msg, type) => {
+            if (typeof window.pcgShowToast === 'function') window.pcgShowToast(msg, type || 'info');
+            else alert(msg);
+        };
+
+        const canUseCropper =
+            typeof window.PL_Cropper !== 'undefined' &&
+            window.PL_Cropper &&
+            typeof window.PL_Cropper.open === 'function' &&
+            typeof window.pcgCreatorData !== 'undefined' &&
+            window.pcgCreatorData &&
+            window.pcgCreatorData.ajaxUrl &&
+            window.pcgCreatorData.nonce;
+
+        if (canUseCropper) {
+            const questionId = Number($row.closest('.pqc-slide').data('question-id') || 0) || 0;
+            window.PL_Cropper.open({
+                title: 'Imagen de respuesta',
+                width: 160,
+                height: 100,
+                outputMaxWidth: 1600,
+                quality: 0.92,
+                onSave: function (dataUrl) {
+                    $.ajax({
+                        url: window.pcgCreatorData.ajaxUrl,
+                        type: 'POST',
+                        data: {
+                            action: 'pcg_upload_cropped_image',
+                            nonce: window.pcgCreatorData.nonce,
+                            image_data: dataUrl,
+                            type: 'quiz_answer',
+                            entity_id: questionId
+                        },
+                        success: function (response) {
+                            if (response && response.success && response.data && response.data.id && response.data.url) {
+                                $row.attr('data-image-id', String(response.data.id || 0));
+                                $row.addClass('has-image');
+                                $row.find('.pqc-answer-thumb img').attr('src', response.data.url).show();
+                                $row.find('.pqc-answer-image-remove-btn').show();
+                            } else {
+                                toast((response && response.data && response.data.message) ? response.data.message : 'Error al subir imagen.', 'error');
+                            }
+                        },
+                        error: function () {
+                            toast('Error al subir imagen.', 'error');
+                        }
+                    });
+                }
+            });
+            return;
+        }
+
+        if (typeof wp === 'undefined' || !wp.media) {
+            toast('Media uploader not available.', 'error');
+            return;
+        }
+
+        const frame = wp.media({
+            title: 'Seleccionar imagen',
+            button: { text: 'Usar imagen' },
+            multiple: false,
+            library: { type: 'image' }
+        });
+
+        frame.on('select', function () {
+            const selection = frame.state().get('selection');
+            const attachment = selection && selection.first ? selection.first().toJSON() : null;
+            if (!attachment || !attachment.id) return;
+
+            const thumbUrl =
+                (attachment.sizes && attachment.sizes.thumbnail && attachment.sizes.thumbnail.url)
+                    ? attachment.sizes.thumbnail.url
+                    : (attachment.url || '');
+
+            $row.attr('data-image-id', String(attachment.id || 0));
+            $row.addClass('has-image');
+            $row.find('.pqc-answer-thumb img').attr('src', thumbUrl).show();
+            $row.find('.pqc-answer-image-remove-btn').show();
+        });
+
+        frame.open();
+    });
+
+    $(document).on('click', '.pqc-answer-image-remove-btn', function (e) {
+        e.preventDefault();
+        const $row = $(this).closest('.pqc-answer-edit-row');
+        if (!$row.length) return;
+        $row.attr('data-image-id', '0');
+        $row.removeClass('has-image');
+        $row.find('.pqc-answer-thumb img').attr('src', '').hide();
+        $(this).hide();
+    });
+
+    $(document).on('click', '.pqc-question-image-btn', function (e) {
+        e.preventDefault();
+        const $wrap = $(this).closest('.pqc-question-edit-wrap');
+        if (!$wrap.length) return;
+
+        const toast = (msg, type) => {
+            if (typeof window.pcgShowToast === 'function') window.pcgShowToast(msg, type || 'info');
+            else alert(msg);
+        };
+
+        const canUseCropper =
+            typeof window.PL_Cropper !== 'undefined' &&
+            window.PL_Cropper &&
+            typeof window.PL_Cropper.open === 'function' &&
+            typeof window.pcgCreatorData !== 'undefined' &&
+            window.pcgCreatorData &&
+            window.pcgCreatorData.ajaxUrl &&
+            window.pcgCreatorData.nonce;
+
+        if (canUseCropper) {
+            const questionId = Number($wrap.closest('.pqc-slide').data('question-id') || 0) || 0;
+            window.PL_Cropper.open({
+                title: 'Imagen de pregunta',
+                width: 160,
+                height: 100,
+                outputMaxWidth: 1600,
+                quality: 0.92,
+                onSave: function (dataUrl) {
+                    $.ajax({
+                        url: window.pcgCreatorData.ajaxUrl,
+                        type: 'POST',
+                        data: {
+                            action: 'pcg_upload_cropped_image',
+                            nonce: window.pcgCreatorData.nonce,
+                            image_data: dataUrl,
+                            type: 'quiz_question',
+                            entity_id: questionId
+                        },
+                        success: function (response) {
+                            if (response && response.success && response.data && response.data.id && response.data.url) {
+                                $wrap.attr('data-question-image-id', String(response.data.id || 0));
+                                $wrap.addClass('has-question-image');
+                                $wrap.find('.pqc-question-image-thumb').attr('src', response.data.url).show();
+                                $wrap.find('.pqc-question-image-remove-btn').show();
+                            } else {
+                                toast((response && response.data && response.data.message) ? response.data.message : 'Error al subir imagen.', 'error');
+                            }
+                        },
+                        error: function () {
+                            toast('Error al subir imagen.', 'error');
+                        }
+                    });
+                }
+            });
+            return;
+        }
+
+        if (typeof wp === 'undefined' || !wp.media) {
+            toast('Media uploader not available.', 'error');
+            return;
+        }
+
+        const frame = wp.media({
+            title: 'Seleccionar imagen',
+            button: { text: 'Usar imagen' },
+            multiple: false,
+            library: { type: 'image' }
+        });
+
+        frame.on('select', function () {
+            const selection = frame.state().get('selection');
+            const attachment = selection && selection.first ? selection.first().toJSON() : null;
+            if (!attachment || !attachment.id) return;
+
+            const url = attachment.url || '';
+            $wrap.attr('data-question-image-id', String(attachment.id || 0));
+            $wrap.addClass('has-question-image');
+            $wrap.find('.pqc-question-image-thumb').attr('src', url).show();
+            $wrap.find('.pqc-question-image-remove-btn').show();
+        });
+
+        frame.open();
+    });
+
+    $(document).on('click', '.pqc-question-image-remove-btn', function (e) {
+        e.preventDefault();
+        const $wrap = $(this).closest('.pqc-question-edit-wrap');
+        if (!$wrap.length) return;
+        $wrap.attr('data-question-image-id', '0');
+        $wrap.removeClass('has-question-image');
+        $wrap.find('.pqc-question-image-thumb').attr('src', '').hide();
+        $(this).hide();
     });
 
     function refreshQuizModule(courseId) {
@@ -769,11 +1144,14 @@
         $('.pqc-slide').each(function () {
             const $slide = $(this);
             const questionHtml = $slide.find('.pqc-editable-text-area').html().trim();
+            const questionImageId =
+                parseInt($slide.find('.pqc-question-edit-wrap').attr('data-question-image-id') || '0', 10) || 0;
             const question = {
                 id: $slide.data('question-id'),
                 pro_id: $slide.data('pro-id'),
                 title: deriveTitleFromHtml(questionHtml),
                 question_text: questionHtml,
+                image_id: questionImageId,
                 answers: []
             };
 
@@ -786,7 +1164,8 @@
                 question.answers.push({
                     text: text,
                     correct: $ans.find('.pqc-answer-correct-check').is(':checked'),
-                    points: parseInt($ans.find('.pqc-answer-points-edit').val()) || 0
+                    points: parseInt($ans.find('.pqc-answer-points-edit').val()) || 0,
+                    image_id: parseInt($ans.attr('data-image-id') || '0', 10) || 0
                 });
             });
 

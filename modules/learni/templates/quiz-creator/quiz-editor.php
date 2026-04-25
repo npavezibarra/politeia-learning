@@ -16,12 +16,13 @@ if (!$quiz_data) {
 }
 ?>
 
-<div class="pqc-container pqc-editor-container" data-quiz-id="<?php echo esc_attr($quiz_data['id']); ?>" data-quiz-title="<?php echo esc_attr($quiz_data['title'] ?? ''); ?>" data-quiz-settings="<?php echo esc_attr(wp_json_encode($quiz_data['settings'] ?? [])); ?>">
-    <!-- UNIFIED CONTROL ROW: Question Tag + Arrows + Save (Now Static) -->
-    <div class="pqc-slide-controls-row">
-        <div class="pqc-question-num-tag" id="pqc-editor-counter">
-            <?php echo sprintf(__('Question %d/%d', 'politeia-learning'), 1, count($quiz_data['questions'])); ?>
-        </div>
+    <div class="pqc-container pqc-editor-container" data-quiz-id="<?php echo esc_attr($quiz_data['id']); ?>" data-quiz-title="<?php echo esc_attr($quiz_data['title'] ?? ''); ?>" data-quiz-settings="<?php echo esc_attr(wp_json_encode($quiz_data['settings'] ?? [])); ?>">
+	    <!-- UNIFIED CONTROL ROW: Question Tag + Arrows + Save (Now Static) -->
+	    <div class="pqc-slide-controls-row">
+	        <button type="button" class="pqc-question-num-tag pqc-question-selector-toggle" id="pqc-editor-counter" aria-expanded="false" aria-controls="pqc-question-selector">
+	            <span id="pqc-editor-counter-text"><?php echo sprintf(__('Question %d/%d', 'politeia-learning'), 1, count($quiz_data['questions'])); ?></span>
+	            <svg class="pqc-question-selector-caret" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+	        </button>
 
         <div class="pqc-slide-nav-mini">
             <button type="button" class="pqc-nav-btn pqc-prev-slide" disabled>
@@ -52,18 +53,40 @@ if (!$quiz_data) {
             </button>
         </div>
 
-        <button type="button" class="pqc-delete-quiz-btn" data-quiz-id="<?php echo esc_attr($quiz_data['id']); ?>">
-            <span class="dashicons dashicons-trash"></span>
-            <?php _e('Delete Quiz', 'politeia-learning'); ?>
-        </button>
+	        <button type="button" class="pqc-delete-quiz-btn" data-quiz-id="<?php echo esc_attr($quiz_data['id']); ?>">
+	            <span class="dashicons dashicons-trash"></span>
+	            <?php _e('Delete Quiz', 'politeia-learning'); ?>
+	        </button>
 
-    </div>
+	    </div>
 
-    <div class="pqc-ai-panel" style="display:none;">
-        <div class="pqc-ai-panel__inner">
-            <div class="pqc-ai-panel__header">
-                <div class="pqc-ai-panel__title"><?php _e('AI Assisted', 'politeia-learning'); ?></div>
-                <div class="pqc-ai-panel__subtitle"><?php _e('Genera preguntas con un LLM y pega el JSON para importarlas al quiz.', 'politeia-learning'); ?></div>
+        <div id="pqc-question-selector" class="pqc-question-selector" aria-hidden="true">
+            <div class="pqc-question-selector__backdrop" data-action="close"></div>
+            <div class="pqc-question-selector__sheet" role="dialog" aria-modal="true" aria-label="<?php echo esc_attr__('Organizar preguntas', 'politeia-learning'); ?>">
+                <div class="pqc-question-selector__header">
+                    <div class="pqc-question-selector__titlewrap">
+                        <div class="pqc-question-selector__title"><?php _e('Organizar Preguntas', 'politeia-learning'); ?></div>
+                        <div class="pqc-question-selector__subtitle" id="pqc-question-selector-total"></div>
+                    </div>
+                    <button type="button" class="pqc-question-selector__close" aria-label="<?php echo esc_attr__('Cerrar', 'politeia-learning'); ?>">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                </div>
+                <div class="pqc-question-selector__list" id="pqc-question-selector-list"></div>
+                <div class="pqc-question-selector__footer">
+                    <button type="button" class="pqc-question-selector__add">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                        <?php _e('Nueva pregunta', 'politeia-learning'); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+	    <div class="pqc-ai-panel" style="display:none;">
+	        <div class="pqc-ai-panel__inner">
+	            <div class="pqc-ai-panel__header">
+	                <div class="pqc-ai-panel__title"><?php _e('AI Assisted', 'politeia-learning'); ?></div>
+	                <div class="pqc-ai-panel__subtitle"><?php _e('Genera preguntas con un LLM y pega el JSON para importarlas al quiz.', 'politeia-learning'); ?></div>
             </div>
 
             <div class="pqc-settings-grid pqc-ai-panel__grid">
@@ -191,9 +214,20 @@ if (!$quiz_data) {
 
                             <div class="pqc-slide-body">
                                 <div class="pqc-field pqc-field-full">
-                                    <div class="pqc-editable-text-area" contenteditable="true" data-field="question_text" data-placeholder="<?php esc_attr_e('Escribe la pregunta...', 'politeia-learning'); ?>">
-                                        <?php echo $question['question_text']; ?>
-                                    </div>
+	                            <?php
+	                            $question_image_id = (int) ($question['image_id'] ?? 0);
+	                            $question_image_url = (string) ($question['image_url'] ?? '');
+	                            ?>
+	                            <div class="pqc-question-edit-wrap <?php echo $question_image_url ? 'has-question-image' : ''; ?>" data-question-image-id="<?php echo esc_attr($question_image_id); ?>">
+	                                <div class="pqc-editable-text-area" contenteditable="true" data-field="question_text" data-placeholder="<?php esc_attr_e('Escribe la pregunta...', 'politeia-learning'); ?>">
+	                                    <?php echo $question['question_text']; ?>
+	                                </div>
+	                                <button type="button" class="pqc-question-image-btn" title="<?php echo esc_attr__('Adjuntar imagen a la pregunta', 'politeia-learning'); ?>">
+	                                    <span class="dashicons dashicons-format-image"></span>
+	                                </button>
+	                                <img class="pqc-question-image-thumb" src="<?php echo esc_url($question_image_url); ?>" alt="" <?php echo $question_image_url ? '' : 'style="display:none;"'; ?> />
+	                                <button type="button" class="pqc-question-image-remove-btn" title="<?php echo esc_attr__('Quitar imagen', 'politeia-learning'); ?>" <?php echo $question_image_url ? '' : 'style="display:none;"'; ?>>×</button>
+	                            </div>
                                 </div>
 
                                 <div class="pqc-answers-section">
@@ -204,16 +238,28 @@ if (!$quiz_data) {
                                     </div>
                                     <div class="pqc-answers-editor-list">
                                         <?php foreach ($question['answers'] as $a_index => $answer): ?>
-                                            <div class="pqc-answer-edit-row <?php echo $answer['correct'] ? 'is-correct' : ''; ?>"
-                                                data-answer-index="<?php echo $a_index; ?>">
+                                            <?php
+                                            $answer_image_id = (int) ($answer['image_id'] ?? 0);
+                                            $answer_image_url = (string) ($answer['image_url'] ?? '');
+                                            ?>
+                                            <div class="pqc-answer-edit-row <?php echo $answer['correct'] ? 'is-correct' : ''; ?> <?php echo $answer_image_url ? 'has-image' : ''; ?>"
+                                                data-answer-index="<?php echo $a_index; ?>"
+                                                data-image-id="<?php echo esc_attr($answer_image_id); ?>">
                                                 <div class="pqc-answer-check-wrap">
                                                     <input type="checkbox" <?php checked($answer['correct'], true); ?>
                                                         class="pqc-answer-correct-check"
                                                         title="<?php _e('Mark as correct', 'politeia-learning'); ?>">
                                                 </div>
+                                                <div class="pqc-answer-thumb">
+                                                    <img src="<?php echo esc_url($answer_image_url); ?>" alt="" <?php echo $answer_image_url ? '' : 'style="display:none;"'; ?> />
+                                                    <button type="button" class="pqc-answer-image-remove-btn" title="<?php echo esc_attr__('Quitar imagen', 'politeia-learning'); ?>" <?php echo $answer_image_url ? '' : 'style="display:none;"'; ?>>×</button>
+                                                </div>
                                                 <div class="pqc-answer-text-wrap" contenteditable="true" data-field="answer_text">
                                                     <?php echo esc_html($answer['text']); ?>
                                                 </div>
+                                                <button type="button" class="pqc-answer-image-btn" title="<?php echo esc_attr__('Adjuntar imagen', 'politeia-learning'); ?>">
+                                                    <span class="dashicons dashicons-format-image"></span>
+                                                </button>
                                                 <button type="button" class="pqc-remove-answer-btn" title="<?php _e('Remove answer', 'politeia-learning'); ?>">
                                                     <span class="dashicons dashicons-no-alt"></span>
                                                 </button>

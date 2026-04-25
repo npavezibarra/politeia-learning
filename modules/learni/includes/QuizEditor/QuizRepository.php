@@ -179,7 +179,10 @@ final class QuizRepository
                     'explanation' => null,
                     'points' => 1,
                     'sort_order' => (int) ($offset + $index),
-                    'meta_json' => wp_json_encode(['title' => (string) ($q['title'] ?? '')]),
+                    'meta_json' => wp_json_encode([
+                        'title' => (string) ($q['title'] ?? ''),
+                        'image_id' => (int) ($q['image_id'] ?? 0),
+                    ]),
                 ],
                 ['%d', '%s', '%s', '%s', '%d', '%d', '%s']
             );
@@ -192,6 +195,8 @@ final class QuizRepository
             $question_id = (int) $wpdb->insert_id;
             $a_index = 0;
             foreach ((array) ($q['answers'] ?? []) as $a) {
+                $image_id = (int) ($a['image_id'] ?? 0);
+                $meta_json = $image_id > 0 ? wp_json_encode(['image_id' => $image_id]) : null;
                 $wpdb->insert(
                     $answer_table,
                     [
@@ -199,7 +204,7 @@ final class QuizRepository
                         'answer_text' => (string) ($a['text'] ?? ''),
                         'is_correct' => !empty($a['correct']) ? 1 : 0,
                         'sort_order' => $a_index,
-                        'meta_json' => null,
+                        'meta_json' => $meta_json,
                     ],
                     ['%d', '%s', '%d', '%d', '%s']
                 );
@@ -248,7 +253,7 @@ final class QuizRepository
         $answer_table = $wpdb->prefix . self::TABLE_ANSWERS;
         return $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT answer_text, is_correct, sort_order
+                "SELECT answer_text, is_correct, sort_order, meta_json
                  FROM {$answer_table}
                  WHERE question_id = %d
                  ORDER BY sort_order ASC, id ASC",

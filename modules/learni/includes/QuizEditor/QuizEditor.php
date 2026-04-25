@@ -61,14 +61,21 @@ final class QuizEditor
             foreach ($answers as $a) {
                 $text = trim((string) $a['answer_text']);
                 if ($text === '') continue;
+                $meta = json_decode((string) ($a['meta_json'] ?? ''), true) ?: [];
+                $image_id = (int) ($meta['image_id'] ?? 0);
+                $image_url = $image_id > 0 ? (string) wp_get_attachment_image_url($image_id, 'thumbnail') : '';
                 $out_answers[] = [
                     'text' => $text,
                     'correct' => !empty($a['is_correct']),
                     'points' => 0,
+                    'image_id' => $image_id,
+                    'image_url' => $image_url,
                 ];
             }
 
             $title = (string) ($meta['title'] ?? '');
+            $image_id = (int) ($meta['image_id'] ?? 0);
+            $image_url = $image_id > 0 ? (string) wp_get_attachment_image_url($image_id, 'medium') : '';
             if ($title === '') {
                 $plain = trim(wp_strip_all_tags((string) $q['prompt']));
                 $plain = trim((string) preg_replace('/\s+/', ' ', $plain));
@@ -80,6 +87,8 @@ final class QuizEditor
                 'pro_id' => 0,
                 'title' => $title,
                 'question_text' => (string) $q['prompt'],
+                'image_id' => $image_id,
+                'image_url' => $image_url,
                 'answers' => $out_answers,
             ];
         }
@@ -172,10 +181,16 @@ final class QuizEditor
             $qid = (int) ($q['id'] ?? 0);
             if ($qid <= 0) continue;
 
+            $q_image_id = (int) ($q['image_id'] ?? 0);
+            $q_meta = ['title' => sanitize_text_field((string) ($q['title'] ?? ''))];
+            if ($q_image_id > 0) {
+                $q_meta['image_id'] = $q_image_id;
+            }
+
             $wpdb->update($question_table, [
                 'prompt' => wp_kses_post((string) ($q['question_text'] ?? '')),
                 'sort_order' => (int) $index,
-                'meta_json' => wp_json_encode(['title' => sanitize_text_field((string) ($q['title'] ?? ''))]),
+                'meta_json' => wp_json_encode($q_meta),
             ], ['id' => $qid, 'quiz_id' => $quiz_id]);
 
             $wpdb->delete($answer_table, ['question_id' => $qid]);
@@ -183,11 +198,14 @@ final class QuizEditor
             foreach (array_values($answers) as $a_index => $a) {
                 $text = sanitize_text_field((string) ($a['text'] ?? ''));
                 if ($text === '') continue;
+                $image_id = (int) ($a['image_id'] ?? 0);
+                $meta_json = $image_id > 0 ? wp_json_encode(['image_id' => $image_id]) : null;
                 $wpdb->insert($answer_table, [
                     'question_id' => $qid,
                     'answer_text' => $text,
                     'is_correct' => !empty($a['correct']) ? 1 : 0,
                     'sort_order' => (int) $a_index,
+                    'meta_json' => $meta_json,
                 ]);
             }
         }
@@ -269,6 +287,7 @@ final class QuizEditor
                 'answer_text' => sprintf('Opción %s', chr(ord('A') + $i)),
                 'is_correct' => $i === 0 ? 1 : 0,
                 'sort_order' => $i,
+                'meta_json' => null,
             ]);
         }
 
@@ -318,6 +337,7 @@ final class QuizEditor
             if (trim(wp_strip_all_tags($text)) === '') continue;
 
             $title = sanitize_text_field((string) ($q['title'] ?? ''));
+            $image_id = (int) ($q['image_id'] ?? 0);
             if ($title === '') {
                 $plain = trim(wp_strip_all_tags($text));
                 $title = strlen($plain) > 64 ? (substr($plain, 0, 64) . '…') : ($plain ?: "Pregunta " . ($i+1));
@@ -332,13 +352,14 @@ final class QuizEditor
                 if ($a_text === '') continue;
                 $correct = !empty($a['correct']);
                 if ($correct) $has_correct = true;
-                $norm_answers[] = ['text' => $a_text, 'correct' => $correct];
+                $image_id = (int) ($a['image_id'] ?? 0);
+                $norm_answers[] = ['text' => $a_text, 'correct' => $correct, 'image_id' => $image_id];
             }
 
             if (count($norm_answers) < 2) return new WP_Error('invalid_answers', 'Cada pregunta debe tener al menos 2 respuestas.');
             if (!$has_correct) $norm_answers[0]['correct'] = true;
 
-            $out[] = ['title' => $title, 'prompt' => $text, 'answers' => $norm_answers];
+            $out[] = ['title' => $title, 'prompt' => $text, 'answers' => $norm_answers, 'image_id' => $image_id];
         }
         return empty($out) ? new WP_Error('empty', 'No hay preguntas.') : $out;
     }
