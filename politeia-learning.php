@@ -29,6 +29,8 @@ require_once PL_PATH . 'includes/class-partnerships-repository.php';
 require_once PL_PATH . 'includes/class-email.php';
 require_once PL_PATH . 'includes/Partnerships/class-partnership-utils.php';
 require_once PL_PATH . 'includes/Partnerships/class-partnership-manager.php';
+require_once PL_PATH . 'includes/Partnerships/class-partnership-invite-mirror.php';
+require_once PL_PATH . 'includes/Partnerships/class-partnership-backfill.php';
 require_once PL_PATH . 'includes/Partnerships/class-partnership-handlers.php';
 require_once PL_PATH . 'includes/class-rest-partnerships.php';
 require_once PL_PATH . 'includes/class-partner-add-shortcode.php';
@@ -144,17 +146,18 @@ add_action('wp_enqueue_scripts', function () {
 
     // Mini-cart badge styling (requested by user)
     $custom_css = "
-        .wc-block-mini-cart__badge {
-            align-items: center;
-            font-family: 'Poppins', sans-serif;
-            border-radius: 1em;
-            box-sizing: border-box;
-            display: flex;
-            font-size: 9px;
-            font-weight: 600;
-            height: 18px;
-            background: linear-gradient(135deg, #783F27, #B87333, #E5AA70);
-            justify-content: center;
+	        .wc-block-mini-cart__badge {
+	            align-items: center;
+	            font-family: 'Poppins', sans-serif;
+	            border-radius: 1em;
+	            box-sizing: border-box;
+	            display: flex;
+	            color: #ffffff;
+	            font-size: 9px;
+	            font-weight: 600;
+	            height: 18px;
+	            background: linear-gradient(135deg, #783F27, #B87333, #E5AA70);
+	            justify-content: center;
             left: 100%;
             margin-left: -44%;
             min-width: 18px;
@@ -225,6 +228,10 @@ class PL_Module_Loader
         'navigation' => true,
         'blog-post' => true,
         'login-register' => true,
+        // Bookshelf port (Phase 1). Gated by `PL_READING_PLANNER_MODULE_ENABLED` and auto-disables if Bookshelf is active.
+        'reading-planner' => true,
+        // Bookshelf port (Phase 10). Gated by `PL_BOOKSHELF_MODULE_ENABLED`.
+        'bookshelf' => true,
         'course-creator' => true,
         'quiz-creator' => true,
         'woo' => true,

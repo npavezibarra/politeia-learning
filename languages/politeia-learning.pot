@@ -1401,3 +1401,11 @@ msgstr ""
 #: modules/menu-management/includes/class-menu-manager.php:707
 msgid "Cerrar Sesión"
 msgstr ""
+
+#: modules/learni/templates/dashboard/main-dashboard.php:0
+msgid "PLANIFICADOR DE LECTURAS"
+msgstr ""
+
+#: modules/navigation/includes/Navigation/NavEngine.php:0
+msgid "Planificador de Lecturas"
+msgstr ""

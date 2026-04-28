@@ -174,6 +174,13 @@ class NavEngine
             'url' => home_url('/members/' . $user->user_login . '/my-reading-stats'),
         ];
 
+        if (defined('PL_READING_PLANNER_MODULE_ENABLED') && PL_READING_PLANNER_MODULE_ENABLED) {
+            $items[] = [
+                'label' => __('Planificador de Lecturas', 'politeia-learning'),
+                'url' => home_url('/members/' . $user->user_login . '/my-plans-ver-2'),
+            ];
+        }
+
         $items[] = [
             'label' => __('Cerrar sesión', 'politeia-learning'),
             'url' => wp_logout_url(home_url('/')),

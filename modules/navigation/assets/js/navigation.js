@@ -131,9 +131,13 @@
         itemsRoot.appendChild(btn);
       });
     } else {
+      const creatorWrapper = document.querySelector('.pcg-creator-dashboard-wrapper');
+      const creatorUserLogin = creatorWrapper && creatorWrapper.dataset ? (creatorWrapper.dataset.plUserLogin || '') : '';
+
       const centerMenu = [
         { id: 'create-course', label: 'MIS CURSOS' },
         { id: 'mis-escritos', label: 'MIS ESCRITOS' },
+        ...(creatorUserLogin ? [{ id: 'reading-planner', label: 'PLANIFICADOR DE LECTURAS', url: '/members/' + encodeURIComponent(creatorUserLogin) + '/my-plans-ver-2/' }] : []),
         { id: 'especializacion', label: 'ESPECIALIZACIÓN' },
         { id: 'create-group', label: 'PROGRAMAS' },
         {
@@ -168,6 +172,10 @@
           btn.addEventListener('click', function () {
             if (item.id === section) {
               closePanel();
+              return;
+            }
+            if (item.url) {
+              window.location.href = new URL(item.url, window.location.href).toString();
               return;
             }
             window.location.href = '?section=' + item.id;

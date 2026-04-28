@@ -10,6 +10,35 @@ if (!defined('ABSPATH')) {
 class PL_Partnership_Utils
 {
     /**
+     * Debug logger for partnership/invite flows.
+     *
+     * Enabled only when WP_DEBUG is true.
+     *
+     * @param array<string,mixed> $context
+     */
+    public static function debug_log(string $event, array $context = []): void
+    {
+        if (!defined('WP_DEBUG') || !WP_DEBUG) {
+            return;
+        }
+
+        // Avoid logging raw tokens/emails; log hashes instead.
+        if (isset($context['email']) && is_string($context['email'])) {
+            $context['email_sha1'] = sha1(self::normalize_email($context['email']));
+            unset($context['email']);
+        }
+        if (isset($context['token']) && is_string($context['token'])) {
+            $token = strtolower(trim($context['token']));
+            $context['token_tail'] = strlen($token) >= 8 ? substr($token, -8) : $token;
+            unset($context['token']);
+        }
+
+        $payload = $context ? (' ' . wp_json_encode($context)) : '';
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+        error_log('[PL][partnerships][' . $event . ']' . $payload);
+    }
+
+    /**
      * Generate a username from an email address.
      */
     public static function generate_username_from_email(string $email): string

@@ -1,0 +1,177 @@
+/* ============================================
+   Responsive Book Info Layout — Adjusted
+   ============================================ */
+
+/* Mobile-first: ≤950px */
+#prs-book-info.prs-book-info {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+}
+
+#prs-book-info.prs-book-info > #prs-book-cover {
+        width: 90px;
+        flex: 0 0 90px;
+        order: 1;
+}
+
+#prs-book-info.prs-book-info > #prs-book-info__main {
+        flex: 1 1 auto;
+        order: 2;
+        margin-left: 16px;
+        min-width: 0;
+}
+
+@media (max-width: 949px) {
+        #prs-book-info.prs-book-info > #prs-book-info__main {
+                flex: 1 1 auto;
+                order: 2;
+                margin-left: 16px;
+                min-width: 0;
+                width: 50%;
+        }
+}
+
+#prs-book-info.prs-book-info > #prs-book-info__sidebar {
+        flex: 0 0 100%;
+        width: 100%;
+        order: 3;
+        margin-top: 16px;
+        min-width: 0;
+}
+
+/* Desktop: ≥950px — one-row, three columns */
+@media (min-width: 950px) {
+        #prs-book-info.prs-book-info {
+                flex-wrap: nowrap;
+                gap: 24px;
+        }
+
+        #prs-book-info.prs-book-info > #prs-book-cover {
+                width: 190px;
+                flex: 0 0 190px;
+        }
+
+        #prs-cover-frame:not(.has-image)[data-cover-state="empty"] > #prs-book-cover-figure,
+        #prs-cover-frame:not(.has-image):not([data-cover-state]) > #prs-book-cover-figure {
+                height: 280px;
+        }
+
+        #prs-book-info.prs-book-info > #prs-book-info__main {
+                margin-left: 0;
+                flex: 1 1 50%;
+        }
+
+        #prs-book-info.prs-book-info > #prs-book-info__sidebar {
+                margin-top: 0;
+                flex: 1 1 50%;
+                width: auto;
+        }
+}
+
+.prs-reading-sessions {
+        clear: both;
+        margin-top: 15px;
+        width: 100%;
+        display: block;
+}
+
+.prs-reading-density-bar {
+        position: relative;
+        height: 24px;
+        border-radius: 6px;
+        overflow: hidden;
+        background-color: #e5e7eb;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+        margin-top: 8px;
+}
+
+.prs-contact-input {
+        display: block;
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+}
+
+#prs-reading-density-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+}
+
+/* ============================================
+   Layout Fix — Small/Medium screens (≤950px)
+   ============================================ */
+@media (max-width: 950px) {
+        .prs-single-grid {
+                display: block;
+                grid-template-columns: 1fr;
+                gap: 0;
+                margin: 16px 0 32px;
+        }
+}
+
+/* ============================================
+   Cover height constraint for tablets/small laptops
+   ============================================ */
+@media (min-width: 481px) and (max-width: 900px) {
+        .prs-cover-frame {
+                max-height: 140px;
+        }
+}
+
+/* Debug-only visual aid (won’t render unless data attr is set manually) */
+#prs-book-cover-figure[debug-outline="1"] {
+        outline: 2px dashed #f59e0b;
+}
+
+/* Pagination container above the table */
+.prs-pagination--top {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 20px auto;
+        padding: 8px 16px;
+        border-radius: 6px;
+        background: #f7f7f7;
+        width: fit-content;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Links inside pagination */
+.prs-pagination--top a,
+.prs-pagination--top span {
+        display: inline-block;
+        margin: 0 6px;
+        padding: 4px 8px;
+        text-decoration: none;
+        color: #121212;
+        font-weight: 500;
+        font-size: 15px;
+        transition: all 0.2s ease;
+}
+
+.prs-pagination--top a:hover {
+        color: var(--bb-primary-color, #385DFF);
+}
+
+.prs-pagination--top .current {
+        background: var(--bb-primary-color, #385DFF);
+        color: #fff;
+        border-radius: 4px;
+        padding: 4px 10px;
+}
+
+/* Fallback styles if WordPress outputs a list */
+.prs-pagination--top ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+}
+
+.prs-pagination--top li {
+        margin: 0 4px;
+}

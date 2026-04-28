@@ -64,7 +64,7 @@ if (empty($active_modules[$current_section])) {
 pl_template_open();
 ?>
 
-<div class="pcg-creator-dashboard-wrapper pcg-template-center">
+<div class="pcg-creator-dashboard-wrapper pcg-template-center" data-pl-user-login="<?php echo esc_attr($user->user_login); ?>">
     <div class="pcg-creator-container">
 
         <aside id="pcg-creator-sidebar" class="pcg-creator-sidebar">
@@ -95,6 +95,14 @@ pl_template_open();
                             <a href="?section=mis-escritos">
                                 <span class="dashicons dashicons-edit"></span>
                                 <?php _e('MIS ESCRITOS', 'politeia-learning'); ?>
+                            </a>
+                        </li>
+                    <?php endif; ?>
+                    <?php if (defined('PL_READING_PLANNER_MODULE_ENABLED') && PL_READING_PLANNER_MODULE_ENABLED): ?>
+                        <li class="<?php echo $current_section === 'reading-planner' ? 'active' : ''; ?>">
+                            <a href="<?php echo esc_url(home_url('/members/' . $user->user_login . '/my-plans-ver-2')); ?>">
+                                <span class="dashicons dashicons-book-alt"></span>
+                                <?php _e('PLANIFICADOR DE LECTURAS', 'politeia-learning'); ?>
                             </a>
                         </li>
                     <?php endif; ?>

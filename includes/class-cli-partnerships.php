@@ -44,6 +44,8 @@ class PL_CLI_Partnerships
     public static function register(): void
     {
         \WP_CLI::add_command('politeia partnerships:verify', [__CLASS__, 'verify']);
+        \WP_CLI::add_command('politeia partnerships:backfill-reading-plans', [__CLASS__, 'backfill_reading_plans']);
+        \WP_CLI::add_command('politeia partnerships:backfill-reading-plan-invites', [__CLASS__, 'backfill_reading_plan_invites']);
     }
 
     /**
@@ -209,7 +211,102 @@ class PL_CLI_Partnerships
             \WP_CLI::warning('Partnerships are NOT fully in sync with legacy course roles.');
         }
     }
+
+    /**
+     * Backfill reading_plan observers from legacy plan_participants into unified partnerships.
+     *
+     * ## OPTIONS
+     *
+     * [--batch-size=<n>]
+     * : Batch size for scanning plan participants. Default: 500.
+     *
+     * [--max-batches=<n>]
+     * : Max number of batches to process (0 = all). Default: 0.
+     *
+     * [--dry-run]
+     * : Don't write anything; only count rows. Default: false.
+     *
+     * ## EXAMPLES
+     *
+     *     wp politeia partnerships:backfill-reading-plans
+     *     wp politeia partnerships:backfill-reading-plans --batch-size=200 --max-batches=5
+     *     wp politeia partnerships:backfill-reading-plans --dry-run
+     */
+    public static function backfill_reading_plans(array $args, array $assoc_args): void
+    {
+        $batch_size = isset($assoc_args['batch-size']) ? (int) $assoc_args['batch-size'] : 500;
+        $max_batches = isset($assoc_args['max-batches']) ? (int) $assoc_args['max-batches'] : 0;
+        $dry_run = isset($assoc_args['dry-run']);
+
+        if (!class_exists('PL_Partnership_Backfill') || !method_exists('PL_Partnership_Backfill', 'backfill_reading_plan_observers')) {
+            \WP_CLI::error('Backfill class not available.');
+        }
+
+        \WP_CLI::line(sprintf('Running backfill (batch_size=%d, max_batches=%d, dry_run=%s)...', $batch_size, $max_batches, $dry_run ? 'true' : 'false'));
+        $stats = PL_Partnership_Backfill::backfill_reading_plan_observers($batch_size, $max_batches, $dry_run);
+
+        \WP_CLI::line(sprintf('✓ batches: %d', (int) ($stats['batches'] ?? 0)));
+        \WP_CLI::line(sprintf('✓ rows scanned: %d', (int) ($stats['rows'] ?? 0)));
+        \WP_CLI::line(sprintf('✓ activated: %d', (int) ($stats['activated'] ?? 0)));
+        \WP_CLI::line(sprintf('✓ skipped: %d', (int) ($stats['skipped'] ?? 0)));
+        \WP_CLI::line(sprintf('✓ errors: %d', (int) ($stats['errors'] ?? 0)));
+
+        if ($dry_run) {
+            \WP_CLI::success('Dry run complete.');
+        } elseif ((int) ($stats['errors'] ?? 0) > 0) {
+            \WP_CLI::warning('Backfill completed with errors.');
+        } else {
+            \WP_CLI::success('Backfill complete.');
+        }
+    }
+
+    /**
+     * Backfill pending reading_plan invites from legacy invites into unified partnerships.
+     *
+     * ## OPTIONS
+     *
+     * [--batch-size=<n>]
+     * : Batch size for scanning legacy invites. Default: 500.
+     *
+     * [--max-batches=<n>]
+     * : Max number of batches to process (0 = all). Default: 0.
+     *
+     * [--dry-run]
+     * : Don't write anything; only count rows. Default: false.
+     *
+     * ## EXAMPLES
+     *
+     *     wp politeia partnerships:backfill-reading-plan-invites
+     *     wp politeia partnerships:backfill-reading-plan-invites --batch-size=200 --max-batches=5
+     *     wp politeia partnerships:backfill-reading-plan-invites --dry-run
+     */
+    public static function backfill_reading_plan_invites(array $args, array $assoc_args): void
+    {
+        $batch_size = isset($assoc_args['batch-size']) ? (int) $assoc_args['batch-size'] : 500;
+        $max_batches = isset($assoc_args['max-batches']) ? (int) $assoc_args['max-batches'] : 0;
+        $dry_run = isset($assoc_args['dry-run']);
+
+        if (!class_exists('PL_Partnership_Backfill') || !method_exists('PL_Partnership_Backfill', 'backfill_reading_plan_pending_invites')) {
+            \WP_CLI::error('Backfill class not available.');
+        }
+
+        \WP_CLI::line(sprintf('Running invites backfill (batch_size=%d, max_batches=%d, dry_run=%s)...', $batch_size, $max_batches, $dry_run ? 'true' : 'false'));
+        $stats = PL_Partnership_Backfill::backfill_reading_plan_pending_invites($batch_size, $max_batches, $dry_run);
+
+        \WP_CLI::line(sprintf('✓ batches: %d', (int) ($stats['batches'] ?? 0)));
+        \WP_CLI::line(sprintf('✓ rows scanned: %d', (int) ($stats['rows'] ?? 0)));
+        \WP_CLI::line(sprintf('✓ upserted: %d', (int) ($stats['upserted'] ?? 0)));
+        \WP_CLI::line(sprintf('✓ skipped: %d', (int) ($stats['skipped'] ?? 0)));
+        \WP_CLI::line(sprintf('✓ errors: %d', (int) ($stats['errors'] ?? 0)));
+
+        if ($dry_run) {
+            \WP_CLI::success('Dry run complete.');
+        } elseif ((int) ($stats['errors'] ?? 0) > 0) {
+            \WP_CLI::warning('Backfill completed with errors.');
+        } else {
+            \WP_CLI::success('Backfill complete.');
+        }
+    }
 }
 
 PL_CLI_Partnerships::register();
-

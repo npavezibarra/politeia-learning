@@ -136,7 +136,19 @@ class PL_Partnership_Manager
                 )
             );
 
-            return $inserted ? $token : '';
+            if ($inserted) {
+                PL_Partnership_Utils::debug_log('invite_created', [
+                    'source' => 'partnerships',
+                    'object_type' => $object_type,
+                    'object_id' => $object_id,
+                    'role' => $role,
+                    'email' => $email,
+                    'expires_at' => $expires_at,
+                ]);
+                return $token;
+            }
+
+            return '';
         }
 
         return self::create_invite_legacy($object_type, $object_id, $email, $role);
@@ -242,6 +254,17 @@ class PL_Partnership_Manager
             ]
         );
 
+        if (false !== $inserted) {
+            PL_Partnership_Utils::debug_log('invite_created', [
+                'source' => 'legacy',
+                'object_type' => $object_type,
+                'object_id' => $object_id,
+                'role' => $role,
+                'email' => $email,
+                'expires_at' => $expires_at,
+            ]);
+        }
+
         return (false !== $inserted) ? $token : '';
     }
 
@@ -250,8 +273,18 @@ class PL_Partnership_Manager
      */
     public static function accept_invite_for_user(string $raw_token, int $user_id): bool
     {
+        PL_Partnership_Utils::debug_log('invite_accept_attempt', [
+            'token' => $raw_token,
+            'user_id' => $user_id,
+        ]);
+
         $invite = self::get_pending_invite_by_raw_token($raw_token);
         if (!$invite) {
+            PL_Partnership_Utils::debug_log('invite_accept_failed', [
+                'reason' => 'invite_not_found_or_not_pending',
+                'token' => $raw_token,
+                'user_id' => $user_id,
+            ]);
             return false;
         }
 
@@ -259,6 +292,13 @@ class PL_Partnership_Manager
         $expires_ts = strtotime((string) ($invite['expires_at'] ?? '') . ' UTC');
         if ($expires_ts && $expires_ts < $now_ts) {
             self::mark_invite_expired($invite);
+            PL_Partnership_Utils::debug_log('invite_accept_failed', [
+                'reason' => 'expired',
+                'source' => (string) ($invite['_pl_source'] ?? ''),
+                'invite_id' => (int) ($invite['id'] ?? 0),
+                'token' => $raw_token,
+                'user_id' => $user_id,
+            ]);
             return false;
         }
 
@@ -270,6 +310,12 @@ class PL_Partnership_Manager
         $current_email = PL_Partnership_Utils::normalize_email((string) ($user->user_email ?? ''));
         $invite_email = PL_Partnership_Utils::normalize_email((string) ($invite['invitee_email'] ?? ''));
         if ('' === $current_email || '' === $invite_email || $current_email !== $invite_email) {
+            PL_Partnership_Utils::debug_log('invite_accept_failed', [
+                'reason' => 'email_mismatch',
+                'source' => (string) ($invite['_pl_source'] ?? ''),
+                'invite_id' => (int) ($invite['id'] ?? 0),
+                'user_id' => $user_id,
+            ]);
             return false;
         }
 
@@ -334,6 +380,16 @@ class PL_Partnership_Manager
                 ['%d']
             );
 
+            if ($updated !== false) {
+                PL_Partnership_Utils::debug_log('invite_accepted', [
+                    'source' => 'partnerships',
+                    'invite_id' => $invite_id,
+                    'object_type' => $object_type,
+                    'object_id' => $object_id,
+                    'role' => $role,
+                    'user_id' => $user_id,
+                ]);
+            }
             return $updated !== false;
         }
 
@@ -351,7 +407,600 @@ class PL_Partnership_Manager
             ['%d']
         );
 
+        if ($updated !== false) {
+            PL_Partnership_Utils::debug_log('invite_accepted', [
+                'source' => 'legacy',
+                'invite_id' => $invite_id,
+                'object_type' => $object_type,
+                'object_id' => $object_id,
+                'role' => $role,
+                'user_id' => $user_id,
+            ]);
+        }
         return $updated !== false;
+    }
+
+    /**
+     * Respond to a Reading Planner (reading_plan) invite for a user.
+     *
+     * Phase 2 goal:
+     * - Single pipeline for accept/decline that updates BOTH:
+     *   - unified table `wp_politeia_user_object_partnerships` (when present)
+     *   - legacy table `wp_politeia_plan_participant_invites`
+     * - Best-effort keeps `wp_politeia_plan_participants` in sync on accept.
+     *
+     * @return array<string,mixed> Result payload.
+     */
+    public static function respond_to_reading_plan_invite_for_user(string $raw_token, int $user_id, string $action = 'accept'): array
+    {
+        $raw_token = strtolower(trim($raw_token));
+        $action = sanitize_key($action);
+        if (!in_array($action, ['accept', 'decline'], true)) {
+            $action = 'accept';
+        }
+
+        if (!preg_match('/^[a-f0-9]{64}$/', $raw_token) || $user_id <= 0) {
+            return ['ok' => false, 'error' => 'invalid_token'];
+        }
+
+        $user = get_userdata($user_id);
+        if (!($user instanceof \WP_User)) {
+            return ['ok' => false, 'error' => 'invalid_user'];
+        }
+
+        $token_hash = hash('sha256', $raw_token);
+
+        global $wpdb;
+        if (!$wpdb) {
+            return ['ok' => false, 'error' => 'db_unavailable'];
+        }
+
+        $legacy_table = $wpdb->prefix . self::LEGACY_INVITES_TABLE_SLUG;
+        $legacy_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $legacy_table)) === $legacy_table);
+        if (!$legacy_exists) {
+            return ['ok' => false, 'error' => 'legacy_invites_missing'];
+        }
+
+        $partnerships_table = $wpdb->prefix . self::PARTNERSHIPS_TABLE_SLUG;
+        $partnerships_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $partnerships_table)) === $partnerships_table)
+            && PL_Partnership_Utils::invites_table_column_exists($partnerships_table, 'invitation_token_hash');
+
+        $legacy_invite = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT *
+                 FROM {$legacy_table}
+                 WHERE token_hash = %s
+                 LIMIT 1",
+                $token_hash
+            ),
+            ARRAY_A
+        );
+
+        $partnerships_invite = null;
+        if ($partnerships_exists) {
+            $partnerships_invite = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT *
+                     FROM {$partnerships_table}
+                     WHERE invitation_token_hash = %s
+                     LIMIT 1",
+                    $token_hash
+                ),
+                ARRAY_A
+            );
+        }
+
+        if (!is_array($legacy_invite) && !is_array($partnerships_invite)) {
+            return ['ok' => false, 'error' => 'invite_not_found'];
+        }
+
+        // Determine invite email (legacy preferred).
+        $invite_email = '';
+        if (is_array($legacy_invite) && isset($legacy_invite['invitee_email'])) {
+            $invite_email = (string) $legacy_invite['invitee_email'];
+        } elseif (is_array($partnerships_invite) && isset($partnerships_invite['invitee_email'])) {
+            $invite_email = (string) $partnerships_invite['invitee_email'];
+        }
+
+        $current_email = PL_Partnership_Utils::normalize_email((string) ($user->user_email ?? ''));
+        $invite_email_norm = PL_Partnership_Utils::normalize_email($invite_email);
+        if ($current_email === '' || $invite_email_norm === '' || $current_email !== $invite_email_norm) {
+            return ['ok' => false, 'error' => 'email_mismatch'];
+        }
+
+        // Ensure it's a reading_plan invite.
+        $object_type = '';
+        $plan_id = 0;
+        $role = 'observer';
+        $notify_on = 'none';
+        $inviter_user_id = 0;
+
+        if (is_array($legacy_invite)) {
+            $object_type = (string) ($legacy_invite['object_type'] ?? 'reading_plan');
+            $plan_id = (int) ($legacy_invite['object_id'] ?? ($legacy_invite['plan_id'] ?? 0));
+            $role = sanitize_key((string) ($legacy_invite['role'] ?? 'observer')) ?: 'observer';
+            $notify_on = sanitize_key((string) ($legacy_invite['notify_on'] ?? 'none')) ?: 'none';
+            $inviter_user_id = (int) ($legacy_invite['inviter_user_id'] ?? 0);
+        } elseif (is_array($partnerships_invite)) {
+            $object_type = (string) ($partnerships_invite['object_type'] ?? 'reading_plan');
+            $plan_id = (int) ($partnerships_invite['object_id'] ?? 0);
+            $role = sanitize_key((string) ($partnerships_invite['role'] ?? 'observer')) ?: 'observer';
+            $inviter_user_id = (int) ($partnerships_invite['owner_user_id'] ?? 0);
+        }
+
+        if ($object_type !== 'reading_plan' || $plan_id <= 0) {
+            return ['ok' => false, 'error' => 'invalid_invite_object'];
+        }
+
+        $legacy_pending = is_array($legacy_invite) && (($legacy_invite['status'] ?? '') === 'pending');
+        $partnerships_pending = is_array($partnerships_invite) && (($partnerships_invite['status'] ?? '') === 'pending');
+        if (!$legacy_pending && !$partnerships_pending) {
+            return [
+                'ok' => false,
+                'error' => 'invite_not_pending',
+                'legacy_status' => is_array($legacy_invite) ? (string) ($legacy_invite['status'] ?? '') : '',
+                'partnerships_status' => is_array($partnerships_invite) ? (string) ($partnerships_invite['status'] ?? '') : '',
+            ];
+        }
+
+        // Expiry check (prefer legacy, fallback partnerships).
+        $expires_at = '';
+        if (is_array($legacy_invite) && isset($legacy_invite['expires_at'])) {
+            $expires_at = (string) $legacy_invite['expires_at'];
+        } elseif (is_array($partnerships_invite) && isset($partnerships_invite['expires_at'])) {
+            $expires_at = (string) $partnerships_invite['expires_at'];
+        }
+
+        $now_ts = current_time('timestamp', true);
+        $expires_ts = $expires_at !== '' ? strtotime($expires_at . ' UTC') : 0;
+        if ($expires_ts && $expires_ts < $now_ts) {
+            $now = current_time('mysql');
+
+            if ($legacy_pending) {
+                $wpdb->update(
+                    $legacy_table,
+                    ['status' => 'expired', 'updated_at' => $now],
+                    ['id' => (int) ($legacy_invite['id'] ?? 0)],
+                    ['%s', '%s'],
+                    ['%d']
+                );
+            }
+            if ($partnerships_pending) {
+                $wpdb->update(
+                    $partnerships_table,
+                    ['status' => 'expired', 'updated_at' => $now],
+                    ['id' => (int) ($partnerships_invite['id'] ?? 0)],
+                    ['%s', '%s'],
+                    ['%d']
+                );
+            }
+
+            return ['ok' => false, 'error' => 'invite_expired'];
+        }
+
+        $now = current_time('mysql');
+
+        if ($action === 'decline') {
+            if ($legacy_pending) {
+                $wpdb->update(
+                    $legacy_table,
+                    [
+                        'status' => 'declined',
+                        'declined_at' => $now,
+                        'invitee_user_id' => $user_id,
+                        'updated_at' => $now,
+                    ],
+                    ['id' => (int) ($legacy_invite['id'] ?? 0)],
+                    ['%s', '%s', '%d', '%s'],
+                    ['%d']
+                );
+            }
+            if ($partnerships_pending) {
+                $wpdb->update(
+                    $partnerships_table,
+                    [
+                        'status' => 'declined',
+                        'declined_at' => $now,
+                        'updated_at' => $now,
+                    ],
+                    ['id' => (int) ($partnerships_invite['id'] ?? 0)],
+                    ['%s', '%s', '%s'],
+                    ['%d']
+                );
+            }
+
+            return ['ok' => true, 'action' => 'decline', 'plan_id' => $plan_id];
+        }
+
+        // Accept: ensure unified partnership relationship.
+        if (class_exists('PL_Partnerships_Repository') && method_exists('PL_Partnerships_Repository', 'add_partner')) {
+            $wpdb_owner_user_id = 0;
+            if (is_array($partnerships_invite)) {
+                $wpdb_owner_user_id = (int) ($partnerships_invite['owner_user_id'] ?? 0);
+            } elseif (is_array($legacy_invite)) {
+                $wpdb_owner_user_id = (int) ($legacy_invite['inviter_user_id'] ?? 0);
+            }
+            try {
+                PL_Partnerships_Repository::add_partner('reading_plan', $plan_id, $user_id, $role, $wpdb_owner_user_id);
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
+
+        // Accept: keep legacy plan participants table in sync.
+        self::upsert_reading_plan_participant($plan_id, $user_id, $role, $notify_on, $inviter_user_id);
+
+        if ($legacy_pending) {
+            $wpdb->update(
+                $legacy_table,
+                [
+                    'status' => 'accepted',
+                    'accepted_at' => $now,
+                    'invitee_user_id' => $user_id,
+                    'updated_at' => $now,
+                ],
+                ['id' => (int) ($legacy_invite['id'] ?? 0)],
+                ['%s', '%s', '%d', '%s'],
+                ['%d']
+            );
+        }
+        if ($partnerships_pending) {
+            $wpdb->update(
+                $partnerships_table,
+                [
+                    'status' => 'accepted',
+                    'accepted_at' => $now,
+                    'updated_at' => $now,
+                ],
+                ['id' => (int) ($partnerships_invite['id'] ?? 0)],
+                ['%s', '%s', '%s'],
+                ['%d']
+            );
+        }
+
+        return ['ok' => true, 'action' => 'accept', 'plan_id' => $plan_id];
+    }
+
+    /**
+     * Create a Reading Planner invite (object_type=reading_plan).
+     *
+     * Phase 2 goal:
+     * - One pipeline to create invites that writes to the legacy invites table,
+     *   and mirrors to the unified partnerships table (best-effort).
+     *
+     * @return array<string,mixed> Result payload.
+     */
+    public static function create_reading_plan_invite_for_user(int $plan_id, int $owner_user_id, string $invitee_email, string $role = 'observer', string $notify_on = 'none'): array
+    {
+        $plan_id = (int) $plan_id;
+        $owner_user_id = (int) $owner_user_id;
+        $invitee_email = sanitize_email($invitee_email);
+        $role = sanitize_key($role ?: 'observer');
+        $notify_on = sanitize_key($notify_on ?: 'none');
+
+        if ($plan_id <= 0 || $owner_user_id <= 0 || !$invitee_email || !is_email($invitee_email)) {
+            return ['ok' => false, 'error' => 'invalid_input'];
+        }
+
+        if ($role !== 'observer') {
+            return ['ok' => false, 'error' => 'invalid_role'];
+        }
+
+        $allowed_notify = ['none', 'failures_only', 'milestones', 'daily_summary', 'weekly_summary'];
+        if (!in_array($notify_on, $allowed_notify, true)) {
+            $notify_on = 'none';
+        }
+
+        global $wpdb;
+        if (!$wpdb) {
+            return ['ok' => false, 'error' => 'db_unavailable'];
+        }
+
+        // Ensure required legacy tables exist (Installer is safe best-effort).
+        $invites_table = $wpdb->prefix . self::LEGACY_INVITES_TABLE_SLUG;
+        $participants_table = $wpdb->prefix . 'politeia_plan_participants';
+        $invites_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $invites_table)) === $invites_table);
+        $participants_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $participants_table)) === $participants_table);
+
+        if (!$invites_exists || !$participants_exists) {
+            if (class_exists('\\Politeia\\ReadingPlanner\\Installer')) {
+                try {
+                    \Politeia\ReadingPlanner\Installer::install();
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+            $invites_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $invites_table)) === $invites_table);
+            $participants_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $participants_table)) === $participants_table);
+        }
+
+        if (!$invites_exists || !$participants_exists) {
+            return ['ok' => false, 'error' => 'missing_invite_tables'];
+        }
+
+        // Plan ownership check.
+        $plans_table = $wpdb->prefix . 'politeia_plans';
+        $plan = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT id, user_id, name FROM {$plans_table} WHERE id = %d LIMIT 1",
+                $plan_id
+            ),
+            ARRAY_A
+        );
+        if (!$plan) {
+            return ['ok' => false, 'error' => 'plan_not_found'];
+        }
+        if ((int) ($plan['user_id'] ?? 0) !== $owner_user_id) {
+            return ['ok' => false, 'error' => 'forbidden'];
+        }
+
+        // Cannot invite yourself.
+        $owner = get_userdata($owner_user_id);
+        $owner_email = $owner ? PL_Partnership_Utils::normalize_email((string) $owner->user_email) : '';
+        $normalized_invitee_email = PL_Partnership_Utils::normalize_email($invitee_email);
+        if ($owner_email && $normalized_invitee_email === $owner_email) {
+            return ['ok' => false, 'error' => 'cannot_invite_owner'];
+        }
+
+        // Prevent inviting an already-active participant when we can resolve user_id.
+        $invitee_user = get_user_by('email', $invitee_email);
+        $invitee_user_id = $invitee_user ? (int) $invitee_user->ID : 0;
+        if ($invitee_user_id > 0) {
+            $already = false;
+
+            if (class_exists('PL_Partnerships_Repository') && method_exists('PL_Partnerships_Repository', 'get_object_partners')) {
+                try {
+                    $rows = PL_Partnerships_Repository::get_object_partners('reading_plan', $plan_id);
+                    foreach ((array) $rows as $row) {
+                        if (is_array($row) && (int) ($row['partner_user_id'] ?? 0) === $invitee_user_id && ($row['status'] ?? '') === 'active') {
+                            $already = true;
+                            break;
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+
+            $authoritative_partnerships = defined('PL_READING_PLANNER_PARTNERSHIPS_AUTHORITATIVE') && PL_READING_PLANNER_PARTNERSHIPS_AUTHORITATIVE;
+
+            if (!$already && !$authoritative_partnerships) {
+                $participants_has_revoked_at = PL_Partnership_Utils::invites_table_column_exists($participants_table, 'revoked_at');
+                $active_clause = $participants_has_revoked_at ? 'AND revoked_at IS NULL' : '';
+                $already = (bool) $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT 1 FROM {$participants_table} WHERE plan_id = %d AND user_id = %d AND role = %s {$active_clause} LIMIT 1",
+                        $plan_id,
+                        $invitee_user_id,
+                        $role
+                    )
+                );
+            }
+
+            if ($already) {
+                return ['ok' => false, 'error' => 'already_participant'];
+            }
+        }
+
+        $now = current_time('mysql');
+        $expires_at = gmdate('Y-m-d H:i:s', current_time('timestamp', true) + (7 * DAY_IN_SECONDS));
+
+        // Revoke any existing pending legacy invites for this exact object/email/role.
+        $invites_has_object_type = PL_Partnership_Utils::invites_table_column_exists($invites_table, 'object_type');
+        $invites_has_object_id = PL_Partnership_Utils::invites_table_column_exists($invites_table, 'object_id');
+        $invites_has_revoked_at = PL_Partnership_Utils::invites_table_column_exists($invites_table, 'revoked_at');
+
+        $revoked_fields = $invites_has_revoked_at
+            ? "status = %s, revoked_at = %s, updated_at = %s"
+            : "status = %s, updated_at = %s";
+
+        if ($invites_has_object_type && $invites_has_object_id) {
+            if ($invites_has_revoked_at) {
+                $wpdb->query(
+                    $wpdb->prepare(
+                        "UPDATE {$invites_table}
+                         SET {$revoked_fields}
+                         WHERE object_type = %s
+                           AND object_id = %d
+                           AND invitee_email = %s
+                           AND role = %s
+                           AND status = %s",
+                        'revoked',
+                        $now,
+                        $now,
+                        'reading_plan',
+                        $plan_id,
+                        $invitee_email,
+                        $role,
+                        'pending'
+                    )
+                );
+            } else {
+                $wpdb->query(
+                    $wpdb->prepare(
+                        "UPDATE {$invites_table}
+                         SET {$revoked_fields}
+                         WHERE object_type = %s
+                           AND object_id = %d
+                           AND invitee_email = %s
+                           AND role = %s
+                           AND status = %s",
+                        'revoked',
+                        $now,
+                        'reading_plan',
+                        $plan_id,
+                        $invitee_email,
+                        $role,
+                        'pending'
+                    )
+                );
+            }
+        } else {
+            // Backwards compat: use plan_id column only.
+            if ($invites_has_revoked_at) {
+                $wpdb->query(
+                    $wpdb->prepare(
+                        "UPDATE {$invites_table}
+                         SET {$revoked_fields}
+                         WHERE plan_id = %d
+                           AND invitee_email = %s
+                           AND role = %s
+                           AND status = %s",
+                        'revoked',
+                        $now,
+                        $now,
+                        $plan_id,
+                        $invitee_email,
+                        $role,
+                        'pending'
+                    )
+                );
+            } else {
+                $wpdb->query(
+                    $wpdb->prepare(
+                        "UPDATE {$invites_table}
+                         SET {$revoked_fields}
+                         WHERE plan_id = %d
+                           AND invitee_email = %s
+                           AND role = %s
+                           AND status = %s",
+                        'revoked',
+                        $now,
+                        $plan_id,
+                        $invitee_email,
+                        $role,
+                        'pending'
+                    )
+                );
+            }
+        }
+
+        // Create new legacy invite.
+        $token = bin2hex(random_bytes(32));
+        $token_hash = hash('sha256', $token);
+
+        $has_invitee_user_id = PL_Partnership_Utils::invites_table_column_exists($invites_table, 'invitee_user_id');
+        $has_notify_on = PL_Partnership_Utils::invites_table_column_exists($invites_table, 'notify_on');
+
+        $insert = [
+            'plan_id' => $plan_id,
+            'inviter_user_id' => $owner_user_id,
+            'invitee_email' => $invitee_email,
+            'invitee_user_id' => ($has_invitee_user_id && $invitee_user_id > 0) ? $invitee_user_id : null,
+            'role' => $role,
+            'status' => 'pending',
+            'token_hash' => $token_hash,
+            'expires_at' => $expires_at,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ];
+        $format = ['%d', '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s'];
+
+        if ($invites_has_object_type) {
+            $insert['object_type'] = 'reading_plan';
+            $format[] = '%s';
+        }
+        if ($invites_has_object_id) {
+            $insert['object_id'] = $plan_id;
+            $format[] = '%d';
+        }
+        if ($has_notify_on) {
+            $insert['notify_on'] = $notify_on;
+            $format[] = '%s';
+        }
+
+        $inserted = $wpdb->insert($invites_table, $insert, $format);
+        if (false === $inserted) {
+            return ['ok' => false, 'error' => 'invite_insert_failed', 'db_error' => (string) $wpdb->last_error];
+        }
+
+        $invite_id = (int) $wpdb->insert_id;
+
+        // Mirror to unified table (best-effort).
+        if (class_exists('PL_Partnership_Invite_Mirror')) {
+            PL_Partnership_Invite_Mirror::mirror_pending_invite('reading_plan', $plan_id, $invitee_email, $role, $token_hash, $expires_at, $owner_user_id);
+        }
+
+        PL_Partnership_Utils::debug_log('invite_created', [
+            'source' => 'reading_plan',
+            'object_type' => 'reading_plan',
+            'object_id' => $plan_id,
+            'role' => $role,
+            'email' => $invitee_email,
+            'expires_at' => $expires_at,
+        ]);
+
+        return [
+            'ok' => true,
+            'invite_id' => $invite_id,
+            'token' => $token,
+            'expires_at' => $expires_at,
+            'is_registered_user' => ($invitee_user_id > 0),
+        ];
+    }
+
+    private static function upsert_reading_plan_participant(int $plan_id, int $participant_user_id, string $role, string $notify_on, int $added_by_user_id): void
+    {
+        global $wpdb;
+        if (!$wpdb || $plan_id <= 0 || $participant_user_id <= 0) {
+            return;
+        }
+
+        $participants_table = $wpdb->prefix . 'politeia_plan_participants';
+        $participants_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $participants_table)) === $participants_table);
+        if (!$participants_exists) {
+            if (class_exists('\\Politeia\\ReadingPlanner\\Installer')) {
+                try {
+                    \Politeia\ReadingPlanner\Installer::install();
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+        }
+
+        $participants_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $participants_table)) === $participants_table);
+        if (!$participants_exists) {
+            return;
+        }
+
+        $role = sanitize_key($role ?: 'observer');
+        $notify_on = sanitize_key($notify_on ?: 'none');
+
+        $has_added_by = PL_Partnership_Utils::invites_table_column_exists($participants_table, 'added_by_user_id');
+        $has_added_at = PL_Partnership_Utils::invites_table_column_exists($participants_table, 'added_at');
+        $has_revoked_at = PL_Partnership_Utils::invites_table_column_exists($participants_table, 'revoked_at');
+
+        $columns = ['plan_id', 'user_id', 'role', 'notify_on'];
+        $placeholders = ['%d', '%d', '%s', '%s'];
+        $params = [$plan_id, $participant_user_id, $role, $notify_on];
+
+        if ($has_added_by) {
+            $columns[] = 'added_by_user_id';
+            $placeholders[] = '%d';
+            $params[] = (int) $added_by_user_id;
+        }
+        if ($has_added_at) {
+            $columns[] = 'added_at';
+            $placeholders[] = '%s';
+            $params[] = current_time('mysql');
+        }
+
+        $updates = [
+            'role = VALUES(role)',
+            'notify_on = VALUES(notify_on)',
+        ];
+        if ($has_added_by) {
+            $updates[] = 'added_by_user_id = VALUES(added_by_user_id)';
+        }
+        if ($has_added_at) {
+            $updates[] = 'added_at = VALUES(added_at)';
+        }
+        if ($has_revoked_at) {
+            $updates[] = 'revoked_at = NULL';
+        }
+
+        $sql = "INSERT INTO {$participants_table} (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ") ON DUPLICATE KEY UPDATE " . implode(', ', $updates);
+        $wpdb->query($wpdb->prepare($sql, $params));
     }
 
     /**

@@ -1620,3 +1620,11 @@ msgstr "Related Articles"
 #: modules/menu-management/includes/class-menu-manager.php:707
 msgid "Cerrar Sesión"
 msgstr "Log Out"
+
+#: modules/learni/templates/dashboard/main-dashboard.php:0
+msgid "PLANIFICADOR DE LECTURAS"
+msgstr "READING PLANNER"
+
+#: modules/navigation/includes/Navigation/NavEngine.php:0
+msgid "Planificador de Lecturas"
+msgstr "Reading Planner"

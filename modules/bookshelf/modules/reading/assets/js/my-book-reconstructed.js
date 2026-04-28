@@ -1,0 +1,5410 @@
+/* global PRS_BOOK, PRS_SESS, jQuery */
+
+window.PRS_isSaving = false;
+
+// Debug flag (safe no-op in production if left false)
+window.__PRS_DEBUG_COVER__ = Boolean(window.__PRS_DEBUG_COVER__);
+const PRS_STRINGS = (window.PRS_BOOK && window.PRS_BOOK.strings) || (window.PRS_LIBRARY && window.PRS_LIBRARY.strings) || {};
+const prsText = (key, fallback) => (PRS_STRINGS && PRS_STRINGS[key]) ? PRS_STRINGS[key] : fallback;
+const prsFormat = (key, fallback, value) => prsText(key, fallback).replace('%s', String(value)).replace('%d', String(value));
+
+/**
+ * Utilidades
+ */
+"use strict";
+
+var overlayConfirmed = false;
+var currentReturnButton = null;
+var currentBoughtContext = null;
+
+function resolveAjaxUrl() {
+  if (typeof window.ajaxurl === "string" && window.ajaxurl) {
+    return window.ajaxurl;
+  }
+  if (typeof window.PRS_BOOK?.ajax_url === "string" && window.PRS_BOOK.ajax_url) {
+    return window.PRS_BOOK.ajax_url;
+  }
+  if (typeof window.PRS_SR?.ajax_url === "string" && window.PRS_SR.ajax_url) {
+    return window.PRS_SR.ajax_url;
+  }
+  return "";
+}
+
+function getReadingNonce() {
+  const nonce = window.PRS_SR?.nonce;
+  return typeof nonce === "string" && nonce ? nonce : "";
+}
+
+var NOTE_DATA_HELPER = document.createElement("textarea");
+
+function encodeNoteDataAttr(value) {
+  let noteValue = value;
+  if (typeof noteValue !== "string") {
+    noteValue = noteValue === null || noteValue === undefined ? "" : String(noteValue);
+  }
+  NOTE_DATA_HELPER.textContent = noteValue;
+  return NOTE_DATA_HELPER.innerHTML;
+}
+
+function decodeNoteDataAttr(value) {
+  if (typeof value !== "string" || value === "") {
+    return "";
+  }
+  NOTE_DATA_HELPER.innerHTML = value;
+  return NOTE_DATA_HELPER.value;
+}
+
+function triggerReturnAction() {
+  if (!currentReturnButton || typeof currentReturnButton.__prsReturnHandler !== "function") {
+    currentReturnButton = null;
+    overlayConfirmed = false;
+    return Promise.resolve();
+  }
+
+  const handler = currentReturnButton.__prsReturnHandler;
+  currentReturnButton = null;
+
+  try {
+    const result = handler();
+    if (result && typeof result.finally === "function") {
+      return result.finally(() => {
+        overlayConfirmed = false;
+      });
+    }
+    overlayConfirmed = false;
+    return result;
+  } catch (err) {
+    overlayConfirmed = false;
+    throw err;
+  }
+}
+
+function openReturnOverlay(bookId, btnEl) {
+  currentReturnButton = btnEl || null;
+  const overlay = document.getElementById("return-overlay");
+
+  if (!overlay) {
+    if (currentReturnButton && typeof currentReturnButton.__prsReturnHandler === "function") {
+      overlayConfirmed = true;
+      const result = currentReturnButton.__prsReturnHandler();
+      if (result && typeof result.finally === "function") {
+        result.finally(() => {
+          overlayConfirmed = false;
+        });
+      } else {
+        overlayConfirmed = false;
+      }
+      if (result && typeof result.catch === "function") {
+        result.catch(() => {});
+      }
+    }
+    currentReturnButton = null;
+    return;
+  }
+
+  overlay.style.display = "flex";
+
+  const yesReturn = document.getElementById("return-overlay-yes");
+  const noReturn = document.getElementById("return-overlay-no");
+
+  if (!yesReturn || !noReturn) {
+    overlayConfirmed = true;
+    const action = triggerReturnAction();
+    if (action && typeof action.catch === "function") {
+      action.catch(() => {});
+    }
+    overlay.style.display = "none";
+    return;
+  }
+
+  yesReturn.replaceWith(yesReturn.cloneNode(true));
+  noReturn.replaceWith(noReturn.cloneNode(true));
+
+  const yes = document.getElementById("return-overlay-yes");
+  const no = document.getElementById("return-overlay-no");
+
+  yes.addEventListener("click", () => {
+    overlay.style.display = "none";
+    overlayConfirmed = true;
+    const action = triggerReturnAction();
+    if (action && typeof action.catch === "function") {
+      action.catch(() => {});
+    }
+  });
+
+  no.addEventListener("click", () => {
+    overlay.style.display = "none";
+    currentReturnButton = null;
+    overlayConfirmed = false;
+  });
+}
+
+function openBoughtOverlay(context) {
+  const overlay = document.getElementById("bought-overlay");
+  if (!overlay) {
+    if (context && typeof context.onConfirm === "function") {
+      context.onConfirm();
+    }
+    return;
+  }
+
+  const confirmBtn = document.getElementById("bought-overlay-confirm");
+  const cancelBtn = document.getElementById("bought-overlay-cancel");
+
+  if (!confirmBtn || !cancelBtn) {
+    overlay.style.display = "none";
+    if (context && typeof context.onConfirm === "function") {
+      context.onConfirm();
+    }
+    return;
+  }
+
+  overlay.style.display = "flex";
+  currentBoughtContext = context || null;
+
+  confirmBtn.replaceWith(confirmBtn.cloneNode(true));
+  cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+
+  const confirm = document.getElementById("bought-overlay-confirm");
+  const cancel = document.getElementById("bought-overlay-cancel");
+
+  confirm.addEventListener("click", () => {
+    overlay.style.display = "none";
+    if (currentBoughtContext && typeof currentBoughtContext.onConfirm === "function") {
+      currentBoughtContext.onConfirm();
+    }
+    currentBoughtContext = null;
+  });
+
+  cancel.addEventListener("click", () => {
+    overlay.style.display = "none";
+    if (currentBoughtContext && typeof currentBoughtContext.onCancel === "function") {
+      currentBoughtContext.onCancel();
+    }
+    currentBoughtContext = null;
+  });
+}
+
+document.addEventListener("click", e => {
+  const target = e.target;
+  if (target && target.classList && target.classList.contains("owning-return-shelf")) {
+    openReturnOverlay(target.dataset.bookId || "", target);
+  }
+});
+
+function setupFlashNoteToggle(root) {
+  const summary = root.querySelector("#prs-sr-summary");
+  const notePanel = root.querySelector("#prs-note-panel");
+  const addBtn = root.querySelector("#prs-add-note-btn");
+  const cancelBtn = root.querySelector("#prs-cancel-note-btn");
+  const saveBtn = root.querySelector("#prs-save-note-btn");
+  const flash = root.querySelector("#prs-sr-flash");
+  const editor = notePanel?.querySelector("#prs-note-editor");
+  const noteHeader = notePanel?.querySelector(".prs-note-header");
+  const sessionLabelEl = noteHeader?.querySelector(".prs-session-id");
+  const bookTitleEl = noteHeader?.querySelector(".prs-book-title strong")
+    || noteHeader?.querySelector(".prs-book-title");
+  const pageRangeEl = noteHeader?.querySelector(".prs-pages");
+  const flashInner = flash?.querySelector(".prs-sr-flash-inner");
+  const srContainer = root;
+  const defaultPlaceholder = editor
+    ? (editor.getAttribute("data-placeholder") || editor.getAttribute("placeholder") || "")
+    : "";
+  const limitWarning = notePanel?.querySelector(".note-limit-warning");
+  const MAX_NOTE_CHARACTERS = 3000;
+  let savedRange = null;
+  let lastValidEditorHtml = editor ? editor.innerHTML : "";
+  let lastValidSelection = null;
+
+  const applyEditorPlaceholder = placeholderText => {
+    if (!editor) {
+      return;
+    }
+    const text = typeof placeholderText === "string" ? placeholderText : "";
+    if (text) {
+      editor.setAttribute("data-placeholder", text);
+      editor.setAttribute("placeholder", text);
+      editor.setAttribute("aria-label", text);
+    } else {
+      editor.removeAttribute("data-placeholder");
+      editor.removeAttribute("placeholder");
+      editor.removeAttribute("aria-label");
+    }
+  };
+
+  const getEditorPlainText = () => {
+    if (!editor) {
+      return "";
+    }
+    return editor.textContent.replace(/\u00A0/g, " ");
+  };
+
+  const getEditorText = () =>
+    getEditorPlainText()
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const getEditorCharacterCount = () => {
+    if (!editor) {
+      return 0;
+    }
+    return getEditorPlainText().length;
+  };
+
+  const isEditorEmpty = () => getEditorText() === "";
+
+  const ensureEditorPlaceholder = () => {
+    if (!editor) {
+      return;
+    }
+    if (isEditorEmpty()) {
+      editor.innerHTML = "";
+    }
+  };
+
+  const clearEditor = () => {
+    if (!editor) {
+      return;
+    }
+    editor.innerHTML = "";
+    savedRange = null;
+    lastValidEditorHtml = "";
+    lastValidSelection = null;
+    if (limitWarning) {
+      limitWarning.style.display = "none";
+    }
+    ensureEditorPlaceholder();
+  };
+
+  const saveEditorSelection = () => {
+    if (!editor) {
+      savedRange = null;
+      return;
+    }
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      savedRange = null;
+      return;
+    }
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    if (container && !editor.contains(container) && editor !== container) {
+      savedRange = null;
+      return;
+    }
+    savedRange = range.cloneRange();
+  };
+
+  const restoreEditorSelection = () => {
+    if (!editor) {
+      return;
+    }
+    const selection = window.getSelection();
+    if (!selection) {
+      return;
+    }
+    selection.removeAllRanges();
+    if (savedRange) {
+      const range = savedRange.cloneRange();
+      selection.addRange(range);
+      savedRange = range.cloneRange();
+    } else {
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      selection.addRange(range);
+      savedRange = range.cloneRange();
+    }
+  };
+
+  const focusEditorAtEnd = () => {
+    if (!editor) {
+      return;
+    }
+    editor.focus({ preventScroll: true });
+    const selection = window.getSelection();
+    if (!selection) {
+      return;
+    }
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    savedRange = range.cloneRange();
+  };
+
+  const execEditorCommand = (command, value) => {
+    if (!editor) {
+      return;
+    }
+    editor.focus({ preventScroll: true });
+    restoreEditorSelection();
+    document.execCommand(command, false, typeof value === "undefined" ? null : value);
+    saveEditorSelection();
+    lastValidEditorHtml = editor.innerHTML;
+    lastValidSelection = savedRange ? savedRange.cloneRange() : null;
+    if (limitWarning) {
+      const count = getEditorCharacterCount();
+      limitWarning.style.display = count >= MAX_NOTE_CHARACTERS ? "block" : "none";
+    }
+  };
+
+  const bindToolbarCommand = (selector, command, value) => {
+    const button = notePanel?.querySelector(selector);
+    if (!button) {
+      return;
+    }
+    button.addEventListener("mousedown", event => {
+      event.preventDefault();
+    });
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      execEditorCommand(command, value);
+    });
+  };
+
+  const updateLimitWarning = count => {
+    if (!limitWarning) {
+      return;
+    }
+    if (count >= MAX_NOTE_CHARACTERS) {
+      limitWarning.style.display = "block";
+    } else {
+      limitWarning.style.display = "none";
+    }
+  };
+
+  if (editor) {
+    applyEditorPlaceholder(defaultPlaceholder);
+    ensureEditorPlaceholder();
+    ["keyup", "mouseup", "touchend"].forEach(evt => {
+      editor.addEventListener(evt, saveEditorSelection);
+    });
+    editor.addEventListener("input", () => {
+      ensureEditorPlaceholder();
+      const count = getEditorCharacterCount();
+      if (count > MAX_NOTE_CHARACTERS) {
+        editor.innerHTML = lastValidEditorHtml;
+        if (lastValidSelection) {
+          savedRange = lastValidSelection.cloneRange();
+          restoreEditorSelection();
+        } else {
+          focusEditorAtEnd();
+        }
+        updateLimitWarning(MAX_NOTE_CHARACTERS);
+        return;
+      }
+      updateLimitWarning(count);
+      lastValidEditorHtml = editor.innerHTML;
+      lastValidSelection = savedRange ? savedRange.cloneRange() : null;
+      saveEditorSelection();
+    });
+    editor.addEventListener("focus", () => {
+      ensureEditorPlaceholder();
+      saveEditorSelection();
+    });
+    editor.addEventListener("blur", () => {
+      ensureEditorPlaceholder();
+    });
+    updateLimitWarning(getEditorCharacterCount());
+    lastValidEditorHtml = editor.innerHTML;
+    lastValidSelection = savedRange ? savedRange.cloneRange() : null;
+    bindToolbarCommand('.tool-button[data-command="bold"]', 'bold');
+    bindToolbarCommand('.tool-button[data-command="italic"]', 'italic');
+    bindToolbarCommand('.tool-button[data-command="bullet"]', 'insertUnorderedList');
+  }
+
+  const normalizeString = value => (typeof value === "string" ? value.trim() : "");
+  const normalizeValue = value => {
+    if (value === null || value === undefined) {
+      return "";
+    }
+    return typeof value === "string" ? value.trim() : String(value).trim();
+  };
+  const globalBookTitle = normalizeString(window.PRS_BOOK?.title);
+  let defaultBookTitle = noteHeader ? normalizeString(noteHeader.dataset?.defaultTitle) : "";
+  let storedBookTitle = noteHeader ? normalizeString(noteHeader.dataset?.bookTitle) : "";
+  let labelPrefix = noteHeader ? normalizeString(noteHeader.dataset?.labelPrefix) : "";
+  let defaultSessionLabel = noteHeader ? normalizeString(noteHeader.dataset?.defaultSessionLabel) : "";
+  let defaultPageRange = noteHeader ? normalizeString(noteHeader.dataset?.defaultPageRange) : "";
+
+  if (!defaultBookTitle && bookTitleEl) {
+    defaultBookTitle = normalizeString(bookTitleEl.textContent || "");
+  }
+  if (!storedBookTitle) {
+    storedBookTitle = defaultBookTitle || normalizeString(globalBookTitle);
+  }
+  if (!labelPrefix) {
+    labelPrefix = "SESSION";
+  }
+  if (!defaultSessionLabel) {
+    defaultSessionLabel = labelPrefix ? `${labelPrefix} —` : "SESSION —";
+  }
+  if (!defaultPageRange) {
+    defaultPageRange = "— · —";
+  }
+
+  if (noteHeader) {
+    if (defaultBookTitle) {
+      noteHeader.dataset.defaultTitle = defaultBookTitle;
+    }
+    if (storedBookTitle) {
+      noteHeader.dataset.bookTitle = storedBookTitle;
+    }
+    noteHeader.dataset.labelPrefix = labelPrefix;
+    noteHeader.dataset.defaultSessionLabel = defaultSessionLabel;
+    noteHeader.dataset.defaultPageRange = defaultPageRange;
+  }
+
+  const updateNoteContext = detail => {
+    if (!noteHeader) {
+      return;
+    }
+
+    const detailTitle = normalizeString(detail?.bookTitle);
+    if (detailTitle) {
+      storedBookTitle = detailTitle;
+      noteHeader.dataset.bookTitle = detailTitle;
+    }
+
+    const fallbackTitle = storedBookTitle
+      || defaultBookTitle
+      || normalizeString(noteHeader?.dataset?.bookTitle)
+      || globalBookTitle
+      || "";
+    const bookTitle = detailTitle || fallbackTitle;
+
+    if (!storedBookTitle && bookTitle) {
+      storedBookTitle = bookTitle;
+      noteHeader.dataset.bookTitle = bookTitle;
+    }
+    if (!defaultBookTitle && bookTitle) {
+      defaultBookTitle = bookTitle;
+      noteHeader.dataset.defaultTitle = bookTitle;
+    }
+
+    if (bookTitleEl) {
+      setText(bookTitleEl, bookTitle || defaultBookTitle || "");
+    }
+
+    const startTextRaw = normalizeValue(detail?.startPage);
+    const endTextRaw = normalizeValue(detail?.endPage);
+    const startText = startTextRaw !== "" ? startTextRaw : "—";
+    const endText = endTextRaw !== "" ? endTextRaw : "—";
+    const hasRange = startTextRaw !== "" || endTextRaw !== "";
+    const rangeText = hasRange ? `${startText} · ${endText}` : defaultPageRange;
+
+    if (pageRangeEl) {
+      setText(pageRangeEl, rangeText || defaultPageRange);
+    }
+
+    const sessionNumberRaw = normalizeValue(detail?.sessionNumber);
+    const sessionIdRaw = normalizeValue(detail?.sessionId);
+    const prefix = labelPrefix || "SESSION";
+    const sessionValue = sessionNumberRaw || sessionIdRaw;
+    const sessionText = sessionValue ? `${prefix} ${sessionValue}` : defaultSessionLabel;
+
+    if (sessionLabelEl) {
+      setText(sessionLabelEl, sessionText || defaultSessionLabel);
+    }
+  };
+
+  if (!summary || !notePanel || !addBtn || !cancelBtn || !saveBtn) {
+    return;
+  }
+
+  const dispatch = (name, detail) => {
+    document.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
+  };
+
+  const isNoteOnlyMode = mode => mode === "edit" || mode === "read" || mode === "table";
+
+  const applyNoteOnlyMode = mode => {
+    const noteOnly = isNoteOnlyMode(mode);
+    if (srContainer) {
+      srContainer.classList.toggle("prs-note-only", noteOnly);
+    }
+    if (flash) {
+      flash.classList.toggle("prs-note-only", noteOnly);
+    }
+    if (flashInner) {
+      flashInner.style.minHeight = "";
+    }
+    return noteOnly;
+  };
+
+  const resetNoteLayout = () => {
+    summary.style.display = "";
+    notePanel.style.display = "none";
+    addBtn.setAttribute("aria-expanded", "false");
+    applyNoteOnlyMode("");
+    if (editor) {
+      clearEditor();
+      applyEditorPlaceholder(defaultPlaceholder);
+    }
+    if (flash) {
+      delete flash.dataset.noteMode;
+    }
+    updateNoteContext();
+  };
+
+  function showSummary(options = {}) {
+    const currentMode = flash?.dataset?.noteMode || "";
+    const wasNoteOnly = isNoteOnlyMode(currentMode);
+
+    summary.style.display = "";
+    notePanel.style.display = "none";
+    addBtn.setAttribute("aria-expanded", "false");
+    applyNoteOnlyMode("");
+    if (flash) {
+      delete flash.dataset.noteMode;
+    }
+
+    updateNoteContext();
+
+    if (wasNoteOnly) {
+      if (options.userAction) {
+        document.dispatchEvent(new CustomEvent("prs-session-modal:close"));
+      }
+      return;
+    }
+
+    if (options.userAction) {
+      dispatch("prs-sr-flash:closeNote", { delay: 2000 });
+      addBtn.focus();
+    }
+  }
+
+  function showNote(options = {}) {
+    updateNoteContext(options.contextDetail);
+    summary.style.display = "none";
+    notePanel.style.display = "block";
+    addBtn.setAttribute("aria-expanded", "true");
+    let activeMode = "";
+    if (flash) {
+      if (typeof options.mode === "string" && options.mode) {
+        flash.dataset.noteMode = options.mode;
+      } else if (!flash.dataset.noteMode) {
+        flash.dataset.noteMode = "create";
+      }
+      activeMode = flash.dataset.noteMode;
+    }
+    applyNoteOnlyMode(activeMode);
+    dispatch("prs-sr-flash:openNote");
+    const shouldFocus = options.focus !== false;
+    if (shouldFocus) {
+      window.requestAnimationFrame(() => {
+        focusEditorAtEnd();
+      });
+    }
+  }
+
+  addBtn.addEventListener("click", event => {
+    event.preventDefault();
+    showNote({ focus: true, mode: "create" });
+  });
+
+  cancelBtn.addEventListener("click", event => {
+    event.preventDefault();
+    showSummary({ userAction: true });
+  });
+
+  document.addEventListener("prs-sr-flash:showNoteEditor", event => {
+    const detail = event?.detail || {};
+    if (flash && detail?.bookId && flash.dataset?.bookId && String(detail.bookId) !== String(flash.dataset.bookId)) {
+      return;
+    }
+    if (editor) {
+      const noteHtml = typeof detail.note === "string" ? detail.note : "";
+      if (noteHtml) {
+        editor.innerHTML = noteHtml;
+      } else {
+        clearEditor();
+      }
+      const placeholderText = typeof detail.placeholder === "string" && detail.placeholder
+        ? detail.placeholder
+        : defaultPlaceholder;
+      applyEditorPlaceholder(placeholderText);
+      ensureEditorPlaceholder();
+      savedRange = null;
+      if (noteHtml) {
+        updateLimitWarning(getEditorCharacterCount());
+        lastValidEditorHtml = editor.innerHTML;
+        lastValidSelection = null;
+      }
+    }
+    const mode = typeof detail.mode === "string" && detail.mode ? detail.mode : "edit";
+    showNote({ focus: detail.focus !== false, mode, contextDetail: detail });
+  });
+
+  let isSavingNote = false;
+
+  saveBtn.addEventListener("click", event => {
+    event.preventDefault();
+    if (isSavingNote) {
+      return;
+    }
+
+    if (!editor) {
+      window.alert(prsText("note_required", "Please write a note before saving."));
+      return;
+    }
+
+    ensureEditorPlaceholder();
+    if (isEditorEmpty()) {
+      window.alert(prsText("note_required", "Please write a note before saving."));
+      focusEditorAtEnd();
+      return;
+    }
+
+    const noteContent = editor.innerHTML.trim();
+
+    const rsId = flash?.dataset?.sessionId || "";
+    const bookId = flash?.dataset?.bookId || "";
+    const userId = flash?.dataset?.userId || "";
+
+    if (!rsId || rsId === "0" || !bookId || !userId) {
+      window.alert(prsText("note_missing_details", "Missing session details. Please try again."));
+      return;
+    }
+
+    const ajaxUrl = resolveAjaxUrl();
+    if (!ajaxUrl) {
+      console.error("[Politeia] Missing ajax URL for saving session note");
+      window.alert(prsText("note_unavailable", "Unable to save the note right now. Please refresh the page and try again."));
+      return;
+    }
+
+    const nonce = getReadingNonce();
+    if (!nonce) {
+      window.alert(prsText("note_missing_nonce", "Unable to save the note because the session security token is missing. Please refresh the page and try again."));
+      return;
+    }
+
+    const payload = {
+      action: "politeia_save_session_note",
+      rs_id: rsId,
+      book_id: bookId,
+      user_book_id: window.PRS_BOOK?.user_book_id ? String(window.PRS_BOOK.user_book_id) : "",
+      user_id: userId,
+      note: noteContent,
+      nonce,
+    };
+
+    isSavingNote = true;
+    saveBtn.disabled = true;
+    saveBtn.setAttribute("aria-busy", "true");
+
+    jQuery.post(ajaxUrl, payload)
+      .done(response => {
+        if (response && response.success) {
+          window.alert(prsText("note_saved", "✅ Note saved successfully!"));
+          
+          // Hide the session recorder
+          const sessionRecorder = document.querySelector('.prs-sr');
+          if (sessionRecorder) {
+            sessionRecorder.style.display = 'none';
+          }
+          
+          // Refresh the page to show updated data
+          window.location.reload();
+        } else {
+          const errorData = response && response.data ? response.data : null;
+          const message = typeof errorData === "string"
+            ? errorData
+            : (errorData && typeof errorData.message === "string" ? errorData.message : prsText("unknown_error", "Unknown error"));
+          window.alert(prsFormat("note_save_failed_prefix", "⚠️ Failed to save note: %s", message));
+        }
+      })
+      .fail(() => {
+        window.alert(prsText("note_ajax_failed", "❌ AJAX request failed — check console."));
+      })
+      .always(() => {
+        isSavingNote = false;
+        saveBtn.disabled = false;
+        saveBtn.removeAttribute("aria-busy");
+      });
+  });
+
+  document.addEventListener("prs-sr-flash:reset", () => {
+    showSummary({ userAction: false });
+  });
+
+  document.addEventListener("prs-session-modal:close", () => {
+    resetNoteLayout();
+  });
+}
+
+document.querySelectorAll(".prs-sr").forEach((root) => {
+  setupFlashNoteToggle(root);
+});
+
+function setupReadNoteButtons() {
+  const flash = document.getElementById("prs-sr-flash");
+  if (!flash) {
+    return;
+  }
+
+  const assignDataset = detail => {
+    if (!flash) {
+      return;
+    }
+    if (typeof detail.bookId !== "undefined" && detail.bookId !== null && detail.bookId !== "") {
+      flash.dataset.bookId = String(detail.bookId);
+    }
+    if (typeof detail.userId !== "undefined" && detail.userId !== null && detail.userId !== "") {
+      flash.dataset.userId = String(detail.userId);
+    }
+    flash.dataset.sessionId = detail.sessionId ? String(detail.sessionId) : "";
+    if (typeof detail.sessionNumber !== "undefined" && detail.sessionNumber !== null && detail.sessionNumber !== "") {
+      flash.dataset.sessionNumber = String(detail.sessionNumber);
+    } else {
+      delete flash.dataset.sessionNumber;
+    }
+    if (typeof detail.bookTitle === "string") {
+      flash.dataset.bookTitle = detail.bookTitle;
+    }
+    if (Object.prototype.hasOwnProperty.call(detail, "startPage")) {
+      const startValue = detail.startPage === null || detail.startPage === undefined
+        ? ""
+        : String(detail.startPage);
+      flash.dataset.startPage = startValue;
+    }
+    if (Object.prototype.hasOwnProperty.call(detail, "endPage")) {
+      const endValue = detail.endPage === null || detail.endPage === undefined
+        ? ""
+        : String(detail.endPage);
+      flash.dataset.endPage = endValue;
+    }
+    if (typeof detail.chapter === "string") {
+      flash.dataset.chapter = detail.chapter;
+    }
+    if (detail.mode) {
+      flash.dataset.noteMode = detail.mode;
+    }
+  };
+
+  document.addEventListener("click", event => {
+    const btn = event.target?.closest?.(".prs-sr-read-note-btn");
+    if (!btn) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const getDataValue = value => (typeof value === "string" ? value.trim() : "");
+    const sessionId = btn.dataset.sessionId ? String(btn.dataset.sessionId) : "";
+    const sessionNumber = btn.dataset.sessionNumber ? String(btn.dataset.sessionNumber) : "";
+    const bookId = btn.dataset.bookId ? String(btn.dataset.bookId) : (flash.dataset?.bookId || "");
+    const userId = btn.dataset.userId ? String(btn.dataset.userId) : (flash.dataset?.userId || "");
+    const noteRaw = typeof btn.dataset.note === "string" ? btn.dataset.note : "";
+    const noteHtml = decodeNoteDataAttr(noteRaw);
+    const startPage = getDataValue(btn.dataset.startPage);
+    const endPage = getDataValue(btn.dataset.endPage);
+    const chapter = getDataValue(btn.dataset.chapter);
+    const fallbackBookTitle = typeof window.PRS_BOOK?.title === "string" ? window.PRS_BOOK.title.trim() : "";
+    const buttonBookTitle = getDataValue(btn.dataset.bookTitle);
+    const bookTitle = buttonBookTitle || fallbackBookTitle;
+
+  if (!sessionId) {
+    window.alert(prsText("note_missing_session_id", "Unable to load this session note because the session identifier is missing."));
+    return;
+  }
+
+    document.dispatchEvent(new CustomEvent("prs-session-modal:open", {
+      detail: {
+        source: "read-note",
+        focusClose: false,
+      },
+    }));
+
+    const noteMode = "table";
+    assignDataset({ sessionId, sessionNumber, bookId, userId, mode: noteMode, startPage, endPage, chapter, bookTitle });
+
+    document.dispatchEvent(new CustomEvent("prs-sr-flash:showNoteForSession", {
+      detail: {
+        sessionId,
+        sessionNumber,
+        bookId,
+        userId,
+        note: noteHtml,
+        focus: true,
+        mode: noteMode,
+        startPage,
+        endPage,
+        chapter,
+        bookTitle,
+      },
+    }));
+  });
+}
+
+setupReadNoteButtons();
+
+// ---------- Helpers ----------
+function qs(sel, root) { return (root || document).querySelector(sel); }
+function qsa(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+
+function setText(el, txt) { if (el) el.textContent = txt; }
+function show(el) { if (el) el.style.display = ""; }
+function hide(el) { if (el) el.style.display = "none"; }
+
+function prsNormalizeCoverUrl(url) {
+  if (!url || typeof url !== "string") return "";
+
+  let normalized = url.replace(/\\\//g, "/").trim();
+  const forceHttp = window.PRS_BOOK && String(window.PRS_BOOK.force_http_covers) === "1";
+  if (forceHttp) {
+    normalized = normalized.replace(/^https:\/\//i, "http://");
+  } else {
+    normalized = normalized.replace(/^http:\/\//i, "https://");
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    const isGoogleBooks = parsed.hostname.includes("books.google")
+      && parsed.pathname.includes("/books/content");
+    if (isGoogleBooks) {
+      if (!parsed.searchParams.has("zoom")) {
+        parsed.searchParams.set("zoom", "3");
+      }
+      if (!parsed.searchParams.has("img")) {
+        parsed.searchParams.set("img", "1");
+      }
+      normalized = parsed.toString();
+    }
+  } catch (e) {
+    // ignore malformed URLs; fall back to normalized string
+  }
+
+  return normalized;
+}
+
+function prsPreloadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(src);
+    img.onerror = () => reject(new Error("Image failed to load: " + src));
+    img.src = src;
+  });
+}
+
+function prsCoverLog(...args) {
+  if (window.__PRS_DEBUG_COVER__) {
+    console.log("[PRS Cover]", ...args);
+  }
+}
+
+function attachCoverImgGuards() {
+  if (typeof jQuery !== "function") {
+    return;
+  }
+
+  const $img = jQuery("#prs-cover-img");
+  if (!$img.length) {
+    return;
+  }
+
+  $img.off("load.prs error.prs")
+    .on("load.prs", function () {
+      prsCoverLog("IMG load ok:", this.src, `${this.naturalWidth}x${this.naturalHeight}`);
+      jQuery("#prs-cover-frame").attr("data-cover-state", "image").addClass("has-image");
+      jQuery("#prs-book-cover-figure").removeClass("is-placeholder");
+    })
+    .on("error.prs", function () {
+      prsCoverLog("IMG load error for:", this.src);
+    });
+}
+
+function getNormalizedOwningValue(select) {
+  if (!select) return "";
+  let value = "";
+  if (typeof select.value !== "undefined") {
+    value = String(select.value || "").trim();
+  }
+  if (!value) {
+    const dataCurrent = select.getAttribute("data-current-value")
+      || (select.dataset ? select.dataset.currentValue : "");
+    if (dataCurrent) {
+      value = String(dataCurrent).trim();
+    }
+  }
+  if (!value) {
+    const dataStored = select.getAttribute("data-stored-status")
+      || (select.dataset ? select.dataset.storedStatus : "");
+    if (dataStored) {
+      value = String(dataStored).trim();
+    }
+  }
+  return value || "in_shelf";
+}
+
+function findRelatedReadingSelect(owningSelect) {
+  if (!owningSelect) return null;
+  const row = owningSelect.closest && owningSelect.closest("tr");
+  if (row) {
+    const rowReading = row.querySelector(".reading-status-select");
+    if (rowReading) {
+      return rowReading;
+    }
+  }
+  return document.getElementById("reading-status-select");
+}
+
+function toggleReadingStatusLock(owningSelect) {
+  if (!owningSelect) return;
+  const readingSelect = findRelatedReadingSelect(owningSelect);
+  if (!readingSelect) return;
+
+  const owningValue = getNormalizedOwningValue(owningSelect);
+  const isBorrowRelated = owningValue === "borrowing" || owningValue === "borrowed";
+  const isSold = owningValue === "sold";
+  const isLost = owningValue === "lost";
+  const shouldDisable = isBorrowRelated || isSold || isLost;
+
+  const lostText = readingSelect.getAttribute("data-disabled-text-lost")
+    || prsText("disabled_lost", "Disabled while this book is lost.");
+  const defaultDisabledText = readingSelect.getAttribute("data-disabled-text")
+    || prsText("disabled_borrowed", "Disabled while this book is being borrowed.");
+  const disabledText = isLost ? lostText : defaultDisabledText;
+
+  if (shouldDisable) {
+    if (!readingSelect.disabled) {
+      readingSelect.disabled = true;
+    }
+    readingSelect.classList.add("is-disabled");
+    readingSelect.setAttribute("aria-disabled", "true");
+    if (disabledText) {
+      readingSelect.title = disabledText;
+    }
+  } else {
+    if (readingSelect.disabled) {
+      readingSelect.disabled = false;
+    }
+    readingSelect.classList.remove("is-disabled");
+    readingSelect.setAttribute("aria-disabled", "false");
+    readingSelect.title = "";
+  }
+}
+
+function toggleReadingStatusLockForAll() {
+  qsa(".owning-status-select").forEach(toggleReadingStatusLock);
+  const singleSelect = document.getElementById("owning-status-select");
+  if (singleSelect) {
+    toggleReadingStatusLock(singleSelect);
+  }
+}
+
+function normalizeOwningState(value) {
+  const raw = (value || "").trim();
+  if (!raw || raw === "in_shelf") {
+    return "in_shelf";
+  }
+  return raw;
+}
+
+var POLITEIA_TRANSITIONS = {
+  in_shelf: ["", "in_shelf", "borrowing", "sold", "lost"],
+  borrowing: ["", "in_shelf", "borrowing", "sold", "lost"],
+  borrowed: ["", "in_shelf", "borrowed"],
+  sold: ["sold", "bought"],
+  bought: ["", "in_shelf"],
+  lost: ["", "in_shelf", "lost"],
+};
+
+function filterOwningOptions(selectEl, currentState) {
+  if (!selectEl) return;
+  const normalized = normalizeOwningState(currentState);
+  const allowed = POLITEIA_TRANSITIONS[normalized] || [];
+  const fallback = allowed.length ? allowed : [selectEl.value];
+
+  selectEl.querySelectorAll("option").forEach(opt => {
+    const value = (opt.value || "").trim();
+    const isAllowed = fallback.includes(value);
+    opt.disabled = !isAllowed;
+    opt.style.display = isAllowed ? "" : "none";
+  });
+}
+
+function applyOwningOptionFilters() {
+  qsa(".owning-status-select").forEach(sel => {
+    const current = sel.value
+      || sel.getAttribute("data-current-value")
+      || sel.getAttribute("data-stored-status")
+      || "";
+    filterOwningOptions(sel, current);
+  });
+
+  const singleSelect = document.getElementById("owning-status-select");
+  if (singleSelect) {
+    const currentState = getNormalizedOwningValue(singleSelect);
+    filterOwningOptions(singleSelect, currentState);
+  }
+}
+
+function setStatus(el, msg, ok = true, ttl = 2000) {
+  if (!el) return;
+  el.textContent = msg || "";
+  el.style.color = ok ? "#2f6b2f" : "#b00020";
+  if (ttl > 0) {
+    setTimeout(() => { el.textContent = ""; }, ttl);
+  }
+}
+
+function escapeHtml(str) {
+  if (typeof str !== "string") return "";
+  return str.replace(/[&<>"']/g, ch => {
+    switch (ch) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case '"': return "&quot;";
+      case "'": return "&#39;";
+      default: return ch;
+    }
+  });
+}
+
+function formatOwningDate(raw) {
+  if (!raw && raw !== 0) {
+    return "";
+  }
+  const value = String(raw).trim();
+  if (!value) {
+    return "";
+  }
+  if (value.includes("T")) {
+    return value.split("T")[0];
+  }
+  if (value.includes(" ")) {
+    return value.split(" ")[0];
+  }
+  return value;
+}
+
+function formatOwningAmount(raw) {
+  if (raw === null || typeof raw === "undefined") {
+    return "";
+  }
+  const value = String(raw).trim();
+  if (!value) {
+    return "";
+  }
+  const digits = value.replace(/[^0-9.,-]/g, "");
+  if (!digits) {
+    return "";
+  }
+  const normalized = digits.replace(/\./g, "").replace(/,/g, ".");
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || Number.isNaN(amount)) {
+    return "";
+  }
+  return amount.toLocaleString("es-CL");
+}
+
+function formatAuthorName(raw) {
+  if (typeof raw !== "string") return "";
+
+  const normalized = raw.replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  if (/et al\.?$/i.test(normalized)) {
+    return normalized;
+  }
+
+  const altDelimiters = [
+    /\s+and\s+/i,
+    /\s*&\s*/,
+    /\s*\/\s*/,
+    /\s*·\s*/,
+    /\s*•\s*/,
+    /\s*;\s*/,
+  ];
+
+  for (const delim of altDelimiters) {
+    if (delim.test(normalized)) {
+      const parts = normalized.split(delim).map(part => part.trim()).filter(Boolean);
+      if (parts.length > 1) {
+        return `${parts[0]} et al`;
+      }
+    }
+  }
+
+  if (normalized.includes(",")) {
+    const parts = normalized.split(",").map(part => part.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      const suffixPattern = /^(?:Jr|Sr|II|III|IV|V|VI|VII|VIII|IX|X)\.?$/i;
+      let [firstPart, ...rest] = parts;
+      let firstAuthor = firstPart;
+
+      if (firstAuthor && !/\s/.test(firstAuthor) && rest.length) {
+        const potentialGiven = rest[0];
+        if (potentialGiven && /^(?:[A-Za-z\u00C0-\u017F]+(?:[\s-][A-Za-z\u00C0-\u017F.]+)*)$/.test(potentialGiven) && !suffixPattern.test(potentialGiven)) {
+          firstAuthor = `${firstAuthor}, ${potentialGiven}`;
+          rest = rest.slice(1);
+        }
+      }
+
+      if (rest.length && suffixPattern.test(rest[0])) {
+        firstAuthor = `${firstAuthor}, ${rest[0]}`;
+        rest = rest.slice(1);
+      }
+
+      if (rest.length > 0) {
+        return `${firstAuthor} et al`;
+      }
+
+      return firstAuthor;
+    }
+  }
+
+  return normalized;
+}
+
+function ajaxPost(url, data) {
+  return fetch(url, {
+    method: "POST",
+    body: data,
+    credentials: "same-origin",
+  }).then(r => r.json());
+}
+
+function num(val, defVal = 0) {
+  const n = parseInt(val, 10);
+  return Number.isFinite(n) ? n : defVal;
+}
+
+function setupCoverPlaceholder() {
+  const titlePlaceholder = qs("#prs-book-title-placeholder");
+  const authorPlaceholder = qs("#prs-book-author-placeholder");
+  if (!titlePlaceholder || !authorPlaceholder) return;
+
+  const hasCover = qs("#prs-book-cover-figure img");
+  if (hasCover) return;
+
+  const domTitle = qs(".prs-book-title__text") || qs(".prs-book-title");
+  const domAuthor = qs(".prs-book-author");
+
+  const localizedTitle = (window.PRS_BOOK && typeof PRS_BOOK.title === "string") ? PRS_BOOK.title.trim() : "";
+  let localizedAuthor = "";
+  if (window.PRS_BOOK) {
+    if (Array.isArray(PRS_BOOK.authors)) {
+      localizedAuthor = PRS_BOOK.authors.filter(Boolean).join(", ").trim();
+    } else if (typeof PRS_BOOK.authors === "string") {
+      localizedAuthor = PRS_BOOK.authors.trim();
+    }
+  }
+
+  const sourceTitle = domTitle && domTitle.textContent ? domTitle.textContent.trim() : localizedTitle;
+  const sourceAuthor = domAuthor && domAuthor.textContent ? domAuthor.textContent.trim() : localizedAuthor;
+
+  if (sourceTitle) {
+    titlePlaceholder.textContent = sourceTitle;
+  }
+
+  if (sourceAuthor) {
+    const formattedAuthor = formatAuthorName(sourceAuthor);
+    if (formattedAuthor) {
+      authorPlaceholder.textContent = formattedAuthor;
+    }
+  }
+}
+
+// ---------- Edición: Pages ----------
+function setupPages() {
+  const wrap = qs("#fld-pages");
+  if (!wrap) return;
+
+  const view = qs("#pages-view", wrap);
+  const editBtn = qs("#pages-edit", wrap);
+  const input = qs("#pages-input", wrap);
+  const hint = qs("#pages-hint", wrap);
+
+  if (!view || !editBtn || !input) {
+    return;
+  }
+
+  const ajaxUrl = (typeof window.ajaxurl === "string" && window.ajaxurl)
+    || (window.PRS_BOOK && PRS_BOOK.ajax_url)
+    || "";
+  const nonce = (window.PRS_BOOK && PRS_BOOK.nonce) || "";
+  const bookId = (window.PRS_BOOK && PRS_BOOK.user_book_id) ? parseInt(PRS_BOOK.user_book_id, 10) : 0;
+  const defaultHint = hint ? hint.textContent.trim() : "";
+
+  function normalizeValue(raw) {
+    const trimmed = (raw || "").trim();
+    return trimmed === "—" ? "" : trimmed;
+  }
+
+  function displayValue(val) {
+    return val ? String(val) : "—";
+  }
+
+  function openEditor() {
+    view.style.display = "none";
+    editBtn.style.display = "none";
+    input.style.display = "inline-block";
+    input.value = originalValue || "";
+    if (hint) {
+      hint.style.display = "none";
+      hint.textContent = defaultHint;
+    }
+    setTimeout(() => {
+      input.focus();
+      input.select && input.select();
+    }, 0);
+  }
+
+  function closeEditor() {
+    view.style.display = "";
+    editBtn.style.display = "";
+    input.style.display = "none";
+    if (hint) {
+      hint.style.display = "none";
+      hint.textContent = defaultHint;
+    }
+  }
+
+  function setHint(message, autoHideDelay) {
+    if (!hint) return;
+    hint.textContent = message;
+    hint.style.display = "block";
+    if (autoHideDelay) {
+      setTimeout(() => {
+        hint.style.display = "none";
+        hint.textContent = defaultHint;
+      }, autoHideDelay);
+    }
+  }
+
+  function toggleHintForChange() {
+    if (!hint) return;
+    const current = normalizeValue(input.value);
+    if (current !== originalValue) {
+      hint.textContent = defaultHint || prsText("press_enter_to_save", "Press Enter to save");
+      hint.style.display = "block";
+    } else {
+      hint.style.display = "none";
+      hint.textContent = defaultHint;
+    }
+  }
+
+  function handleError(msg) {
+    setHint(msg || prsText("pages_error", "Error saving pages."));
+  }
+
+  function saveValue(newValue) {
+    if (!ajaxUrl || !bookId) {
+      handleError(prsText("pages_error", "Error saving pages."));
+      return;
+    }
+
+    const numeric = parseInt(newValue, 10);
+    if (!Number.isFinite(numeric) || numeric < 1) {
+      handleError(prsText("pages_too_small", "Please enter a number greater than zero."));
+      return;
+    }
+
+    const stringValue = String(numeric);
+    const payload = {
+      action: "prs_update_pages",
+      book_id: String(bookId),
+      pages: stringValue,
+    };
+    if (nonce) {
+      payload.nonce = nonce;
+    }
+
+    setHint(prsText("status_saving", "Saving..."));
+    input.disabled = true;
+
+    const jq = window.jQuery;
+    const onDone = (json) => {
+      const resp = (json && typeof json === "object" && Object.prototype.hasOwnProperty.call(json, "success")) ? json : null;
+
+      if (!resp || !resp.success) {
+        const message = resp && resp.data && resp.data.message ? resp.data.message : prsText("pages_error", "Error saving pages.");
+        handleError(message);
+        input.disabled = false;
+        return;
+      }
+
+      const savedValue = resp && resp.data && resp.data.pages ? String(resp.data.pages) : stringValue;
+      originalValue = savedValue;
+      view.textContent = displayValue(originalValue);
+      closeEditor();
+      setHint(prsText("pages_saved", "Saved!"), 1200);
+      input.disabled = false;
+    };
+
+    const onFail = () => {
+      handleError(prsText("pages_error", "Error saving pages."));
+      input.disabled = false;
+    };
+
+    if (jq && typeof jq.post === "function") {
+      jq.post(ajaxUrl, payload)
+        .done(onDone)
+        .fail(onFail);
+    } else {
+      const fd = new FormData();
+      Object.keys(payload).forEach(key => fd.append(key, payload[key]));
+      ajaxPost(ajaxUrl, fd)
+        .then(onDone)
+        .catch(onFail);
+    }
+  }
+
+  let originalValue = normalizeValue(view.textContent);
+  if (!input.value) {
+    input.value = originalValue || "";
+  }
+
+  editBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    openEditor();
+  });
+
+  input.addEventListener("input", () => {
+    toggleHintForChange();
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const candidate = normalizeValue(input.value);
+      if (!candidate || candidate === originalValue) {
+        return;
+      }
+      e.preventDefault();
+      saveValue(candidate);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      input.value = originalValue || "";
+      closeEditor();
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    if (normalizeValue(input.value) === originalValue) {
+      closeEditor();
+    }
+  });
+}
+
+// ---------- Edición: ISBN ----------
+function setupIsbn() {
+  const wrap = qs("#fld-isbn");
+  if (!wrap) return;
+
+  const view = qs("#isbn-view", wrap);
+  const editBtn = qs("#isbn-edit", wrap);
+  const input = qs("#isbn-input", wrap);
+  const hint = qs("#isbn-hint", wrap);
+
+  if (!view || !editBtn || !input) {
+    return;
+  }
+
+  const ajaxUrl = (typeof window.ajaxurl === "string" && window.ajaxurl)
+    || (window.PRS_BOOK && PRS_BOOK.ajax_url)
+    || "";
+  const nonce = (window.PRS_BOOK && PRS_BOOK.nonce) || "";
+  const userBookId = (window.PRS_BOOK && PRS_BOOK.user_book_id) ? parseInt(PRS_BOOK.user_book_id, 10) : 0;
+  const defaultHint = hint ? hint.textContent.trim() : "";
+
+  function normalizeValue(raw) {
+    const trimmed = (raw || "").trim();
+    return trimmed === "—" ? "" : trimmed;
+  }
+
+  function normalizeIsbn(raw) {
+    return String(raw || "").replace(/[^0-9Xx]/g, "").toUpperCase();
+  }
+
+  function displayValue(val) {
+    return val ? String(val) : "—";
+  }
+
+  function openEditor() {
+    view.style.display = "none";
+    editBtn.style.display = "none";
+    input.style.display = "inline-block";
+    input.value = originalValue || "";
+    if (hint) {
+      hint.style.display = "none";
+      hint.textContent = defaultHint;
+    }
+    setTimeout(() => {
+      input.focus();
+      input.select && input.select();
+    }, 0);
+  }
+
+  function closeEditor() {
+    view.style.display = "";
+    editBtn.style.display = "";
+    input.style.display = "none";
+    if (hint) {
+      hint.style.display = "none";
+      hint.textContent = defaultHint;
+    }
+  }
+
+  function setHint(message, autoHideDelay) {
+    if (!hint) return;
+    hint.textContent = message;
+    hint.style.display = "block";
+    if (autoHideDelay) {
+      setTimeout(() => {
+        hint.style.display = "none";
+        hint.textContent = defaultHint;
+      }, autoHideDelay);
+    }
+  }
+
+  function toggleHintForChange() {
+    if (!hint) return;
+    const current = normalizeIsbn(input.value);
+    if (current !== originalNormalized) {
+      hint.textContent = defaultHint || prsText("press_enter_to_save", "Press Enter to save");
+      hint.style.display = "block";
+    } else {
+      hint.style.display = "none";
+      hint.textContent = defaultHint;
+    }
+  }
+
+  function handleError(msg) {
+    setHint(msg || prsText("isbn_error", "Error saving ISBN."));
+  }
+
+  function saveValue(newValue) {
+    if (!ajaxUrl || !userBookId) {
+      handleError(prsText("isbn_error", "Error saving ISBN."));
+      return;
+    }
+
+    const normalized = normalizeIsbn(newValue);
+    if (newValue && !normalized) {
+      handleError(prsText("isbn_invalid", "Invalid ISBN."));
+      return;
+    }
+    if (normalized && normalized.length !== 10 && normalized.length !== 13) {
+      handleError(prsText("isbn_invalid", "Invalid ISBN."));
+      return;
+    }
+
+    const payload = {
+      action: "prs_update_isbn",
+      user_book_id: String(userBookId),
+      isbn: normalized,
+    };
+    if (nonce) {
+      payload.nonce = nonce;
+    }
+
+    setHint(prsText("status_saving", "Saving..."));
+    input.disabled = true;
+
+    const jq = window.jQuery;
+    const onDone = (json) => {
+      const resp = (json && typeof json === "object" && Object.prototype.hasOwnProperty.call(json, "success")) ? json : null;
+
+      if (!resp || !resp.success) {
+        const message = resp && resp.data && resp.data.message ? resp.data.message : prsText("isbn_error", "Error saving ISBN.");
+        handleError(message);
+        input.disabled = false;
+        return;
+      }
+
+      const savedValue = resp && resp.data && typeof resp.data.isbn !== "undefined" ? String(resp.data.isbn) : normalized;
+      originalValue = savedValue;
+      originalNormalized = normalizeIsbn(originalValue);
+      view.textContent = displayValue(originalValue);
+      closeEditor();
+      setHint(prsText("saved_short", "Saved."), 1200);
+      input.disabled = false;
+    };
+
+    const onFail = () => {
+      handleError(prsText("isbn_error", "Error saving ISBN."));
+      input.disabled = false;
+    };
+
+    if (jq && typeof jq.post === "function") {
+      jq.post(ajaxUrl, payload)
+        .done(onDone)
+        .fail(onFail);
+    } else {
+      const fd = new FormData();
+      Object.keys(payload).forEach(key => fd.append(key, payload[key]));
+      ajaxPost(ajaxUrl, fd)
+        .then(onDone)
+        .catch(onFail);
+    }
+  }
+
+  let originalValue = normalizeValue(view.textContent);
+  let originalNormalized = normalizeIsbn(originalValue);
+  if (!input.value) {
+    input.value = originalValue || "";
+  }
+
+  editBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    openEditor();
+  });
+
+  input.addEventListener("input", () => {
+    toggleHintForChange();
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const candidate = normalizeIsbn(input.value);
+      if (candidate === originalNormalized) {
+        return;
+      }
+      e.preventDefault();
+      saveValue(input.value);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      input.value = originalValue || "";
+      closeEditor();
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    if (normalizeIsbn(input.value) === originalNormalized) {
+      closeEditor();
+    }
+  });
+}
+
+function setupLibraryPagesInlineEdit() {
+  const table = qs("#prs-library");
+  if (!table) return;
+
+  const nonceField = qs("#prs_update_user_book_nonce");
+  const ajaxUrl = (window.PRS_LIBRARY && PRS_LIBRARY.ajax_url) ||
+    (window.PRS_BOOK && PRS_BOOK.ajax_url) ||
+    (typeof window.ajaxurl === "string" ? window.ajaxurl : "");
+
+  if (!nonceField || !nonceField.value || !ajaxUrl) {
+    return;
+  }
+
+  const messages = (window.PRS_LIBRARY && PRS_LIBRARY.messages) || {};
+  const msgInvalid = messages.invalid || "Please enter a valid number of pages.";
+  const msgTooSmall = messages.too_small || "Please enter a number greater than zero.";
+  const msgSaveError = messages.error || "There was an error saving the number of pages.";
+
+  function wrapFor(el) {
+    return el ? el.closest(".prs-library__pages") : null;
+  }
+
+  function clearError(wrap) {
+    if (!wrap) return;
+    wrap.classList.remove("prs-library__pages--error");
+    const err = qs(".prs-library__pages-error", wrap);
+    setText(err, "");
+  }
+
+  function showError(wrap, msg) {
+    if (!wrap) return;
+    wrap.classList.add("prs-library__pages--error");
+    const err = qs(".prs-library__pages-error", wrap);
+    setText(err, msg);
+  }
+
+  function openEditor(wrap) {
+    if (!wrap) return;
+    clearError(wrap);
+    wrap.classList.remove("prs-library__pages--saving");
+    wrap.classList.add("prs-library__pages--editing");
+    const input = qs(".prs-library__pages-input", wrap);
+    if (input) {
+      input.disabled = false;
+      input.value = wrap.dataset.pages || "";
+      setTimeout(() => {
+        input.focus();
+        input.select && input.select();
+      }, 0);
+    }
+  }
+
+  function closeEditor(wrap) {
+    if (!wrap) return;
+    wrap.classList.remove("prs-library__pages--editing");
+  }
+
+  function saveValue(wrap, input) {
+    if (!wrap || !input) return;
+
+    clearError(wrap);
+
+    const row = wrap.closest("tr[data-user-book-id]");
+    const userBookId = row ? num(row.getAttribute("data-user-book-id"), 0) : 0;
+    if (!userBookId) return;
+
+    const raw = (input.value || "").trim();
+    if (raw !== "" && !/^[0-9]+$/.test(raw)) {
+      showError(wrap, msgInvalid);
+      return;
+    }
+
+    let pagesValue = "";
+    if (raw !== "") {
+      pagesValue = parseInt(raw, 10);
+      if (!Number.isFinite(pagesValue) || pagesValue < 1) {
+        showError(wrap, msgTooSmall);
+        return;
+      }
+    }
+
+    input.disabled = true;
+    wrap.classList.add("prs-library__pages--saving");
+
+    const fd = new FormData();
+    fd.append("action", "prs_update_user_book_meta");
+    fd.append("user_book_id", String(userBookId));
+    fd.append("pages", pagesValue === "" ? "" : String(pagesValue));
+    fd.append("prs_update_user_book_nonce", nonceField.value);
+
+    ajaxPost(ajaxUrl, fd)
+      .then(json => {
+        if (!json || !json.success) throw json;
+
+        const newDisplay = pagesValue === "" ? "" : String(pagesValue);
+        const valueEl = qs(".prs-library__pages-value", wrap);
+        setText(valueEl, newDisplay);
+        wrap.dataset.pages = pagesValue === "" ? "" : String(pagesValue);
+        input.value = wrap.dataset.pages || "";
+        closeEditor(wrap);
+      })
+      .catch(err => {
+        const msg = (err && err.data && err.data.message) ? err.data.message : msgSaveError;
+        showError(wrap, msg);
+      })
+      .then(() => {
+        wrap.classList.remove("prs-library__pages--saving");
+        input.disabled = false;
+      });
+  }
+
+  table.addEventListener("click", (event) => {
+    const editBtn = event.target.closest(".prs-library__pages-edit");
+    if (!editBtn) return;
+    const wrap = wrapFor(editBtn);
+    if (!wrap) return;
+    event.preventDefault();
+    openEditor(wrap);
+  });
+
+  table.addEventListener("keydown", (event) => {
+    const input = event.target.closest(".prs-library__pages-input");
+    if (!input) return;
+
+    const wrap = wrapFor(input);
+    if (!wrap) return;
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      saveValue(wrap, input);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      input.value = wrap.dataset.pages || "";
+      clearError(wrap);
+      closeEditor(wrap);
+    }
+  });
+
+  table.addEventListener("input", (event) => {
+    const input = event.target.closest(".prs-library__pages-input");
+    if (!input) return;
+    const wrap = wrapFor(input);
+    clearError(wrap);
+  });
+}
+
+function setupLibraryReadingStatus() {
+  const table = qs("#prs-library");
+  if (!table) return;
+
+  const nonceField = qs("#prs_update_user_book_nonce");
+  const ajaxUrl = (window.PRS_LIBRARY && PRS_LIBRARY.ajax_url)
+    || (window.PRS_BOOK && PRS_BOOK.ajax_url)
+    || (typeof window.ajaxurl === "string" ? window.ajaxurl : "");
+
+  const normalizeProgress = (value, fallback) => {
+    const parsed = parseInt(String(value), 10);
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+    return Math.max(0, Math.min(100, parsed));
+  };
+
+  const setProgress = (row, value) => {
+    if (!row) return;
+    const progress = normalizeProgress(value, 0);
+    row.setAttribute("data-progress", String(progress));
+    const track = row.querySelector(".prs-library__progress-track");
+    const fill = row.querySelector(".prs-library__progress-fill");
+    const label = row.querySelector(".prs-library__progress-value");
+    if (fill) {
+      fill.style.width = `${progress}%`;
+    }
+    if (label) {
+      label.textContent = `${progress}%`;
+    }
+    if (track) {
+      track.setAttribute("aria-valuenow", String(progress));
+      track.setAttribute("aria-valuetext", `${progress}% complete`);
+    }
+  };
+
+  const getBaseProgress = row => {
+    if (!row) return 0;
+    const baseAttr = row.getAttribute("data-progress-base");
+    const existing = row.dataset.progressBase || baseAttr;
+    if (typeof row.dataset.progressBase === "undefined" || row.dataset.progressBase === "") {
+      row.dataset.progressBase = existing || row.getAttribute("data-progress") || "0";
+    }
+    return normalizeProgress(row.dataset.progressBase, 0);
+  };
+
+  const applyProgressForStatus = (row, status) => {
+    const normalized = (status || "").trim().toLowerCase();
+    const baseProgress = getBaseProgress(row);
+    if (normalized === "finished") {
+      setProgress(row, 100);
+    } else {
+      setProgress(row, baseProgress);
+    }
+  };
+
+  table.addEventListener("change", (event) => {
+    const select = event.target.closest(".reading-status-select");
+    if (!select || !table.contains(select)) {
+      return;
+    }
+
+    const row = select.closest("tr[data-user-book-id]");
+    if (!row) {
+      return;
+    }
+
+    const previousStatus = (select.dataset.currentValue || row.getAttribute("data-reading-status") || "").trim();
+    const nextStatus = (select.value || "not_started").trim();
+
+    applyProgressForStatus(row, nextStatus);
+    row.setAttribute("data-reading-status", nextStatus);
+    select.dataset.currentValue = nextStatus;
+
+    if (!ajaxUrl || !nonceField || !nonceField.value) {
+      return;
+    }
+
+    const userBookId = row.getAttribute("data-user-book-id");
+    if (!userBookId) {
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append("action", "prs_update_user_book_meta");
+    fd.append("user_book_id", String(userBookId));
+    fd.append("reading_status", nextStatus);
+    fd.append("prs_update_user_book_nonce", nonceField.value);
+
+    ajaxPost(ajaxUrl, fd)
+      .then(json => {
+        if (!json || !json.success) throw json;
+      })
+      .catch(() => {
+        select.value = previousStatus || "not_started";
+        row.setAttribute("data-reading-status", previousStatus);
+        select.dataset.currentValue = previousStatus;
+        applyProgressForStatus(row, previousStatus);
+      });
+  });
+}
+
+// ---------- Edición: Purchase Date ----------
+function setupPurchaseDate() {
+  const wrap = qs("#fld-purchase-date");
+  if (!wrap || !window.PRS_BOOK) return;
+
+  const view = qs("#purchase-date-view", wrap);
+  const editBtn = qs("#purchase-date-edit", wrap);
+  const form = qs("#purchase-date-form", wrap);
+  const input = qs("#purchase-date-input", wrap);
+  const saveBtn = qs("#purchase-date-save", wrap);
+  const cancelBtn = qs("#purchase-date-cancel", wrap);
+  const status = qs("#purchase-date-status", wrap);
+
+  if (editBtn) editBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    hide(editBtn);
+    show(form);
+    input.showPicker && input.showPicker();
+  });
+
+  if (cancelBtn) cancelBtn.addEventListener("click", () => {
+    show(editBtn);
+    hide(form);
+    setStatus(status, "", true, 0);
+  });
+
+  if (saveBtn) saveBtn.addEventListener("click", () => {
+    const dateVal = (input.value || "").trim(); // YYYY-MM-DD or empty
+    const fd = new FormData();
+    fd.append("action", "prs_update_user_book_meta");
+    fd.append("nonce", PRS_BOOK.nonce);
+    fd.append("user_book_id", String(PRS_BOOK.user_book_id));
+    fd.append("purchase_date", dateVal);
+
+    ajaxPost(PRS_BOOK.ajax_url, fd)
+      .then(json => {
+        if (!json || !json.success) throw json;
+        setText(view, dateVal ? dateVal : "—");
+        setStatus(status, prsText("saved_short", "Saved."), true);
+        show(editBtn);
+        hide(form);
+      })
+      .catch(err => {
+        const msg = (err && err.data && err.data.message)
+          ? err.data.message
+          : prsText("error_saving_date", "Error saving date.");
+        setStatus(status, msg, false, 4000);
+      });
+  });
+}
+
+// ---------- Edición: Purchase Channel + Place ----------
+function setupPurchaseChannel() {
+  const wrap = qs("#fld-purchase-channel");
+  if (!wrap || !window.PRS_BOOK) return;
+
+  const view = qs("#purchase-channel-view", wrap);
+  const editBtn = qs("#purchase-channel-edit", wrap);
+  const form = qs("#purchase-channel-form", wrap);
+  const select = qs("#purchase-channel-select", wrap);
+  const place = qs("#purchase-place-input", wrap);
+  const saveBtn = qs("#purchase-channel-save", wrap);
+  const cancelBtn = qs("#purchase-channel-cancel", wrap);
+  const status = qs("#purchase-channel-status", wrap);
+
+  function adjustPlaceVisibility() {
+    if (!place) return;
+    const v = (select.value || "").trim();
+    place.style.display = v ? "inline-block" : "none";
+  }
+
+  if (editBtn) editBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    hide(editBtn);
+    show(form);
+    adjustPlaceVisibility();
+    select.focus();
+  });
+
+  if (cancelBtn) cancelBtn.addEventListener("click", () => {
+    show(editBtn);
+    hide(form);
+    setStatus(status, "", true, 0);
+  });
+
+  if (select) select.addEventListener("change", adjustPlaceVisibility);
+
+  if (saveBtn) saveBtn.addEventListener("click", () => {
+    const channel = (select.value || "").trim(); // "online" | "store" | ""
+    const placeVal = (place && place.value || "").trim();
+
+    const fd = new FormData();
+    fd.append("action", "prs_update_user_book_meta");
+    fd.append("nonce", PRS_BOOK.nonce);
+    fd.append("user_book_id", String(PRS_BOOK.user_book_id));
+    fd.append("purchase_channel", channel);
+    fd.append("purchase_place", placeVal);
+
+    ajaxPost(PRS_BOOK.ajax_url, fd)
+      .then(json => {
+        if (!json || !json.success) throw json;
+        let label = "—";
+        const channelLabels = PRS_BOOK.purchase_channel_labels || {
+          online: prsText("channel_online", "Online"),
+          store: prsText("channel_store", "Store"),
+        };
+        if (channel) {
+          label = channelLabels[channel] || (channel.charAt(0).toUpperCase() + channel.slice(1));
+          if (placeVal) label += " — " + placeVal;
+        }
+        setText(view, label);
+        setStatus(status, prsText("saved_short", "Saved."), true);
+        show(editBtn);
+        hide(form);
+      })
+      .catch(err => {
+        const msg = (err && err.data && err.data.message)
+          ? err.data.message
+          : prsText("error_saving_channel", "Error saving channel.");
+        setStatus(status, msg, false, 4000);
+      });
+  });
+}
+
+// ---------- Rating (stars) ----------
+function setupRating() {
+  const wrap = qs("#fld-user-rating");
+  if (!wrap || !window.PRS_BOOK) return;
+
+  const stars = qsa("#prs-user-rating .prs-star", wrap);
+  const status = qs("#rating-status", wrap);
+
+  function paint(upTo) {
+    stars.forEach((btn, i) => {
+      const on = (i + 1) <= upTo;
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-checked", on ? "true" : "false");
+    });
+  }
+
+  stars.forEach((btn, idx) => {
+    btn.addEventListener("click", () => {
+      const val = idx + 1;
+      const fd = new FormData();
+      fd.append("action", "prs_update_user_book_meta");
+      fd.append("nonce", PRS_BOOK.nonce);
+      fd.append("user_book_id", String(PRS_BOOK.user_book_id));
+      fd.append("rating", String(val));
+
+      ajaxPost(PRS_BOOK.ajax_url, fd)
+        .then(json => {
+          if (!json || !json.success) throw json;
+          paint(val);
+          setStatus(status, prsText("saved_short", "Saved."), true);
+        })
+        .catch(err => {
+          const msg = (err && err.data && err.data.message)
+            ? err.data.message
+            : prsText("error_saving_rating", "Error saving rating.");
+          setStatus(status, msg, false, 4000);
+        });
+    });
+  });
+}
+
+// ---------- Type of book ----------
+function setupTypeBook() {
+  if (!window.PRS_BOOK) return;
+
+  const select = qs("#prs-type-book");
+  const status = qs("#type-book-status");
+
+  if (!select) return;
+
+  select.addEventListener("change", () => {
+    const val = (select.value || "").trim();
+    const fd = new FormData();
+    fd.append("action", "prs_update_user_book_meta");
+    fd.append("nonce", PRS_BOOK.nonce);
+    fd.append("user_book_id", String(PRS_BOOK.user_book_id));
+    fd.append("type_book", val);
+
+    ajaxPost(PRS_BOOK.ajax_url, fd)
+      .then(json => {
+        if (!json || !json.success) throw json;
+        setStatus(status, prsText("saved_short", "Saved."), true);
+        PRS_BOOK.type_book = val;
+        document.dispatchEvent(new CustomEvent("prs:type-book-changed", { detail: { type: val } }));
+      })
+      .catch(err => {
+        const msg = (err && err.data && err.data.message)
+          ? err.data.message
+          : prsText("error_saving_format", "Error saving format.");
+        setStatus(status, msg, false, 4000);
+      });
+  });
+}
+
+// ---------- Reading Status ----------
+function setupReadingStatus() {
+  const wrap = qs("#fld-reading-status");
+  if (!wrap || !window.PRS_BOOK) return;
+
+  const select = qs("#reading-status-select", wrap);
+  const status = qs("#reading-status-status", wrap);
+
+  if (!select) return;
+
+  select.addEventListener("change", () => {
+    const val = (select.value || "not_started").trim();
+    const fd = new FormData();
+    fd.append("action", "prs_update_user_book_meta");
+    fd.append("nonce", PRS_BOOK.nonce);
+    fd.append("user_book_id", String(PRS_BOOK.user_book_id));
+    fd.append("reading_status", val);
+
+    ajaxPost(PRS_BOOK.ajax_url, fd)
+      .then(json => {
+        if (!json || !json.success) throw json;
+        setStatus(status, prsText("saved_short", "Saved."), true);
+      })
+      .catch(err => {
+        const msg = (err && err.data && err.data.message) ? err.data.message : "Error updating status.";
+        setStatus(status, msg, false, 4000);
+      });
+  });
+}
+
+// ---------- Owning Status + Return to shelf + Contact ----------
+function setupOwningStatus() {
+  const wrap = qs("#fld-owning-status");
+  if (!wrap || !window.PRS_BOOK) return;
+
+  const select = qs("#owning-status-select", wrap);
+  const status = qs("#owning-status-status", wrap);
+  const returnBtn = qs(".owning-return-shelf", wrap);
+  const derivedText = qs("#derived-location-text", wrap);
+  const note = qs("#owning-status-note", wrap);
+  const overlay = qs("#owning-overlay");
+  const overlayTitle = qs("#owning-overlay-title");
+  const nameInput = qs("#owning-overlay-name");
+  const emailInput = qs("#owning-overlay-email");
+  const amountInput = qs("#owning-overlay-amount");
+  const confirmBtn = qs("#owning-overlay-confirm");
+  const cancelBtn = qs("#owning-overlay-cancel");
+  const overlayStatus = qs("#owning-overlay-status");
+  if (returnBtn) {
+    if (!returnBtn.dataset.bookId && bookId) {
+      returnBtn.dataset.bookId = String(bookId);
+    }
+    if (!returnBtn.dataset.userBookId && userBookId) {
+      returnBtn.dataset.userBookId = String(userBookId);
+    }
+  }
+
+  const ajaxUrl = (typeof window.ajaxurl === "string" && window.ajaxurl)
+    || (window.PRS_BOOK && PRS_BOOK.ajax_url)
+    || "";
+
+  const savedNameAttr = wrap.getAttribute("data-contact-name") || "";
+  const labelBorrowing = wrap.getAttribute("data-label-borrowing") || "Borrowing to:";
+  const labelBorrowed = wrap.getAttribute("data-label-borrowed") || "Borrowed from:";
+  const labelSold = wrap.getAttribute("data-label-sold") || "Sold to:";
+  const labelLost = wrap.getAttribute("data-label-lost") || "Last borrowed to:";
+  const labelSoldOn = wrap.getAttribute("data-label-sold-on") || "Sold on:";
+  const labelLostDate = wrap.getAttribute("data-label-lost-date") || "Lost:";
+  const labelUnknown = wrap.getAttribute("data-label-unknown") || "Unknown";
+  const contactStatuses = ["borrowed", "borrowing", "sold"];
+  const savedSaleAmountAttr = wrap.getAttribute("data-sale-amount") || "";
+
+  let savedOwningStatus = select ? (select.value || "").trim() : "";
+  let pendingStatus = "";
+  let lastContactName = savedNameAttr;
+  let loanDate = wrap.getAttribute("data-active-start") || "";
+  let lastSaleAmount = savedSaleAmountAttr;
+
+  const bookId = (typeof window.PRS_BOOK_ID === "number" && window.PRS_BOOK_ID)
+    || (window.PRS_BOOK && parseInt(PRS_BOOK.book_id, 10))
+    || 0;
+  const userBookId = (typeof window.PRS_USER_BOOK_ID === "number" && window.PRS_USER_BOOK_ID)
+    || (window.PRS_BOOK && parseInt(PRS_BOOK.user_book_id, 10))
+    || 0;
+  const owningNonce = (typeof window.PRS_NONCE === "string" && window.PRS_NONCE)
+    || (window.PRS_BOOK && PRS_BOOK.owning_nonce)
+    || "";
+
+  function getStatusLabel(statusValue) {
+    switch (statusValue) {
+      case "borrowing":
+        return labelBorrowing;
+      case "borrowed":
+        return labelBorrowed;
+      case "sold":
+        return labelSold;
+      case "lost":
+        return labelLost;
+      default:
+        return "";
+    }
+  }
+
+  function computeStatusDescription(statusValue, contactName, options = {}) {
+    const normalizedName = (contactName || "").trim() || labelUnknown;
+    const label = getStatusLabel(statusValue);
+    if (!label) {
+      return { text: "" };
+    }
+
+    const allowRich = !!options.rich && contactStatuses.indexOf(statusValue) !== -1;
+    const date = (options.date || "").trim();
+    const amountRaw = typeof options.amount === "undefined" || options.amount === null
+      ? ""
+      : String(options.amount);
+    const formattedAmount = statusValue === "sold" ? formatOwningAmount(amountRaw) : "";
+    const textParts = [label];
+    if (normalizedName) {
+      textParts.push(normalizedName);
+    }
+    if (formattedAmount) {
+      textParts.push(`$${formattedAmount}`);
+    }
+    if (date) {
+      textParts.push(date);
+    }
+
+    if (allowRich) {
+      const safeLabel = escapeHtml(label);
+      const safeName = escapeHtml(normalizedName);
+      const safeDate = escapeHtml(date);
+      const safeAmount = formattedAmount ? escapeHtml(formattedAmount) : "";
+      let html = `<strong>${safeLabel}</strong>`;
+      if (statusValue === "sold") {
+        if (safeName) {
+          html += `<br>${safeName}`;
+          if (safeAmount) {
+            html += ` for $${safeAmount}`;
+          }
+        } else if (safeAmount) {
+          html += `<br>$${safeAmount}`;
+        }
+      } else if (safeName) {
+        html += `<br>${safeName}`;
+      }
+      if (safeDate) {
+        html += `<br><small>${safeDate}</small>`;
+      }
+      return {
+        html,
+        text: textParts.join(" ").trim(),
+      };
+    }
+
+    return {
+      text: textParts.join(" ").trim(),
+    };
+  }
+
+  function applyStatusDescription(statusValue, contactName, options = {}) {
+    if (!status) return;
+    const description = computeStatusDescription(statusValue, contactName, options);
+    if (description.html) {
+      status.innerHTML = description.html;
+    } else {
+      status.textContent = description.text || "";
+    }
+    if (!options.keepColor) {
+      status.style.color = "";
+    }
+  }
+
+  function updateOwningStatusInfo(statusValue, changeDate, contactName, saleAmountRaw) {
+    const normalized = normalizeOwningState(statusValue);
+    if (normalized !== "lost" && normalized !== "sold") {
+      return;
+    }
+
+    const infoEl = document.querySelector(`.owning-status-info[data-book-id="${bookId}"]`) || status;
+    if (!infoEl) {
+      return;
+    }
+
+    const formattedDate = formatOwningDate(changeDate);
+    const safeDate = formattedDate ? escapeHtml(formattedDate) : "";
+
+    if (normalized === "lost") {
+      if (safeDate) {
+        const lostLabel = escapeHtml(labelLostDate);
+        infoEl.innerHTML = `<strong>${lostLabel}</strong><br><small>${safeDate}</small>`;
+      } else {
+        const lostLabel = escapeHtml(labelLostDate);
+        infoEl.innerHTML = `<strong>${lostLabel}</strong>`;
+      }
+      return;
+    }
+
+    const soldLabel = escapeHtml(labelSold);
+    const safeName = escapeHtml((contactName || "").trim());
+    const safeDisplayName = safeName || escapeHtml(labelUnknown);
+    const formattedAmount = formatOwningAmount(saleAmountRaw);
+    const safeAmount = formattedAmount ? escapeHtml(formattedAmount) : "";
+    let html = `<strong>${soldLabel}</strong>`;
+    if (safeDisplayName) {
+      html += `<br>${safeDisplayName}`;
+      if (safeAmount) {
+        html += ` for $${safeAmount}`;
+      }
+    } else if (safeAmount) {
+      html += `<br>$${safeAmount}`;
+    }
+    if (safeDate) {
+      html += `<br><small>${safeDate}</small>`;
+    }
+    infoEl.innerHTML = html;
+  }
+
+  function setLoanDate(value) {
+    loanDate = (value || "").trim();
+    wrap.setAttribute("data-active-start", loanDate);
+  }
+
+  function openOverlayFor(statusValue, previousStateOverride) {
+    if (!overlay) return;
+    pendingStatus = statusValue;
+    const priorState = normalizeOwningState(
+      typeof previousStateOverride === "string"
+        ? previousStateOverride
+        : savedOwningStatus
+    );
+    if (overlayStatus) {
+      overlayStatus.textContent = "";
+      overlayStatus.style.color = "";
+    }
+    if (overlayTitle) {
+      switch (statusValue) {
+        case "borrowing":
+          overlayTitle.textContent = labelBorrowing;
+          break;
+        case "borrowed":
+          overlayTitle.textContent = labelBorrowed;
+          break;
+        case "sold":
+          overlayTitle.textContent = labelSold;
+          break;
+        default:
+          overlayTitle.textContent = labelBorrowing;
+      }
+    }
+    if (amountInput) {
+      if (statusValue === "sold") {
+        amountInput.value = lastSaleAmount || "";
+        amountInput.style.display = "";
+      } else {
+        amountInput.value = "";
+        amountInput.style.display = "none";
+      }
+    }
+    if (statusValue === "sold" && priorState === "borrowing") {
+      if (overlayTitle) {
+        overlayTitle.textContent = prsText("borrower_buying_title", "Borrowed person is buying this book:");
+      }
+      if (overlayStatus) {
+        overlayStatus.textContent = prsText("borrower_buying_confirm", "Confirm that the borrower is purchasing or compensating for the book.");
+      }
+    }
+    if (nameInput) nameInput.value = "";
+    if (emailInput) emailInput.value = "";
+    overlay.style.display = "flex";
+    setTimeout(() => {
+      if (nameInput) {
+        nameInput.focus();
+      }
+    }, 0);
+  }
+
+  function closeOverlay() {
+    if (!overlay) return;
+    overlay.style.display = "none";
+    if (amountInput) {
+      amountInput.value = "";
+      amountInput.style.display = "none";
+    }
+  }
+
+  function isDigitalType() {
+    const raw = (window.PRS_BOOK && typeof PRS_BOOK.type_book !== "undefined") ? PRS_BOOK.type_book : "";
+    return String(raw || "").trim().toLowerCase() === "d";
+  }
+
+  function updateDerived(val) {
+    const locked = isDigitalType();
+    const inShelf = !val; // NULL/'' => In Shelf
+    const labelInShelf = prsText("label_in_shelf", "In Shelf");
+    const labelNotInShelf = prsText("label_not_in_shelf", "Not In Shelf");
+    setText(derivedText, inShelf ? labelInShelf : labelNotInShelf);
+    // botón "Mark as returned" visible solo si borrowed/borrowing
+    const showReturn = (!locked) && (val === "borrowed" || val === "borrowing");
+    if (returnBtn) {
+      returnBtn.style.display = showReturn ? "" : "none";
+      returnBtn.disabled = locked;
+    }
+  }
+
+  function applyTypeLock() {
+    const locked = isDigitalType();
+    if (select) {
+      select.disabled = locked;
+      if (locked) {
+        select.setAttribute("aria-disabled", "true");
+      } else {
+        select.removeAttribute("aria-disabled");
+      }
+      select.classList.toggle("is-disabled", locked);
+    }
+    if (note) {
+      note.style.display = locked ? "" : "none";
+    }
+    if (overlay) {
+      overlay.setAttribute("aria-hidden", locked ? "true" : "false");
+    }
+  }
+
+  function postOwning(val) {
+    if (isDigitalType()) {
+      return Promise.resolve();
+    }
+    const fd = new FormData();
+    fd.append("action", "prs_update_user_book_meta");
+    fd.append("nonce", PRS_BOOK.nonce);
+    fd.append("user_book_id", String(PRS_BOOK.user_book_id));
+    fd.append("owning_status", val); // "" => volver a In Shelf
+
+    return ajaxPost(PRS_BOOK.ajax_url, fd)
+      .then(json => {
+        if (!json || !json.success) throw json;
+        setStatus(status, prsText("saved_short", "Saved."), true);
+        updateDerived(val);
+        savedOwningStatus = val;
+        toggleReadingStatusLock(select);
+        filterOwningOptions(select, val);
+        if (!val) {
+          lastContactName = "";
+          wrap.setAttribute("data-contact-name", "");
+          wrap.setAttribute("data-contact-email", "");
+          setLoanDate("");
+          lastSaleAmount = "";
+          wrap.setAttribute("data-sale-amount", "");
+          if (select) {
+            delete select.dataset.saleAmount;
+          }
+          applyStatusDescription("", "", { amount: "" });
+        }
+      })
+      .catch(err => {
+        const msg = (err && err.data && err.data.message)
+          ? err.data.message
+          : prsText("error_owning_status", "Error updating owning status.");
+        setStatus(status, msg, false, 4000);
+        if (select) {
+          select.value = savedOwningStatus;
+        }
+        updateDerived(savedOwningStatus);
+        toggleReadingStatusLock(select);
+        filterOwningOptions(select, savedOwningStatus);
+      });
+  }
+
+  function saveOwningContact(statusValue, name, email, options) {
+    const useOverlay = !options || options.fromOverlay !== false ? true : false;
+
+    if (!ajaxUrl || !bookId || !userBookId) {
+      console.warn("Missing owning overlay configuration.");
+      return Promise.reject(new Error("configuration"));
+    }
+
+    if (window.PRS_isSaving) {
+      return Promise.resolve(null);
+    }
+    window.PRS_isSaving = true;
+
+    const trimmedName = (name || "").trim();
+    const trimmedEmail = (email || "").trim();
+    const previousState = normalizeOwningState(
+      options && typeof options.previousValue === "string"
+        ? options.previousValue
+        : savedOwningStatus
+    );
+    const nextState = normalizeOwningState(statusValue);
+    const transactionType = previousState === "borrowing" && nextState === "sold"
+      ? "bought_by_borrower"
+      : "";
+
+    if (useOverlay && overlayStatus) {
+      overlayStatus.style.color = "";
+      overlayStatus.textContent = prsText("status_saving", "Saving...");
+    } else if (!useOverlay && status) {
+      status.style.color = "";
+      status.textContent = prsText("status_saving", "Saving...");
+    }
+
+    const rowEl = select.closest("tr");
+
+    let amountValue = "";
+    if (options && Object.prototype.hasOwnProperty.call(options, "amount")) {
+      amountValue = options.amount == null ? "" : String(options.amount);
+    } else if (amountInput && amountInput.style.display !== "none") {
+      amountValue = amountInput.value.trim();
+    }
+
+    const body = new URLSearchParams({
+      action: "save_owning_contact",
+      book_id: String(bookId),
+      user_book_id: String(userBookId),
+      owning_status: statusValue,
+      contact_name: trimmedName,
+      contact_email: trimmedEmail,
+      transaction_type: transactionType,
+      amount: amountValue,
+      nonce: owningNonce,
+    });
+
+    return fetch(ajaxUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      credentials: "same-origin",
+      body,
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (!res || !res.success) {
+          throw res;
+        }
+
+        const payload = res.data || {};
+        const savedStatus = typeof payload.owning_status === "string" ? payload.owning_status : normalizedStatus;
+        const nextName = typeof payload.counterparty_name === "string" ? payload.counterparty_name : trimmedName;
+        const nextEmail = typeof payload.counterparty_email === "string" ? payload.counterparty_email : trimmedEmail;
+        const normalizedSaved = normalizeOwningState(savedStatus);
+        const responseDate = formatOwningDate(payload.date);
+        const todayFormatted = formatOwningDate(new Date().toISOString());
+        const shouldShowChangeDate = normalizedSaved === "lost" || normalizedSaved === "sold";
+        const changeDate = shouldShowChangeDate ? (responseDate || todayFormatted) : "";
+        const payloadAmount = typeof payload.amount !== "undefined" && payload.amount !== null
+          ? String(payload.amount)
+          : amountValue;
+        const nextSaleAmount = normalizedSaved === "sold" ? payloadAmount : "";
+
+        lastContactName = nextName || "";
+        savedOwningStatus = savedStatus;
+        lastSaleAmount = normalizedSaved === "sold" ? nextSaleAmount : "";
+        wrap.setAttribute("data-sale-amount", lastSaleAmount);
+        if (select) {
+          if (lastSaleAmount) {
+            select.dataset.saleAmount = lastSaleAmount;
+          } else {
+            delete select.dataset.saleAmount;
+          }
+        }
+
+        wrap.setAttribute("data-contact-name", lastContactName);
+        wrap.setAttribute("data-contact-email", nextEmail || "");
+
+        if (contactStatuses.indexOf(savedStatus) !== -1) {
+          const nextLoanDate = normalizedSaved === "sold" && changeDate
+            ? changeDate
+            : (responseDate || todayFormatted);
+          setLoanDate(nextLoanDate);
+        } else {
+          setLoanDate("");
+        }
+
+        updateDerived(savedStatus);
+        applyStatusDescription(savedStatus, lastContactName, {
+          rich: contactStatuses.indexOf(savedStatus) !== -1 && (normalizedSaved === "sold" || !!loanDate),
+          date: loanDate,
+          amount: lastSaleAmount,
+        });
+
+        if (normalizedSaved === "sold" || (normalizedSaved === "lost" && changeDate)) {
+          updateOwningStatusInfo(savedStatus, changeDate, nextName, lastSaleAmount);
+        }
+
+        if (useOverlay && overlayStatus) {
+          overlayStatus.style.color = "green";
+          overlayStatus.textContent = (payload && payload.message) || prsText("saved_successfully", "Saved successfully.");
+          setTimeout(() => {
+            overlayStatus.textContent = "";
+          }, 2000);
+          closeOverlay();
+        } else if (!useOverlay && status) {
+          status.style.color = "";
+        }
+
+        if (select) {
+          select.value = savedStatus;
+        }
+        toggleReadingStatusLock(select);
+        filterOwningOptions(select, savedStatus);
+        if (returnBtn) {
+          const shouldShowReturn = normalizedSaved === "borrowing" || normalizedSaved === "borrowed";
+          returnBtn.style.display = shouldShowReturn ? "" : "none";
+          returnBtn.disabled = false;
+        }
+
+        return res;
+      })
+      .catch(err => {
+        const msg = (err && err.data && err.data.message)
+          ? err.data.message
+          : prsText("error_saving_contact", "Error saving contact.");
+        if (useOverlay && overlayStatus) {
+          overlayStatus.style.color = "#b00020";
+          overlayStatus.textContent = msg;
+        } else if (status) {
+          status.style.color = "#b00020";
+          status.textContent = msg;
+        }
+        if (select) {
+          select.value = savedOwningStatus;
+        }
+        updateDerived(savedOwningStatus);
+        toggleReadingStatusLock(select);
+        filterOwningOptions(select, savedOwningStatus);
+        if (returnBtn) {
+          const shouldShowReturn = savedOwningStatus === "borrowing" || savedOwningStatus === "borrowed";
+          returnBtn.style.display = shouldShowReturn ? "" : "none";
+          returnBtn.disabled = false;
+        }
+        throw err;
+      })
+      .finally(() => {
+        window.PRS_isSaving = false;
+      });
+  }
+
+  function markAsReturned(triggerBtn) {
+    if (!ajaxUrl || !bookId || !userBookId) {
+      console.warn("Missing owning overlay configuration.");
+      return Promise.reject(new Error("configuration"));
+    }
+
+    const activeBtn = triggerBtn || returnBtn;
+    const body = new URLSearchParams({
+      action: "mark_as_returned",
+      book_id: String(bookId),
+      user_book_id: String(userBookId),
+      nonce: owningNonce,
+    });
+
+    if (status) {
+      status.style.color = "";
+      status.textContent = prsText("status_saving", "Saving...");
+    }
+    if (activeBtn) {
+      activeBtn.disabled = true;
+    }
+
+    return fetch(ajaxUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      credentials: "same-origin",
+      body,
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (!res || !res.success) {
+          throw res;
+        }
+
+        savedOwningStatus = "";
+        pendingStatus = "";
+        lastContactName = "";
+        lastSaleAmount = "";
+        wrap.setAttribute("data-contact-name", "");
+        wrap.setAttribute("data-contact-email", "");
+        wrap.setAttribute("data-sale-amount", "");
+        setLoanDate("");
+        updateDerived("");
+
+        if (select) {
+          select.value = "";
+          delete select.dataset.saleAmount;
+        }
+        toggleReadingStatusLock(select);
+        filterOwningOptions(select, "");
+
+        const readingSelect = document.querySelector(`.reading-status-select[data-book-id="${bookId}"]`)
+          || document.getElementById("reading-status-select");
+        if (readingSelect) {
+          readingSelect.disabled = false;
+          readingSelect.classList.remove("is-disabled");
+          readingSelect.setAttribute("aria-disabled", "false");
+          readingSelect.title = "";
+        }
+
+        if (activeBtn) {
+          activeBtn.style.display = "none";
+          activeBtn.disabled = false;
+        }
+
+        if (status) {
+          const message = (res.data && res.data.message) ? res.data.message : "Book marked as returned.";
+          status.style.color = "#2f6b2f";
+          status.textContent = message;
+        }
+
+        return res;
+      })
+      .catch(err => {
+        if (status) {
+          const msg = (err && err.data && err.data.message) ? err.data.message : "Error updating.";
+          status.style.color = "#b00020";
+          status.textContent = msg;
+        }
+        if (activeBtn) {
+          activeBtn.disabled = false;
+        }
+        filterOwningOptions(select, savedOwningStatus);
+        throw err;
+      })
+      .finally(() => {
+        overlayConfirmed = false;
+      });
+  }
+
+  if (select) {
+    updateDerived(select.value || "");
+    applyTypeLock();
+    applyStatusDescription(savedOwningStatus, lastContactName, {
+      rich: contactStatuses.indexOf(savedOwningStatus) !== -1
+        && (normalizeOwningState(savedOwningStatus) === "sold" || !!loanDate),
+      date: loanDate,
+      amount: lastSaleAmount,
+    });
+    toggleReadingStatusLock(select);
+    filterOwningOptions(select, savedOwningStatus);
+    select.addEventListener("change", () => {
+      if (overlayConfirmed) {
+        overlayConfirmed = false;
+        return;
+      }
+      if (window.PRS_isSaving) {
+        return;
+      }
+      if (select.disabled) {
+        toggleReadingStatusLock(select);
+        return;
+      }
+      const val = (select.value || "").trim(); // "", borrowed, borrowing, sold, lost
+      const previousState = normalizeOwningState(savedOwningStatus);
+      toggleReadingStatusLock(select);
+      if (!val) {
+        postOwning("").finally(() => {
+          filterOwningOptions(select, "");
+        });
+        return;
+      }
+
+      if (val === "lost") {
+        const readingSelect = document.querySelector(`.reading-status-select[data-book-id="${bookId}"]`)
+          || document.getElementById("reading-status-select");
+        if (readingSelect) {
+          readingSelect.disabled = true;
+          readingSelect.classList.add("is-disabled");
+          readingSelect.setAttribute("aria-disabled", "true");
+          readingSelect.title = prsText("disabled_lost", "Disabled while this book is lost.");
+        }
+
+        const fallbackName = lastContactName || labelUnknown;
+        saveOwningContact("lost", fallbackName, "", { fromOverlay: false, previousValue: savedOwningStatus })
+          .catch(() => {})
+          .finally(() => {
+            filterOwningOptions(select, savedOwningStatus);
+          });
+        return;
+      }
+
+      if (val === "bought") {
+        const revertSelection = () => {
+          select.value = savedOwningStatus;
+          toggleReadingStatusLock(select);
+          filterOwningOptions(select, savedOwningStatus);
+        };
+
+        revertSelection();
+
+        openBoughtOverlay({
+          onConfirm: () => {
+            saveOwningContact("bought", "", "", {
+              previousValue: savedOwningStatus,
+              fromOverlay: false,
+              amount: "",
+            }).catch(() => {
+              revertSelection();
+            });
+          },
+          onCancel: revertSelection,
+        });
+        return;
+      }
+
+      if (val === "borrowed" || val === "borrowing" || val === "sold") {
+        openOverlayFor(val, previousState);
+        return;
+      }
+
+      // Default: revert to saved value
+      select.value = savedOwningStatus;
+      toggleReadingStatusLock(select);
+      filterOwningOptions(select, savedOwningStatus);
+    });
+  }
+
+  if (returnBtn) {
+    returnBtn.__prsReturnHandler = () => markAsReturned(returnBtn);
+  }
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener("click", () => {
+      if (!pendingStatus) {
+        closeOverlay();
+        return;
+      }
+
+      const name = (nameInput && nameInput.value || "").trim();
+      const email = (emailInput && emailInput.value || "").trim();
+
+      if (!name || !email) {
+        if (overlayStatus) {
+          overlayStatus.style.color = "#b00020";
+          overlayStatus.textContent = prsText("missing_contact", "Please enter both name and email.");
+        }
+        return;
+      }
+
+      const saleAmount = amountInput && amountInput.style.display !== "none"
+        ? amountInput.value.trim()
+        : "";
+      saveOwningContact(pendingStatus, name, email, {
+        previousValue: savedOwningStatus,
+        amount: saleAmount,
+      })
+        .then(() => {
+          pendingStatus = "";
+        })
+        .catch(() => {});
+    });
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", () => {
+      closeOverlay();
+      pendingStatus = "";
+      if (select) {
+        select.value = savedOwningStatus;
+        toggleReadingStatusLock(select);
+        filterOwningOptions(select, savedOwningStatus);
+      }
+    });
+  }
+
+  document.addEventListener("prs:type-book-changed", () => {
+    const val = select ? (select.value || "") : "";
+    updateDerived(val);
+    applyTypeLock();
+    applyStatusDescription(savedOwningStatus, lastContactName, {
+      rich: contactStatuses.indexOf(savedOwningStatus) !== -1
+        && (normalizeOwningState(savedOwningStatus) === "sold" || !!loanDate),
+      date: loanDate,
+      amount: lastSaleAmount,
+    });
+  });
+}
+
+// ---------- Sesiones: render parcial + paginación + SORTING ----------
+function setupSessionsAjax() {
+  if (!window.PRS_SESS) return;
+  const box = qs("#prs-sessions-table");
+  if (!box) return;
+
+  // --- NEW: Keep track of sorting state ---
+  let currentOrderby = 'start_time';
+  let currentOrder = 'desc';
+
+  function loadSessions(page, orderby, order) {
+    const p = num(page, 1);
+    // Use state variables if new values are not provided
+    const ob = orderby || currentOrderby;
+    const o = order || currentOrder;
+
+    const fd = new FormData();
+    fd.append("action", "prs_render_sessions");
+    fd.append("nonce", PRS_SESS.nonce);
+    fd.append("book_id", String(PRS_SESS.book_id));
+    fd.append("paged", String(p));
+    // --- NEW: Send sorting data with the request ---
+    fd.append("orderby", ob);
+    fd.append("order", o);
+
+    box.innerHTML = "<p>Loading…</p>";
+
+    ajaxPost(PRS_SESS.ajax_url, fd)
+      .then(json => {
+        if (!json || !json.success) throw json;
+        box.innerHTML = json.data && json.data.html ? json.data.html : "";
+
+        // Update the URL (without reloading) to reflect the current page
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set(PRS_SESS.param, String(json.data.paged || 1));
+          window.history.replaceState({}, "", url.toString());
+        } catch (e) { /* noop */ }
+      })
+      .catch(() => {
+        box.innerHTML = "<p>Error loading sessions.</p>";
+      });
+  }
+
+  // Initial render using the page number from the URL if present
+  const initialPage = num(box.getAttribute("data-initial-paged"), 1);
+  loadSessions(initialPage);
+
+  // --- NEW: A single event listener for both pagination and sorting ---
+  box.addEventListener("click", function (e) {
+    // Handle pagination clicks
+    const pageLink = e.target.closest("a.prs-sess-link");
+    if (pageLink) {
+      e.preventDefault();
+      const page = num(pageLink.getAttribute("data-page"), 1);
+      loadSessions(page);
+      return; // Stop further processing
+    }
+    
+    // Handle sorting clicks
+    const sortHeader = e.target.closest("th.prs-sortable");
+    if(sortHeader) {
+      e.preventDefault();
+      const newOrderby = sortHeader.getAttribute('data-sort');
+      
+      if (newOrderby === currentOrderby) {
+        // If it's the same column, just flip the direction
+        currentOrder = (currentOrder === 'desc') ? 'asc' : 'desc';
+      } else {
+        // If it's a new column, set it and default to descending
+        currentOrderby = newOrderby;
+        currentOrder = 'desc';
+      }
+      
+      // Fetch the first page with the new sorting applied
+      loadSessions(1, currentOrderby, currentOrder);
+    }
+  });
+}
+
+// ---------- Session recorder modal ----------
+function setupSessionRecorderModal() {
+  const trigger = qs("#prs-session-recorder-open");
+  const modal = qs("#prs-session-modal");
+  if (!trigger || !modal) return;
+
+  const closeBtn = qs("#prs-session-recorder-close", modal);
+
+  function handleKeydown(event) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+    }
+  }
+
+  function open(options = {}) {
+    const shouldFocusClose = options.focusClose !== false;
+
+    if (!modal.classList.contains("is-active")) {
+      modal.classList.add("is-active");
+      document.addEventListener("keydown", handleKeydown);
+    }
+
+    modal.setAttribute("aria-hidden", "false");
+    trigger.setAttribute("aria-expanded", "true");
+
+    if (shouldFocusClose && closeBtn) {
+      setTimeout(() => closeBtn.focus(), 0);
+    }
+  }
+
+  function close() {
+    if (!modal.classList.contains("is-active")) {
+      return;
+    }
+
+    modal.classList.remove("is-active");
+    trigger.setAttribute("aria-expanded", "false");
+    modal.setAttribute("aria-hidden", "true");
+    document.removeEventListener("keydown", handleKeydown);
+    setTimeout(() => trigger.focus(), 0);
+  }
+
+  trigger.addEventListener("click", (event) => {
+    event.preventDefault();
+    open();
+  });
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      close();
+    });
+  }
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      event.preventDefault();
+    }
+  });
+
+  document.addEventListener("prs-session-modal:open", event => {
+    const detail = event?.detail || {};
+    open({ focusClose: detail.focusClose !== false });
+  });
+
+  document.addEventListener("prs-session-modal:close", () => {
+    close();
+  });
+}
+
+// ---------- Manual add session modal ----------
+function setupManualSessionModal() {
+  const modal = qs("#prs-manual-session-modal");
+  if (!modal || !window.PRS_BOOK) return;
+
+  const closeBtn = qs("#prs-manual-session-close", modal);
+  const cancelBtn = qs('[data-prs-close-manual-session="1"]', modal);
+  const form = qs("#prs-manual-session-form", modal);
+  const statusEl = qs("#prs-ms-status", modal);
+  const startDtInput = qs("#prs-ms-start-dt", modal);
+  const endDtInput = qs("#prs-ms-end-dt", modal);
+  const startIsoInput = qs("#prs-ms-start-iso", modal);
+  const endIsoInput = qs("#prs-ms-end-iso", modal);
+  const startInput = qs("#prs-ms-start-page", modal);
+  const endInput = qs("#prs-ms-end-page", modal);
+  const chapterInput = qs("#prs-ms-chapter", modal);
+  const submitBtn = qs('button[type="submit"]', modal);
+
+  if (!form || !startDtInput || !endDtInput || !startIsoInput || !endIsoInput || !startInput || !endInput) return;
+
+  function setStatus(msg, opts = {}) {
+    if (!statusEl) return;
+    statusEl.textContent = msg || "";
+    statusEl.style.color = opts.color || "rgba(255, 255, 255, 0.8)";
+  }
+
+  function handleKeydown(event) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+    }
+  }
+
+  function pad2(n) {
+    return String(n).padStart(2, "0");
+  }
+
+  function formatIsoLocal(dt) {
+    const yyyy = dt.getFullYear();
+    const mm = pad2(dt.getMonth() + 1);
+    const dd = pad2(dt.getDate());
+    const hh = pad2(dt.getHours());
+    const mi = pad2(dt.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  }
+
+  function formatDisplay(dt) {
+    const dd = pad2(dt.getDate());
+    const mm = pad2(dt.getMonth() + 1);
+    const yyyy = dt.getFullYear();
+
+    let h = dt.getHours();
+    const m = pad2(dt.getMinutes());
+    const ampm = h >= 12 ? "PM" : "AM";
+    h = h % 12;
+    h = h === 0 ? 12 : h;
+    const hh = pad2(h);
+    return `${dd}-${mm}-${yyyy}, ${hh}:${m} ${ampm}`;
+  }
+
+  function parseIsoToDate(iso) {
+    if (!iso || typeof iso !== "string") return null;
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (!m) return null;
+    const yyyy = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    const dd = parseInt(m[3], 10);
+    const hh = parseInt(m[4], 10);
+    const mi = parseInt(m[5], 10);
+    const dt = new Date(yyyy, mm - 1, dd, hh, mi, 0, 0);
+    if (Number.isNaN(dt.getTime())) return null;
+    return dt;
+  }
+
+  function setDtFields(displayInput, hiddenIsoInput, dateObj) {
+    const iso = formatIsoLocal(dateObj);
+    hiddenIsoInput.value = iso;
+    displayInput.value = formatDisplay(dateObj);
+  }
+
+  function open() {
+    if (!modal.classList.contains("is-active")) {
+      modal.classList.add("is-active");
+      document.addEventListener("keydown", handleKeydown);
+    }
+    modal.setAttribute("aria-hidden", "false");
+    setStatus("");
+    form.reset();
+    try {
+      const now = new Date();
+      setDtFields(startDtInput, startIsoInput, now);
+      setDtFields(endDtInput, endIsoInput, now);
+    } catch (e) { /* noop */ }
+    setTimeout(() => startInput.focus(), 0);
+  }
+
+  function close() {
+    if (!modal.classList.contains("is-active")) return;
+    modal.classList.remove("is-active");
+    modal.setAttribute("aria-hidden", "true");
+    document.removeEventListener("keydown", handleKeydown);
+  }
+
+  document.addEventListener("click", event => {
+    const openBtn = event.target.closest('[data-prs-open-manual-session="1"]');
+    if (openBtn) {
+      event.preventDefault();
+      open();
+      return;
+    }
+
+    const closeBtn2 = event.target.closest('[data-prs-close-manual-session="1"]');
+    if (closeBtn2) {
+      event.preventDefault();
+      close();
+    }
+  });
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", event => {
+      event.preventDefault();
+      close();
+    });
+  }
+
+  modal.addEventListener("click", event => {
+    if (event.target === modal) {
+      event.preventDefault();
+    }
+  });
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", event => {
+      event.preventDefault();
+      close();
+    });
+  }
+
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+
+    const startDt = (startIsoInput.value || "").trim();
+    const endDt = (endIsoInput.value || "").trim();
+    const startPage = num(startInput.value, 0);
+    const endPage = num(endInput.value, 0);
+    const chapter = (chapterInput && chapterInput.value || "").trim();
+
+    if (!startDt || !endDt) {
+      setStatus(prsText("manual_invalid_datetime", "Please enter valid date & time values."), { color: "#fca5a5" });
+      return;
+    }
+
+    if (endDt < startDt) {
+      setStatus(prsText("manual_invalid_time_range", "End date/time must be after start date/time."), { color: "#fca5a5" });
+      return;
+    }
+
+    if (!startPage || !endPage || endPage < startPage) {
+      setStatus(prsText("manual_invalid_pages", "Please check the page range."), { color: "#fca5a5" });
+      return;
+    }
+
+    if (submitBtn) submitBtn.disabled = true;
+    setStatus(prsText("status_saving", "Saving..."));
+
+    const fd = new FormData();
+    fd.append("action", "prs_add_manual_session");
+    fd.append("nonce", PRS_BOOK.reading_nonce || "");
+    fd.append("book_id", String(PRS_BOOK.book_id || ""));
+    fd.append("start_datetime", startDt);
+    fd.append("end_datetime", endDt);
+    fd.append("start_page", String(startPage));
+    fd.append("end_page", String(endPage));
+    fd.append("chapter_name", chapter);
+
+    ajaxPost(PRS_BOOK.ajax_url, fd)
+      .then(json => {
+        if (!json || !json.success) throw json;
+        close();
+        window.location.reload();
+      })
+      .catch(err => {
+        const code = err && err.data && err.data.message ? String(err.data.message) : "";
+        let msg = prsText("manual_save_failed", "Unable to save session. Please try again.");
+        if (code === "invalid_datetime") msg = prsText("manual_invalid_datetime", "Please enter valid date & time values.");
+        if (code === "invalid_time_range") msg = prsText("manual_invalid_time_range", "End date/time must be after start date/time.");
+        if (code === "invalid_pages") msg = prsText("manual_invalid_pages", msg);
+        setStatus(msg, { color: "#fca5a5" });
+      })
+      .finally(() => {
+        if (submitBtn) submitBtn.disabled = false;
+      });
+  });
+
+  // Minimal custom picker (corporate colors) to avoid any browser blue UI.
+  (function setupMiniPicker() {
+    const pop = qs("#prs-ms-dtp-pop");
+    if (!pop) return;
+
+    const monthEl = qs("[data-ms-dtp-month]", pop);
+    const gridEl = qs("[data-ms-dtp-grid]", pop);
+    const hourSel = qs("[data-ms-dtp-hour]", pop);
+    const minSel = qs("[data-ms-dtp-minute]", pop);
+    const ampmSel = qs("[data-ms-dtp-ampm]", pop);
+    const applyBtn = qs("[data-ms-dtp-apply]", pop);
+
+    let active = null; // { displayInput, isoInput }
+    let view = new Date();
+    let selected = new Date();
+
+    function show(anchorEl) {
+      pop.classList.remove("is-hidden");
+      pop.setAttribute("aria-hidden", "false");
+
+      // Position under anchor (inside viewport)
+      const r = anchorEl.getBoundingClientRect();
+      const w = pop.offsetWidth || 320;
+      const h = pop.offsetHeight || 360;
+      const pad = 10;
+      let left = Math.min(window.innerWidth - w - pad, Math.max(pad, r.left));
+      let top = r.bottom + 8;
+      if (top + h + pad > window.innerHeight) {
+        top = Math.max(pad, r.top - h - 8);
+      }
+      pop.style.left = `${left}px`;
+      pop.style.top = `${top}px`;
+    }
+
+    function hide() {
+      pop.classList.add("is-hidden");
+      pop.setAttribute("aria-hidden", "true");
+      active = null;
+    }
+
+    function monthName(dt) {
+      try {
+        return dt.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+      } catch {
+        const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+        return `${months[dt.getMonth()]} ${dt.getFullYear()}`;
+      }
+    }
+
+    function buildSelects() {
+      if (hourSel && !hourSel.options.length) {
+        for (let h = 1; h <= 12; h++) {
+          const o = document.createElement("option");
+          o.value = String(h);
+          o.textContent = pad2(h);
+          hourSel.appendChild(o);
+        }
+      }
+      if (minSel && !minSel.options.length) {
+        for (let m = 0; m < 60; m++) {
+          const o = document.createElement("option");
+          o.value = String(m);
+          o.textContent = pad2(m);
+          minSel.appendChild(o);
+        }
+      }
+    }
+
+    function syncControlsFromSelected() {
+      if (!hourSel || !minSel || !ampmSel) return;
+      let h = selected.getHours();
+      const ampm = h >= 12 ? "PM" : "AM";
+      h = h % 12;
+      h = h === 0 ? 12 : h;
+      hourSel.value = String(h);
+      minSel.value = String(selected.getMinutes());
+      ampmSel.value = ampm;
+    }
+
+    function syncSelectedFromControls() {
+      if (!hourSel || !minSel || !ampmSel) return;
+      let h = parseInt(hourSel.value || "12", 10);
+      const m = parseInt(minSel.value || "0", 10);
+      const ampm = ampmSel.value || "AM";
+      if (ampm === "PM" && h !== 12) h += 12;
+      if (ampm === "AM" && h === 12) h = 0;
+      selected = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate(), h, m, 0, 0);
+    }
+
+    function isSameDay(a, b) {
+      return a.getFullYear() === b.getFullYear()
+        && a.getMonth() === b.getMonth()
+        && a.getDate() === b.getDate();
+    }
+
+    function render() {
+      if (monthEl) monthEl.textContent = monthName(view);
+      if (!gridEl) return;
+      gridEl.innerHTML = "";
+
+      const first = new Date(view.getFullYear(), view.getMonth(), 1);
+      const startDow = first.getDay();
+      const cur = new Date(first);
+      cur.setDate(first.getDate() - startDow);
+
+      for (let i = 0; i < 42; i++) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "prs-ms-dtp-pop__day";
+        btn.textContent = String(cur.getDate());
+        if (cur.getMonth() !== view.getMonth()) btn.classList.add("is-out");
+        if (isSameDay(cur, new Date())) btn.classList.add("is-today");
+        if (isSameDay(cur, selected)) btn.classList.add("is-selected");
+        const pick = new Date(cur);
+        btn.addEventListener("click", () => {
+          selected = new Date(pick.getFullYear(), pick.getMonth(), pick.getDate(), selected.getHours(), selected.getMinutes(), 0, 0);
+          render();
+        });
+        gridEl.appendChild(btn);
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+
+    function openFor(which, anchorEl) {
+      buildSelects();
+      active = which === "end"
+        ? { displayInput: endDtInput, isoInput: endIsoInput }
+        : { displayInput: startDtInput, isoInput: startIsoInput };
+
+      const existing = parseIsoToDate(active.isoInput.value || "");
+      selected = existing || new Date();
+      view = new Date(selected.getFullYear(), selected.getMonth(), 1);
+      syncControlsFromSelected();
+      render();
+      show(anchorEl);
+    }
+
+    document.addEventListener("click", event => {
+      const openBtn = event.target.closest("[data-ms-dtp-open]");
+      if (openBtn) {
+        event.preventDefault();
+        const which = openBtn.getAttribute("data-ms-dtp-open");
+        openFor(which, openBtn);
+        return;
+      }
+
+      if (!pop.classList.contains("is-hidden")) {
+        const inside = event.target.closest("#prs-ms-dtp-pop");
+        const openAny = event.target.closest("[data-ms-dtp-open]");
+        if (!inside && !openAny) {
+          hide();
+        }
+      }
+    });
+
+    pop.addEventListener("click", event => {
+      const nav = event.target.closest("[data-ms-dtp-nav]");
+      if (nav) {
+        event.preventDefault();
+        const dir = nav.getAttribute("data-ms-dtp-nav");
+        view = new Date(view.getFullYear(), view.getMonth() + (dir === "prev" ? -1 : 1), 1);
+        render();
+        return;
+      }
+
+      const clear = event.target.closest("[data-ms-dtp-clear]");
+      if (clear) {
+        event.preventDefault();
+        if (active) {
+          active.isoInput.value = "";
+          active.displayInput.value = "";
+        }
+        hide();
+        return;
+      }
+
+      const today = event.target.closest("[data-ms-dtp-today]");
+      if (today) {
+        event.preventDefault();
+        const now = new Date();
+        selected = new Date(now.getFullYear(), now.getMonth(), now.getDate(), selected.getHours(), selected.getMinutes(), 0, 0);
+        view = new Date(selected.getFullYear(), selected.getMonth(), 1);
+        render();
+        return;
+      }
+    });
+
+    function onTimeChange() {
+      syncSelectedFromControls();
+      render();
+    }
+
+    if (hourSel) hourSel.addEventListener("change", onTimeChange);
+    if (minSel) minSel.addEventListener("change", onTimeChange);
+    if (ampmSel) ampmSel.addEventListener("change", onTimeChange);
+
+    if (applyBtn) {
+      applyBtn.addEventListener("click", event => {
+        event.preventDefault();
+        syncSelectedFromControls();
+        if (active) setDtFields(active.displayInput, active.isoInput, selected);
+        hide();
+      });
+    }
+
+    [startDtInput, endDtInput].forEach((inp) => {
+      inp.addEventListener("click", (event) => {
+        event.preventDefault();
+        openFor(inp === endDtInput ? "end" : "start", inp);
+      });
+    });
+  })();
+}
+
+
+// ---------- Library filter dashboard ----------
+function setupLibraryFilterDashboard() {
+  const filterBtn = qs(".prs-library__filter-btn");
+  const overlay = qs("#prs-filter-overlay");
+  const dashboard = qs("#prs-filter-dashboard");
+  const form = qs("#prs-filter-form", dashboard);
+  const tbody = qs("#prs-library tbody");
+
+  if (!filterBtn || !overlay || !dashboard || !form || !tbody) {
+    return;
+  }
+
+  const owningToggle = qs("#prs-filter-owning-toggle", dashboard);
+  const readingToggle = qs("#prs-filter-reading-toggle", dashboard);
+  const owningPanel = qs("#prs-filter-owning-panel", dashboard);
+  const readingPanel = qs("#prs-filter-reading-panel", dashboard);
+  const owningChecks = owningPanel ? qsa('input[type="checkbox"][data-group="owning"]', owningPanel) : [];
+  const readingChecks = readingPanel ? qsa('input[type="checkbox"][data-group="reading"]', readingPanel) : [];
+  const progressMinInput = qs("#prs-filter-progress-min", dashboard);
+  const progressMaxInput = qs("#prs-filter-progress-max", dashboard);
+  const progressTrack = qs("#prs-filter-progress-track", dashboard);
+  const progressFill = qs("#prs-filter-progress-fill", dashboard);
+  const progressThumbMin = qs("#prs-filter-progress-thumb-min", dashboard);
+  const progressThumbMax = qs("#prs-filter-progress-thumb-max", dashboard);
+  let draggingThumb = null;
+  const orderSelect = qs("#prs-filter-order", dashboard);
+  const resetBtn = qs("#prs-filter-reset", dashboard);
+
+  const storageKey = "PRS_LIBRARY_FILTERS";
+  const defaultState = {
+    owning: [],
+    reading: [],
+    min: 0,
+    max: 100,
+    order: "title_asc",
+  };
+
+  let lastFocused = null;
+
+  function normalizeOwningOption(value) {
+    const lower = typeof value === "string" ? value.toLocaleLowerCase() : "";
+    if (!lower) return "";
+    if (lower === "borrowing") return "lent_out";
+    return lower;
+  }
+
+  function toOwningComparisonValue(value) {
+    const lower = typeof value === "string" ? value.toLocaleLowerCase() : "";
+    if (lower === "lent_out" || lower === "borrowing") {
+      return "borrowing";
+    }
+    if (lower === "in_shelf") {
+      return "";
+    }
+    return lower;
+  }
+
+  function clampProgress(val, fallback) {
+    return Math.min(100, Math.max(0, num(val, fallback)));
+  }
+
+  function normalizeState(raw) {
+    const normalized = Object.assign({}, defaultState);
+    if (raw && typeof raw === "object") {
+      if (Array.isArray(raw.owning)) {
+        normalized.owning = raw.owning.map(normalizeOwningOption).filter(Boolean);
+      } else if (typeof raw.owning === "string") {
+        normalized.owning = raw.owning ? [normalizeOwningOption(raw.owning)] : [];
+      }
+
+      if (Array.isArray(raw.reading)) {
+        normalized.reading = raw.reading.filter(Boolean);
+      } else if (typeof raw.reading === "string") {
+        normalized.reading = raw.reading ? [raw.reading] : [];
+      }
+
+      if (typeof raw.order === "string") normalized.order = raw.order;
+      normalized.min = clampProgress(raw.min, defaultState.min);
+      normalized.max = clampProgress(raw.max, defaultState.max);
+    }
+
+    if (normalized.min > normalized.max) {
+      const swap = normalized.min;
+      normalized.min = normalized.max;
+      normalized.max = swap;
+    }
+
+    normalized.owning = normalized.owning.map(normalizeOwningOption).filter(Boolean);
+
+    return normalized;
+  }
+
+  function updateRangeDisplay(input) {
+    if (!input) return;
+    const span = dashboard.querySelector('[data-display-for="' + input.id + '"]');
+    const minValue = input.id === "prs-filter-progress-max" ? 100 : 0;
+    const value = clampProgress(input.value, minValue);
+    if (span) {
+      span.textContent = value + "%";
+    }
+  }
+
+  function setRangePositions(minVal, maxVal) {
+    if (!progressTrack || !progressFill || !progressThumbMin || !progressThumbMax) return;
+    progressThumbMin.style.left = `${minVal}%`;
+    progressThumbMax.style.left = `${maxVal}%`;
+    progressFill.style.left = `${minVal}%`;
+    progressFill.style.right = `${100 - maxVal}%`;
+    progressThumbMin.setAttribute("aria-valuenow", String(minVal));
+    progressThumbMax.setAttribute("aria-valuenow", String(maxVal));
+  }
+
+  function syncRangeUI() {
+    const minVal = clampProgress(progressMinInput ? progressMinInput.value : 0, 0);
+    const maxVal = clampProgress(progressMaxInput ? progressMaxInput.value : 100, 100);
+    if (progressMinInput) updateRangeDisplay(progressMinInput);
+    if (progressMaxInput) updateRangeDisplay(progressMaxInput);
+    setRangePositions(minVal, maxVal);
+  }
+
+  function setDragState(target) {
+    draggingThumb = target;
+    if (progressThumbMin) progressThumbMin.classList.toggle("is-active", draggingThumb === "min");
+    if (progressThumbMax) progressThumbMax.classList.toggle("is-active", draggingThumb === "max");
+  }
+
+  function handleTrackDrag(event) {
+    if (!draggingThumb || !progressTrack) return;
+    const rect = progressTrack.getBoundingClientRect();
+    const percentage = Math.min(Math.max(0, ((event.clientX - rect.left) / rect.width) * 100), 100);
+    const newValue = Math.round(percentage);
+
+    const minVal = clampProgress(progressMinInput ? progressMinInput.value : 0, 0);
+    const maxVal = clampProgress(progressMaxInput ? progressMaxInput.value : 100, 100);
+
+    if (draggingThumb === "min") {
+      const nextMin = Math.min(newValue, maxVal - 1);
+      if (progressMinInput) {
+        progressMinInput.value = String(nextMin);
+      }
+    } else {
+      const nextMax = Math.max(newValue, minVal + 1);
+      if (progressMaxInput) {
+        progressMaxInput.value = String(nextMax);
+      }
+    }
+
+    syncRangeUI();
+  }
+
+  function handleMouseUp() {
+    setDragState(null);
+    document.removeEventListener("mousemove", handleTrackDrag);
+    document.removeEventListener("mouseup", handleMouseUp);
+  }
+
+  function attachThumbHandlers(thumb, type) {
+    if (!thumb || !progressTrack) return;
+    thumb.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      setDragState(type);
+      document.addEventListener("mousemove", handleTrackDrag);
+      document.addEventListener("mouseup", handleMouseUp);
+    });
+  }
+
+  function setSelectValue(select, value) {
+    if (!select) return;
+    const values = Array.prototype.map.call(select.options, option => option.value);
+    select.value = values.indexOf(value) !== -1 ? value : "";
+  }
+
+  function setCheckedValues(checkboxes, values) {
+    if (!checkboxes || !checkboxes.length) return;
+    const selected = new Set((values || []).filter(Boolean));
+    checkboxes.forEach((checkbox) => {
+      checkbox.checked = selected.has(checkbox.value);
+    });
+  }
+
+  function getCheckedValues(checkboxes) {
+    if (!checkboxes || !checkboxes.length) return [];
+    return checkboxes.filter((checkbox) => checkbox.checked).map((checkbox) => checkbox.value);
+  }
+
+  function updateMultiLabel(toggle, checkboxes) {
+    if (!toggle) return;
+    const defaultLabel = toggle.getAttribute("data-default-label") || prsText("filter_all", "All");
+    const checked = getCheckedValues(checkboxes);
+    if (!checked.length) {
+      toggle.textContent = defaultLabel;
+      return;
+    }
+
+    const labels = checked.map((value) => {
+      const input = (checkboxes || []).find((checkbox) => checkbox.value === value);
+      const label = input && input.parentElement ? input.parentElement.textContent : value;
+      return (label || value).trim();
+    });
+
+    toggle.textContent = labels.length <= 2
+      ? labels.join(", ")
+      : prsFormat("selected_count", "%d selected", labels.length);
+  }
+
+  function applyInputs(state) {
+    setCheckedValues(owningChecks, state.owning);
+    setCheckedValues(readingChecks, state.reading);
+    updateMultiLabel(owningToggle, owningChecks);
+    updateMultiLabel(readingToggle, readingChecks);
+    setSelectValue(orderSelect, state.order);
+    if (progressMinInput) {
+      progressMinInput.value = String(state.min);
+      updateRangeDisplay(progressMinInput);
+    }
+    if (progressMaxInput) {
+      progressMaxInput.value = String(state.max);
+      updateRangeDisplay(progressMaxInput);
+    }
+  }
+
+  function getStateFromInputs() {
+    return {
+      owning: getCheckedValues(owningChecks).map(normalizeOwningOption).filter(Boolean),
+      reading: getCheckedValues(readingChecks).filter(Boolean),
+      min: progressMinInput ? num(progressMinInput.value, defaultState.min) : defaultState.min,
+      max: progressMaxInput ? num(progressMaxInput.value, defaultState.max) : defaultState.max,
+      order: orderSelect ? orderSelect.value : defaultState.order,
+    };
+  }
+
+  function compareText(a, b, attr, asc) {
+    const aVal = (a.getAttribute(attr) || "").toLocaleLowerCase();
+    const bVal = (b.getAttribute(attr) || "").toLocaleLowerCase();
+    const result = aVal.localeCompare(bVal, undefined, { sensitivity: "base" });
+    return asc ? result : -result;
+  }
+
+  function compareNumber(a, b, attr, asc) {
+    const aVal = clampProgress(a.getAttribute(attr), 0);
+    const bVal = clampProgress(b.getAttribute(attr), 0);
+    if (aVal === bVal) return 0;
+    return asc ? (aVal - bVal) : (bVal - aVal);
+  }
+
+  function reorderRows(rows, order) {
+    const sorted = rows.slice();
+    switch (order) {
+      case "title_desc":
+        sorted.sort((a, b) => compareText(a, b, "data-title", false));
+        break;
+      case "author_asc":
+        sorted.sort((a, b) => compareText(a, b, "data-author", true));
+        break;
+      case "author_desc":
+        sorted.sort((a, b) => compareText(a, b, "data-author", false));
+        break;
+      case "progress_asc":
+        sorted.sort((a, b) => compareNumber(a, b, "data-progress", true));
+        break;
+      case "progress_desc":
+        sorted.sort((a, b) => compareNumber(a, b, "data-progress", false));
+        break;
+      case "title_asc":
+      default:
+        sorted.sort((a, b) => compareText(a, b, "data-title", true));
+        break;
+    }
+
+    sorted.forEach(row => tbody.appendChild(row));
+    return sorted;
+  }
+
+  function applyFilters(state) {
+    const normalized = normalizeState(state);
+    const rows = qsa("tr[data-user-book-id]", tbody);
+    if (!rows.length) {
+      return normalized;
+    }
+
+    const sortedRows = reorderRows(rows, normalized.order);
+    const owningValues = normalized.owning.map(toOwningComparisonValue);
+    const readingValues = normalized.reading.map((value) => (value || "").toLocaleLowerCase());
+
+    let visibleCount = 0;
+    sortedRows.forEach(row => {
+      const owning = toOwningComparisonValue(row.getAttribute("data-owning-status"));
+      const reading = (row.getAttribute("data-reading-status") || "").toLocaleLowerCase();
+      const progress = clampProgress(row.getAttribute("data-progress"), 0);
+      const owningMatches = owningValues.length === 0 || owningValues.includes(owning);
+      const readingMatches = readingValues.length === 0 || readingValues.includes(reading);
+      const progressMatches = progress >= normalized.min && progress <= normalized.max;
+      const isVisible = owningMatches && readingMatches && progressMatches;
+      row.style.display = isVisible ? "" : "none";
+      if (isVisible) {
+        visibleCount += 1;
+      }
+    });
+
+    let emptyRow = tbody.querySelector("#prs-library-empty");
+    if (visibleCount === 0) {
+      if (!emptyRow) {
+        emptyRow = document.createElement("tr");
+        emptyRow.id = "prs-library-empty";
+        emptyRow.setAttribute("data-empty", "1");
+        emptyRow.innerHTML = '<td colspan="100%"><div class="prs-library__empty">Zero books meet this criteria.</div></td>';
+        tbody.appendChild(emptyRow);
+      }
+      emptyRow.style.display = "";
+    } else if (emptyRow) {
+      emptyRow.remove();
+    }
+
+    const filterActive = normalized.owning.length > 0
+      || normalized.reading.length > 0
+      || normalized.min > 0
+      || normalized.max < 100;
+
+    if (typeof window.updateBookCount === "function") {
+      window.updateBookCount({
+        filterActive: filterActive,
+        filteredCount: visibleCount,
+      });
+    }
+
+    return normalized;
+  }
+
+  function saveState(state) {
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(state));
+    } catch (err) {
+      // ignore storage errors
+    }
+  }
+
+  function loadState() {
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return normalizeState(parsed);
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function clearState() {
+    try {
+      window.localStorage.removeItem(storageKey);
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  function handleKeydown(event) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeDashboard();
+    }
+  }
+
+  function openDashboard() {
+    lastFocused = document.activeElement;
+    overlay.classList.add("is-active");
+    overlay.removeAttribute("hidden");
+    dashboard.classList.add("is-active");
+    dashboard.removeAttribute("hidden");
+    dashboard.setAttribute("aria-hidden", "false");
+    filterBtn.setAttribute("aria-expanded", "true");
+    document.body.classList.add("prs-filter-open");
+    document.addEventListener("keydown", handleKeydown);
+    const firstFocusable = dashboard.querySelector("select, input, button");
+    if (firstFocusable) {
+      setTimeout(() => firstFocusable.focus(), 0);
+    }
+  }
+
+  function closeDashboard() {
+    overlay.classList.remove("is-active");
+    overlay.setAttribute("hidden", "hidden");
+    dashboard.classList.remove("is-active");
+    dashboard.setAttribute("hidden", "hidden");
+    dashboard.setAttribute("aria-hidden", "true");
+    filterBtn.setAttribute("aria-expanded", "false");
+    document.body.classList.remove("prs-filter-open");
+    document.removeEventListener("keydown", handleKeydown);
+    if (owningPanel) togglePanel(owningToggle, owningPanel, false);
+    if (readingPanel) togglePanel(readingToggle, readingPanel, false);
+    if (lastFocused && typeof lastFocused.focus === "function") {
+      setTimeout(() => lastFocused.focus(), 0);
+    }
+  }
+
+  function applyAndSave(state, shouldClose) {
+    const normalized = normalizeState(state);
+    applyInputs(normalized);
+    const applyNow = () => {
+      applyFilters(normalized);
+      saveState(normalized);
+      if (shouldClose) {
+        closeDashboard();
+      }
+    };
+
+    if (typeof window.loadLibraryPage === "function") {
+      Promise.resolve(window.loadLibraryPage(1)).then(applyNow).catch(applyNow);
+    } else {
+      applyNow();
+    }
+  }
+
+  filterBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    openDashboard();
+  });
+
+  function togglePanel(toggle, panel, shouldOpen) {
+    if (!toggle || !panel) return;
+    const isOpen = typeof shouldOpen === "boolean" ? shouldOpen : panel.hasAttribute("hidden");
+    if (isOpen) {
+      panel.removeAttribute("hidden");
+      panel.classList.add("is-open");
+      toggle.setAttribute("aria-expanded", "true");
+    } else {
+      panel.setAttribute("hidden", "hidden");
+      panel.classList.remove("is-open");
+      toggle.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  if (owningToggle && owningPanel) {
+    owningToggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      const shouldOpen = owningPanel.hasAttribute("hidden");
+      togglePanel(owningToggle, owningPanel, shouldOpen);
+      if (shouldOpen && readingPanel) {
+        togglePanel(readingToggle, readingPanel, false);
+      }
+    });
+  }
+
+  if (readingToggle && readingPanel) {
+    readingToggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      const shouldOpen = readingPanel.hasAttribute("hidden");
+      togglePanel(readingToggle, readingPanel, shouldOpen);
+      if (shouldOpen && owningPanel) {
+        togglePanel(owningToggle, owningPanel, false);
+      }
+    });
+  }
+
+  [...owningChecks, ...readingChecks].forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      updateMultiLabel(owningToggle, owningChecks);
+      updateMultiLabel(readingToggle, readingChecks);
+    });
+  });
+
+  overlay.addEventListener("click", () => {
+    closeDashboard();
+  });
+
+  dashboard.addEventListener("click", (event) => {
+    if (event.target === dashboard) {
+      closeDashboard();
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!dashboard.contains(target) && target !== filterBtn) {
+      if (owningPanel) togglePanel(owningToggle, owningPanel, false);
+      if (readingPanel) togglePanel(readingToggle, readingPanel, false);
+      if (dashboard.classList.contains("is-active")) {
+        closeDashboard();
+      }
+    }
+  });
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    applyAndSave(getStateFromInputs(), true);
+  });
+
+  if (resetBtn) {
+    resetBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      clearState();
+      applyInputs(defaultState);
+      applyFilters(defaultState);
+    });
+  }
+
+  [progressMinInput, progressMaxInput].forEach((input) => {
+    if (!input) return;
+    input.addEventListener("input", () => {
+      const minVal = clampProgress(progressMinInput ? progressMinInput.value : 0, 0);
+      const maxVal = clampProgress(progressMaxInput ? progressMaxInput.value : 100, 100);
+      if (progressMinInput && progressMaxInput) {
+        if (minVal > maxVal) {
+          if (input === progressMinInput) {
+            progressMaxInput.value = String(minVal);
+          } else {
+            progressMinInput.value = String(maxVal);
+          }
+        }
+      }
+      syncRangeUI();
+    });
+  });
+
+  attachThumbHandlers(progressThumbMin, "min");
+  attachThumbHandlers(progressThumbMax, "max");
+
+  if (progressTrack) {
+    progressTrack.addEventListener("mousedown", (event) => {
+      if (!progressMinInput || !progressMaxInput) return;
+      const rect = progressTrack.getBoundingClientRect();
+      const percentage = Math.min(Math.max(0, ((event.clientX - rect.left) / rect.width) * 100), 100);
+      const minVal = clampProgress(progressMinInput.value, 0);
+      const maxVal = clampProgress(progressMaxInput.value, 100);
+      const distanceToMin = Math.abs(percentage - minVal);
+      const distanceToMax = Math.abs(percentage - maxVal);
+      const target = distanceToMin <= distanceToMax ? "min" : "max";
+      setDragState(target);
+      handleTrackDrag(event);
+      document.addEventListener("mousemove", handleTrackDrag);
+      document.addEventListener("mouseup", handleMouseUp);
+    });
+  }
+
+  const savedState = loadState();
+  if (savedState) {
+    applyInputs(savedState);
+    applyFilters(savedState);
+  } else {
+    applyInputs(defaultState);
+    applyFilters(defaultState);
+  }
+
+  syncRangeUI();
+}
+
+
+// ---------- Library owning overlay ----------
+function setupLibraryOwningOverlay() {
+  const selects = qsa(".owning-status-select");
+  if (!selects.length) return;
+
+  const overlay = qs("#owning-overlay");
+  if (!overlay) return;
+
+  const overlayTitle = qs("#owning-overlay-title");
+  const nameInput = qs("#owning-overlay-name");
+  const emailInput = qs("#owning-overlay-email");
+  const amountInput = qs("#owning-overlay-amount");
+  const confirmBtn = qs("#owning-overlay-confirm");
+  const cancelBtn = qs("#owning-overlay-cancel");
+  const statusMsg = qs("#owning-overlay-status");
+
+  const owningConfig = (window.PRS_LIBRARY && PRS_LIBRARY.owning) || {};
+  const owningLabels = owningConfig.labels || {};
+  const owningMessages = owningConfig.messages || {};
+  const nonce = owningConfig.nonce || (typeof window.PRS_NONCE === "string" ? window.PRS_NONCE : "");
+  const ajaxUrl = (typeof window.ajaxurl === "string" && window.ajaxurl)
+    || (window.PRS_LIBRARY && PRS_LIBRARY.ajax_url)
+    || "";
+
+  const msgMissingContact = owningMessages.missing || prsText("missing_contact", "Please enter both name and email.");
+  const msgSaving = owningMessages.saving || prsText("status_saving", "Saving...");
+  const msgError = owningMessages.error || prsText("error_saving_contact", "Error saving contact.");
+  const msgAlert = owningMessages.alert || msgError;
+
+  const labelBorrowing = owningLabels.borrowing || prsText("label_borrowing", "Borrowing to:");
+  const labelBorrowed = owningLabels.borrowed || prsText("label_borrowed", "Borrowed from:");
+  const labelSold = owningLabels.sold || prsText("label_sold", "Sold to:");
+  const labelLost = owningLabels.lost || prsText("label_lost", "Last borrowed to:");
+  const labelSoldOn = owningLabels.sold_on || prsText("label_sold_on", "Sold on:");
+  const labelLostDate = owningLabels.lost_date || prsText("label_lost_date", "Lost:");
+  const labelLocation = owningLabels.location || prsText("label_location", "Location");
+  const labelInShelf = owningLabels.in_shelf || prsText("label_in_shelf", "In Shelf");
+  const labelNotInShelf = owningLabels.not_in_shelf || prsText("label_not_in_shelf", "Not In Shelf");
+  const labelUnknown = owningLabels.unknown || prsText("label_unknown", "Unknown");
+
+  let currentSelect = null;
+  let currentStatus = "";
+  let currentRowInfo = null;
+  let previousValue = "";
+
+  function requiresContact(status) {
+    return status === "borrowed" || status === "borrowing" || status === "sold";
+  }
+
+  function getLabelFor(status) {
+    switch (status) {
+      case "borrowed":
+        return labelBorrowed;
+      case "borrowing":
+        return labelBorrowing;
+      case "sold":
+        return labelSold;
+      case "lost":
+        return labelLost;
+      default:
+        return labelBorrowing;
+    }
+  }
+
+  function normalizeStatus(value) {
+    const trimmed = (value || "").trim();
+    return trimmed === "" ? "in_shelf" : trimmed;
+  }
+
+  function clearOverlayMessage() {
+    if (!statusMsg) return;
+    statusMsg.style.color = "";
+    statusMsg.textContent = "";
+  }
+
+  function closeOverlay() {
+    overlay.style.display = "none";
+    currentSelect = null;
+    currentStatus = "";
+    currentRowInfo = null;
+    previousValue = "";
+    clearOverlayMessage();
+    if (amountInput) {
+      amountInput.value = "";
+      amountInput.style.display = "none";
+    }
+  }
+
+  function openOverlay(select, status, rowInfo) {
+    currentSelect = select;
+    currentStatus = status;
+    currentRowInfo = rowInfo || null;
+    previousValue = select ? (select.dataset.currentValue || select.value || "") : "";
+    clearOverlayMessage();
+
+    if (overlayTitle) {
+      overlayTitle.textContent = getLabelFor(status);
+    }
+    const priorState = normalizeStatus(previousValue || "");
+    if (status === "sold" && priorState === "borrowing") {
+      if (overlayTitle) {
+        overlayTitle.textContent = prsText("borrower_buying_title", "Borrowed person is buying this book:");
+      }
+      if (statusMsg) {
+        statusMsg.style.color = "";
+        statusMsg.textContent = prsText("borrower_buying_confirm", "Confirm that the borrower is purchasing or compensating for the book.");
+      }
+    }
+    if (nameInput) {
+      nameInput.value = select ? (select.dataset.contactName || "") : "";
+    }
+    if (emailInput) {
+      emailInput.value = select ? (select.dataset.contactEmail || "") : "";
+    }
+
+    if (amountInput) {
+      if (status === "sold") {
+        amountInput.value = select ? (select.dataset.saleAmount || "") : "";
+        amountInput.style.display = "";
+      } else {
+        amountInput.value = "";
+        amountInput.style.display = "none";
+      }
+    }
+
+    overlay.style.display = "flex";
+    setTimeout(() => {
+      if (nameInput) {
+        nameInput.focus();
+      }
+    }, 0);
+  }
+
+  function updateInfoElement(el, status, name, date, amount = "") {
+    if (!el) return;
+    const normalizedStatus = (status || "").trim();
+    const formattedDate = formatOwningDate(date);
+    const safeDate = formattedDate ? escapeHtml(formattedDate) : "";
+    const safeName = escapeHtml(name || "");
+    const safeDisplayName = safeName || escapeHtml(labelUnknown);
+    const formattedAmount = normalizedStatus === "sold" ? formatOwningAmount(amount) : "";
+    const safeAmount = formattedAmount ? escapeHtml(formattedAmount) : "";
+
+    if (normalizedStatus === "lost") {
+      if (safeDate) {
+        const lostLabel = escapeHtml(labelLostDate);
+        el.innerHTML = `<strong>${lostLabel}</strong><br><small>${safeDate}</small>`;
+      } else {
+        const locationLine = `<strong>${escapeHtml(labelLocation)}</strong>: ${escapeHtml(labelNotInShelf)}`;
+        el.innerHTML = locationLine;
+      }
+      return;
+    }
+
+    if (normalizedStatus === "sold") {
+      const soldLabel = escapeHtml(labelSold);
+      let html = `<strong>${soldLabel}</strong>`;
+      if (safeDisplayName) {
+        html += `<br>${safeDisplayName}`;
+        if (safeAmount) {
+          html += ` for $${safeAmount}`;
+        }
+      } else if (safeAmount) {
+        html += `<br>$${safeAmount}`;
+      }
+      if (safeDate) {
+        html += `<br><small>${safeDate}</small>`;
+      }
+      el.innerHTML = html;
+      return;
+    }
+
+    if (requiresContact(normalizedStatus)) {
+      const label = escapeHtml(getLabelFor(normalizedStatus));
+      const displayName = safeDisplayName;
+      let html = label ? `<strong>${label}</strong>` : "";
+      if (displayName) {
+        html += (html ? "<br>" : "") + displayName;
+      }
+      if (safeAmount && normalizedStatus === "sold") {
+        html += `<br>$${safeAmount}`;
+      }
+      if (safeDate) {
+        html += `<br><small>${safeDate}</small>`;
+      }
+      el.innerHTML = html;
+      return;
+    }
+
+    const locationLine = `<strong>${escapeHtml(labelLocation)}</strong>: ${escapeHtml(labelInShelf)}`;
+    el.innerHTML = locationLine;
+  }
+
+  function finalizeSelect(select, storedStatus, meta = {}) {
+    const uiValue = storedStatus ? storedStatus : "in_shelf";
+    select.value = uiValue;
+    select.dataset.currentValue = uiValue;
+    select.dataset.storedStatus = storedStatus || "";
+
+    if (typeof meta.contactName !== "undefined") {
+      select.dataset.contactName = meta.contactName || "";
+    }
+    if (typeof meta.contactEmail !== "undefined") {
+      select.dataset.contactEmail = meta.contactEmail || "";
+    }
+    if (typeof meta.activeStart !== "undefined") {
+      select.dataset.activeStart = meta.activeStart || "";
+    }
+    if (typeof meta.saleAmount !== "undefined") {
+      if (meta.saleAmount) {
+        select.dataset.saleAmount = meta.saleAmount;
+      } else {
+        delete select.dataset.saleAmount;
+      }
+    } else if (storedStatus !== "sold") {
+      delete select.dataset.saleAmount;
+    }
+
+    toggleReadingStatusLock(select);
+    filterOwningOptions(select, storedStatus || "");
+
+    const row = select.closest("tr");
+    const returnBtn = row ? row.querySelector(".owning-return-shelf") : null;
+    if (returnBtn) {
+      const normalizedStatus = normalizeStatus(storedStatus || "");
+      const shouldShow = normalizedStatus === "borrowing" || normalizedStatus === "borrowed";
+      returnBtn.style.display = shouldShow ? "" : "none";
+      if (!returnBtn.dataset.bookId && select.dataset.bookId) {
+        returnBtn.dataset.bookId = select.dataset.bookId;
+      }
+      if (!returnBtn.dataset.userBookId && select.dataset.userBookId) {
+        returnBtn.dataset.userBookId = select.dataset.userBookId;
+      }
+      returnBtn.disabled = select.disabled;
+    }
+  }
+
+  function saveOwningContact(select, status, name, email, options = {}) {
+    const previous = options.previousValue || select.dataset.currentValue || "";
+    const bookId = parseInt(select.dataset.bookId || "", 10) || 0;
+    const userBookId = parseInt(select.dataset.userBookId || "", 10) || 0;
+    const normalizedStatus = status === "in_shelf" ? "" : (status || "");
+    const trimmedName = (name || "").trim();
+    const trimmedEmail = (email || "").trim();
+    const previousState = normalizeStatus(previous);
+    const transactionType = previousState === "borrowing" && normalizeStatus(status) === "sold"
+      ? "bought_by_borrower"
+      : "";
+    const rowEl = select.closest("tr");
+
+    if (!ajaxUrl || !nonce || !bookId || !userBookId) {
+      console.warn("Missing owning overlay configuration.");
+      select.value = previous;
+      select.dataset.currentValue = previous;
+      return Promise.reject(new Error("configuration"));
+    }
+
+    if (window.PRS_isSaving) {
+      return Promise.resolve(null);
+    }
+    window.PRS_isSaving = true;
+
+    const fromOverlay = !!options.fromOverlay;
+    if (fromOverlay && statusMsg) {
+      statusMsg.style.color = "";
+      statusMsg.textContent = msgSaving;
+    }
+
+    let amountValue = "";
+    if (options && Object.prototype.hasOwnProperty.call(options, "amount")) {
+      amountValue = options.amount == null ? "" : String(options.amount);
+    } else if (amountInput && amountInput.style.display !== "none") {
+      amountValue = amountInput.value.trim();
+    }
+
+    const body = new URLSearchParams({
+      action: "save_owning_contact",
+      book_id: String(bookId),
+      user_book_id: String(userBookId),
+      owning_status: normalizedStatus,
+      contact_name: trimmedName,
+      contact_email: trimmedEmail,
+      transaction_type: transactionType,
+      amount: amountValue,
+      nonce,
+    });
+
+    const rowInfo = options.rowInfo || null;
+
+    return fetch(ajaxUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      credentials: "same-origin",
+      body,
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (!res || !res.success) {
+          throw res;
+        }
+
+        const payload = res.data || {};
+        const savedStatus = typeof payload.owning_status === "string" ? payload.owning_status : normalizedStatus;
+        const nextName = typeof payload.counterparty_name === "string" ? payload.counterparty_name : trimmedName;
+        const nextEmail = typeof payload.counterparty_email === "string" ? payload.counterparty_email : trimmedEmail;
+        const normalizedSaved = normalizeStatus(savedStatus);
+        const responseDate = formatOwningDate(payload.date);
+        const todayFormatted = formatOwningDate(new Date().toISOString());
+        const shouldShowChangeDate = normalizedSaved === "lost" || normalizedSaved === "sold";
+        const changeDate = shouldShowChangeDate ? (responseDate || todayFormatted) : "";
+        const payloadAmount = typeof payload.amount !== "undefined" && payload.amount !== null
+          ? String(payload.amount)
+          : amountValue;
+        const nextSaleAmount = normalizedSaved === "sold" ? payloadAmount : "";
+        let activeDate = "";
+        if (requiresContact(savedStatus)) {
+          if (normalizedSaved === "sold") {
+            activeDate = changeDate || options.dateString || select.dataset.activeStart || todayFormatted;
+          } else {
+            activeDate = options.dateString || select.dataset.activeStart || (responseDate || todayFormatted);
+          }
+        }
+        const infoDate = changeDate || activeDate;
+
+        finalizeSelect(select, savedStatus, {
+          contactName: nextName,
+          contactEmail: nextEmail,
+          activeStart: requiresContact(savedStatus) ? activeDate : "",
+          saleAmount: normalizedSaved === "sold" ? nextSaleAmount : "",
+        });
+
+        if (rowEl) {
+          rowEl.setAttribute("data-owning-status", savedStatus ? savedStatus : "in_shelf");
+        }
+
+        if (rowInfo) {
+          if (normalizedSaved === "sold" && nextSaleAmount) {
+            rowInfo.dataset.saleAmount = nextSaleAmount;
+          } else {
+            delete rowInfo.dataset.saleAmount;
+          }
+        }
+
+        updateInfoElement(rowInfo, savedStatus, nextName, infoDate, nextSaleAmount);
+
+        if (fromOverlay && statusMsg) {
+          const successMsg = (payload && payload.message) ? payload.message : prsText("saved_successfully", "Saved successfully.");
+          statusMsg.style.color = "#2f6b2f";
+          statusMsg.textContent = successMsg;
+          setTimeout(() => {
+            if (statusMsg.textContent === successMsg) {
+              statusMsg.textContent = "";
+            }
+          }, 2000);
+        }
+
+        closeOverlay();
+        return res;
+      })
+      .catch(err => {
+        if (fromOverlay && statusMsg) {
+          statusMsg.style.color = "#b00020";
+          statusMsg.textContent = (err && err.data && err.data.message) ? err.data.message : msgError;
+        } else {
+          window.alert((err && err.data && err.data.message) ? err.data.message : msgAlert);
+        }
+
+        select.value = previous;
+        select.dataset.currentValue = previous;
+        if (rowEl) {
+          const fallbackStatus = select.dataset.storedStatus || "";
+          rowEl.setAttribute("data-owning-status", fallbackStatus ? fallbackStatus : "in_shelf");
+        }
+        updateInfoElement(
+          rowInfo,
+          select.dataset.storedStatus || "",
+          select.dataset.contactName || "",
+          select.dataset.activeStart || "",
+          select.dataset.saleAmount || (rowInfo && rowInfo.dataset ? rowInfo.dataset.saleAmount : "") || ""
+        );
+        toggleReadingStatusLock(select);
+        filterOwningOptions(select, previous);
+        const returnBtn = rowEl ? rowEl.querySelector(".owning-return-shelf") : null;
+        if (returnBtn) {
+          const stored = normalizeStatus(select.dataset.storedStatus || "");
+          const shouldShow = stored === "borrowing" || stored === "borrowed";
+          returnBtn.style.display = shouldShow ? "" : "none";
+          returnBtn.disabled = select.disabled;
+        }
+        return Promise.reject(err);
+      })
+      .finally(() => {
+        window.PRS_isSaving = false;
+      });
+  }
+
+  function markAsReturnedRow(select, returnBtn, rowInfo) {
+    const bookId = parseInt((returnBtn && returnBtn.dataset.bookId) || select.dataset.bookId || "", 10) || 0;
+    const userBookId = parseInt((returnBtn && returnBtn.dataset.userBookId) || select.dataset.userBookId || "", 10) || 0;
+
+    if (!ajaxUrl || !nonce || !bookId || !userBookId) {
+      console.warn("Missing owning overlay configuration.");
+      overlayConfirmed = false;
+      return Promise.reject(new Error("configuration"));
+    }
+
+    if (returnBtn) {
+      returnBtn.disabled = true;
+    }
+
+    const body = new URLSearchParams({
+      action: "mark_as_returned",
+      book_id: String(bookId),
+      user_book_id: String(userBookId),
+      nonce,
+    });
+
+    return fetch(ajaxUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      credentials: "same-origin",
+      body,
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (!res || !res.success) {
+          throw res;
+        }
+
+        select.dataset.currentValue = "in_shelf";
+        select.dataset.storedStatus = "";
+        select.dataset.contactName = "";
+        select.dataset.contactEmail = "";
+        select.dataset.activeStart = "";
+        delete select.dataset.saleAmount;
+        select.value = "in_shelf";
+
+        const row = select.closest("tr");
+        if (row) {
+          row.setAttribute("data-owning-status", "in_shelf");
+        }
+
+        if (rowInfo && rowInfo.dataset) {
+          delete rowInfo.dataset.saleAmount;
+        }
+
+        updateInfoElement(rowInfo, "", "", "", "");
+        toggleReadingStatusLock(select);
+        filterOwningOptions(select, "");
+
+        const readingSelect = document.querySelector(`.reading-status-select[data-book-id="${select.dataset.bookId || ""}"]`)
+          || document.getElementById("reading-status-select");
+        if (readingSelect) {
+          readingSelect.disabled = false;
+          readingSelect.classList.remove("is-disabled");
+          readingSelect.setAttribute("aria-disabled", "false");
+          readingSelect.title = "";
+        }
+
+        if (returnBtn) {
+          returnBtn.style.display = "none";
+          returnBtn.disabled = false;
+        }
+
+        overlayConfirmed = false;
+        return res;
+      })
+      .catch(err => {
+        if (returnBtn) {
+          returnBtn.disabled = false;
+        }
+        const message = (err && err.data && err.data.message) ? err.data.message : msgAlert;
+        window.alert(message);
+        overlayConfirmed = false;
+        throw err;
+      });
+  }
+
+  selects.forEach(select => {
+    if (select.dataset.libraryOwningBound === "1") {
+      return;
+    }
+    select.dataset.libraryOwningBound = "1";
+
+    if (!select.dataset.currentValue) {
+      select.dataset.currentValue = normalizeStatus(select.value || "");
+    }
+    if (typeof select.dataset.storedStatus === "undefined") {
+      const initialStored = select.value && select.value !== "in_shelf" ? select.value : "";
+      select.dataset.storedStatus = initialStored;
+    }
+    if (typeof select.dataset.contactName === "undefined") {
+      select.dataset.contactName = "";
+    }
+    if (typeof select.dataset.contactEmail === "undefined") {
+      select.dataset.contactEmail = "";
+    }
+    if (typeof select.dataset.activeStart === "undefined") {
+      select.dataset.activeStart = "";
+    }
+
+    const row = select.closest("tr");
+    const rowInfo = row ? row.querySelector(".owning-status-info") : null;
+    const returnBtn = row ? row.querySelector(".owning-return-shelf") : null;
+    if (returnBtn) {
+      if (!returnBtn.dataset.bookId && select.dataset.bookId) {
+        returnBtn.dataset.bookId = select.dataset.bookId;
+      }
+      if (!returnBtn.dataset.userBookId && select.dataset.userBookId) {
+        returnBtn.dataset.userBookId = select.dataset.userBookId;
+      }
+      const initialState = normalizeStatus(select.dataset.currentValue || select.value || "");
+      const shouldShowReturn = initialState === "borrowing" || initialState === "borrowed";
+      returnBtn.style.display = shouldShowReturn ? "" : "none";
+      returnBtn.disabled = select.disabled;
+      returnBtn.__prsReturnHandler = () => markAsReturnedRow(select, returnBtn, rowInfo);
+    }
+    toggleReadingStatusLock(select);
+    filterOwningOptions(select, select.dataset.currentValue || select.value || "");
+
+    select.addEventListener("change", () => {
+      if (overlayConfirmed) {
+        overlayConfirmed = false;
+        return;
+      }
+      if (window.PRS_isSaving) {
+        return;
+      }
+      if (select.disabled) {
+        select.value = select.dataset.currentValue || select.value || "";
+        toggleReadingStatusLock(select);
+        filterOwningOptions(select, select.dataset.currentValue || "");
+        return;
+      }
+
+      const rawValue = normalizeStatus(select.value);
+      const previous = select.dataset.currentValue || normalizeStatus(select.value);
+
+      if (rawValue === "bought") {
+        const revertSelection = () => {
+          select.value = previous;
+          select.dataset.currentValue = previous;
+          toggleReadingStatusLock(select);
+          filterOwningOptions(select, previous);
+        };
+
+        revertSelection();
+
+        openBoughtOverlay({
+          onConfirm: () => {
+            saveOwningContact(select, "bought", "", "", {
+              rowInfo,
+              previousValue: previous,
+              fromOverlay: false,
+              amount: "",
+            }).catch(() => {
+              revertSelection();
+            });
+          },
+          onCancel: revertSelection,
+        });
+        return;
+      }
+
+      toggleReadingStatusLock(select);
+      filterOwningOptions(select, rawValue);
+
+      if (requiresContact(rawValue)) {
+        openOverlay(select, rawValue, rowInfo);
+        return;
+      }
+
+      const readingSelect = document.querySelector(`.reading-status-select[data-book-id="${select.dataset.bookId || ""}"]`)
+        || document.getElementById("reading-status-select");
+
+      if (rawValue === "lost") {
+        if (readingSelect) {
+          readingSelect.disabled = true;
+          readingSelect.classList.add("is-disabled");
+          readingSelect.setAttribute("aria-disabled", "true");
+          readingSelect.title = prsText("disabled_lost", "Disabled while this book is lost.");
+        }
+
+        saveOwningContact(select, rawValue, select.dataset.contactName || "", select.dataset.contactEmail || "", {
+          rowInfo,
+          previousValue: previous,
+          fromOverlay: false,
+        }).catch(() => {});
+        return;
+      }
+
+      if (rawValue === "in_shelf") {
+        if (readingSelect) {
+          readingSelect.disabled = false;
+          readingSelect.classList.remove("is-disabled");
+          readingSelect.setAttribute("aria-disabled", "false");
+          readingSelect.title = "";
+        }
+
+        saveOwningContact(select, rawValue, "", "", {
+          rowInfo,
+          previousValue: previous,
+          fromOverlay: false,
+        }).catch(() => {});
+        return;
+      }
+
+      select.value = previous;
+      toggleReadingStatusLock(select);
+    });
+  });
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener("click", () => {
+      if (!currentSelect || !requiresContact(currentStatus)) {
+        closeOverlay();
+        return;
+      }
+
+      const name = nameInput ? nameInput.value.trim() : "";
+      const email = emailInput ? emailInput.value.trim() : "";
+      const amountValue = amountInput && amountInput.style.display !== "none"
+        ? amountInput.value.trim()
+        : "";
+
+      if (!name || !email) {
+        if (statusMsg) {
+          statusMsg.style.color = "#b00020";
+          statusMsg.textContent = msgMissingContact;
+        }
+        return;
+      }
+
+      confirmBtn.disabled = true;
+      saveOwningContact(currentSelect, currentStatus, name, email, {
+        rowInfo: currentRowInfo,
+        previousValue,
+        fromOverlay: true,
+        dateString: formatOwningDate(new Date().toISOString()),
+        amount: amountValue,
+      })
+        .catch(() => {})
+        .finally(() => {
+          confirmBtn.disabled = false;
+        });
+    });
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", () => {
+      if (currentSelect) {
+        currentSelect.value = previousValue || currentSelect.dataset.currentValue || "";
+        toggleReadingStatusLock(currentSelect);
+        filterOwningOptions(currentSelect, currentSelect.value || previousValue || "");
+      }
+      closeOverlay();
+    });
+  }
+}
+
+function setupReadingDensityBar() {
+  const canvas = document.getElementById("prs-reading-density-canvas");
+  if (!canvas) return;
+
+  const rawTotal = canvas.getAttribute("data-total-pages") || "";
+  const totalPages = parseInt(rawTotal, 10);
+  if (!Number.isFinite(totalPages) || totalPages <= 0) return;
+
+  const rawSessions = canvas.getAttribute("data-sessions") || "";
+  let sessions = [];
+
+  try {
+    sessions = JSON.parse(rawSessions);
+  } catch (err) {
+    sessions = [];
+  }
+
+  if (!Array.isArray(sessions) || sessions.length === 0) {
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const container = canvas.parentElement || canvas;
+
+  function renderDensity() {
+    const width = container.offsetWidth || canvas.clientWidth || 0;
+    const height = container.offsetHeight || canvas.clientHeight || 0;
+
+    if (width === 0 || height === 0) {
+      return;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const pageDensity = new Array(totalPages).fill(0);
+
+    sessions.forEach(session => {
+      const startValue = parseInt(session.start_page, 10);
+      const endValue = parseInt(session.end_page, 10);
+      const start = Math.min(totalPages, Math.max(1, Number.isFinite(startValue) ? startValue : 0));
+      const end = Math.min(totalPages, Math.max(start, Number.isFinite(endValue) ? endValue : 0));
+
+      for (let i = start - 1; i < end; i++) {
+        pageDensity[i] += 1;
+      }
+    });
+
+    ctx.clearRect(0, 0, width, height);
+
+    const pageWidth = width / totalPages;
+
+    for (let i = 0; i < totalPages; i++) {
+      const density = pageDensity[i];
+      if (density === 0) {
+        continue;
+      }
+
+      const clamped = Math.min(density, 5);
+      const lightness = 75 - (clamped - 1) * 10;
+      ctx.fillStyle = `hsl(44, 60%, ${lightness}%)`;
+      ctx.fillRect(i * pageWidth, 0, pageWidth + 0.5, height);
+    }
+  }
+
+  renderDensity();
+  window.addEventListener("resize", renderDensity);
+}
+
+
+jQuery(document).on("click", ".prs-remove-book", function () {
+  const btn = jQuery(this);
+  const id = parseInt(String(btn.data("id") || 0), 10);
+  const nonce = String(btn.data("nonce") || "");
+  const originalText = btn.text();
+
+  if (!id || !nonce) {
+    return;
+  }
+
+  if (!window.confirm(prsText("remove_book_confirm", "Are you sure you want to remove this book from your library?"))) {
+    return;
+  }
+
+  btn.prop("disabled", true).text(prsText("remove_book_removing", "Removing..."));
+
+  const ajaxUrl = (typeof PRS_LIBRARY !== "undefined" && PRS_LIBRARY && PRS_LIBRARY.ajax_url)
+    ? PRS_LIBRARY.ajax_url
+    : (typeof ajaxurl !== "undefined" ? ajaxurl : "");
+
+  if (!ajaxUrl) {
+    window.alert(prsText("remove_book_error", "Error removing book."));
+    btn.prop("disabled", false).text(originalText);
+    return;
+  }
+
+  jQuery.post(ajaxUrl, {
+    action: "politeia_remove_user_book",
+    id,
+    nonce,
+  })
+    .done(response => {
+      if (response && response.success) {
+        const row = btn.closest("tr");
+        if (row && row.length) {
+          row.fadeOut(300, function () {
+            jQuery(this).remove();
+          });
+        }
+      } else {
+        window.alert((response && response.data) || prsText("remove_book_error", "Error removing book."));
+        btn.prop("disabled", false).text(originalText);
+      }
+    })
+    .fail(() => {
+      window.alert(prsText("remove_book_error", "Error removing book."));
+      btn.prop("disabled", false).text(originalText);
+    });
+});
+
+
+
+
+function setupSearchCoverOverlay() {
+  const searchBtn = document.getElementById("prs-cover-search");
+  const overlay = document.getElementById("prs-search-cover-overlay");
+  const cancelBtn = document.getElementById("prs-cancel-cover");
+  const setCoverBtn = document.getElementById("prs-set-cover");
+  const optionsContainer = overlay ? overlay.querySelector(".prs-search-cover-options") : null;
+  let attributionEl = null;
+
+  if (!overlay || !optionsContainer) {
+    return;
+  }
+
+  function ensureAttributionElement() {
+    if (attributionEl && attributionEl.isConnected) {
+      return attributionEl;
+    }
+    attributionEl = document.createElement("p");
+    attributionEl.className = "prs-search-cover-attribution";
+    attributionEl.textContent = prsText("images_from_google", "Images from Google Books");
+    const parent = optionsContainer.parentNode;
+    if (parent) {
+      parent.insertBefore(attributionEl, optionsContainer.nextSibling);
+    }
+    return attributionEl;
+  }
+
+  function toggleAttribution(isVisible) {
+    const node = ensureAttributionElement();
+    if (!node) {
+      return;
+    }
+    node.style.display = isVisible ? "" : "none";
+  }
+
+  toggleAttribution(false);
+
+  const ajaxUrl = (window.PRS_BOOK && PRS_BOOK.ajax_url)
+    || (typeof window.ajaxurl === "string" ? window.ajaxurl : "");
+  const nonce = (window.PRS_BOOK && PRS_BOOK.cover_nonce) || "";
+  const bookId = (window.PRS_BOOK && PRS_BOOK.book_id) ? parseInt(String(PRS_BOOK.book_id), 10) : 0;
+  const userBookId = (window.PRS_BOOK && PRS_BOOK.user_book_id) ? parseInt(String(PRS_BOOK.user_book_id), 10) : 0;
+  const userId = (window.PRS_BOOK && PRS_BOOK.user_id) ? parseInt(String(PRS_BOOK.user_id), 10) : 0;
+
+  let currentSelection = null;
+  let isSearching = false;
+  let isSaving = false;
+
+  function setOverlayVisibility(isVisible) {
+    if (isVisible) {
+      overlay.classList.remove("is-hidden");
+      overlay.setAttribute("aria-hidden", "false");
+    } else {
+      overlay.classList.add("is-hidden");
+      overlay.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  function resetSelection() {
+    currentSelection = null;
+    if (setCoverBtn) {
+      setCoverBtn.disabled = true;
+    }
+    optionsContainer.querySelectorAll(".prs-cover-option").forEach(opt => {
+      opt.classList.remove("selected");
+    });
+  }
+
+  function renderMessage(message, className) {
+    optionsContainer.innerHTML = "";
+    toggleAttribution(false);
+    const wrapper = document.createElement("p");
+    wrapper.textContent = message;
+    wrapper.className = className || "prs-search-cover-message";
+    optionsContainer.appendChild(wrapper);
+  }
+
+  function renderLoading() {
+    renderMessage("Searching covers…", "prs-search-cover-loading");
+  }
+
+  function sanitizeCoverImage(img) {
+    if (!img) {
+      return;
+    }
+
+    img.removeAttribute("width");
+    img.removeAttribute("height");
+    img.removeAttribute("srcset");
+    img.removeAttribute("sizes");
+
+    if (img.style && typeof img.style.removeProperty === "function") {
+      img.style.removeProperty("width");
+      img.style.removeProperty("height");
+      img.style.removeProperty("max-width");
+      img.style.removeProperty("max-height");
+    } else if (img.style) {
+      img.style.width = "";
+      img.style.height = "";
+      img.style.maxWidth = "";
+      img.style.maxHeight = "";
+    }
+
+    const classesToRemove = [
+      "size-thumbnail",
+      "size-medium",
+      "size-large",
+      "size-full",
+      "wp-post-image",
+      "attachment-thumbnail",
+      "attachment-medium",
+      "attachment-large",
+      "attachment-full",
+      "is-placeholder",
+    ];
+
+    classesToRemove.forEach(cls => {
+      if (img.classList && img.classList.contains(cls)) {
+        img.classList.remove(cls);
+      }
+    });
+  }
+
+  function prepareExistingCoverFrame() {
+    const frame = document.getElementById("prs-cover-frame");
+    if (!frame) {
+      return;
+    }
+
+    const img = frame.querySelector("img.prs-cover-img");
+    if (!img) {
+      return;
+    }
+
+    sanitizeCoverImage(img);
+
+    const currentSrc = img.getAttribute("src") || "";
+    const normalized = prsNormalizeCoverUrl(currentSrc);
+    if (normalized && normalized !== currentSrc) {
+      img.src = normalized;
+    }
+
+    if (img.classList && img.classList.contains("is-placeholder")) {
+      img.classList.remove("is-placeholder");
+    }
+
+    if (!frame.classList.contains("has-image")) {
+      frame.classList.add("has-image");
+    }
+
+    if (!frame.getAttribute("data-cover-state")) {
+      frame.setAttribute("data-cover-state", "image");
+    }
+
+    const figure = document.getElementById("prs-book-cover-figure");
+    if (figure) {
+      figure.classList.remove("is-placeholder");
+    }
+
+    window.PRS_BOOK = window.PRS_BOOK || {};
+    window.PRS_BOOK.cover_url = normalized || currentSrc;
+
+    attachCoverImgGuards();
+  }
+
+  function buildRequestBody(params) {
+    return Object.keys(params)
+      .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+      .join("&");
+  }
+
+  function selectOption(option) {
+    if (!option || !optionsContainer.contains(option)) {
+      return;
+    }
+    optionsContainer.querySelectorAll(".prs-cover-option").forEach(opt => {
+      if (opt !== option) {
+        opt.classList.remove("selected");
+      }
+    });
+    option.classList.add("selected");
+    currentSelection = option;
+    if (setCoverBtn) {
+      setCoverBtn.disabled = false;
+    }
+  }
+
+  function renderResults(payload) {
+    resetSelection();
+    optionsContainer.innerHTML = "";
+    toggleAttribution(false);
+
+    const html = payload && typeof payload === "object" && payload !== null && typeof payload.html === "string"
+      ? payload.html.trim()
+      : typeof payload === "string"
+        ? payload.trim()
+        : "";
+
+    const items = Array.isArray(payload)
+      ? payload
+      : payload && typeof payload === "object" && Array.isArray(payload.items)
+        ? payload.items
+        : [];
+
+    if (html) {
+      optionsContainer.innerHTML = html;
+      const options = optionsContainer.querySelectorAll(".prs-cover-option");
+      if (!options.length) {
+      const fallbackMessage = optionsContainer.textContent.trim() || prsText("no_covers_found", "No covers found.");
+        renderMessage(fallbackMessage, "prs-search-cover-empty");
+        return;
+      }
+
+      let hasImages = false;
+
+      options.forEach(option => {
+        const rawUrl = option.getAttribute("data-image-url")
+          || option.getAttribute("data-cover-url")
+          || option.getAttribute("data-thumbnail")
+          || "";
+        const normalized = prsNormalizeCoverUrl(String(rawUrl || ""));
+        if (normalized) {
+          option.setAttribute("data-image-url", normalized);
+          option.setAttribute("data-cover-url", normalized);
+          option.dataset.coverUrl = normalized;
+          option.dataset.imageUrl = normalized;
+          option.dataset.thumbnail = normalized;
+
+          const img = option.querySelector("img");
+          if (img) {
+            const imgSrc = img.getAttribute("src") || "";
+            const normalizedImg = prsNormalizeCoverUrl(imgSrc);
+            if (normalizedImg && normalizedImg !== imgSrc) {
+              img.setAttribute("src", normalizedImg);
+            }
+            hasImages = true;
+          }
+        }
+      });
+
+      toggleAttribution(hasImages);
+      return;
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      renderMessage(prsText("no_covers_found", "No covers found."), "prs-search-cover-empty");
+      return;
+    }
+
+    let appended = 0;
+    let displayed = 0;
+    const limit = 3;
+
+    for (let i = 0; i < items.length && displayed < limit; i += 1) {
+      const entry = items[i];
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+
+      const volume = entry.volumeInfo || {};
+      const imageLinks = volume.imageLinks || null;
+      const imageUrl = prsNormalizeCoverUrl(
+        (imageLinks && imageLinks.thumbnail)
+          || (imageLinks && imageLinks.smallThumbnail),
+      );
+
+      if (!imageUrl) {
+        continue;
+      }
+
+      const option = document.createElement("div");
+      option.className = "prs-cover-option";
+      option.setAttribute("role", "button");
+      option.setAttribute("tabindex", "0");
+
+      const title = volume.title ? String(volume.title).trim() : "";
+      const author = Array.isArray(volume.authors) && volume.authors.length
+        ? String(volume.authors[0]).trim()
+        : "";
+
+      if (title) {
+        option.dataset.coverTitle = title;
+      }
+      if (author) {
+        option.dataset.coverAuthor = author;
+      }
+
+      option.dataset.coverUrl = imageUrl;
+      option.setAttribute("data-cover-url", imageUrl);
+      option.setAttribute("data-image-url", imageUrl);
+      option.setAttribute("data-thumbnail", imageUrl);
+
+      const img = document.createElement("img");
+      img.src = imageUrl;
+      img.alt = title || "";
+      img.className = "prs-cover-image";
+      img.loading = "lazy";
+      option.appendChild(img);
+
+      optionsContainer.appendChild(option);
+      appended += 1;
+      displayed += 1;
+    }
+
+    if (!appended) {
+      renderMessage(prsText("no_covers_found", "No covers found."), "prs-search-cover-empty");
+      return;
+    }
+
+    toggleAttribution(appended > 0);
+  }
+
+  function applyCoverToDom(url, option) {
+    const frame = document.getElementById("prs-cover-frame");
+    const figure = document.getElementById("prs-book-cover-figure");
+    if (!frame || !figure) {
+      return;
+    }
+
+    let img = figure.querySelector("#prs-cover-img");
+    const placeholder = document.getElementById("prs-cover-placeholder");
+
+    if (!img) {
+      img = document.createElement("img");
+      img.id = "prs-cover-img";
+      img.className = "prs-cover-img";
+      figure.insertBefore(img, figure.firstChild || null);
+    }
+
+    sanitizeCoverImage(img);
+
+    const normalizedUrl = prsNormalizeCoverUrl(url);
+    const finalUrl = normalizedUrl || (url ? String(url) : "");
+    if (!finalUrl) {
+      prsCoverLog("No final URL provided to applyCoverToDom.");
+      return;
+    }
+
+    img.src = finalUrl;
+    if (img.classList && img.classList.contains("is-placeholder")) {
+      img.classList.remove("is-placeholder");
+    }
+
+    const selectedTitle = option && option.dataset.coverTitle ? option.dataset.coverTitle : "";
+    const fallbackTitle = (window.PRS_BOOK && typeof PRS_BOOK.title === "string") ? PRS_BOOK.title : "";
+    const altTitle = selectedTitle || fallbackTitle;
+    img.alt = altTitle ? `Cover for ${altTitle}` : "Book cover";
+
+    if (placeholder) {
+      const actions = placeholder.querySelector(".prs-cover-actions");
+      if (actions) {
+        let overlayActions = frame.querySelector(".prs-cover-overlay");
+        if (!overlayActions) {
+          overlayActions = document.createElement("div");
+          overlayActions.className = "prs-cover-overlay";
+          frame.appendChild(overlayActions);
+        }
+        overlayActions.innerHTML = "";
+        overlayActions.appendChild(actions);
+      }
+      placeholder.remove();
+    }
+
+    frame.classList.add("has-image");
+    frame.setAttribute("data-cover-state", "image");
+    figure.classList.remove("is-placeholder");
+
+    const attributionWrap = document.getElementById("prs-cover-attribution-wrap");
+    const attributionLink = document.getElementById("prs-cover-attribution");
+    if (attributionWrap && attributionLink) {
+      try {
+        const parsed = new URL(finalUrl);
+        if (parsed.hostname.includes("books.google")) {
+          attributionLink.setAttribute("href", "https://books.google.com/");
+          attributionLink.classList.remove("is-hidden");
+          attributionWrap.classList.remove("is-hidden");
+          attributionWrap.setAttribute("aria-hidden", "false");
+        } else {
+          attributionLink.classList.add("is-hidden");
+          attributionWrap.classList.add("is-hidden");
+          attributionWrap.setAttribute("aria-hidden", "true");
+          attributionLink.removeAttribute("href");
+        }
+      } catch (err) {
+        attributionLink.classList.add("is-hidden");
+        attributionWrap.classList.add("is-hidden");
+        attributionWrap.setAttribute("aria-hidden", "true");
+        attributionLink.removeAttribute("href");
+      }
+    }
+
+    const coverInput = document.getElementById("prs-cover-url");
+    if (coverInput) {
+      coverInput.value = finalUrl;
+    }
+
+    window.PRS_BOOK = window.PRS_BOOK || {};
+    window.PRS_BOOK.cover_url = finalUrl;
+
+    attachCoverImgGuards();
+
+    if (window.__PRS_DEBUG_COVER__) {
+      jQuery(figure).css({ outline: "2px solid #22c55e" });
+      prsCoverLog("Frame state:", frame.getAttribute("data-cover-state"), frame.className);
+      prsCoverLog("Img element:", img);
+      prsCoverLog("Computed src on img:", img.getAttribute("src"));
+    }
+  }
+
+  function handleSearchClick(event) {
+    if (event) {
+      event.preventDefault();
+    }
+    if (!ajaxUrl || !nonce || !bookId) {
+      renderMessage("Cover search is not available.", "prs-search-cover-error");
+      setOverlayVisibility(true);
+      return;
+    }
+
+    if (isSearching) {
+      return;
+    }
+
+    isSearching = true;
+    setOverlayVisibility(true);
+    resetSelection();
+    renderLoading();
+
+    const payload = {
+      action: "politeia_bookshelf_search_cover",
+      nonce,
+      book_id: String(bookId),
+    };
+
+    if (userBookId) {
+      payload.user_book_id = String(userBookId);
+    }
+    if (userId) {
+      payload.user_id = String(userId);
+    }
+
+    fetch(ajaxUrl, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      },
+      body: buildRequestBody(payload),
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (!data || data.success !== true) {
+          const message = data && data.data && data.data.message
+            ? String(data.data.message)
+            : "Unable to search for covers.";
+          renderMessage(message, "prs-search-cover-error");
+          return;
+        }
+
+        if (typeof window !== "undefined" && window.console) {
+          console.log("[PRS] Google Books response:", data);
+          if (data && data.data && data.data.items) {
+            console.log("[PRS] Found items:", data.data.items.length);
+          }
+        }
+
+        const html = data && data.data && typeof data.data.html === "string"
+          ? data.data.html
+          : "";
+        const items = data && data.data && Array.isArray(data.data.items)
+          ? data.data.items
+          : Array.isArray(data.items)
+            ? data.items
+            : [];
+
+        if (html) {
+          renderResults({ html, items });
+        } else {
+          renderResults(items);
+        }
+      })
+      .catch(() => {
+        renderMessage("Unable to search for covers.", "prs-search-cover-error");
+      })
+      .finally(() => {
+        isSearching = false;
+      });
+  }
+
+  async function persistCoverSelection(normalizedUrl) {
+    if (!normalizedUrl) {
+      return null;
+    }
+
+    if (!ajaxUrl || !nonce) {
+      prsCoverLog("Missing ajaxUrl or nonce. Skipping persistence.");
+      return normalizedUrl;
+    }
+
+    const payload = {
+      action: "politeia_bookshelf_save_cover",
+      nonce,
+      cover_url: normalizedUrl,
+    };
+
+    if (bookId) {
+      payload.book_id = String(bookId);
+    }
+    if (userBookId) {
+      payload.user_book_id = String(userBookId);
+    }
+    if (userId) {
+      payload.user_id = String(userId);
+    }
+
+    prsCoverLog("Sending ajax_save_cover with:", normalizedUrl);
+
+    try {
+      const response = await fetch(ajaxUrl, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        },
+        body: buildRequestBody(payload),
+      });
+
+      const data = await response.json();
+      if (!data || data.success !== true) {
+        const message = data && data.data && data.data.message
+          ? String(data.data.message)
+          : prsText("cover_save_failed", "Unable to save cover.");
+        window.alert(message);
+        prsCoverLog("Save failed:", data);
+        return null;
+      }
+
+      const savedUrl = data.data && data.data.cover_url ? String(data.data.cover_url) : normalizedUrl;
+      const normalizedSavedUrl = prsNormalizeCoverUrl(savedUrl) || savedUrl;
+      prsCoverLog("Save success. Stored URL:", normalizedSavedUrl);
+      return normalizedSavedUrl;
+    } catch (error) {
+      prsCoverLog("Save request error:", error);
+      window.alert(prsText("cover_save_failed", "Unable to save cover."));
+      return null;
+    }
+  }
+
+  prepareExistingCoverFrame();
+
+  if (searchBtn) {
+    searchBtn.addEventListener("click", handleSearchClick);
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", event => {
+      if (event) {
+        event.preventDefault();
+      }
+      setOverlayVisibility(false);
+      resetSelection();
+    });
+  }
+
+  if (setCoverBtn) {
+    jQuery(setCoverBtn).off("click.prs").on("click.prs", async function (event) {
+      if (event) {
+        event.preventDefault();
+      }
+
+      if (isSaving) {
+        prsCoverLog("Already saving cover. Ignoring click.");
+        return;
+      }
+
+      let selectedElement = null;
+      if (currentSelection && optionsContainer.contains(currentSelection)) {
+        selectedElement = currentSelection;
+      }
+
+      let $selected = selectedElement ? jQuery(selectedElement) : jQuery(".prs-cover-result.is-selected, .prs-cover-result.selected, .prs-cover-option.is-selected").first();
+      if (!$selected.length) {
+        prsCoverLog("No cover option is currently selected. Aborting.");
+        return;
+      }
+
+      selectedElement = $selected.get(0);
+      currentSelection = selectedElement;
+
+      const rawUrl =
+        $selected.data("image-url") ||
+        $selected.attr("data-image-url") ||
+        $selected.data("thumbnail") ||
+        $selected.data("coverUrl") ||
+        (selectedElement && selectedElement.getAttribute("data-cover-url")) ||
+        "";
+
+      const normalized = prsNormalizeCoverUrl(String(rawUrl || ""));
+
+      prsCoverLog("Selected raw:", rawUrl);
+      prsCoverLog("Normalized:", normalized);
+
+      if (!normalized) {
+        prsCoverLog("No URL found on selected item. Aborting.");
+        return;
+      }
+
+      const $btn = jQuery(this);
+      $btn.prop("disabled", true);
+
+      try {
+        await prsPreloadImage(normalized);
+        prsCoverLog("Preload ok:", normalized);
+
+        applyCoverToDom(normalized, selectedElement);
+
+        if (typeof PRS_BOOK !== "undefined" && PRS_BOOK && typeof PRS_BOOK.ajax_save_cover === "function") {
+          prsCoverLog("Calling PRS_BOOK.ajax_save_cover with:", normalized);
+          try {
+            PRS_BOOK.ajax_save_cover(normalized);
+          } catch (ajaxErr) {
+            prsCoverLog("PRS_BOOK.ajax_save_cover error:", ajaxErr);
+          }
+        }
+
+        if (ajaxUrl && nonce) {
+          isSaving = true;
+          try {
+            const savedUrl = await persistCoverSelection(normalized);
+            if (savedUrl) {
+              if (savedUrl !== normalized) {
+                applyCoverToDom(savedUrl, selectedElement);
+              }
+              resetSelection();
+              setOverlayVisibility(false);
+            } else {
+              prsCoverLog("Cover save failed; selection remains active.");
+            }
+          } finally {
+            isSaving = false;
+          }
+        } else {
+          prsCoverLog("No AJAX configuration for cover save. Closing overlay.");
+          resetSelection();
+          setOverlayVisibility(false);
+        }
+      } catch (err) {
+        prsCoverLog("ERROR applying cover:", err);
+      } finally {
+        if (!isSaving) {
+          $btn.prop("disabled", !currentSelection);
+        }
+      }
+    });
+
+    setCoverBtn.disabled = true;
+  }
+
+  if (optionsContainer) {
+    optionsContainer.addEventListener("click", event => {
+      const option = event.target.closest(".prs-cover-option");
+      if (!option) {
+        return;
+      }
+      event.preventDefault();
+      selectOption(option);
+    });
+
+    optionsContainer.addEventListener("keydown", event => {
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+      const option = event.target.closest(".prs-cover-option");
+      if (!option) {
+        return;
+      }
+      event.preventDefault();
+      selectOption(option);
+    });
+  }
+
+  if (overlay) {
+    overlay.addEventListener("click", event => {
+      if (event.target === overlay) {
+        setOverlayVisibility(false);
+        resetSelection();
+      }
+    });
+  }
+}
+
+// ---------- Boot ----------
+document.addEventListener("DOMContentLoaded", function () {
+  setupReadingDensityBar();
+  setupCoverPlaceholder();
+  setupPages();
+  setupIsbn();
+  setupLibraryPagesInlineEdit();
+  setupLibraryReadingStatus();
+  setupPurchaseDate();
+  setupPurchaseChannel();
+  setupRating();
+  setupTypeBook();
+  setupReadingStatus();
+  setupOwningStatus();
+  setupLibraryOwningOverlay();
+  toggleReadingStatusLockForAll();
+  applyOwningOptionFilters();
+  setupSessionsAjax();
+  setupSessionRecorderModal();
+  setupManualSessionModal();
+  setupLibraryFilterDashboard();
+  setupSearchCoverOverlay();
+  attachCoverImgGuards();
+});

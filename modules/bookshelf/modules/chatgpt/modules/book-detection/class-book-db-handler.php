@@ -1,0 +1,598 @@
+<?php
+/**
+ * Class: Politeia_Book_DB_Handler
+ * Purpose: Database utilities for book matching, insertion, user linking — with slug support.
+ * Language: English (all user-facing strings are translatable via the 'politeia-chatgpt' text domain).
+ *
+ * Assumptions (created by the “Politeia Reading” plugin):
+ *   - {$wpdb->prefix}politeia_books          (canonical catalog; primary key: id)
+ *   - {$wpdb->prefix}politeia_user_books     (user-to-book links; primary key: id)
+ *
+ * Optional columns in politeia_books that this class will use if present:
+ *   - normalized_title  (VARCHAR)
+ *   - slug              (VARCHAR)  // pretty URL id; unique in table
+ *
+ * This class does not create or migrate tables.
+ */
+
+if ( ! defined('ABSPATH') ) exit;
+
+class Politeia_Book_DB_Handler {
+
+    /** @var string */
+    protected $tbl_books;
+
+    /** @var string */
+    protected $tbl_user_books;
+
+    /** @var bool */
+    protected $has_norm_title = false;
+
+    /** @var bool */
+    protected $has_slug_col = false;
+
+    /** @var bool */
+    protected $has_isbn_col = false;
+
+    /** @var string */
+    protected $text_domain = 'politeia-chatgpt';
+
+    public function __construct() {
+        global $wpdb;
+        $this->tbl_books      = $wpdb->prefix . 'politeia_books';
+        $this->tbl_user_books = $wpdb->prefix . 'politeia_user_books';
+        $this->introspect_schema();
+    }
+
+    /**
+     * Public getters in case other modules need them.
+     */
+    public function get_books_table() {
+        return $this->tbl_books;
+    }
+    public function get_user_books_table() {
+        return $this->tbl_user_books;
+    }
+
+    /**
+     * Check tables and optional columns to enable best behavior.
+     */
+    protected function introspect_schema() {
+        // Quietly detect what exists; callers can verify readiness with is_ready().
+        if ( $this->table_exists( $this->tbl_books ) ) {
+            $this->has_norm_title  = $this->column_exists( $this->tbl_books, 'normalized_title' );
+            $this->has_slug_col    = $this->column_exists( $this->tbl_books, 'slug' );
+            $this->has_isbn_col    = $this->column_exists( $this->tbl_books, 'isbn' );
+        }
+    }
+
+    /**
+     * Whether dependency tables are present.
+     * @return true|\WP_Error
+     */
+    public function is_ready() {
+        $missing = [];
+        if ( ! $this->table_exists( $this->tbl_books ) ) {
+            $missing[] = $this->tbl_books;
+        }
+        if ( ! $this->table_exists( $this->tbl_user_books ) ) {
+            $missing[] = $this->tbl_user_books;
+        }
+
+        if ( $missing ) {
+            return new \WP_Error(
+                'politeia_missing_tables',
+                sprintf(
+                    /* translators: %s: comma-separated list of missing tables */
+                    __( 'Required tables are missing: %s. Please activate or repair the "Politeia Reading" plugin.', $this->text_domain ),
+                    implode(', ', array_map( 'sanitize_text_field', $missing ) )
+                )
+            );
+        }
+        return true;
+    }
+
+    /**
+     * Normalize free text for relaxed matching.
+     * - strip tags, trim, remove accents
+     * - lowercase
+     * - keep only letters, numbers, spaces, and a few separators
+     * - collapse whitespace
+     *
+     * @param string $text
+     * @return string
+     */
+    public function normalize( $text ) {
+        if ( function_exists( 'politeia__normalize_text' ) ) {
+            return politeia__normalize_text( $text );
+        }
+
+        $t = (string) $text;
+        $t = wp_strip_all_tags( $t );
+        $t = trim( $t );
+        $t = remove_accents( $t );
+        $t = mb_strtolower( $t, 'UTF-8' );
+        $t = preg_replace( '/[^a-z0-9\s\-\_\'\":]+/u', ' ', $t );
+        $t = preg_replace( '/\s+/u', ' ', $t );
+        return trim( $t );
+    }
+
+    /**
+     * Internal best-match search strategy:
+     *  1) Normalized LIKE (if normalized_* columns exist)
+     *  2) Raw LIKE fallback
+     * Picks a candidate by simple similarity scoring (similar_text).
+     *
+     * @param string $title
+     * @param string $author
+     * @return array{match: array|null, method: string} method ∈ {normalized_like, raw_like, none}
+     */
+    public function find_best_match_internal( $title, $author ) {
+        global $wpdb;
+
+        // Prepare normalized inputs once
+        $nt = $this->normalize( $title );
+        $na = $this->normalize( $author );
+
+        $authors_table = $wpdb->prefix . 'politeia_authors';
+        $pivot_table   = $wpdb->prefix . 'politeia_book_authors';
+        $author_select = "(SELECT GROUP_CONCAT(a.display_name ORDER BY ba.sort_order ASC SEPARATOR ', ')
+                           FROM {$pivot_table} ba
+                           LEFT JOIN {$authors_table} a ON a.id = ba.author_id
+                           WHERE ba.book_id = b.id) AS author_names";
+
+        // 2) Normalized LIKE (title-only filter, author resolved via pivot)
+        if ( $this->has_norm_title ) {
+            $like_t = '%' . $wpdb->esc_like( $nt ) . '%';
+            $candidates = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT b.*, {$author_select}
+                     FROM {$this->tbl_books} b
+                     WHERE b.normalized_title LIKE %s
+                     LIMIT 50",
+                    $like_t
+                ),
+                ARRAY_A
+            );
+            $picked = $this->pick_best_similarity( $candidates, $nt, $na, 'normalized_title', 'author_names' );
+            if ( $picked ) {
+                return [ 'match' => $picked, 'method' => 'normalized_like' ];
+            }
+        }
+
+        // 3) Raw LIKE
+        $like_t = '%' . $wpdb->esc_like( $title ) . '%';
+        $candidates = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT b.*, {$author_select}
+                 FROM {$this->tbl_books} b
+                 WHERE b.title LIKE %s
+                 LIMIT 50",
+                $like_t
+            ),
+            ARRAY_A
+        );
+        $picked = $this->pick_best_similarity( $candidates, $nt, $na, 'title', 'author_names' );
+        if ( $picked ) {
+            return [ 'match' => $picked, 'method' => 'raw_like' ];
+        }
+
+        return [ 'match' => null, 'method' => 'none' ];
+    }
+
+    /**
+     * Pick best candidate by simple similarity (0..100), weighted title 60% / author 40%.
+     *
+     * @param array<int,array> $rows
+     * @param string $nt normalized target title
+     * @param string $na normalized target author
+     * @param string $col_title column to compare for title (normalized_* or raw)
+     * @param string $col_author column to compare for author (normalized_* or raw)
+     * @return array|null
+     */
+    protected function pick_best_similarity( $rows, $nt, $na, $col_title, $col_author ) {
+        if ( empty( $rows ) ) return null;
+
+        $best = null;
+               $best_score = -1;
+
+        foreach ( $rows as $r ) {
+            $ct = isset( $r[ $col_title ] ) ? $this->normalize( $r[ $col_title ] ) : '';
+            $ca = isset( $r[ $col_author ] ) ? $this->normalize( $r[ $col_author ] ) : '';
+
+            $score_t = 0; $score_a = 0;
+            similar_text( $nt, $ct, $score_t );
+            similar_text( $na, $ca, $score_a );
+
+            $score = (0.6 * $score_t) + (0.4 * $score_a);
+            if ( $score > $best_score ) {
+                $best_score = $score;
+                $best = $r;
+            }
+        }
+
+        // threshold to avoid very weak matches
+        if ( $best_score < 55 ) {
+            return null;
+        }
+        return $best;
+    }
+
+    /* ============================= Slug helpers ============================= */
+
+    /**
+     * Build a base slug derived only from the title.
+     */
+    protected function build_slug( $title ) {
+        $raw = trim( (string) $title );
+        return sanitize_title( remove_accents( $raw ) );
+    }
+
+    /**
+     * Resolve a slug candidate using title (+year on collision).
+     */
+    protected function resolve_slug( $title, $year = null, $given = '' ) {
+        $base = $given !== '' ? $given : $this->build_slug( $title );
+        if ( '' === $base ) {
+            return '';
+        }
+
+        if ( ! $this->slug_exists( $base ) ) {
+            return $base;
+        }
+
+        if ( $year ) {
+            $candidate = $base . '-' . (int) $year;
+            if ( ! $this->slug_exists( $candidate ) ) {
+                return $candidate;
+            }
+        }
+
+        return '';
+    }
+
+    protected function slugs_table_name() {
+        global $wpdb;
+        return $wpdb->prefix . 'politeia_book_slugs';
+    }
+
+    protected function slugs_table_exists() {
+        global $wpdb;
+        $table = $this->slugs_table_name();
+        return (bool) $wpdb->get_var(
+            $wpdb->prepare(
+                'SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s LIMIT 1',
+                $table
+            )
+        );
+    }
+
+    protected function slug_exists( $slug, $exclude_book_id = 0 ) {
+        global $wpdb;
+        $slug = is_string( $slug ) ? trim( $slug ) : '';
+        if ( '' === $slug ) {
+            return false;
+        }
+
+        $exclude_book_id = (int) $exclude_book_id;
+
+        if ( $this->slugs_table_exists() ) {
+            $table = $this->slugs_table_name();
+            $query = "SELECT book_id FROM {$table} WHERE slug = %s";
+            $params = [ $slug ];
+            if ( $exclude_book_id > 0 ) {
+                $query .= ' AND book_id <> %d';
+                $params[] = $exclude_book_id;
+            }
+            $query .= ' LIMIT 1';
+            return (bool) $wpdb->get_var( $wpdb->prepare( $query, $params ) );
+        }
+
+        $query = "SELECT id FROM {$this->tbl_books} WHERE slug = %s";
+        $params = [ $slug ];
+        if ( $exclude_book_id > 0 ) {
+            $query .= ' AND id <> %d';
+            $params[] = $exclude_book_id;
+        }
+        $query .= ' LIMIT 1';
+        return (bool) $wpdb->get_var( $wpdb->prepare( $query, $params ) );
+    }
+
+    protected function set_primary_slug( $book_id, $slug ) {
+        global $wpdb;
+        $book_id = (int) $book_id;
+        $slug = is_string( $slug ) ? trim( $slug ) : '';
+        if ( $book_id <= 0 || '' === $slug || ! $this->slugs_table_exists() ) {
+            return;
+        }
+
+        $table = $this->slugs_table_name();
+        $wpdb->update(
+            $table,
+            [ 'is_primary' => 0 ],
+            [ 'book_id' => $book_id ],
+            [ '%d' ],
+            [ '%d' ]
+        );
+
+        $existing_id = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT id FROM {$table} WHERE slug = %s LIMIT 1",
+                $slug
+            )
+        );
+
+        if ( $existing_id ) {
+            $wpdb->update(
+                $table,
+                [
+                    'book_id'    => $book_id,
+                    'is_primary' => 1,
+                    'updated_at' => current_time( 'mysql' ),
+                ],
+                [ 'id' => (int) $existing_id ],
+                [ '%d', '%d', '%s' ],
+                [ '%d' ]
+            );
+            return;
+        }
+
+        $wpdb->insert(
+            $table,
+            [
+                'book_id'    => $book_id,
+                'slug'       => $slug,
+                'is_primary' => 1,
+                'created_at' => current_time( 'mysql' ),
+                'updated_at' => current_time( 'mysql' ),
+            ],
+            [ '%d', '%s', '%d', '%s', '%s' ]
+        );
+    }
+
+    /* ============================= Inserts / Ensures ============================= */
+
+    /**
+     * Insert a canonical book (uses optional columns if available).
+     *
+     * @param string $title
+     * @param string $author
+     * @param array  $extra  Optional scalar extras (e.g., 'isbn', 'year', 'slug', etc.)
+     * @return int|\WP_Error New book ID or WP_Error
+     */
+    public function insert_book( $title, $author, $extra = [], $source = 'candidate' ) {
+        global $wpdb;
+
+        if ( 'confirmed' !== $source ) {
+            return new \WP_Error(
+                'politeia_canonical_write_blocked',
+                __( 'Canonical writes require confirmation.', $this->text_domain )
+            );
+        }
+
+        $data = [
+            'title'  => sanitize_text_field( $title ),
+        ];
+        $fmt  = [ '%s' ];
+
+        if ( $this->has_norm_title ) {
+            $data['normalized_title'] = $this->normalize( $title );
+            $fmt[] = '%s';
+        }
+        // --- Slug generation if column exists ---
+        $resolved_slug = '';
+        if ( $this->has_slug_col ) {
+            $given = isset( $extra['slug'] ) ? sanitize_title( remove_accents( (string) $extra['slug'] ) ) : '';
+            $resolved_slug = $this->resolve_slug( $title, $extra['year'] ?? null, $given );
+            if ( '' !== $resolved_slug ) {
+                $data['slug'] = $resolved_slug;
+                $fmt[] = '%s';
+            }
+        }
+
+        // Merge extras (only scalar, without overwriting already set keys)
+        foreach ( (array) $extra as $k => $v ) {
+            if ( $k === 'isbn' && ! $this->has_isbn_col ) {
+                continue;
+            }
+            if ( is_scalar( $v ) && ! array_key_exists( $k, $data ) ) {
+                $data[ $k ] = sanitize_text_field( (string) $v );
+                $fmt[] = '%s';
+            }
+        }
+
+        $ok = $wpdb->insert( $this->tbl_books, $data, $fmt );
+        if ( ! $ok ) {
+            return new \WP_Error(
+                'politeia_insert_failed',
+                __( 'Failed to insert the book into the catalog.', $this->text_domain )
+            );
+        }
+        $insert_id = (int) $wpdb->insert_id;
+        if ( $resolved_slug ) {
+            $this->set_primary_slug( $insert_id, $resolved_slug );
+        }
+        return $insert_id;
+    }
+
+    /**
+     * Ensure a canonical book exists: try match, else insert.
+     *
+     * @param string $title
+     * @param string $author
+     * @param array  $extra
+     * @return array{
+     *   book_id:int,
+     *   created:bool,
+     *   method:string,   // normalized_like|raw_like|inserted|error|insert_failed
+     *   row:array|null,
+     *   error:\WP_Error|null
+     * }
+     */
+    public function ensure_book( $title, $author, $extra = [], $source = 'candidate' ) {
+        $ready = $this->is_ready();
+        if ( is_wp_error( $ready ) ) {
+            return [
+                'book_id' => 0,
+                'created' => false,
+                'method'  => 'error',
+                'row'     => null,
+                'error'   => $ready,
+            ];
+        }
+
+        $match = $this->find_best_match_internal( $title, $author );
+        if ( $match['match'] ) {
+            // If the book exists but has no slug, fill it (when slug column exists)
+            if ( $this->has_slug_col && ( empty( $match['match']['slug'] ) || $match['match']['slug'] === null ) ) {
+                global $wpdb;
+                $slug = $this->resolve_slug( $title, $extra['year'] ?? null );
+                if ( '' !== $slug ) {
+                    $wpdb->update(
+                        $this->tbl_books,
+                        [ 'slug' => $slug ],
+                        [ 'id'   => (int) $match['match']['id'] ],
+                        [ '%s' ],
+                        [ '%d' ]
+                    );
+                    $match['match']['slug'] = $slug;
+                    $this->set_primary_slug( (int) $match['match']['id'], $slug );
+                }
+            }
+
+            return [
+                'book_id' => isset($match['match']['id']) ? (int) $match['match']['id'] : 0,
+                'created' => false,
+                'method'  => $match['method'],
+                'row'     => $match['match'],
+                'error'   => null,
+            ];
+        }
+
+        $insert_id = $this->insert_book( $title, $author, $extra, $source );
+        if ( is_wp_error( $insert_id ) ) {
+            return [
+                'book_id' => 0,
+                'created' => false,
+                'method'  => ( 'politeia_canonical_write_blocked' === $insert_id->get_error_code() ) ? 'write_blocked' : 'insert_failed',
+                'row'     => null,
+                'error'   => $insert_id,
+            ];
+        }
+
+        return [
+            'book_id' => (int) $insert_id,
+            'created' => true,
+            'method'  => 'inserted',
+            'row'     => null,
+            'error'   => null,
+        ];
+    }
+
+    /**
+     * Link a user to a book, avoiding duplicate links.
+     *
+     * @param int $user_id
+     * @param int $book_id
+     * @return array{linked:bool, created:bool}
+     */
+    public function ensure_user_book( $user_id, $book_id ) {
+        global $wpdb;
+        $user_id = (int) $user_id;
+        $book_id = (int) $book_id;
+
+        // Already linked?
+        $exists = (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT id FROM {$this->tbl_user_books} WHERE user_id=%d AND book_id=%d LIMIT 1",
+                $user_id, $book_id
+            )
+        );
+        if ( $exists ) {
+            return [ 'linked' => true, 'created' => false ];
+        }
+
+        $ok = $wpdb->insert(
+            $this->tbl_user_books,
+            [ 'user_id' => $user_id, 'book_id' => $book_id ],
+            [ '%d', '%d' ]
+        );
+        if ( ! $ok ) {
+            return [ 'linked' => false, 'created' => false ];
+        }
+
+        return [ 'linked' => true, 'created' => true ];
+    }
+
+    /**
+     * Convenience helper: ensure the book exists and link it to the user.
+     *
+     * @param int    $user_id
+     * @param string $title
+     * @param string $author
+     * @param array  $extra
+     * @return array{
+     *   ok: bool,
+     *   book_id: int,
+     *   created: bool,         // whether the catalog row was inserted now
+     *   method: string,        // how it was resolved (normalized_like|raw_like|inserted|error)
+     *   linked: bool,
+     *   link_created: bool,    // whether the link row was inserted now
+     *   error: \WP_Error|null
+     * }
+     */
+    public function ensure_book_and_link_user( $user_id, $title, $author, $extra = [], $source = 'candidate' ) {
+        $result = $this->ensure_book( $title, $author, $extra, $source );
+        if ( isset( $result['error'] ) && is_wp_error( $result['error'] ) ) {
+            return [
+                'ok'           => false,
+                'book_id'      => 0,
+                'created'      => false,
+                'method'       => 'error',
+                'linked'       => false,
+                'link_created' => false,
+                'error'        => $result['error'],
+            ];
+        }
+
+        $link = $this->ensure_user_book( (int) $user_id, (int) $result['book_id'] );
+
+        return [
+            'ok'           => ( $result['book_id'] > 0 && $link['linked'] ),
+            'book_id'      => (int) $result['book_id'],
+            'created'      => (bool) $result['created'],
+            'method'       => (string) $result['method'],
+            'linked'       => (bool) $link['linked'],
+            'link_created' => (bool) $link['created'],
+            'error'        => null,
+        ];
+    }
+
+    /* ============================= Low-level DB helpers ============================= */
+
+    /**
+     * Check if a DB table exists.
+     * @param string $table
+     * @return bool
+     */
+    protected function table_exists( $table ) {
+        global $wpdb;
+        // Use LIKE with exact value; returns the table name when present.
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $res = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+        return ( $res === $table );
+    }
+
+    /**
+     * Check if a column exists in a table.
+     * @param string $table
+     * @param string $column
+     * @return bool
+     */
+    protected function column_exists( $table, $column ) {
+        global $wpdb;
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $res = $wpdb->get_var( $wpdb->prepare( "SHOW COLUMNS FROM {$table} LIKE %s", $column ) );
+        return ! empty( $res );
+    }
+}

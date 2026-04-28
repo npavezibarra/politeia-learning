@@ -1562,3 +1562,11 @@ msgstr "Artículos relacionados"
 #: modules/menu-management/includes/class-menu-manager.php:707
 msgid "Cerrar Sesión"
 msgstr "Cerrar Sesión"
+
+#: modules/learni/templates/dashboard/main-dashboard.php:0
+msgid "PLANIFICADOR DE LECTURAS"
+msgstr "PLANIFICADOR DE LECTURAS"
+
+#: modules/navigation/includes/Navigation/NavEngine.php:0
+msgid "Planificador de Lecturas"
+msgstr "Planificador de Lecturas"

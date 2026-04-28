@@ -78,6 +78,11 @@ class NavOrchestrator
             return true;
         }
 
+        // Bookshelf / Reading Module routes
+        if (get_query_var('prs_my_books_archive') || get_query_var('prs_book_slug') || get_query_var('prs_my_reading_stats') || get_query_var('prs_my_reading_stats_2')) {
+            return true;
+        }
+
         // Auth pages
         if (isset($_GET['pl_auth_action']) || is_page(['login', 'register', 'lost-password', 'mi-cuenta', 'checkout-curso'])) {
             return true;
