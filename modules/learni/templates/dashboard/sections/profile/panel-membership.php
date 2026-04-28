@@ -5,9 +5,35 @@
 if (!defined('ABSPATH')) exit;
 
 $current_user_id = get_current_user_id();
-// Mock data or real meta for subscription
-$current_tier = get_user_meta($current_user_id, 'pl_membership_tier', true) ?: 'Gratis';
-$membership_price = get_user_meta($current_user_id, 'pl_membership_price', true) ?: '5000';
+$current_user = $current_user_id ? get_userdata($current_user_id) : null;
+$current_user_slug = ($current_user instanceof WP_User) ? (string) $current_user->user_nicename : '';
+
+// Display helpers (saved/failed redirect from handler).
+$notice = '';
+$error = '';
+if (isset($_GET['pl_membership_notice']) && sanitize_key((string) wp_unslash($_GET['pl_membership_notice'])) === 'saved') {
+    $notice = __('Membresía guardada.', 'politeia-learning');
+}
+if (isset($_GET['pl_membership_error'])) {
+    $error = sanitize_text_field((string) wp_unslash($_GET['pl_membership_error']));
+}
+
+// Read the current monthly tier amount from PPS (source of truth).
+$membership_amount_minor = 0;
+if ($current_user_id > 0 && class_exists('Politeia_PPS_Subscription_Engine') && method_exists('Politeia_PPS_Subscription_Engine', 'get_creator_tier_by_slug')) {
+    $tier = Politeia_PPS_Subscription_Engine::get_creator_tier_by_slug($current_user_id, 'monthly');
+    if (is_array($tier) && isset($tier['amount_minor'])) {
+        $membership_amount_minor = (int) $tier['amount_minor'];
+    }
+}
+
+// Fallback (legacy): user meta used when PPS module is missing.
+if ($membership_amount_minor <= 0) {
+    $membership_amount_minor = (int) get_user_meta($current_user_id, 'politeia_membership_monthly_amount', true);
+}
+if ($membership_amount_minor <= 0) {
+    $membership_amount_minor = 5000;
+}
 ?>
 
 <div data-profile-panel="membership" class="pcg-profile-view" style="display:none;">
@@ -21,7 +47,7 @@ $membership_price = get_user_meta($current_user_id, 'pl_membership_price', true)
                     </p>
                     <div class="pcg-badge">
                         <i data-lucide="credit-card"></i>
-                        <?php echo esc_html($current_tier); ?>
+                        <?php echo esc_html__('Mensual', 'politeia-learning'); ?>
                     </div>
                 </div>
             </div>
@@ -35,32 +61,49 @@ $membership_price = get_user_meta($current_user_id, 'pl_membership_price', true)
 
         <main class="pcg-connectivity-main">
             <h2 class="section-title" style="border-top: none; padding-top: 0;"><?php _e('CONFIGURACIÓN DE PAGOS', 'politeia-learning'); ?></h2>
-            
-            <div class="pcg-form-group">
-                <label><?php _e('VALOR DE SUSCRIPCIÓN MENSUAL (CLP)', 'politeia-learning'); ?></label>
-                <div class="pcg-input-wrapper">
-                    <i data-lucide="dollar-sign"></i>
-                    <input 
-                        type="text" 
-                        name="membership_price" 
-                        value="<?php echo esc_attr($membership_price); ?>" 
-                        class="input-field input-field--membership-price" 
-                        inputmode="numeric" 
-                        placeholder="5000"
-                    />
-                </div>
-                <p style="margin-top:10px; color:#a3a3a3; font-size:11px; text-transform: uppercase; letter-spacing: 0.05em;">
-                    <?php _e('Este monto será cobrado mensualmente a tus suscriptores.', 'politeia-learning'); ?>
-                </p>
-            </div>
 
-            <div class="pt-8 mt-8" style="border-top: 1px solid #f0f0f0;">
-                <button type="button" class="gold-cta gold-cta--compact">
-                    <i data-lucide="save"></i>
-                    <?php _e('Guardar Membresía', 'politeia-learning'); ?>
-                </button>
-            </div>
-            <p class="pcg-footer-note">Actualización <span>segura</span> vía Stripe/MercadoPago</p>
+            <?php if ($notice !== '') : ?>
+                <div class="politeia-pps__notice" role="status" style="margin: 12px 0;">
+                    <?php echo esc_html($notice); ?>
+                </div>
+            <?php endif; ?>
+            <?php if ($error !== '') : ?>
+                <div class="politeia-pps__error" role="alert" style="margin: 12px 0;">
+                    <?php echo esc_html($error); ?>
+                </div>
+            <?php endif; ?>
+            
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="m-0">
+                <?php wp_nonce_field('pl_cc_membership_tier', 'pl_cc_membership_tier_nonce'); ?>
+                <input type="hidden" name="action" value="pl_cc_save_membership_tier" />
+                <input type="hidden" name="user_slug" value="<?php echo esc_attr($current_user_slug); ?>" />
+
+                <div class="pcg-form-group">
+                    <label><?php _e('VALOR DE SUSCRIPCIÓN MENSUAL (CLP)', 'politeia-learning'); ?></label>
+                    <div class="pcg-input-wrapper">
+                        <i data-lucide="dollar-sign"></i>
+                        <input 
+                            type="text" 
+                            name="monthly_amount" 
+                            value="<?php echo esc_attr((string) $membership_amount_minor); ?>" 
+                            class="input-field input-field--membership-price" 
+                            inputmode="numeric" 
+                            placeholder="5000"
+                        />
+                    </div>
+                    <p style="margin-top:10px; color:#a3a3a3; font-size:11px; text-transform: uppercase; letter-spacing: 0.05em;">
+                        <?php _e('Este monto será cobrado mensualmente a tus suscriptores.', 'politeia-learning'); ?>
+                    </p>
+                </div>
+
+                <div class="pt-8 mt-8" style="border-top: 1px solid #f0f0f0;">
+                    <button type="submit" class="gold-cta gold-cta--compact">
+                        <i data-lucide="save"></i>
+                        <?php _e('Guardar Membresía', 'politeia-learning'); ?>
+                    </button>
+                </div>
+                <p class="pcg-footer-note">Actualización <span>segura</span> vía Stripe/MercadoPago</p>
+            </form>
         </main>
     </div>
 </div>

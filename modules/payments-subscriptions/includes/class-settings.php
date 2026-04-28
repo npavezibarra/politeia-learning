@@ -529,12 +529,8 @@ class Politeia_PPS_Settings {
 			<?php echo esc_html__( 'Hosted Checkout (redirect)', 'politeia-payments-subscriptions' ); ?>
 		</label>
 		<br />
-		<label>
-			<input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[subscription_flow]" value="direct" <?php checked( $val, 'direct' ); ?> />
-			<?php echo esc_html__( 'Direct (card token / authorized)', 'politeia-payments-subscriptions' ); ?>
-		</label>
 		<p class="description">
-			<?php echo esc_html__( 'Hosted opens Mercado Pago checkout. Direct creates the preapproval with card_token_id (no redirect).', 'politeia-payments-subscriptions' ); ?>
+			<?php echo esc_html__( 'Hosted opens Mercado Pago checkout. (Direct/tokenized flow is not enabled yet.)', 'politeia-payments-subscriptions' ); ?>
 		</p>
 		<?php
 	}
@@ -622,6 +618,7 @@ class Politeia_PPS_Settings {
 		$access_set      = (bool) self::get_access_token();
 		$webhook_set     = (bool) self::get( 'mp_webhook_secret', '' );
 		$test_result     = get_transient( self::TEST_RESULT_TRANSIENT );
+		$webhooks_notice = isset( $_GET['pps_webhooks_notice'] ) ? sanitize_key( (string) wp_unslash( $_GET['pps_webhooks_notice'] ) ) : '';
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html__( 'Payment Gateways', 'politeia-learning' ); ?></h1>
@@ -667,6 +664,147 @@ class Politeia_PPS_Settings {
 				submit_button();
 				?>
 			</form>
+
+			<hr />
+
+			<h2><?php echo esc_html__( 'Webhooks & Ledger', 'politeia-payments-subscriptions' ); ?></h2>
+
+			<?php if ( $webhooks_notice === 'processed' ) : ?>
+				<div class="notice notice-success"><p><?php echo esc_html__( 'Webhook queue processed.', 'politeia-payments-subscriptions' ); ?></p></div>
+			<?php elseif ( $webhooks_notice === 'event_processed' ) : ?>
+				<div class="notice notice-success"><p><?php echo esc_html__( 'Webhook event processed.', 'politeia-payments-subscriptions' ); ?></p></div>
+			<?php endif; ?>
+
+			<?php
+			global $wpdb;
+			$pending_count = 0;
+			$events        = array();
+			$ledger        = array();
+			if ( $wpdb && class_exists( 'Politeia_PPS_Subscription_Engine' ) ) {
+				$events_table = Politeia_PPS_Subscription_Engine::webhook_events_table();
+				$ledger_table = Politeia_PPS_Subscription_Engine::ledger_table();
+				$pending_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$events_table} WHERE processed = 0" );
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				$events = $wpdb->get_results(
+					"SELECT id, event_type, resource_id, processed, received_at, processed_at
+					 FROM {$events_table}
+					 ORDER BY received_at DESC
+					 LIMIT 25",
+					ARRAY_A
+				);
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				$ledger = $wpdb->get_results(
+					"SELECT id, creator_user_id, subscriber_user_id, tier_id, mp_payment_id, mp_preapproval_id, mp_status, currency, gross_amount_minor, occurred_at
+					 FROM {$ledger_table}
+					 ORDER BY occurred_at DESC
+					 LIMIT 25",
+					ARRAY_A
+				);
+			}
+			?>
+
+			<p>
+				<strong><?php echo esc_html__( 'Pending webhook events:', 'politeia-payments-subscriptions' ); ?></strong>
+				<?php echo esc_html( (string) $pending_count ); ?>
+				&nbsp;&nbsp;
+				<a class="button button-secondary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=' . Politeia_PPS_Webhooks::ADMIN_ACTION_PROCESS_ALL ), 'politeia_pps_process_webhooks' ) ); ?>">
+					<?php echo esc_html__( 'Process Now', 'politeia-payments-subscriptions' ); ?>
+				</a>
+			</p>
+
+			<h3><?php echo esc_html__( 'Recent Webhook Events', 'politeia-payments-subscriptions' ); ?></h3>
+			<table class="widefat striped" style="max-width: 1100px;">
+				<thead>
+					<tr>
+						<th><?php echo esc_html__( 'ID', 'politeia-payments-subscriptions' ); ?></th>
+						<th><?php echo esc_html__( 'Type', 'politeia-payments-subscriptions' ); ?></th>
+						<th><?php echo esc_html__( 'Resource', 'politeia-payments-subscriptions' ); ?></th>
+						<th><?php echo esc_html__( 'Processed', 'politeia-payments-subscriptions' ); ?></th>
+						<th><?php echo esc_html__( 'Received', 'politeia-payments-subscriptions' ); ?></th>
+						<th><?php echo esc_html__( 'Actions', 'politeia-payments-subscriptions' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+				<?php if ( ! $events ) : ?>
+					<tr><td colspan="6"><?php echo esc_html__( 'No webhook events yet.', 'politeia-payments-subscriptions' ); ?></td></tr>
+				<?php else : ?>
+					<?php foreach ( (array) $events as $ev ) : ?>
+						<?php
+						$ev_id     = (int) ( $ev['id'] ?? 0 );
+						$processed = (int) ( $ev['processed'] ?? 0 ) === 1;
+						$process_url = wp_nonce_url(
+							add_query_arg(
+								array(
+									'action'   => Politeia_PPS_Webhooks::ADMIN_ACTION_PROCESS_EVENT,
+									'event_id' => $ev_id,
+								),
+								admin_url( 'admin-post.php' )
+							),
+							'politeia_pps_process_webhook_event'
+						);
+						$reprocess_url = wp_nonce_url(
+							add_query_arg(
+								array(
+									'action'   => Politeia_PPS_Webhooks::ADMIN_ACTION_PROCESS_EVENT,
+									'event_id' => $ev_id,
+									'force'    => '1',
+								),
+								admin_url( 'admin-post.php' )
+							),
+							'politeia_pps_process_webhook_event'
+						);
+						?>
+						<tr>
+							<td><?php echo esc_html( (string) $ev_id ); ?></td>
+							<td><code><?php echo esc_html( (string) ( $ev['event_type'] ?? '' ) ); ?></code></td>
+							<td><code><?php echo esc_html( (string) ( $ev['resource_id'] ?? '' ) ); ?></code></td>
+							<td><?php echo $processed ? esc_html__( 'yes', 'politeia-payments-subscriptions' ) : esc_html__( 'no', 'politeia-payments-subscriptions' ); ?></td>
+							<td><?php echo esc_html( (string) ( $ev['received_at'] ?? '' ) ); ?></td>
+							<td>
+								<a class="button button-small" href="<?php echo esc_url( $process_url ); ?>"><?php echo esc_html__( 'Process', 'politeia-payments-subscriptions' ); ?></a>
+								<?php if ( $processed ) : ?>
+									<a class="button button-small" href="<?php echo esc_url( $reprocess_url ); ?>"><?php echo esc_html__( 'Reprocess', 'politeia-payments-subscriptions' ); ?></a>
+								<?php endif; ?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				<?php endif; ?>
+				</tbody>
+			</table>
+
+			<h3 style="margin-top: 18px;"><?php echo esc_html__( 'Recent Ledger Entries', 'politeia-payments-subscriptions' ); ?></h3>
+			<table class="widefat striped" style="max-width: 1100px;">
+				<thead>
+					<tr>
+						<th><?php echo esc_html__( 'ID', 'politeia-payments-subscriptions' ); ?></th>
+						<th><?php echo esc_html__( 'Creator', 'politeia-payments-subscriptions' ); ?></th>
+						<th><?php echo esc_html__( 'Subscriber', 'politeia-payments-subscriptions' ); ?></th>
+						<th><?php echo esc_html__( 'Payment', 'politeia-payments-subscriptions' ); ?></th>
+						<th><?php echo esc_html__( 'Preapproval', 'politeia-payments-subscriptions' ); ?></th>
+						<th><?php echo esc_html__( 'Status', 'politeia-payments-subscriptions' ); ?></th>
+						<th><?php echo esc_html__( 'Amount', 'politeia-payments-subscriptions' ); ?></th>
+						<th><?php echo esc_html__( 'Occurred', 'politeia-payments-subscriptions' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+				<?php if ( ! $ledger ) : ?>
+					<tr><td colspan="8"><?php echo esc_html__( 'No ledger entries yet.', 'politeia-payments-subscriptions' ); ?></td></tr>
+				<?php else : ?>
+					<?php foreach ( (array) $ledger as $l ) : ?>
+						<tr>
+							<td><?php echo esc_html( (string) ( $l['id'] ?? '' ) ); ?></td>
+							<td><?php echo esc_html( (string) ( $l['creator_user_id'] ?? '' ) ); ?></td>
+							<td><?php echo esc_html( (string) ( $l['subscriber_user_id'] ?? '' ) ); ?></td>
+							<td><code><?php echo esc_html( (string) ( $l['mp_payment_id'] ?? '' ) ); ?></code></td>
+							<td><code><?php echo esc_html( (string) ( $l['mp_preapproval_id'] ?? '' ) ); ?></code></td>
+							<td><code><?php echo esc_html( (string) ( $l['mp_status'] ?? '' ) ); ?></code></td>
+							<td><?php echo esc_html( (string) ( $l['currency'] ?? '' ) . ' ' . (string) ( $l['gross_amount_minor'] ?? '' ) ); ?></td>
+							<td><?php echo esc_html( (string) ( $l['occurred_at'] ?? '' ) ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+				<?php endif; ?>
+				</tbody>
+			</table>
 		</div>
 		<?php
 	}

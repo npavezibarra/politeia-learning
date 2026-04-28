@@ -41,6 +41,10 @@ function pl_template_open(): void
         if (class_exists('\\Learni\\Navigation\\NavOrchestrator')) {
             $should_suppress = \Learni\Navigation\NavOrchestrator::get_instance()->is_politeia_page();
         }
+        // Reading Planner single plan is rendered via a custom route; always suppress the theme footer.
+        if (get_query_var('prs_my_single_plan')) {
+            $should_suppress = true;
+        }
 
         if (!$should_suppress) {
             $pl_theme_footer_html = (string) do_blocks('<!-- wp:template-part {"slug":"footer","area":"footer"} /-->');
@@ -79,6 +83,10 @@ function pl_template_close(): void
         $should_suppress = false;
         if (class_exists('\\Learni\\Navigation\\NavOrchestrator')) {
             $should_suppress = \Learni\Navigation\NavOrchestrator::get_instance()->is_politeia_page();
+        }
+        // Reading Planner single plan is rendered via a custom route; always suppress the theme footer.
+        if (get_query_var('prs_my_single_plan')) {
+            $should_suppress = true;
         }
 
         if (!$should_suppress) {

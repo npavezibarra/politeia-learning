@@ -39,6 +39,7 @@ require_once PL_PPS_PATH . 'includes/class-subscription-engine.php';
 require_once PL_PPS_PATH . 'includes/class-webhooks.php';
 require_once PL_PPS_PATH . 'includes/class-rest.php';
 require_once PL_PPS_PATH . 'includes/class-profile-subscribe.php';
+require_once PL_PPS_PATH . 'includes/class-relationships-bridge.php';
 
 require_once PL_PPS_PATH . 'shortcodes/creator-dashboard.php';
 require_once PL_PPS_PATH . 'shortcodes/subscriber-dashboard.php';
@@ -60,6 +61,9 @@ add_action('init', static function (): void {
     }
     if (class_exists('Politeia_PPS_Profile_Subscribe')) {
         Politeia_PPS_Profile_Subscribe::init();
+    }
+    if (class_exists('Politeia_PPS_Relationships_Bridge')) {
+        Politeia_PPS_Relationships_Bridge::init();
     }
 }, 0);
 

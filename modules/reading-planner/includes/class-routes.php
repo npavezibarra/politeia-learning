@@ -39,7 +39,7 @@ class Routes {
 
 	public static function template_router( string $template ): string {
 		$template_v2 = POLITEIA_READING_PLAN_PATH . 'templates/my-plans-ver-2/my-plans-ver-2.php';
-		$template_single = POLITEIA_READING_PLAN_PATH . 'templates/my-single-plan/my-single-plan.php';
+		$template_single = POLITEIA_READING_PLAN_PATH . 'templates/my-single-plan/my-single-plan-v2.php';
 
 		if ( get_query_var( 'prs_my_plans_ver_2' ) ) {
 			if ( $template_v2 && file_exists( $template_v2 ) ) {
@@ -130,7 +130,7 @@ class Routes {
 			return;
 		}
 
-		$template_single = POLITEIA_READING_PLAN_PATH . 'templates/my-single-plan/my-single-plan.php';
+		$template_single = POLITEIA_READING_PLAN_PATH . 'templates/my-single-plan/my-single-plan-v2.php';
 		if ( ! file_exists( $template_single ) ) {
 			return;
 		}

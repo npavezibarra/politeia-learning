@@ -1518,6 +1518,10 @@ class Rest
 		$user_book_id = 0;
 		$goal_target = 0;
 		$goal_starting_page = 1;
+		$habit_start_pages = 0;
+		$habit_end_pages = 0;
+		$habit_duration_days = 0;
+		$habit_start_date = '';
 
 		// 1. Try New Tables First
 		if ('habit' === $p_type) {
@@ -1525,6 +1529,9 @@ class Rest
 			$habit_row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$ph_table} WHERE plan_id = %d LIMIT 1", $plan_id));
 			if ($habit_row) {
 				$goal_kind = 'habit';
+				$habit_start_pages = isset($habit_row->start_page_amount) ? (int) $habit_row->start_page_amount : 0;
+				$habit_end_pages = isset($habit_row->finish_page_amount) ? (int) $habit_row->finish_page_amount : 0;
+				$habit_duration_days = isset($habit_row->duration_days) ? (int) $habit_row->duration_days : 0;
 				// Habits don't strictly have a "book_id" for the goal itself, usually 'Any Book' or a specific one?
 				// Old logic allowed habit to be tied to a book?
 				// If so, it would be in plan_goals. But phase 2/3 habits are generic.
@@ -1640,6 +1647,118 @@ class Rest
 			// If resolution failed, we can't find sessions.
 		}
 
+		if ('habit' === $goal_kind) {
+			$first_session_date = (string) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT DATE(planned_start_datetime)
+					FROM {$sessions_table}
+					WHERE plan_id = %d
+					ORDER BY planned_start_datetime ASC
+					LIMIT 1",
+					$plan_id
+				)
+			);
+			if ($first_session_date !== '') {
+				$habit_start_date = $first_session_date;
+			}
+			if ($habit_duration_days <= 0) {
+				$habit_duration_days = 48;
+			}
+
+			// For habits, interpret progress as "days accomplished".
+			// UI can show "(X de duration)" instead of pages.
+			$session_dates = array();
+			$session_items_map = array();
+
+			if ($sessions) {
+				foreach ($sessions as $session) {
+					$session = (array) $session;
+					if (empty($session['planned_start_datetime'])) {
+						continue;
+					}
+					$session_dt = date_create_immutable($session['planned_start_datetime'], $timezone);
+					$session_ts = $session_dt ? $session_dt->getTimestamp() : null;
+					$date_key = $session_ts ? wp_date('Y-m-d', $session_ts, $timezone) : '';
+					if ('' === $date_key) {
+						continue;
+					}
+
+					$session_dates[] = $date_key;
+					$s_status = !empty($session['status']) ? (string) $session['status'] : 'planned';
+					$session_items_map[$date_key] = array(
+						'date' => $date_key,
+						'status' => $s_status,
+						'planned_start_page' => 0,
+						'planned_end_page' => 0,
+					);
+				}
+			}
+
+			$session_dates = array_values(array_unique($session_dates));
+			sort($session_dates);
+
+			$expected_by_date = array();
+			if ($habit_start_date !== '' && $habit_duration_days > 0) {
+				foreach ($session_dates as $date_key) {
+					$projections = \Politeia\ReadingPlanner\PlanSessionDeriver::derive_habit_sessions(
+						max(0, $habit_start_pages),
+						max(0, $habit_end_pages),
+						$habit_duration_days,
+						$habit_start_date,
+						array($date_key)
+					);
+					if (!empty($projections) && is_array($projections)) {
+						$projection = $projections[0];
+						if (is_array($projection) && isset($projection['pages'])) {
+							$expected_by_date[$date_key] = (int) $projection['pages'];
+						}
+					}
+				}
+			}
+
+			$accomplished_count = 0;
+			foreach ($session_dates as $date_key) {
+				if (isset($session_items_map[$date_key])) {
+					$item = &$session_items_map[$date_key];
+					$item['expectedPages'] = isset($expected_by_date[$date_key]) ? (int) $expected_by_date[$date_key] : 0;
+					if (isset($item['status']) && 'accomplished' === $item['status']) {
+						$accomplished_count += 1;
+					}
+					unset($item);
+				}
+			}
+
+			$total_pages = max(0, $habit_duration_days);
+			$pages_read_in_plan = max(0, $accomplished_count);
+			$progress = $total_pages > 0 ? min(100, (int) floor(($pages_read_in_plan / $total_pages) * 100)) : 0;
+
+			$session_items = array_values($session_items_map);
+			usort(
+				$session_items,
+				static function ($a, $b) {
+					$ad = is_array($a) && isset($a['date']) ? (string) $a['date'] : '';
+					$bd = is_array($b) && isset($b['date']) ? (string) $b['date'] : '';
+					return strcmp($ad, $bd);
+				}
+			);
+
+			return new WP_REST_Response(array(
+				'success' => true,
+				'plan_id' => $plan_id,
+				'total_pages' => $total_pages,
+				'pages_read' => $pages_read_in_plan,
+				'progress' => $progress,
+				'relationship_type' => $relationship_type,
+				'can_edit' => ('owner' === $relationship_type),
+				'session_dates' => $session_dates,
+				'session_items' => $session_items,
+				'actual_sessions' => $actual_sessions_payload,
+				'today_key' => $today_key,
+				'goal_kind' => 'habit',
+				'habit_duration' => $habit_duration_days,
+				'start_date' => $habit_start_date,
+			), 200);
+		}
 
 		// Calculate Derivations
 		$highest_page_read = 0;
@@ -1724,6 +1843,7 @@ class Rest
 			'session_items' => $session_items,
 			'actual_sessions' => $actual_sessions_payload,
 			'today_key' => $today_key,
+			'goal_kind' => $goal_kind,
 		), 200);
 	}
 

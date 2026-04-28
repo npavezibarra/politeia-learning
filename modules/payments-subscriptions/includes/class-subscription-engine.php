@@ -326,11 +326,13 @@ class Politeia_PPS_Subscription_Engine {
 			return new WP_Error( 'cannot_self_subscribe', 'You cannot subscribe to your own tier.' );
 		}
 
-				$client = new Politeia_PPS_MercadoPago_Client();
-				$flow   = (string) Politeia_PPS_Settings::get( 'subscription_flow', 'hosted' );
-				if ( ! in_array( $flow, array( 'hosted', 'direct' ), true ) ) {
-					$flow = 'hosted';
-				}
+		$client = new Politeia_PPS_MercadoPago_Client();
+
+		// Force the "Hosted Checkout" redirect flow.
+		//
+		// Why: The Direct flow requires card tokenization (card_token_id) which is not implemented
+		// in the public profile CTA yet. Hosted keeps checkout and authentication inside Mercado Pago.
+		$flow = 'hosted';
 
 		// Determine payer_email:
 		// - If admin configured an override (useful for MP test buyers), prefer it.
@@ -346,137 +348,55 @@ class Politeia_PPS_Subscription_Engine {
 			}
 		}
 
-				$access_token = (string) Politeia_PPS_Settings::get_access_token();
-				$is_test      = 0 === strpos( $access_token, 'TEST-' );
+		$access_token = (string) Politeia_PPS_Settings::get_access_token();
+		$is_test      = 0 === strpos( $access_token, 'TEST-' );
 
-				$mp_plan_id = isset( $tier['mp_plan_id'] ) ? (string) $tier['mp_plan_id'] : '';
-				$back_url   = (string) Politeia_PPS_Settings::get( 'success_url', '' );
-				if ( $back_url === '' ) {
-					$back_url = home_url( '/' );
-				}
+		$mp_plan_id = isset( $tier['mp_plan_id'] ) ? (string) $tier['mp_plan_id'] : '';
+		$back_url   = (string) Politeia_PPS_Settings::get( 'success_url', '' );
+		if ( $back_url === '' ) {
+			$back_url = home_url( '/' );
+		}
 
-				// Important: In Mercado Pago, subscriptions *with an associated plan* require `card_token_id`
-				// (direct/tokenized flow). For hosted redirects, create the subscription WITHOUT a plan so MP
-				// can present checkout to collect the payment method.
-				if ( 'hosted' === $flow ) {
-					$mp_plan_id = '';
-				}
-				$payload = array(
-					'reason'            => $tier['tier_name'],
-					'external_reference'=> $tier['external_reference'],
-					'auto_recurring'    => array(
-					'frequency'         => (int) $tier['interval_count'],
-					'frequency_type'    => self::map_interval_unit( $tier['interval_unit'] ),
-					'transaction_amount'=> self::minor_to_major_amount( (int) $tier['amount_minor'], $tier['currency'] ),
-					'currency_id'       => $tier['currency'],
-				),
-				'back_url'          => $back_url,
-			);
+		// Important: In Mercado Pago, subscriptions with an associated plan require `card_token_id` (direct).
+		// For hosted redirects, create the subscription WITHOUT a plan so MP can present checkout.
+		$mp_plan_id = '';
 
-				if ( $payer_email ) {
-					$payload['payer_email'] = sanitize_email( $payer_email );
-				}
+		$payload = array(
+			'reason'             => $tier['tier_name'],
+			'external_reference' => $tier['external_reference'],
+			'auto_recurring'     => array(
+				'frequency'          => (int) $tier['interval_count'],
+				'frequency_type'     => self::map_interval_unit( $tier['interval_unit'] ),
+				'transaction_amount' => self::minor_to_major_amount( (int) $tier['amount_minor'], $tier['currency'] ),
+				'currency_id'        => $tier['currency'],
+			),
+			'back_url'           => $back_url,
+		);
 
-				// Create (and cache) an associated plan only for direct/tokenized subscriptions.
-				if ( 'direct' === $flow && ! $mp_plan_id ) {
-						$plan_payload = array(
-							'reason'             => $tier['tier_name'],
-							'external_reference' => $tier['external_reference'],
-							'auto_recurring'     => $payload['auto_recurring'],
-							'back_url'           => $back_url,
-						);
+		if ( $payer_email ) {
+			$payload['payer_email'] = sanitize_email( $payer_email );
+		}
 
-				self::debug(
-					'preapproval_plan_create_request',
-					array(
-						'tier_id'            => (int) $tier['id'],
-						'external_reference' => $tier['external_reference'],
-						'currency'           => $payload['auto_recurring']['currency_id'],
-						'amount_major'       => $payload['auto_recurring']['transaction_amount'],
-					)
-				);
+		// NOTE: Direct/tokenized subscriptions are intentionally disabled for now.
+		// The related preapproval_plan + card_token_id flow remains in the codebase history but is not used.
 
-				$plan_res = $client->create_preapproval_plan( $plan_payload );
-				if ( is_wp_error( $plan_res ) ) {
-					self::debug(
-						'preapproval_plan_create_error',
-						array(
-							'error' => $plan_res->get_error_message(),
-							'data'  => $plan_res->get_error_data(),
-						)
-					);
+		$payment        = is_array( $payment ) ? $payment : array();
+		$card_token_id  = sanitize_text_field( $payment['card_token_id'] ?? '' );
 
-						// Sandbox (MLC) has been observed failing for /preapproval_plan (503 or PolicyAgent 403).
-						// When that happens, attempt a best-effort fallback: create the preapproval without a plan.
-					$data   = $plan_res->get_error_data();
-					$status = is_array( $data ) && isset( $data['status'] ) ? (int) $data['status'] : 0;
-					$body_code = '';
-					if ( is_array( $data ) && isset( $data['body'] ) && is_array( $data['body'] ) ) {
-						$body_code = isset( $data['body']['code'] ) ? (string) $data['body']['code'] : '';
-					}
-
-					$is_policy_block = ( 403 === $status ) && ( $body_code !== '' ) && ( 0 === strpos( $body_code, 'PA_' ) );
-
-						if ( $is_test && ( $status >= 500 || $is_policy_block ) ) {
-							self::debug(
-								'preapproval_plan_fallback',
-								array(
-									'status' => $status,
-									'code'   => $body_code ? $body_code : null,
-									'note'   => 'Continuing without preapproval_plan_id (TEST fallback).',
-								)
-							);
-							$mp_plan_id = '';
-						} else {
-							return $plan_res;
-						}
-					}
-
-				if ( is_array( $plan_res ) ) {
-					$mp_plan_id = isset( $plan_res['id'] ) ? (string) $plan_res['id'] : '';
-					if ( $mp_plan_id ) {
-						self::set_tier_plan_id( (int) $tier['id'], $mp_plan_id );
-						self::debug( 'preapproval_plan_created', array( 'tier_id' => (int) $tier['id'], 'mp_plan_id' => $mp_plan_id ) );
-					}
-				}
-			}
-
-			$payment = is_array( $payment ) ? $payment : array();
-			$card_token_id     = sanitize_text_field( $payment['card_token_id'] ?? '' );
-			$payment_method_id = sanitize_text_field( $payment['payment_method_id'] ?? '' );
-			$issuer_id         = sanitize_text_field( $payment['issuer_id'] ?? '' );
-
-			if ( 'direct' === $flow ) {
-				if ( ! $card_token_id ) {
-					return new WP_Error( 'card_token_required', 'card_token_id is required for direct subscription flow.' );
-				}
-				$payload['status']        = 'authorized';
-				$payload['card_token_id'] = $card_token_id;
-				if ( $payment_method_id ) {
-					$payload['payment_method_id'] = $payment_method_id;
-				}
-				if ( $issuer_id ) {
-					$payload['issuer_id'] = $issuer_id;
-				}
-			}
-				if ( 'direct' === $flow && $mp_plan_id ) {
-					$payload['preapproval_plan_id'] = $mp_plan_id;
-				}
-
-			self::debug(
-				'preapproval_create_request',
-				array(
-					'subscriber_user_id' => $subscriber_user_id,
-					'creator_user_id'    => (int) $tier['creator_user_id'],
-					'tier_id'            => (int) $tier['id'],
-					'flow'               => $flow,
-					'mp_plan_id'         => $mp_plan_id ? $mp_plan_id : null,
-					'has_card_token'      => (bool) $card_token_id,
-					'external_reference' => $payload['external_reference'],
-					'amount_major'       => $payload['auto_recurring']['transaction_amount'],
-					'currency'           => $payload['auto_recurring']['currency_id'],
-				)
-			);
+		self::debug(
+			'preapproval_create_request',
+			array(
+				'subscriber_user_id' => $subscriber_user_id,
+				'creator_user_id'    => (int) $tier['creator_user_id'],
+				'tier_id'            => (int) $tier['id'],
+				'flow'               => $flow,
+				'mp_plan_id'         => $mp_plan_id ? $mp_plan_id : null,
+				'has_card_token'     => (bool) $card_token_id,
+				'external_reference' => $payload['external_reference'],
+				'amount_major'       => $payload['auto_recurring']['transaction_amount'],
+				'currency'           => $payload['auto_recurring']['currency_id'],
+			)
+		);
 
 		$res = $client->create_preapproval( $payload );
 		if ( is_wp_error( $res ) ) {
@@ -537,9 +457,6 @@ class Politeia_PPS_Subscription_Engine {
 
 		// Prefer the sandbox_init_point when Mercado Pago provides it; otherwise fall back to init_point.
 		$redirect_url = $sandbox_init_point ? $sandbox_init_point : $init_point;
-		if ( 'direct' === $flow ) {
-			$redirect_url = null;
-		}
 		if ( 'hosted' === $flow && $is_test && ! $sandbox_init_point ) {
 			self::debug(
 				'hosted_missing_sandbox_init_point',

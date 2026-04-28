@@ -2683,8 +2683,8 @@ section#prs-book-info__main {
 
 @media (min-width: 950px) {
         #prs-cover-frame {
-                width: 190px !important;
-                height: 280px !important;
+                width: 100% !important;
+                height: auto !important;
         }
 }
 

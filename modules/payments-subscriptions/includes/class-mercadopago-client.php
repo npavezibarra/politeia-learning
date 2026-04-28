@@ -116,9 +116,10 @@ class Politeia_PPS_MercadoPago_Client {
 					array(
 						'status'  => $code,
 						'message' => $message,
-						'headers' => $headers,
+						'headers' => $headers_norm,
 						'body'    => $data ? $data : $raw,
 						'url'     => $url,
+						'idempotency_key' => $idempotency_key,
 					)
 				);
 			}
@@ -139,6 +140,32 @@ class Politeia_PPS_MercadoPago_Client {
 
 	public function get_preapproval( $preapproval_id ) {
 		return $this->request( 'GET', '/preapproval/' . rawurlencode( $preapproval_id ) );
+	}
+
+	public function get_payment( $payment_id ) {
+		$payment_id = preg_replace( '/[^0-9]/', '', (string) $payment_id );
+		if ( ! $payment_id ) {
+			return new WP_Error( 'invalid_payment_id', 'Invalid Mercado Pago payment id.' );
+		}
+		return $this->request( 'GET', '/v1/payments/' . rawurlencode( $payment_id ) );
+	}
+
+	public function get_merchant_order( $merchant_order_id ) {
+		$merchant_order_id = preg_replace( '/[^0-9]/', '', (string) $merchant_order_id );
+		if ( ! $merchant_order_id ) {
+			return new WP_Error( 'invalid_merchant_order_id', 'Invalid Mercado Pago merchant order id.' );
+		}
+		return $this->request( 'GET', '/merchant_orders/' . rawurlencode( $merchant_order_id ) );
+	}
+
+	/**
+	 * Search payments using Mercado Pago's payments search endpoint.
+	 *
+	 * @param array<string,mixed> $query
+	 * @return array<string,mixed>|WP_Error
+	 */
+	public function search_payments( array $query ) {
+		return $this->request( 'GET', '/v1/payments/search', null, $query );
 	}
 
 	public function update_preapproval( $preapproval_id, $payload ) {

@@ -178,6 +178,11 @@ class PL_CC_Creator_Dashboard
                         return $custom_template;
                     }
                 }
+
+                // Not authorized to view another user's Center dashboard: send to public profile instead of a 404.
+                $profile_url = home_url('/profile/' . rawurlencode((string) $user->user_nicename) . '/');
+                wp_safe_redirect($profile_url);
+                exit;
             }
             return $template;
         }

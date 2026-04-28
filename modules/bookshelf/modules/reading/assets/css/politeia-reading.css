@@ -67,6 +67,11 @@
                 flex: 1 1 50%;
                 width: auto;
         }
+
+        #prs-cover-frame {
+                width: 100% !important;
+                height: auto !important;
+        }
 }
 
 .prs-reading-sessions {

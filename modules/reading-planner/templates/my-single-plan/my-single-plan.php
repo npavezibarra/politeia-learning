@@ -24,7 +24,7 @@ if (!is_user_logged_in()) {
 }
 
 $plan_id = intval(get_query_var('plan_id'));
-$allowed_sections = array('calendar', 'list', 'notes', 'settings');
+$allowed_sections = array('calendar', 'barchart');
 $current_section = isset($_GET['section']) ? sanitize_key(wp_unslash($_GET['section'])) : 'calendar';
 if (!in_array($current_section, $allowed_sections, true)) {
 	$current_section = 'calendar';
@@ -32,9 +32,7 @@ if (!in_array($current_section, $allowed_sections, true)) {
 
 $section_titles = array(
 	'calendar' => 'CALENDAR',
-	'list' => 'LIST',
-	'notes' => 'NOTES',
-	'settings' => 'SETTINGS',
+	'barchart' => 'BAR CHART',
 );
 
 $current_section_title = $section_titles[$current_section];
@@ -878,9 +876,8 @@ $today_key = current_time('Y-m-d');
 			opacity: 0;
 		}
 
-	</style>
-	<div id="single-plan-container" class="single-plan-container pcg-creator-container">
-		<aside id="single-plan-sidebar" class="single-plan-sidebar pcg-creator-sidebar">
+		</style>
+			<div class="single-plan-redesign-shell">
 			<?php if ($plan_cover_url || $plan_cover_title) : ?>
 				<div class="single-plan-cover-wrap">
 					<?php if ($plan_cover_url) : ?>
