@@ -43,6 +43,7 @@ class Politeia_PPS_Profile_Subscribe {
 			'PoliteiaPPSProfileSubscribe',
 			array(
 				'restUrl'   => esc_url_raw( rest_url( 'politeia/v1/subscriptions/subscribe' ) ),
+				'tiersUrl'  => esc_url_raw( rest_url( 'politeia/v1/subscriptions/tiers' ) ),
 				'nonce'     => wp_create_nonce( 'wp_rest' ),
 				'publicKey' => (string) Politeia_PPS_Settings::get_public_key(),
 			)
