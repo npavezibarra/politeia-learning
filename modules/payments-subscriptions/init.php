@@ -74,10 +74,17 @@ add_action('init', static function (): void {
 
 // Register frontend assets.
 add_action('wp_enqueue_scripts', static function (): void {
+	wp_register_style(
+		'politeia-pps-poppins',
+		'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap',
+		[],
+		PL_PPS_VERSION
+	);
+
     wp_register_style(
         'politeia-pps',
         PL_PPS_URL . 'assets/css/politeia-pps.css',
-        [],
+        ['politeia-pps-poppins'],
         PL_PPS_VERSION
     );
 
