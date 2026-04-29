@@ -328,11 +328,19 @@ class Politeia_PPS_Subscription_Engine {
 
 		$client = new Politeia_PPS_MercadoPago_Client();
 
-		// Force the "Hosted Checkout" redirect flow.
-		//
-		// Why: The Direct flow requires card tokenization (card_token_id) which is not implemented
-		// in the public profile CTA yet. Hosted keeps checkout and authentication inside Mercado Pago.
-		$flow = 'hosted';
+		// Decide subscription flow.
+		// - hosted: redirect the payer to Mercado Pago (init_point/sandbox_init_point)
+		// - direct: create the subscription with an authorized card_token_id (no redirect)
+		$payment       = is_array( $payment ) ? $payment : array();
+		$card_token_id = sanitize_text_field( $payment['card_token_id'] ?? '' );
+		$flow          = $card_token_id !== '' ? 'direct' : (string) Politeia_PPS_Settings::get( 'subscription_flow', 'hosted' );
+		if ( ! in_array( $flow, array( 'hosted', 'direct' ), true ) ) {
+			$flow = 'hosted';
+		}
+		if ( 'direct' === $flow && $card_token_id === '' ) {
+			// Prevent direct flow without token to avoid confusing MP errors.
+			$flow = 'hosted';
+		}
 
 		// Determine payer_email:
 		// - If admin configured an override (useful for MP test buyers), prefer it.
@@ -377,11 +385,20 @@ class Politeia_PPS_Subscription_Engine {
 			$payload['payer_email'] = sanitize_email( $payer_email );
 		}
 
-		// NOTE: Direct/tokenized subscriptions are intentionally disabled for now.
-		// The related preapproval_plan + card_token_id flow remains in the codebase history but is not used.
+		if ( 'direct' === $flow ) {
+			$payload['card_token_id'] = $card_token_id;
+			// Required by Mercado Pago: subscriptions with authorized payment must set status=authorized.
+			$payload['status'] = 'authorized';
 
-		$payment        = is_array( $payment ) ? $payment : array();
-		$card_token_id  = sanitize_text_field( $payment['card_token_id'] ?? '' );
+			$payment_method_id = sanitize_text_field( $payment['payment_method_id'] ?? '' );
+			$issuer_id         = sanitize_text_field( $payment['issuer_id'] ?? '' );
+			if ( $payment_method_id !== '' ) {
+				$payload['payment_method_id'] = $payment_method_id;
+			}
+			if ( $issuer_id !== '' ) {
+				$payload['issuer_id'] = $issuer_id;
+			}
+		}
 
 		self::debug(
 			'preapproval_create_request',
@@ -422,18 +439,21 @@ class Politeia_PPS_Subscription_Engine {
 			return new WP_Error( 'collector_mismatch', 'El access token pertenece a otro usuario (collector_id). Verifica que el token y el Expected Seller User ID correspondan al mismo entorno (test o live).', array( 'collector_id' => $collector_id, 'expected' => $expected_id ) );
 		}
 
-		// Fetch preapproval details to obtain init URLs (especially sandbox_init_point).
-		$details = $client->get_preapproval( $mp_preapproval_id );
-		if ( is_wp_error( $details ) ) {
-			self::debug(
-				'preapproval_fetch_error',
-				array(
-					'mp_preapproval_id' => $mp_preapproval_id,
-					'error'             => $details->get_error_message(),
-					'data'              => $details->get_error_data(),
-				)
-			);
-			$details = null;
+		$details = null;
+		if ( 'hosted' === $flow ) {
+			// Fetch preapproval details to obtain init URLs (especially sandbox_init_point).
+			$details = $client->get_preapproval( $mp_preapproval_id );
+			if ( is_wp_error( $details ) ) {
+				self::debug(
+					'preapproval_fetch_error',
+					array(
+						'mp_preapproval_id' => $mp_preapproval_id,
+						'error'             => $details->get_error_message(),
+						'data'              => $details->get_error_data(),
+					)
+				);
+				$details = null;
+			}
 		}
 
 		$upsert = self::upsert_subscription(
@@ -477,7 +497,7 @@ class Politeia_PPS_Subscription_Engine {
 				)
 			);
 		}
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		if ( 'hosted' === $flow && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			$host = $redirect_url ? wp_parse_url( $redirect_url, PHP_URL_HOST ) : '';
 			error_log(
 				sprintf(
@@ -505,15 +525,15 @@ class Politeia_PPS_Subscription_Engine {
 		);
 
 		return array(
-			'mp_preapproval_id' => $mp_preapproval_id,
-			'init_point'        => $init_point,
-			'sandbox_init_point'=> $sandbox_init_point,
-			'redirect_url'      => $redirect_url,
-			'flow'              => $flow,
-			'is_test'           => $is_test,
-			'status'            => isset( $res['status'] ) ? $res['status'] : null,
-			'raw'               => $res,
-			'details'           => $details,
+			'mp_preapproval_id'  => $mp_preapproval_id,
+			'init_point'         => $init_point,
+			'sandbox_init_point' => $sandbox_init_point,
+			'redirect_url'       => 'hosted' === $flow ? $redirect_url : '',
+			'flow'               => $flow,
+			'is_test'            => $is_test,
+			'status'             => isset( $res['status'] ) ? $res['status'] : null,
+			'raw'                => $res,
+			'details'            => $details,
 		);
 	}
 

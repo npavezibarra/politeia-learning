@@ -33,7 +33,7 @@ Public profile shows a **Suscribirme** CTA when:
 - Mercado Pago access token is configured
 - The creator has a `monthly` tier
 
-The CTA points to an `admin-post.php` action that calls:
+The CTA points to an `admin-post.php` action that (hosted option) calls:
 
 - `Politeia_PPS_Subscription_Engine::subscribe($subscriber_user_id, $tier_id)`
 
@@ -55,10 +55,19 @@ Configured in WP Admin: **Politeia Learning → Pagos**.
   - `/subscription-cancel/`
   and fills the settings on next admin load.
 
-### Direct (card token) (not enabled yet)
+### Card (tokenized) (no MP account required)
 
-The Direct/tokenized flow requires a dedicated card-tokenization UI (`card_token_id`) on the public subscribe CTA.
-That UI is not implemented yet, so the engine currently **forces Hosted Checkout**.
+The public **Suscribirme** button opens a modal with two options:
+
+1) **Pagar con tarjeta**: tokenizes the card in the browser using Mercado Pago JS v2 and creates a subscription via REST:
+   - `POST /wp-json/politeia/v1/subscriptions/subscribe`
+   - sends `card_token_id` and sets `status=authorized`
+   - no redirect required
+2) **Usar mi cuenta Mercado Pago**: continues with Hosted checkout (redirect).
+
+Source:
+- Modal JS: `modules/payments-subscriptions/assets/js/profile-subscribe-modal.js`
+- Tier id propagation: `modules/payments-subscriptions/includes/class-profile-subscribe.php` (`tier_id` query param)
 
 Source:
 - Engine: `modules/payments-subscriptions/includes/class-subscription-engine.php`

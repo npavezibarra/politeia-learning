@@ -116,3 +116,88 @@
 	font-size: 12px;
 	color: rgba(0, 0, 0, 0.62);
 }
+
+/* Profile subscribe modal */
+.politeia-pps__modal-overlay {
+	position: fixed;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.55);
+	z-index: 99999;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+}
+
+.politeia-pps__modal {
+	width: 100%;
+	max-width: 560px;
+	background: #fff;
+	border-radius: 12px;
+	box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+	overflow: hidden;
+}
+
+.politeia-pps__modal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px 18px;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.politeia-pps__modal-title {
+	font-size: 16px;
+	font-weight: 700;
+	margin: 0;
+}
+
+.politeia-pps__modal-close {
+	appearance: none;
+	border: 0;
+	background: transparent;
+	font-size: 20px;
+	line-height: 1;
+	cursor: pointer;
+	padding: 6px;
+}
+
+.politeia-pps__modal-body {
+	padding: 16px 18px 18px;
+}
+
+.politeia-pps__modal-status {
+	margin-bottom: 12px;
+	padding: 10px 12px;
+	border-radius: 12px;
+	display: none;
+}
+
+.politeia-pps__modal-actions {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 10px;
+}
+
+.politeia-pps__btn--secondary {
+	background: #f3f4f6;
+	color: #111827;
+}
+
+.politeia-pps__label {
+	display: block;
+	font-size: 12px;
+	color: rgba(0, 0, 0, 0.78);
+	margin: 0 0 6px;
+}
+
+.politeia-pps__input {
+	width: 100%;
+	padding: 8px 10px;
+	border: 1px solid rgba(0, 0, 0, 0.2);
+	border-radius: 10px;
+	background: #fff;
+}

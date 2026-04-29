@@ -529,8 +529,13 @@ class Politeia_PPS_Settings {
 			<?php echo esc_html__( 'Hosted Checkout (redirect)', 'politeia-payments-subscriptions' ); ?>
 		</label>
 		<br />
+		<label>
+			<input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[subscription_flow]" value="direct" <?php checked( $val, 'direct' ); ?> />
+			<?php echo esc_html__( 'Card token (authorized) (no redirect)', 'politeia-payments-subscriptions' ); ?>
+		</label>
+		<br />
 		<p class="description">
-			<?php echo esc_html__( 'Hosted opens Mercado Pago checkout. (Direct/tokenized flow is not enabled yet.)', 'politeia-payments-subscriptions' ); ?>
+			<?php echo esc_html__( 'Hosted opens Mercado Pago checkout. Card token uses Mercado Pago JS to create card_token_id and creates a preapproval with status=authorized.', 'politeia-payments-subscriptions' ); ?>
 		</p>
 		<?php
 	}

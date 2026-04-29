@@ -18,10 +18,35 @@ class Politeia_PPS_Profile_Subscribe {
 	const NONCE_ACTION  = 'pl_pps_subscribe_creator';
 	const CREATOR_PARAM = 'creator_user_id';
 	const DEBUG_PARAM   = 'pl_pps_debug';
+	const TIER_PARAM    = 'tier_id';
 
 	public static function init() {
 		add_filter( 'pl_subscribe_checkout_url', array( __CLASS__, 'filter_checkout_url' ), 10, 3 );
 		add_action( 'admin_post_' . self::ACTION, array( __CLASS__, 'handle' ) );
+		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_profile_assets' ), 20 );
+	}
+
+	public static function enqueue_profile_assets(): void {
+		if ( ! is_user_logged_in() ) {
+			return;
+		}
+		if ( ! class_exists( 'Politeia_PPS_Settings' ) ) {
+			return;
+		}
+
+		// We attach the modal script globally for logged-in users. It only activates when it detects
+		// the profile subscribe link pointing to admin-post.php?action=pl_pps_subscribe_creator.
+		wp_enqueue_style( 'politeia-pps' );
+		wp_enqueue_script( 'politeia-pps-profile-subscribe-modal' );
+		wp_localize_script(
+			'politeia-pps-profile-subscribe-modal',
+			'PoliteiaPPSProfileSubscribe',
+			array(
+				'restUrl'   => esc_url_raw( rest_url( 'politeia/v1/subscriptions/subscribe' ) ),
+				'nonce'     => wp_create_nonce( 'wp_rest' ),
+				'publicKey' => (string) Politeia_PPS_Settings::get_public_key(),
+			)
+		);
 	}
 
 	public static function filter_checkout_url( $url, $creator_user_id, $viewer_user_id ) {
@@ -69,6 +94,7 @@ class Politeia_PPS_Profile_Subscribe {
 		$args = array(
 			'action'                 => self::ACTION,
 			self::CREATOR_PARAM      => $creator_user_id,
+			self::TIER_PARAM         => (int) $tier['id'],
 			'_wpnonce'               => wp_create_nonce( self::NONCE_ACTION ),
 		);
 
@@ -79,6 +105,7 @@ class Politeia_PPS_Profile_Subscribe {
 
 	public static function handle(): void {
 		$creator_user_id = isset( $_GET[ self::CREATOR_PARAM ] ) ? (int) $_GET[ self::CREATOR_PARAM ] : 0;
+		$tier_id         = isset( $_GET[ self::TIER_PARAM ] ) ? (int) $_GET[ self::TIER_PARAM ] : 0;
 
 		if ( ! is_user_logged_in() ) {
 			$redirect = self::creator_profile_url( $creator_user_id );
@@ -99,11 +126,21 @@ class Politeia_PPS_Profile_Subscribe {
 			self::redirect_back( $creator_user_id, 'not_available' );
 		}
 
-		$tier = Politeia_PPS_Subscription_Engine::get_creator_tier_by_slug( $creator_user_id, 'monthly' );
+		$tier = null;
+		if ( $tier_id > 0 ) {
+			$tier = Politeia_PPS_Subscription_Engine::get_tier( $tier_id );
+			if ( ! $tier || (int) $tier['creator_user_id'] !== (int) $creator_user_id ) {
+				$tier = null;
+			}
+		}
+		if ( ! $tier ) {
+			$tier = Politeia_PPS_Subscription_Engine::get_creator_tier_by_slug( $creator_user_id, 'monthly' );
+		}
 		if ( ! is_array( $tier ) || empty( $tier['id'] ) ) {
 			self::redirect_back( $creator_user_id, 'tier_not_found' );
 		}
 
+		// Hosted option: keep existing behavior (redirect to Mercado Pago checkout).
 		$res = Politeia_PPS_Subscription_Engine::subscribe( $subscriber_user_id, (int) $tier['id'] );
 		if ( is_wp_error( $res ) ) {
 			$redirect_code = $res->get_error_code();

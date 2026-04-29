@@ -81,11 +81,19 @@ add_action('wp_enqueue_scripts', static function (): void {
         PL_PPS_VERSION
     );
 
-    wp_register_script(
-        'politeia-pps-marketplace',
-        PL_PPS_URL . 'assets/js/marketplace.js',
-        [],
-        PL_PPS_VERSION,
-        true
-    );
+	wp_register_script(
+		'politeia-pps-marketplace',
+		PL_PPS_URL . 'assets/js/marketplace.js',
+		[],
+		PL_PPS_VERSION,
+		true
+	);
+
+	wp_register_script(
+		'politeia-pps-profile-subscribe-modal',
+		PL_PPS_URL . 'assets/js/profile-subscribe-modal.js',
+		[],
+		PL_PPS_VERSION,
+		true
+	);
 }, 5);
