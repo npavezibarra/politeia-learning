@@ -3,6 +3,38 @@
 		return (root || document).querySelector(sel);
 	}
 
+	function getQueryParam(name) {
+		try {
+			var u = new URL(window.location.href);
+			return u.searchParams.get(name);
+		} catch (e) {
+			return null;
+		}
+	}
+
+	function clearSubscribeErrorFromUrl() {
+		try {
+			var u = new URL(window.location.href);
+			if (!u.searchParams.has('pl_subscribe_error')) return;
+			u.searchParams.delete('pl_subscribe_error');
+			window.history.replaceState({}, '', u.toString());
+		} catch (e) {}
+	}
+
+	function hideInlineSubscribeErrorBanner() {
+		var params = getQueryParam('pl_subscribe_error');
+		if (!params) return;
+		var nodes = document.querySelectorAll('body *');
+		for (var i = 0; i < nodes.length; i++) {
+			var el = nodes[i];
+			if (!el || !el.textContent) continue;
+			if (el.textContent.indexOf('Mercado Pago exige que payer y collector') !== -1) {
+				el.style.display = 'none';
+				break;
+			}
+		}
+	}
+
 	function closestSubscribeLink(target) {
 		if (!target || !target.closest) return null;
 		var a = target.closest('a');
@@ -71,6 +103,7 @@
 		overlay.removeAttribute('data-tier-id');
 		overlay.removeAttribute('data-hosted-url');
 		overlay.removeAttribute('data-creator-id');
+		clearSubscribeErrorFromUrl();
 	}
 
 	function setStatus(message, isError) {
@@ -302,5 +335,16 @@
 			showStep('choices');
 			return;
 		}
+	});
+
+	// If we landed here via hosted redirect error, hide the inline banner and show the overlay instead.
+	document.addEventListener('DOMContentLoaded', function () {
+		var err = getQueryParam('pl_subscribe_error');
+		if (!err) return;
+		hideInlineSubscribeErrorBanner();
+		var overlay = ensureOverlay();
+		overlay.style.display = 'flex';
+		showStep('choices');
+		setStatus('No se pudo iniciar la suscripción. Puedes pagar con tarjeta o intentar con Mercado Pago.', true);
 	});
 })();
