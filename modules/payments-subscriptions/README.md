@@ -50,6 +50,10 @@ Configured in WP Admin: **Politeia Learning → Pagos**.
 - Creates a Mercado Pago **preapproval** without an associated plan
 - Opens checkout to collect payment method
 - Returns `redirect_url` (sandbox or production init point)
+- Uses `success_url` as `back_url` for Mercado Pago. If `success_url`/`cancel_url` are empty, the module auto-creates:
+  - `/subscription-success/`
+  - `/subscription-cancel/`
+  and fills the settings on next admin load.
 
 ### Direct (card token) (not enabled yet)
 

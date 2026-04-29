@@ -40,10 +40,12 @@ require_once PL_PPS_PATH . 'includes/class-webhooks.php';
 require_once PL_PPS_PATH . 'includes/class-rest.php';
 require_once PL_PPS_PATH . 'includes/class-profile-subscribe.php';
 require_once PL_PPS_PATH . 'includes/class-relationships-bridge.php';
+require_once PL_PPS_PATH . 'includes/class-return-pages.php';
 
 require_once PL_PPS_PATH . 'shortcodes/creator-dashboard.php';
 require_once PL_PPS_PATH . 'shortcodes/subscriber-dashboard.php';
 require_once PL_PPS_PATH . 'shortcodes/marketplace.php';
+require_once PL_PPS_PATH . 'shortcodes/return-pages.php';
 
 // Ensure tables exist and are updated when the module is active.
 add_action('plugins_loaded', ['Politeia_PPS_Activator', 'maybe_upgrade'], 20);
@@ -64,6 +66,9 @@ add_action('init', static function (): void {
     }
     if (class_exists('Politeia_PPS_Relationships_Bridge')) {
         Politeia_PPS_Relationships_Bridge::init();
+    }
+    if (class_exists('Politeia_PPS_Return_Pages')) {
+        Politeia_PPS_Return_Pages::init();
     }
 }, 0);
 
