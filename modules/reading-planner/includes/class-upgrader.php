@@ -63,7 +63,47 @@ class Upgrader
 				self::migrate_to_1_18_0();
 			}
 
+			if (version_compare($stored_version, '1.19.0', '<')) {
+				self::migrate_to_1_19_0();
+			}
+
 			update_option('politeia_reading_plan_db_version', $target_version);
+		}
+	}
+
+	private static function migrate_to_1_19_0(): void
+	{
+		global $wpdb;
+		if (!$wpdb) {
+			return;
+		}
+
+		$planned_sessions_table = $wpdb->prefix . 'politeia_planned_sessions';
+		$table_exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $planned_sessions_table)) === $planned_sessions_table);
+		if (!$table_exists) {
+			return;
+		}
+
+		// Force-reschedule the settlement cron to a smaller interval to avoid hourly spikes.
+		if (function_exists('wp_clear_scheduled_hook')) {
+			wp_clear_scheduled_hook('politeia_reading_plan_habit_validate');
+		}
+		update_option('politeia_reading_plan_habit_validate_reschedule', '1', false);
+
+		$index = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT 1
+				 FROM INFORMATION_SCHEMA.STATISTICS
+				 WHERE TABLE_SCHEMA = DATABASE()
+				   AND TABLE_NAME = %s
+				   AND INDEX_NAME = %s
+				 LIMIT 1",
+				$planned_sessions_table,
+				'idx_plan_status_start'
+			)
+		);
+		if (!$index) {
+			$wpdb->query("ALTER TABLE {$planned_sessions_table} ADD INDEX idx_plan_status_start (plan_id, status, planned_start_datetime)");
 		}
 	}
 

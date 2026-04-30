@@ -133,16 +133,18 @@ class PlanSettlementEngine
         $today_str = $now_user->format('Y-m-d'); // Session dates are Y-m-d
 
         // 3. Fetch Stale Sessions (Planned < Today)
-        // We explicitly ignore TIME component of planned_start_datetime for the date comparison
+        // planned_start_datetime is stored as DATETIME; we want "date < today" without calling DATE() (index-friendly).
+        $cutoff_dt = $today_str . ' 00:00:00';
         $stale_sessions = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT id, planned_start_datetime
 				 FROM {$sessions_tbl}
 				 WHERE plan_id = %d
 				   AND status = 'planned'
-				   AND DATE(planned_start_datetime) < %s",
+				   AND planned_start_datetime < %s
+                 ORDER BY planned_start_datetime ASC",
                 $plan_id,
-                $today_str
+                $cutoff_dt
             )
         );
 
@@ -179,33 +181,33 @@ class PlanSettlementEngine
             }
         }
 
-        // 5. Process Each Stale Session
-        foreach ($stale_sessions as $session) {
-            $date_key = substr($session->planned_start_datetime, 0, 10);
+        // Preload reading logs once for the stale date range to avoid per-session queries.
+        $pages_read_map = array();
+        if ($user_book_id > 0 && !empty($stale_sessions)) {
+            $date_keys = array();
+            foreach ($stale_sessions as $session) {
+                $date_keys[] = substr((string) $session->planned_start_datetime, 0, 10);
+            }
+            $date_keys = array_values(array_unique($date_keys));
+            sort($date_keys);
 
-            // Default: missed (if no book or generic)
-            $new_status = 'missed';
-
-            if ($user_book_id > 0) {
-                // Calculate Actual Pages Read on this Date (User Timezone)
-                $day_start = date_create($date_key . ' 00:00:00', $timezone);
-                $day_end = date_create($date_key . ' 23:59:59', $timezone);
-
-                $pages_read_today = 0;
-
+            $first_date = $date_keys[0] ?? '';
+            $last_date = $date_keys[count($date_keys) - 1] ?? '';
+            if ($first_date !== '' && $last_date !== '') {
+                $day_start = date_create($first_date . ' 00:00:00', $timezone);
+                $day_end = date_create($last_date . ' 23:59:59', $timezone);
                 if ($day_start && $day_end) {
                     $gmt_start = $day_start->setTimezone(new \DateTimeZone('GMT'))->format('Y-m-d H:i:s');
                     $gmt_end = $day_end->setTimezone(new \DateTimeZone('GMT'))->format('Y-m-d H:i:s');
 
-                    // Sum pages from reading logs in this window
                     $logs = $wpdb->get_results(
                         $wpdb->prepare(
-                            "SELECT start_page, end_page 
-							 FROM {$reading_tbl}
-							 WHERE user_id = %d
-							   AND user_book_id = %d
-							   AND deleted_at IS NULL
-							   AND start_time BETWEEN %s AND %s",
+                            "SELECT start_time, start_page, end_page
+                             FROM {$reading_tbl}
+                             WHERE user_id = %d
+                               AND user_book_id = %d
+                               AND deleted_at IS NULL
+                               AND start_time BETWEEN %s AND %s",
                             $user_id,
                             $user_book_id,
                             $gmt_start,
@@ -214,11 +216,34 @@ class PlanSettlementEngine
                     );
 
                     foreach ($logs as $log) {
-                        if ($log->end_page >= $log->start_page) {
-                            $pages_read_today += ($log->end_page - $log->start_page + 1);
+                        $start_time = isset($log->start_time) ? (string) $log->start_time : '';
+                        $dt_gmt = $start_time !== '' ? \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $start_time, new \DateTimeZone('GMT')) : null;
+                        if (!$dt_gmt) {
+                            continue;
                         }
+
+                        $date_key = $dt_gmt->setTimezone($timezone)->format('Y-m-d');
+                        $start_page = isset($log->start_page) ? (int) $log->start_page : 0;
+                        $end_page = isset($log->end_page) ? (int) $log->end_page : 0;
+                        if ($end_page < $start_page) {
+                            continue;
+                        }
+
+                        $pages_read_map[$date_key] = (int) ($pages_read_map[$date_key] ?? 0) + ($end_page - $start_page + 1);
                     }
                 }
+            }
+        }
+
+        // 5. Process Each Stale Session
+        foreach ($stale_sessions as $session) {
+            $date_key = substr($session->planned_start_datetime, 0, 10);
+
+            // Default: missed (if no book or generic)
+            $new_status = 'missed';
+
+            if ($user_book_id > 0) {
+                $pages_read_today = (int) ($pages_read_map[$date_key] ?? 0);
 
                 // Compare vs Expected
                 $expected = isset($expected_map[$date_key]) ? $expected_map[$date_key] : 0;

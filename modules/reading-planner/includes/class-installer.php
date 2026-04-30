@@ -161,6 +161,7 @@ class Installer
 			PRIMARY KEY  (id),
 			KEY idx_plan (plan_id),
 			KEY idx_status (status),
+			KEY idx_plan_status_start (plan_id, status, planned_start_datetime),
 			KEY idx_previous (previous_session_id)
 		) ENGINE=InnoDB %s;',
 				$planned_sessions_table,

@@ -67,16 +67,18 @@ class HabitSettlementEngine
         $today_str = $now_user->format('Y-m-d');
 
         // 3. Fetch Stale Sessions (Planned < Today)
+        // Use an index-friendly cutoff instead of DATE(planned_start_datetime).
+        $cutoff_dt = $today_str . ' 00:00:00';
         $stale_sessions = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT id, planned_start_datetime 
                  FROM {$sessions_tbl}
                  WHERE plan_id = %d 
                    AND status = 'planned'
-                   AND DATE(planned_start_datetime) < %s
+                   AND planned_start_datetime < %s
                  ORDER BY planned_start_datetime ASC",
                 $plan_id,
-                $today_str
+                $cutoff_dt
             )
         );
 
@@ -108,6 +110,58 @@ class HabitSettlementEngine
         $start_pages = (int) $plan->start_page_amount;
         $end_pages = (int) $plan->finish_page_amount;
 
+        // Preload reading logs once for the stale date range to avoid per-session queries.
+        $pages_read_map = array();
+        if (!empty($stale_sessions)) {
+            $date_keys = array();
+            foreach ($stale_sessions as $session) {
+                $date_keys[] = substr((string) $session->planned_start_datetime, 0, 10);
+            }
+            $date_keys = array_values(array_unique($date_keys));
+            sort($date_keys);
+
+            $first_date = $date_keys[0] ?? '';
+            $last_date = $date_keys[count($date_keys) - 1] ?? '';
+            if ($first_date !== '' && $last_date !== '') {
+                $day_start = date_create($first_date . ' 00:00:00', $timezone);
+                $day_end = date_create($last_date . ' 23:59:59', $timezone);
+                if ($day_start && $day_end) {
+                    $gmt_start = $day_start->setTimezone(new \DateTimeZone('GMT'))->format('Y-m-d H:i:s');
+                    $gmt_end = $day_end->setTimezone(new \DateTimeZone('GMT'))->format('Y-m-d H:i:s');
+
+                    $logs = $wpdb->get_results(
+                        $wpdb->prepare(
+                            "SELECT start_time, start_page, end_page
+                             FROM {$reading_tbl}
+                             WHERE user_id = %d
+                               AND deleted_at IS NULL
+                               AND start_time BETWEEN %s AND %s",
+                            $user_id,
+                            $gmt_start,
+                            $gmt_end
+                        )
+                    );
+
+                    foreach ($logs as $log) {
+                        $start_time = isset($log->start_time) ? (string) $log->start_time : '';
+                        $dt_gmt = $start_time !== '' ? \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $start_time, new \DateTimeZone('GMT')) : null;
+                        if (!$dt_gmt) {
+                            continue;
+                        }
+
+                        $date_key = $dt_gmt->setTimezone($timezone)->format('Y-m-d');
+                        $start_page = isset($log->start_page) ? (int) $log->start_page : 0;
+                        $end_page = isset($log->end_page) ? (int) $log->end_page : 0;
+                        if ($end_page < $start_page) {
+                            continue;
+                        }
+
+                        $pages_read_map[$date_key] = (int) ($pages_read_map[$date_key] ?? 0) + ($end_page - $start_page + 1);
+                    }
+                }
+            }
+        }
+
         // 5. Process Each Stale Session
         foreach ($stale_sessions as $session) {
             $date_str = substr($session->planned_start_datetime, 0, 10);
@@ -131,33 +185,7 @@ class HabitSettlementEngine
             }
 
             // B. Calculate Actual (Any Book)
-            $day_start = date_create($date_str . ' 00:00:00', $timezone);
-            $day_end = date_create($date_str . ' 23:59:59', $timezone);
-
-            $pages_read_today = 0;
-            if ($day_start && $day_end) {
-                $gmt_start = $day_start->setTimezone(new \DateTimeZone('GMT'))->format('Y-m-d H:i:s');
-                $gmt_end = $day_end->setTimezone(new \DateTimeZone('GMT'))->format('Y-m-d H:i:s');
-
-                $logs = $wpdb->get_results(
-                    $wpdb->prepare(
-                        "SELECT start_page, end_page 
-                         FROM {$reading_tbl}
-                         WHERE user_id = %d
-                           AND deleted_at IS NULL
-                           AND start_time BETWEEN %s AND %s",
-                        $user_id,
-                        $gmt_start,
-                        $gmt_end
-                    )
-                );
-
-                foreach ($logs as $log) {
-                    if ($log->end_page >= $log->start_page) {
-                        $pages_read_today += ($log->end_page - $log->start_page + 1);
-                    }
-                }
-            }
+            $pages_read_today = (int) ($pages_read_map[$date_str] ?? 0);
 
             // C. Settle Status
             $new_status = ($pages_read_today >= $target_pages) ? 'accomplished' : 'missed';

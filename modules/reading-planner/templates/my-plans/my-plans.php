@@ -1209,21 +1209,22 @@ $is_owner = $requested_user
 					$total_pages = $goal_target;
 				}
 
-				$today_key = current_time('Y-m-d');
+					$today_key = current_time('Y-m-d');
+					$cutoff_dt = $today_key . ' 00:00:00';
 
 				if ('complete_books' === $goal_kind) {
 					$wpdb->query(
 						$wpdb->prepare(
-							"UPDATE {$sessions_table}
-							SET status = 'missed'
-							WHERE plan_id = %d
-							AND status = 'planned'
-							AND DATE(planned_start_datetime) < %s",
-							$plan_id,
-							$today_key
-						)
-					);
-				}
+								"UPDATE {$sessions_table}
+								SET status = 'missed'
+								WHERE plan_id = %d
+								AND status = 'planned'
+								AND planned_start_datetime < %s",
+								$plan_id,
+								$cutoff_dt
+							)
+						);
+					}
 
 				$sessions = $wpdb->get_results(
 					$wpdb->prepare(
