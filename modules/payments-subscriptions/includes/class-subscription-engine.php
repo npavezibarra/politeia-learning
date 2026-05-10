@@ -343,8 +343,14 @@ class Politeia_PPS_Subscription_Engine {
 		}
 
 		// Determine payer_email:
-		// - If admin configured an override (useful for MP test buyers), prefer it.
+		// - In TEST, admin may configure an override (useful for MP test buyers).
 		// - Otherwise default to the logged-in WP user's email.
+		//
+		// IMPORTANT:
+		// - For HOSTED checkout we intentionally avoid sending payer_email in LIVE, because Mercado Pago
+		//   can reject preapproval creation with "Both payer and collector must be real or test users"
+		//   based solely on payer_email validation. In hosted checkout MP collects/validates payer data.
+		// - For DIRECT (tokenized) flow, payer_email is expected to be provided (from Brick form or WP user).
 		$override_email = (string) Politeia_PPS_Settings::get( 'payer_email_override', '' );
 		$mode           = method_exists( 'Politeia_PPS_Settings', 'get_mode' ) ? (string) Politeia_PPS_Settings::get_mode() : 'test';
 		$mode           = in_array( $mode, array( 'test', 'live' ), true ) ? $mode : 'test';
@@ -386,7 +392,9 @@ class Politeia_PPS_Subscription_Engine {
 			'back_url'           => $back_url,
 		);
 
-		if ( $payer_email ) {
+		// Only include payer_email when it helps (DIRECT, or TEST override). For HOSTED in LIVE, omit it.
+		$should_send_payer_email = ( 'direct' === $flow ) || ( $mode === 'test' && $override_email !== '' );
+		if ( $should_send_payer_email && $payer_email ) {
 			$payload['payer_email'] = sanitize_email( $payer_email );
 		}
 
