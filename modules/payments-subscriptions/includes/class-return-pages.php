@@ -14,8 +14,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Politeia_PPS_Return_Pages {
 	const SUCCESS_SLUG  = 'subscription-success';
 	const CANCEL_SLUG   = 'subscription-cancel';
+	const FLOW_RETURN_SLUG  = 'flow-subscription-return';
 	const SUCCESS_TITLE = 'Suscripción completada';
 	const CANCEL_TITLE  = 'Suscripción cancelada';
+	const FLOW_RETURN_TITLE = 'Flow - Suscripción';
 
 	public static function init(): void {
 		// Only run creation logic in admin to avoid unexpected writes from public requests.
@@ -36,6 +38,11 @@ class Politeia_PPS_Return_Pages {
 			self::CANCEL_SLUG,
 			self::CANCEL_TITLE,
 			'[politeia_pps_subscription_cancel]'
+		);
+		self::ensure_page(
+			self::FLOW_RETURN_SLUG,
+			self::FLOW_RETURN_TITLE,
+			'[politeia_pps_flow_return]'
 		);
 
 		$settings = Politeia_PPS_Settings::get_all();
@@ -88,4 +95,3 @@ class Politeia_PPS_Return_Pages {
 		return (int) $page_id;
 	}
 }
-

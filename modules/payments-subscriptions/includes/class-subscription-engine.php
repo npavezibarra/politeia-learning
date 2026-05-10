@@ -337,7 +337,36 @@ class Politeia_PPS_Subscription_Engine {
 		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $tier_id ), ARRAY_A );
 	}
 
+	/**
+	 * Convert Flow datetime strings into MySQL DATETIME (best-effort).
+	 *
+	 * @param string $value
+	 * @return string|null
+	 */
+	public static function normalize_datetime( $value ) {
+		$value = trim( (string) $value );
+		if ( '' === $value ) {
+			return null;
+		}
+		// Flow uses "YYYY-MM-DD HH:MM:SS"
+		if ( preg_match( '/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/', $value ) ) {
+			return $value;
+		}
+		$ts = strtotime( $value );
+		if ( ! $ts ) {
+			return null;
+		}
+		return gmdate( 'Y-m-d H:i:s', $ts );
+	}
+
 	public static function subscribe( $subscriber_user_id, $tier_id, $payer_email = '', $payment = array() ) {
+		// Flow gateway: we only support redirect enrollment (card registration) for now.
+		$payment = is_array( $payment ) ? $payment : array();
+		$gateway = sanitize_key( (string) ( $payment['gateway'] ?? '' ) );
+		if ( 'flow' === $gateway && class_exists( 'Politeia_PPS_Flow_Subscribe' ) ) {
+			return Politeia_PPS_Flow_Subscribe::start( (int) $subscriber_user_id, (int) $tier_id );
+		}
+
 		$subscriber_user_id = (int) $subscriber_user_id;
 		$tier               = self::get_tier( $tier_id );
 		if ( ! $tier ) {
@@ -678,6 +707,118 @@ class Politeia_PPS_Subscription_Engine {
 			return new WP_Error( 'db_insert_failed', 'Failed to create subscription.', array( 'error' => $wpdb->last_error ) );
 		}
 		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Create or update a pending Flow subscription (keyed by flow_register_token).
+	 *
+	 * @return int|WP_Error
+	 */
+	public static function upsert_subscription_flow_pending( $creator_user_id, $subscriber_user_id, $tier_id, $register_token ) {
+		global $wpdb;
+		$table = self::subs_table();
+
+		$register_token = sanitize_text_field( (string) $register_token );
+		if ( '' === $register_token ) {
+			return new WP_Error( 'invalid_token', 'Missing Flow register token.' );
+		}
+
+		$now = current_time( 'mysql' );
+		$existing_id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE flow_register_token = %s", $register_token ) );
+
+		$data = array(
+			'creator_user_id'      => (int) $creator_user_id,
+			'subscriber_user_id'   => (int) $subscriber_user_id,
+			'tier_id'              => (int) $tier_id,
+			'gateway'              => 'flow',
+			'mp_preapproval_id'    => null,
+			'flow_subscription_id' => null,
+			'flow_register_token'  => $register_token,
+			'status'               => 'pending',
+			'updated_at'           => $now,
+		);
+
+		if ( $existing_id ) {
+			$ok = $wpdb->update( $table, $data, array( 'id' => (int) $existing_id ) );
+			if ( $ok === false ) {
+				return new WP_Error( 'db_update_failed', 'Failed to update Flow subscription.', array( 'error' => $wpdb->last_error ) );
+			}
+			return (int) $existing_id;
+		}
+
+		$data['created_at'] = $now;
+		$ok = $wpdb->insert( $table, $data );
+		if ( ! $ok ) {
+			return new WP_Error( 'db_insert_failed', 'Failed to create Flow subscription.', array( 'error' => $wpdb->last_error ) );
+		}
+		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * @param int $subscriber_user_id
+	 * @param string $register_token
+	 * @return array|null
+	 */
+	public static function get_flow_pending_by_token( $subscriber_user_id, $register_token ) {
+		global $wpdb;
+		$table = self::subs_table();
+
+		$subscriber_user_id = (int) $subscriber_user_id;
+		$register_token     = sanitize_text_field( (string) $register_token );
+
+		if ( $subscriber_user_id <= 0 || '' === $register_token ) {
+			return null;
+		}
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE gateway = 'flow' AND subscriber_user_id = %d AND flow_register_token = %s ORDER BY id DESC LIMIT 1",
+				$subscriber_user_id,
+				$register_token
+			),
+			ARRAY_A
+		);
+
+		return is_array( $row ) ? $row : null;
+	}
+
+	/**
+	 * Finalize a Flow subscription by writing flow_subscription_id and activating.
+	 *
+	 * @param int $local_id
+	 * @param string $flow_subscription_id
+	 * @param string|null $current_period_end
+	 * @return true|WP_Error
+	 */
+	public static function finalize_flow_subscription( $local_id, $flow_subscription_id, $current_period_end ) {
+		global $wpdb;
+		$table = self::subs_table();
+
+		$local_id            = (int) $local_id;
+		$flow_subscription_id = sanitize_text_field( (string) $flow_subscription_id );
+		if ( $local_id <= 0 || '' === $flow_subscription_id ) {
+			return new WP_Error( 'invalid_args', 'Invalid finalize args.' );
+		}
+
+		$data = array(
+			'flow_subscription_id' => $flow_subscription_id,
+			'status'               => 'active',
+			'flow_register_token'  => null,
+			'updated_at'           => current_time( 'mysql' ),
+		);
+		$format = array( '%s', '%s', '%s', '%s' );
+
+		if ( $current_period_end ) {
+			$data['current_period_end'] = $current_period_end;
+			$format[]                   = '%s';
+		}
+
+		$ok = $wpdb->update( $table, $data, array( 'id' => $local_id ), $format, array( '%d' ) );
+		if ( $ok === false ) {
+			return new WP_Error( 'db_update_failed', 'Failed to finalize Flow subscription.', array( 'error' => $wpdb->last_error ) );
+		}
+
+		return true;
 	}
 
 	private static function set_subscription_status_by_mp_id( $mp_preapproval_id, $status ) {

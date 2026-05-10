@@ -121,6 +121,7 @@ class Politeia_PPS_REST {
 
 		$tier_id     = (int) ( $params['tier_id'] ?? 0 );
 		$payer_email = sanitize_email( $params['payer_email'] ?? '' );
+		$gateway       = sanitize_key( (string) ( $params['gateway'] ?? '' ) );
 		$card_token_id = sanitize_text_field( $params['card_token_id'] ?? '' );
 		$payment_method_id = sanitize_text_field( $params['payment_method_id'] ?? '' );
 		$issuer_id = sanitize_text_field( $params['issuer_id'] ?? '' );
@@ -133,6 +134,7 @@ class Politeia_PPS_REST {
 			$tier_id,
 			$payer_email,
 			array(
+				'gateway'           => $gateway,
 				'card_token_id'     => $card_token_id,
 				'payment_method_id' => $payment_method_id,
 				'issuer_id'         => $issuer_id,

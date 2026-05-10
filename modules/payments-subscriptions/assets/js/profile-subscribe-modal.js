@@ -65,6 +65,7 @@
 			'      <div class="politeia-pps__modal-actions">',
 			'        <button type="button" class="politeia-pps__btn politeia-pps__btn--primary" data-pps-choice="card">Pagar con tarjeta (recomendado)</button>',
 			'        <button type="button" class="politeia-pps__btn politeia-pps__btn--secondary" data-pps-choice="mp">Mercado Pago (redirigir)</button>',
+			'        <button type="button" class="politeia-pps__btn politeia-pps__btn--secondary" data-pps-choice="flow">Flow (redirigir)</button>',
 			'      </div>',
 			'    </div>',
 			'    <div class="politeia-pps__modal-step politeia-pps__modal-step--card" style="display:none">',
@@ -313,6 +314,36 @@
 		var btnChoice = e.target && e.target.closest ? e.target.closest('[data-pps-choice]') : null;
 		if (btnChoice) {
 			var choice = String(btnChoice.getAttribute('data-pps-choice') || '');
+			if (choice === 'flow') {
+				var cfg = window.PoliteiaPPSProfileSubscribe || {};
+				var tierId = Number(overlay.getAttribute('data-tier-id') || '0');
+				if (!cfg.restUrl || !cfg.nonce || !tierId) {
+					setStatus('Flow no está configurado.', true);
+					return;
+				}
+				setStatus('Redirigiendo a Flow…', false);
+				fetch(String(cfg.restUrl), {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': cfg.nonce },
+					body: JSON.stringify({ tier_id: tierId, gateway: 'flow' }),
+				})
+					.then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+					.then(function (result) {
+						if (!result.ok || !result.data || result.data.error) {
+							setStatus(extractErrorMessage(result.data) || 'No se pudo iniciar Flow.', true);
+							return;
+						}
+						if (result.data.redirect_url) {
+							window.location.href = String(result.data.redirect_url);
+							return;
+						}
+						setStatus('Flow no devolvió URL de redirección.', true);
+					})
+					.catch(function () {
+						setStatus('No se pudo conectar con Flow.', true);
+					});
+				return;
+			}
 			if (choice === 'mp') {
 				var hostedUrl = overlay.getAttribute('data-hosted-url');
 				if (hostedUrl) window.location.href = hostedUrl;
