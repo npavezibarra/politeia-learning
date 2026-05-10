@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 }
 
 define('PL_PPS_IN_POLITEIA_LEARNING', true);
-define('PL_PPS_VERSION', '0.1.5');
+define('PL_PPS_VERSION', '0.1.6');
 define('PL_PPS_PATH', plugin_dir_path(__FILE__));
 define('PL_PPS_URL', plugin_dir_url(__FILE__));
 
