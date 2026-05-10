@@ -108,7 +108,19 @@ class PL_Relationships
 
         $policy = get_user_meta($owner_user_id, $meta_key, true);
         if (!is_array($policy)) {
-            $policy = [];
+            // Self-heal: if a corrupted serialized string was stored, attempt to unserialize and normalize.
+            if (is_string($policy) && $policy !== '') {
+                $maybe = maybe_unserialize($policy);
+                if (is_array($maybe)) {
+                    $policy = $maybe;
+                    // Normalize serialization to prevent future issues (best-effort).
+                    update_user_meta($owner_user_id, $meta_key, $policy);
+                } else {
+                    $policy = [];
+                }
+            } else {
+                $policy = [];
+            }
         }
 
         $merged = array_merge(self::default_policy($kind), $policy);

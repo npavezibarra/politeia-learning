@@ -6,7 +6,7 @@
 
 ## Qué hace
 
-- Registra post types: `learni_course`, `learni_lesson`, `learni_specialization`, `learni_program`.
+- Registra post types: `learni_course`, `learni_lesson`, `learni_special` (legacy: `learni_specialization`), `learni_program`.
 - Asegura esquema/upgrade de base de datos vía `Learni\\Database\\Installer`.
 - Expone REST routes vía `Learni\\Rest\\Routes::register`.
 - Integra con WooCommerce (inicialización condicional) y sincronización de cursos/productos.

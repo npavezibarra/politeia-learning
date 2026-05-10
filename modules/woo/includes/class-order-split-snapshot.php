@@ -109,11 +109,11 @@ class PL_Woo_Order_Split_Snapshot
 
         if (is_array($specializations) && !empty($specializations)) {
             $gid = (int) ($specializations[0] ?? 0);
-            if ($gid > 0 && get_post_type($gid) === 'learni_specialization') {
+            if ($gid > 0 && get_post_type($gid) === 'learni_special') {
                 return ['group', $gid];
             }
         } elseif (is_int($specializations) && $specializations > 0) {
-            if (get_post_type($specializations) === 'learni_specialization') {
+            if (get_post_type($specializations) === 'learni_special') {
                 return ['group', $specializations];
             }
         }

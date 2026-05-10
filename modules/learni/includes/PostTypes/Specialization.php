@@ -4,7 +4,14 @@ namespace Learni\PostTypes;
 
 final class Specialization
 {
-    public const POST_TYPE = 'learni_specialization';
+    /**
+     * IMPORTANT: WordPress post type keys must be <= 20 chars.
+     * Legacy key `learni_specialization` is 21 chars and triggers _doing_it_wrong notices.
+     *
+     * We migrate legacy posts to this shorter key automatically (one-time) on register.
+     */
+    public const POST_TYPE = 'learni_special';
+    public const LEGACY_POST_TYPE = 'learni_specialization';
     public const META_COURSES = 'learni_courses';
     public const META_PRICE = 'learni_price';
     public const META_WC_PRODUCT_ID = 'learni_wc_product_id';
@@ -13,6 +20,8 @@ final class Specialization
 
     public static function register(): void
     {
+        self::maybe_migrate_legacy_post_type();
+
         if (!post_type_exists(self::POST_TYPE)) {
             register_post_type(
                 self::POST_TYPE,
@@ -35,6 +44,32 @@ final class Specialization
             self::register_meta();
             self::$did_register_meta = true;
         }
+    }
+
+    private static function maybe_migrate_legacy_post_type(): void
+    {
+        // One-time DB migration: wp_posts.post_type from legacy key to new key.
+        // This avoids registering the legacy key (which would keep triggering the warning).
+        $flag = 'learni_specialization_post_type_migrated_v1';
+        if (get_option($flag)) {
+            return;
+        }
+
+        global $wpdb;
+        if (!$wpdb) {
+            return;
+        }
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $wpdb->query(
+            $wpdb->prepare(
+                "UPDATE {$wpdb->posts} SET post_type = %s WHERE post_type = %s",
+                self::POST_TYPE,
+                self::LEGACY_POST_TYPE
+            )
+        );
+
+        update_option($flag, 1, false);
     }
 
     private static function register_meta(): void

@@ -64,12 +64,12 @@ class NavOrchestrator
     public function is_politeia_page(): bool
     {
         // Custom Post Types and Managed Core Types
-        if (is_singular(['learni_course', 'learni_lesson', 'learni_specialization', 'learni_program', 'pl_member_profile', 'post', 'product'])) {
+        if (is_singular(['learni_course', 'learni_lesson', 'learni_special', 'learni_program', 'pl_member_profile', 'post', 'product'])) {
             return true;
         }
         
         // Archives
-        if (is_post_type_archive(['learni_course', 'learni_specialization', 'learni_program', 'product'])) {
+        if (is_post_type_archive(['learni_course', 'learni_special', 'learni_program', 'product'])) {
             return true;
         }
 

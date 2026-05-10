@@ -21,7 +21,7 @@ class PL_Taxonomy
 
     public static function register_taxonomies(): void
     {
-        $object_types = ['learni_course', 'learni_lesson', 'learni_specialization', 'learni_program', 'course_program'];
+        $object_types = ['learni_course', 'learni_lesson', 'learni_special', 'learni_program', 'course_program'];
 
         // Categories (hierarchical).
         if (!taxonomy_exists(self::CATEGORY_TAXONOMY)) {

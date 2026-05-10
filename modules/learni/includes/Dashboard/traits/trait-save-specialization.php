@@ -26,7 +26,7 @@ trait PL_CC_Specialization_Trait
             'group', $user_id
         ));
 
-        $author_group_ids = get_posts(['post_type' => 'learni_specialization', 'post_status' => ['publish', 'draft'], 'author' => $user_id, 'posts_per_page' => -1, 'fields' => 'ids']);
+        $author_group_ids = get_posts(['post_type' => 'learni_special', 'post_status' => ['publish', 'draft'], 'author' => $user_id, 'posts_per_page' => -1, 'fields' => 'ids']);
 
         $group_ids = array_values(array_unique(array_filter(array_map('absint', array_merge((array) $author_group_ids, (array) $pending_group_ids, (array) $participant_group_ids)))));
         if (empty($group_ids)) wp_send_json_success([]);
@@ -34,7 +34,7 @@ trait PL_CC_Specialization_Trait
         $groups = [];
         foreach ($group_ids as $gid) {
             $p = get_post($gid);
-            if ($p && $p->post_type === 'learni_specialization' && in_array($p->post_status, ['publish', 'draft'])) $groups[] = $p;
+            if ($p && $p->post_type === 'learni_special' && in_array($p->post_status, ['publish', 'draft'])) $groups[] = $p;
         }
         usort($groups, static function ($a, $b) { return strcmp((string) $b->post_date, (string) $a->post_date); });
 
@@ -63,7 +63,7 @@ trait PL_CC_Specialization_Trait
     public function handle_get_published_specializations()
     {
         check_ajax_referer('pcg_creator_nonce', 'nonce');
-        $groups = get_posts(['post_type' => 'learni_specialization', 'post_status' => 'publish', 'posts_per_page' => -1, 'orderby' => 'date', 'order' => 'DESC']);
+        $groups = get_posts(['post_type' => 'learni_special', 'post_status' => 'publish', 'posts_per_page' => -1, 'orderby' => 'date', 'order' => 'DESC']);
         $data = [];
         foreach ($groups as $group) {
             $data[] = [
@@ -84,7 +84,7 @@ trait PL_CC_Specialization_Trait
         $title = sanitize_text_field($data['title'] ?? '');
         if ($title === '') wp_send_json_error(['message' => __('Ingresa un nombre.', 'politeia-learning')]);
 
-        $post_data = ['post_title' => $title, 'post_content' => wp_kses_post($data['description'] ?? ''), 'post_status' => 'draft', 'post_type' => 'learni_specialization', 'post_author' => get_current_user_id()];
+        $post_data = ['post_title' => $title, 'post_content' => wp_kses_post($data['description'] ?? ''), 'post_status' => 'draft', 'post_type' => 'learni_special', 'post_author' => get_current_user_id()];
         if ($group_id > 0) {
             if (!$this->user_can_manage_group($group_id, get_current_user_id())) wp_send_json_error(['message' => __('No autorizado.', 'politeia-learning')], 403);
             $post_data['ID'] = $group_id; unset($post_data['post_author']);

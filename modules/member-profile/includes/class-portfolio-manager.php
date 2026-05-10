@@ -135,7 +135,7 @@ class PL_Member_Profile_Portfolio_Manager
         if ($type === 'writings') {
             $post_type = 'post';
         } elseif ($type === 'specializations') {
-            $post_type = 'learni_specialization';
+            $post_type = 'learni_special';
         } elseif ($type === 'programs') {
             $post_type = 'learni_program';
         }
@@ -185,7 +185,7 @@ class PL_Member_Profile_Portfolio_Manager
         if ($type === 'writings') {
             $post_type = 'post';
         } elseif ($type === 'specializations') {
-            $post_type = 'learni_specialization';
+            $post_type = 'learni_special';
         } elseif ($type === 'programs') {
             $post_type = 'learni_program';
         }
@@ -237,7 +237,7 @@ class PL_Member_Profile_Portfolio_Manager
         foreach ($sections as $type) {
             $post_type = 'learni_course';
             if ($type === 'writings') $post_type = 'post';
-            elseif ($type === 'specializations') $post_type = 'learni_specialization';
+            elseif ($type === 'specializations') $post_type = 'learni_special';
             elseif ($type === 'programs') $post_type = 'learni_program';
 
             $args = [

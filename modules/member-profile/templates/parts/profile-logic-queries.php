@@ -90,7 +90,7 @@ if ($show_writings) {
 $user_specs = [];
 if ($show_specs) {
     $specs_args = [
-        'post_type' => 'learni_specialization',
+        'post_type' => 'learni_special',
         'post_status' => 'publish',
         'author' => $user_id,
         'posts_per_page' => -1

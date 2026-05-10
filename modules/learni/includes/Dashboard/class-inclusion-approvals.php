@@ -1,6 +1,6 @@
 <?php
 /**
- * Inclusion approvals for Specializations (learni_specialization) and Programs (learni_program).
+ * Inclusion approvals for Specializations (learni_special) and Programs (learni_program).
  * 
  * Refactored to use Traits for modularity.
  * Now focuses on AJAX handlers and state orchestration.
