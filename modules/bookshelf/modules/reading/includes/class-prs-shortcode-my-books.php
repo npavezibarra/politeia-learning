@@ -47,6 +47,10 @@ class Politeia_Reading_Shortcode_My_Books {
 			return '<p>' . esc_html__( 'Your library is empty. Add a book first.', 'politeia-reading' ) . '</p>';
 		}
 
+		if ( empty( $context['add_book'] ) && shortcode_exists( 'politeia_add_book' ) ) {
+			$context['add_book'] = self::get_add_book_html();
+		}
+
 		self::enqueue_assets( $context );
 
 		ob_start();
@@ -69,6 +73,14 @@ class Politeia_Reading_Shortcode_My_Books {
 	 * @param array $context The render context.
 	 */
 	private static function enqueue_assets( $context ) {
+		static $did_enqueue = false;
+
+		if ( $did_enqueue ) {
+			return;
+		}
+
+		$did_enqueue = true;
+
 		wp_enqueue_style( 'politeia-reading' );
 		wp_enqueue_script( 'politeia-my-book' );
 
@@ -115,7 +127,7 @@ class Politeia_Reading_Shortcode_My_Books {
 					'remove_book_confirm'   => __( 'Are you sure you want to remove this book from your library?', 'politeia-reading' ),
 					'remove_book_removing'  => __( 'Removing...', 'politeia-reading' ),
 					'remove_book_error'     => __( 'Error removing book.', 'politeia-reading' ),
-					'images_from_google'    => __( 'Images from Google Books', 'politeia-reading' ),
+					'images_from_google'    => __( 'Images from external sources', 'politeia-reading' ),
 					'no_covers_found'       => __( 'No covers found.', 'politeia-reading' ),
 					'cover_save_failed'     => __( 'Unable to save cover.', 'politeia-reading' ),
 					'error_owning_status'   => __( 'Error updating owning status.', 'politeia-reading' ),
@@ -135,11 +147,33 @@ class Politeia_Reading_Shortcode_My_Books {
 	}
 
 	/**
+	 * Render the add-book shortcode once per request.
+	 *
+	 * @return string
+	 */
+	private static function get_add_book_html() {
+		static $cached_html = null;
+
+		if ( null !== $cached_html ) {
+			return $cached_html;
+		}
+
+		$cached_html = shortcode_exists( 'politeia_add_book' ) ? do_shortcode( '[politeia_add_book]' ) : '';
+		return $cached_html;
+	}
+
+	/**
 	 * Prepare the data context for rendering the library.
 	 *
 	 * @return array The context array.
 	 */
 	private static function get_render_context() {
+		static $cached_context = null;
+
+		if ( null !== $cached_context ) {
+			return $cached_context;
+		}
+
 		$user_id = get_current_user_id();
 		if ( ! $user_id ) {
 			wp_get_current_user();
@@ -159,6 +193,16 @@ class Politeia_Reading_Shortcode_My_Books {
 		if ( $force_recent ) {
 			$paged  = 1;
 			$offset = 0;
+		}
+
+		$cache_key = '';
+		if ( 1 === (int) $paged && function_exists( 'prs_get_library_cache_key' ) ) {
+			$cache_key = prs_get_library_cache_key( $user_id, $paged, $per_page, $force_recent );
+			$cached_context = get_transient( $cache_key );
+			if ( is_array( $cached_context ) ) {
+				$cached_context['add_book'] = '';
+				return $cached_context;
+			}
 		}
 
 		global $wpdb;
@@ -239,11 +283,14 @@ class Politeia_Reading_Shortcode_My_Books {
 			);
 			$context['pagination'] = $pagination_links;
 
-			if ( shortcode_exists( 'politeia_add_book' ) ) {
-				$context['add_book'] = do_shortcode( '[politeia_add_book]' );
-			}
 		}
 
-		return $context;
+		if ( '' !== $cache_key ) {
+			set_transient( $cache_key, $context, 15 * MINUTE_IN_SECONDS );
+		}
+
+		$cached_context = $context;
+
+		return $cached_context;
 	}
 }

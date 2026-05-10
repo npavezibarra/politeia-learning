@@ -14,6 +14,11 @@ class PL_Learni_Cross_Eval_Popup
 {
     private static bool $inited = false;
 
+    private static function is_relevant_page(): bool
+    {
+        return is_singular('learni_course') || is_singular('learni_lesson');
+    }
+
     public static function init(): void
     {
         if (self::$inited) {
@@ -111,6 +116,14 @@ class PL_Learni_Cross_Eval_Popup
             'window.LearniCrossEval = Object.assign({}, window.LearniCrossEval || {}, ' . wp_json_encode([
                 'restUrl' => esc_url_raw(rest_url()),
                 'restNonce' => wp_create_nonce('wp_rest'),
+                'polling' => [
+                    'fastMs' => 3500,
+                    'watchMs' => 10000,
+                    'idleMs' => 60000,
+                    'maxMs' => 300000,
+                    'relevantPage' => self::is_relevant_page(),
+                    'pauseWhenHidden' => true,
+                ],
                 'i18n' => [
                     'title' => __('Test Partner', 'politeia-learning'),
                     'online' => __('{name} está online', 'politeia-learning'),

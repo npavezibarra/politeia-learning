@@ -136,6 +136,7 @@ class Politeia_Reading_Add_Book_Handler {
 
 		// Check if book exists
 		$book_id = 0;
+		$user_book_id = 0;
 		if ( $isbn ) {
 			$book_id = (int) ( function_exists( 'prs_get_book_id_by_isbn' ) ? prs_get_book_id_by_isbn( $isbn ) : 0 );
 		}
@@ -324,6 +325,10 @@ class Politeia_Reading_Add_Book_Handler {
 					}
 				}
 			}
+		}
+
+		if ( $user_book_id > 0 && function_exists( 'prs_invalidate_library_cache_for_user' ) ) {
+			prs_invalidate_library_cache_for_user( $user_id );
 		}
 
 		// Redirect back with success flag

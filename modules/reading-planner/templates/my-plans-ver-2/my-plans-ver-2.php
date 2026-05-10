@@ -570,6 +570,10 @@ body{
   font-size:.85rem;
 }
 
+.prs-reading-plan-shortcode-shell #politeia-open-reading-plan{
+  display:none;
+}
+
 @media(max-width:1024px){
   .overview-grid{grid-template-columns:repeat(2,1fr)}
 }
@@ -608,6 +612,10 @@ body{
 }
 </style>
 
+<div class="prs-reading-plan-shortcode-shell">
+	<?php echo do_shortcode('[politeia_reading_plan]'); ?>
+</div>
+
 <main class="page">
 	<section class="topbar">
 		<div class="title-block">
@@ -615,7 +623,7 @@ body{
 			<p><?php esc_html_e('A full-page list view for all user plans. This mockup shows book-specific plans and general reading goals in a single unified index.', 'politeia-reading'); ?>
 			</p>
 		</div>
-		<a class="primary-btn" href="<?php echo esc_url(home_url('/my-plans/create')); ?>">+ <?php esc_html_e('Create New Plan', 'politeia-reading'); ?></a>
+		<button type="button" class="primary-btn" id="prs-create-new-plan-v2">+ <?php esc_html_e('Create New Plan', 'politeia-reading'); ?></button>
 	</section>
 
 	<section class="overview-grid">
@@ -808,6 +816,30 @@ body{
 		statusSelect.addEventListener('change', applyFilters);
 		typeSelect.addEventListener('change', applyFilters);
 		applyFilters();
+	})();
+
+	(function () {
+		var createPlanButton = document.getElementById('prs-create-new-plan-v2');
+		var planLauncher = document.getElementById('politeia-open-reading-plan');
+		if (!createPlanButton || !planLauncher) {
+			return;
+		}
+
+		var openPlanModal = function (event) {
+			if (event) {
+				event.preventDefault();
+			}
+			planLauncher.click();
+		};
+
+		createPlanButton.addEventListener('click', openPlanModal);
+
+		var params = new URLSearchParams(window.location.search);
+		if (params.get('open_plan') === '1') {
+			window.addEventListener('load', function () {
+				openPlanModal();
+			}, { once: true });
+		}
 	})();
 	</script>
 

@@ -428,6 +428,7 @@ class Politeia_Reading_Book_Repository {
 				$book_id
 			)
 		);
+		$changed = false;
 		if ( $row ) {
 			$id = (int) $row->id;
 			if ( ! empty( $row->deleted_at ) ) {
@@ -439,6 +440,10 @@ class Politeia_Reading_Book_Repository {
 					),
 					array( 'id' => $id )
 				);
+				$changed = true;
+			}
+			if ( $changed && function_exists( 'prs_invalidate_library_cache_for_user' ) ) {
+				prs_invalidate_library_cache_for_user( $user_id );
 			}
 			return $id;
 		}
@@ -454,7 +459,11 @@ class Politeia_Reading_Book_Repository {
 				'updated_at'     => current_time( 'mysql' ),
 			)
 		);
-		return (int) $wpdb->insert_id;
+		$user_book_id = (int) $wpdb->insert_id;
+		if ( $user_book_id > 0 && function_exists( 'prs_invalidate_library_cache_for_user' ) ) {
+			prs_invalidate_library_cache_for_user( $user_id );
+		}
+		return $user_book_id;
 	}
 
 	/**
@@ -467,6 +476,7 @@ class Politeia_Reading_Book_Repository {
 			'per_page' => 0,
 			'offset'   => 0,
 			'order'    => 'title_asc',
+			'search'   => '',
 		);
 
 		$args = wp_parse_args( $args, $defaults );
@@ -479,12 +489,14 @@ class Politeia_Reading_Book_Repository {
 		$per_page = (int) $args['per_page'];
 		$offset   = max( 0, (int) $args['offset'] );
 		$order    = isset( $args['order'] ) ? (string) $args['order'] : 'title_asc';
+		$search   = isset( $args['search'] ) ? trim( (string) $args['search'] ) : '';
 
 		$ub = $wpdb->prefix . 'politeia_user_books';
 		$b  = $wpdb->prefix . 'politeia_books';
 		$l  = $wpdb->prefix . 'politeia_loans';
 		$ba = $wpdb->prefix . 'politeia_book_authors';
 		$a  = $wpdb->prefix . 'politeia_authors';
+		$search_params = array();
 
 		static $books_has_total_pages = null;
 		if ( null === $books_has_total_pages ) {
@@ -526,18 +538,35 @@ class Politeia_Reading_Book_Repository {
 			{$book_pages_select} AS book_total_pages
 		FROM {$ub} ub
 		JOIN {$b} b ON b.id = ub.book_id
-		WHERE ub.user_id = %d
-		  AND ub.deleted_at IS NULL
-		  AND (ub.owning_status IS NULL OR ub.owning_status != 'deleted')
-		";
+			WHERE ub.user_id = %d
+			  AND ub.deleted_at IS NULL
+			  AND (ub.owning_status IS NULL OR ub.owning_status != 'deleted')
+			";
 
-		if ( 'recent' === $order ) {
-			$sql .= ' ORDER BY ub.updated_at DESC, b.title ASC';
-		} else {
-			$sql .= ' ORDER BY b.title ASC';
+		if ( '' !== $search ) {
+			$like = '%' . $wpdb->esc_like( $search ) . '%';
+			$sql .= "
+			  AND (
+					b.title LIKE %s
+					OR EXISTS (
+						SELECT 1
+						FROM {$ba} ba_search
+						INNER JOIN {$a} a_search ON a_search.id = ba_search.author_id
+						WHERE ba_search.book_id = b.id
+						  AND a_search.display_name LIKE %s
+					)
+			  )
+			";
+			$search_params = array( $like, $like );
 		}
 
-		$params = array( $user_id );
+		if ( 'recent' === $order ) {
+			$sql .= ' ORDER BY ub.updated_at DESC, b.title ASC, b.id ASC';
+		} else {
+			$sql .= ' ORDER BY b.title ASC, b.id ASC';
+		}
+
+		$params = array_merge( array( $user_id ), $search_params );
 
 		if ( $per_page > 0 ) {
 			$sql      .= ' LIMIT %d OFFSET %d';
@@ -546,8 +575,156 @@ class Politeia_Reading_Book_Repository {
 		}
 
 		$prepared = $wpdb->prepare( $sql, $params );
+		$books    = $wpdb->get_results( $prepared );
 
-		return $wpdb->get_results( $prepared );
+		if ( $books && class_exists( 'Politeia_Reading_Sessions_Stats' ) ) {
+			self::hydrate_library_progress( $user_id, $books );
+		}
+
+		return $books;
+	}
+
+	/**
+	 * Attach progress values to library rows in one batch query.
+	 *
+	 * @param int   $user_id The current user ID.
+	 * @param array $books   The library rows returned by the repository.
+	 */
+	private static function hydrate_library_progress( $user_id, array &$books ) {
+		global $wpdb;
+
+		$user_book_ids = array();
+		$book_meta     = array();
+
+		foreach ( $books as $book ) {
+			if ( ! is_object( $book ) || empty( $book->user_book_id ) ) {
+				continue;
+			}
+
+			$user_book_id = (int) $book->user_book_id;
+			$total_pages  = isset( $book->book_total_pages ) ? (int) $book->book_total_pages : 0;
+			if ( $total_pages <= 0 ) {
+				$total_pages = isset( $book->pages ) ? (int) $book->pages : 0;
+			}
+
+			$user_book_ids[]            = $user_book_id;
+			$book_meta[ $user_book_id ] = array(
+				'total_pages'    => $total_pages,
+				'reading_status' => isset( $book->reading_status ) ? (string) $book->reading_status : '',
+			);
+		}
+
+		$user_book_ids = array_values( array_unique( array_filter( array_map( 'absint', $user_book_ids ) ) ) );
+		if ( empty( $user_book_ids ) ) {
+			return;
+		}
+
+		$sessions_table = $wpdb->prefix . 'politeia_reading_sessions';
+		$placeholders   = implode( ', ', array_fill( 0, count( $user_book_ids ), '%d' ) );
+		$params         = array_merge( array( (int) $user_id ), $user_book_ids );
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"
+				SELECT user_book_id, start_page, end_page
+				FROM {$sessions_table}
+				WHERE user_id = %d
+				  AND user_book_id IN ({$placeholders})
+				  AND end_time IS NOT NULL
+				  AND deleted_at IS NULL
+			",
+				$params
+			),
+			ARRAY_A
+		);
+
+		$interval_map = array();
+		foreach ( (array) $rows as $row ) {
+			$user_book_id = isset( $row['user_book_id'] ) ? (int) $row['user_book_id'] : 0;
+			if ( $user_book_id <= 0 ) {
+				continue;
+			}
+
+			$interval_map[ $user_book_id ][] = array(
+				's' => isset( $row['start_page'] ) ? (int) $row['start_page'] : 0,
+				'e' => isset( $row['end_page'] ) ? (int) $row['end_page'] : 0,
+			);
+		}
+
+		foreach ( $books as $book ) {
+			if ( ! is_object( $book ) || empty( $book->user_book_id ) ) {
+				continue;
+			}
+
+			$user_book_id  = (int) $book->user_book_id;
+			$meta          = isset( $book_meta[ $user_book_id ] ) ? $book_meta[ $user_book_id ] : array();
+			$total_pages   = isset( $meta['total_pages'] ) ? (int) $meta['total_pages'] : 0;
+			$reading_state = isset( $meta['reading_status'] ) ? (string) $meta['reading_status'] : '';
+			$intervals     = isset( $interval_map[ $user_book_id ] ) ? $interval_map[ $user_book_id ] : array();
+
+			$progress_base = 0;
+			if ( $total_pages > 0 ) {
+				$progress_base = Politeia_Reading_Sessions_Stats::calculate_progress_percent_from_intervals( $intervals, $total_pages );
+			}
+
+			$book->progress_base_percent = $progress_base;
+			$book->progress_percent      = ( 'finished' === $reading_state ) ? 100 : $progress_base;
+		}
+	}
+
+	/**
+	 * Count books in the user's library using the same filters as the list query.
+	 *
+	 * @param int   $user_id The current user ID.
+	 * @param array $args    Query args.
+	 * @return int
+	 */
+	public static function get_user_books_for_library_count( $user_id, $args = array() ) {
+		global $wpdb;
+
+		$user_id = (int) $user_id;
+		if ( $user_id <= 0 ) {
+			return 0;
+		}
+
+		$search = isset( $args['search'] ) ? trim( (string) $args['search'] ) : '';
+
+		$ub = $wpdb->prefix . 'politeia_user_books';
+		$b  = $wpdb->prefix . 'politeia_books';
+		$ba = $wpdb->prefix . 'politeia_book_authors';
+		$a  = $wpdb->prefix . 'politeia_authors';
+
+		$sql = "
+			SELECT COUNT(*)
+			FROM {$ub} ub
+			JOIN {$b} b ON b.id = ub.book_id
+			WHERE ub.user_id = %d
+			  AND ub.deleted_at IS NULL
+			  AND (ub.owning_status IS NULL OR ub.owning_status != 'deleted')
+		";
+
+		$params = array( $user_id );
+
+		if ( '' !== $search ) {
+			$like = '%' . $wpdb->esc_like( $search ) . '%';
+			$sql .= "
+			  AND (
+					b.title LIKE %s
+					OR EXISTS (
+						SELECT 1
+						FROM {$ba} ba_search
+						INNER JOIN {$a} a_search ON a_search.id = ba_search.author_id
+						WHERE ba_search.book_id = b.id
+						  AND a_search.display_name LIKE %s
+					)
+			  )
+			";
+			$params[] = $like;
+			$params[] = $like;
+		}
+
+		$prepared = $wpdb->prepare( $sql, $params );
+		return (int) $wpdb->get_var( $prepared );
 	}
 
 	/**

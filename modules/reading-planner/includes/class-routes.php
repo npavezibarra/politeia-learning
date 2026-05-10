@@ -126,6 +126,21 @@ class Routes {
 
 	public static function direct_template_fallback(): void {
 		$request_path = isset( $_SERVER['REQUEST_URI'] ) ? wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : '';
+		if ( is_string( $request_path ) && preg_match( '#^/my-plans/create/?$#', $request_path ) ) {
+			$user_login = '';
+			$current_user = wp_get_current_user();
+			if ( $current_user && $current_user->exists() ) {
+				$user_login = (string) $current_user->user_login;
+			}
+
+			$target = $user_login
+				? home_url( '/members/' . rawurlencode( $user_login ) . '/my-plans-ver-2/?open_plan=1' )
+				: wp_login_url( home_url( '/my-plans/create' ) );
+
+			wp_safe_redirect( $target );
+			exit;
+		}
+
 		if ( ! is_string( $request_path ) || ! preg_match( '#^/my-plan/([0-9]+)/?$#', $request_path, $matches ) ) {
 			return;
 		}

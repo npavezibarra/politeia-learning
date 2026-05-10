@@ -519,8 +519,8 @@ msgstr "Opciones de formato"
 msgid "Fri"
 msgstr "Vie"
 
-msgid "Google Books API key is missing. Add it in the plugin settings."
-msgstr "Falta la clave API de Google Books. Agrégala en los ajustes del plugin."
+msgid "Cover search API key is missing. Add it in the plugin settings."
+msgstr "Falta la clave API de busqueda de cubiertas. Agregala en los ajustes del plugin."
 
 msgid "Great job!"
 msgstr "¡Buen trabajo!"
@@ -564,8 +564,8 @@ msgstr "ISBN:"
 msgid "Ideal for those who want reading to be a central part of their identity."
 msgstr "Ideal para quienes quieren que la lectura sea parte central de su identidad."
 
-msgid "Images from Google Books"
-msgstr "Imágenes de Google Books"
+msgid "Images from external sources"
+msgstr "Imagenes de fuentes externas"
 
 msgid "In Shelf"
 msgstr "En estantería"
@@ -1233,8 +1233,8 @@ msgstr "Directorio de subida no disponible."
 msgid "User not logged in."
 msgstr "Usuario no conectado."
 
-msgid "View on Google Books"
-msgstr "Ver en Google Books"
+msgid "View source"
+msgstr "Ver fuente"
 
 msgid "Wed"
 msgstr "Mié"

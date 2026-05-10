@@ -64,6 +64,10 @@ class Politeia_Reading_Book_Utils {
 				$book_id
 			)
 		);
+
+		if ( function_exists( 'prs_invalidate_library_cache_for_book' ) ) {
+			prs_invalidate_library_cache_for_book( $book_id );
+		}
 	}
 
 	/**
@@ -304,6 +308,9 @@ class Politeia_Reading_Book_Utils {
 				array( '%d', '%d', '%s' ),
 				array( '%d' )
 			);
+			if ( function_exists( 'prs_invalidate_library_cache_for_book' ) ) {
+				prs_invalidate_library_cache_for_book( $book_id );
+			}
 			return;
 		}
 
@@ -318,6 +325,10 @@ class Politeia_Reading_Book_Utils {
 			),
 			array( '%d', '%s', '%d', '%s', '%s' )
 		);
+
+		if ( function_exists( 'prs_invalidate_library_cache_for_book' ) ) {
+			prs_invalidate_library_cache_for_book( $book_id );
+		}
 	}
 
 	/**

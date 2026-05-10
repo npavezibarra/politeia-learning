@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Politeia_Reading_User_Books_Covers {
 
 	/**
-	 * AJAX: busca cubiertas en Google Books para el libro actual.
+	 * AJAX: busca cubiertas externas para el libro actual.
 	 */
 	public static function ajax_search_cover() {
 		if ( ! is_user_logged_in() ) {
@@ -72,7 +72,7 @@ class Politeia_Reading_User_Books_Covers {
 		$title  = trim( str_replace( "\"", '', $title ) );
 		$author = trim( str_replace( "\"", '', $author ) );
 
-		// --- Normalize metadata for Google Books ---
+		// --- Normalize external cover metadata ---
 		$title  = preg_replace( '/:.*/', '', $title );
 		$title  = preg_replace( '/\s+/', ' ', $title );
 		$author = preg_replace( '/\([^)]*\)/', '', $author );
@@ -207,7 +207,7 @@ class Politeia_Reading_User_Books_Covers {
 		}
 
 		if ( empty( $options_html ) ) {
-			$options_html = '<p>No covers found in Google Books for this title/author. Check spelling or try another title.</p>';
+			$options_html = '<p>No covers found for this title/author. Check spelling or try another title.</p>';
 		}
 
 		Politeia_Reading_User_Books_Utils::json_success(

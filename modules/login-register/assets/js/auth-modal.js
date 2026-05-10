@@ -179,13 +179,6 @@ function initPlAuth() {
         });
     }
 
-    overlay.addEventListener('click', function (event) {
-        if (event.target === overlay) {
-            if (overlay.classList.contains('is-loading')) return;
-            window.PLAuthCloseModal();
-        }
-    });
-
     document.addEventListener('click', function (event) {
         var trigger = event.target && event.target.closest ? event.target.closest('[data-pl-auth-open], [data-rcp-auth-open]') : null;
         if (!trigger) return;

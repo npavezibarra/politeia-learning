@@ -254,7 +254,7 @@ class PL_Partnership_Handlers
             $args['pl_cp_invite_id'] = $invite_id;
             $args['pl_cp_invite_source'] = $source;
         }
-        $args['tab'] = 'requests';
+        $args['tab'] = 'connections';
 
         wp_safe_redirect(add_query_arg($args, $redirect_to));
         exit;

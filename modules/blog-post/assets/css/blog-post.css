@@ -82,13 +82,17 @@
 
 .pl-bp-blog-post-body .pl-bp-blog-post-lead {
     padding-left: 24px;
-    border-left: 4px solid #111111;
+    border-left: none;
     font-family: 'Newsreader', serif;
     font-size: clamp(1.15rem, 2vw, 1.45rem);
     line-height: 1.7;
     color: #374151;
     font-style: italic;
     font-weight: 200;
+}
+
+.pl-bp-blog-post-body.pl-bp-blog-post-has-image .pl-bp-blog-post-lead {
+    border-left: 4px solid #111111;
 }
 
 .pl-bp-blog-post-body .pl-bp-blog-post-content-wrap {

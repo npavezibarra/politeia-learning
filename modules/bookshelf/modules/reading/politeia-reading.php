@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Politeia Reading
  * Description: Manage "My Library" and Reading Sessions with custom tables and shortcodes.
- * Version: 0.2.7
+ * Version: 0.2.8
  * Author: Politeia
  * Text Domain: politeia-reading
  */
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 // ===== Constants =====
 if (!defined('POLITEIA_READING_VERSION')) {
 	// ⬆️ Incrementa esta versión cuando cambies estructuras/flujo global del plugin
-	define('POLITEIA_READING_VERSION', '0.2.7');
+	define('POLITEIA_READING_VERSION', '0.2.8');
 }
 if (!defined('POLITEIA_READING_DB_VERSION')) {
 	define('POLITEIA_READING_DB_VERSION', '1.14.2');

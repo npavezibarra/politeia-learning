@@ -18,11 +18,14 @@ class PL_Course_Partner_Modal
 
     public static function enqueue_assets(): void
     {
-        if (!is_singular('sfwd-courses') && !is_singular('learni_course')) {
+        $default_should_load = (is_singular('sfwd-courses') || is_singular('learni_course'));
+        $should_load = (bool) apply_filters('pl_course_partner_modal_should_load', $default_should_load);
+        if (!$should_load) {
             return;
         }
 
         $course_id = (int) get_queried_object_id();
+        $course_id = (int) apply_filters('pl_course_partner_modal_course_id', $course_id);
         if ($course_id <= 0) {
             return;
         }
@@ -105,7 +108,9 @@ class PL_Course_Partner_Modal
 
     public static function render_modal(): void
     {
-        if (!is_singular('sfwd-courses') && !is_singular('learni_course')) {
+        $default_should_load = (is_singular('sfwd-courses') || is_singular('learni_course'));
+        $should_load = (bool) apply_filters('pl_course_partner_modal_should_load', $default_should_load);
+        if (!$should_load) {
             return;
         }
 

@@ -822,13 +822,13 @@
             <path d="M14 11v6"></path>
           </svg>
         </button>
+        <div id="book_cover_section">
+          ${coverBlock}
+        </div>
         <div id="book_info_section" class="book-summary-details">
           <div class="book-summary-title">${safeTitle}</div>
           <div class="book-summary-author">${t('by_label', 'por')} ${safeAuthor || escapeHtml(t('unknown_author', 'Autor desconocido'))}</div>
           <div class="book-summary-pages">${safePages} ${escapeHtml(t('pages_label', 'páginas'))}</div>
-        </div>
-        <div id="book_cover_section">
-          ${coverBlock}
         </div>
       </div>` : '';
     const startingPageInput = hasBook ? `
@@ -1060,9 +1060,10 @@
           clearSuggestions();
           return;
         }
-        lastSuggestionItems = items.slice();
+        const limitedItems = items.slice(0, 2);
+        lastSuggestionItems = limitedItems.slice();
         suggestions.innerHTML = '';
-        items.forEach((item) => {
+        limitedItems.forEach((item) => {
           const button = document.createElement('button');
           button.type = 'button';
           button.className = 'prs-add-book__suggestion';
@@ -1088,6 +1089,7 @@
         params.append('action', 'prs_user_book_search');
         params.append('nonce', config.nonce);
         params.append('query', query);
+        params.append('limit', '2');
         const fetchOptions = {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
@@ -1179,7 +1181,7 @@
       };
 
       const runSuggestions = (query) => {
-        if (!query || query.length < 3) {
+        if (!query || query.length < 2) {
           clearSuggestions();
           return;
         }
@@ -1187,7 +1189,7 @@
         suggestionController = new AbortController();
         fetchUserBookSuggestions(query, suggestionController)
           .then((items) => {
-            renderSuggestions(items.slice(0, 8));
+            renderSuggestions(items);
           })
           .catch((err) => {
             if (err && err.name === 'AbortError') return;
@@ -1206,7 +1208,7 @@
       });
 
       titleInput.addEventListener('focus', (e) => {
-        if (e.target.value.trim().length >= 3) {
+        if (e.target.value.trim().length >= 2) {
           runSuggestions(e.target.value.trim());
         }
       });

@@ -17,6 +17,19 @@ function pl_is_block_theme(): bool
     return function_exists('wp_is_block_theme') && wp_is_block_theme();
 }
 
+function pl_should_suppress_theme_footer(): bool
+{
+    if (class_exists('\\Learni\\Navigation\\NavOrchestrator') && \Learni\Navigation\NavOrchestrator::get_instance()->is_politeia_page()) {
+        return true;
+    }
+
+    if (get_query_var('prs_my_single_plan') || get_query_var('prs_my_plans_ver_2')) {
+        return true;
+    }
+
+    return false;
+}
+
 /**
  * Print the document header and theme header.
  * Stores the footer HTML for pl_template_close().
@@ -36,15 +49,7 @@ function pl_template_open(): void
     // Pre-render block theme template parts BEFORE wp_head so their assets are enqueued in the correct place.
     if (function_exists('do_blocks')) {
         $pl_theme_header_html = (string) do_blocks('<!-- wp:template-part {"slug":"header","area":"header"} /-->');
-        
-        $should_suppress = false;
-        if (class_exists('\\Learni\\Navigation\\NavOrchestrator')) {
-            $should_suppress = \Learni\Navigation\NavOrchestrator::get_instance()->is_politeia_page();
-        }
-        // Reading Planner single plan is rendered via a custom route; always suppress the theme footer.
-        if (get_query_var('prs_my_single_plan')) {
-            $should_suppress = true;
-        }
+        $should_suppress = pl_should_suppress_theme_footer();
 
         if (!$should_suppress) {
             $pl_theme_footer_html = (string) do_blocks('<!-- wp:template-part {"slug":"footer","area":"footer"} /-->');
@@ -80,14 +85,7 @@ function pl_template_close(): void
     global $pl_theme_footer_html;
 
     if (!pl_is_block_theme()) {
-        $should_suppress = false;
-        if (class_exists('\\Learni\\Navigation\\NavOrchestrator')) {
-            $should_suppress = \Learni\Navigation\NavOrchestrator::get_instance()->is_politeia_page();
-        }
-        // Reading Planner single plan is rendered via a custom route; always suppress the theme footer.
-        if (get_query_var('prs_my_single_plan')) {
-            $should_suppress = true;
-        }
+        $should_suppress = pl_should_suppress_theme_footer();
 
         if (!$should_suppress) {
             get_footer();

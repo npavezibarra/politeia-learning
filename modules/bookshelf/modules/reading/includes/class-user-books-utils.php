@@ -43,8 +43,17 @@ class Politeia_Reading_User_Books_Utils {
 	public static function update_user_book( $user_book_id, $update ) {
 		global $wpdb;
 		$t                    = $wpdb->prefix . 'politeia_user_books';
+		$user_id              = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT user_id FROM {$t} WHERE id = %d LIMIT 1",
+				(int) $user_book_id
+			)
+		);
 		$update['updated_at'] = current_time( 'mysql', true ); // UTC
 		$wpdb->update( $t, $update, array( 'id' => $user_book_id ) );
+		if ( $user_id > 0 && function_exists( 'prs_invalidate_library_cache_for_user' ) ) {
+			prs_invalidate_library_cache_for_user( $user_id );
+		}
 		return $update;
 	}
 

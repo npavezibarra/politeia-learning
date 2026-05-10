@@ -4712,7 +4712,7 @@ function setupSearchCoverOverlay() {
     }
     attributionEl = document.createElement("p");
     attributionEl.className = "prs-search-cover-attribution";
-    attributionEl.textContent = prsText("images_from_google", "Images from Google Books");
+    attributionEl.textContent = prsText("images_from_google", "Images from external sources");
     const parent = optionsContainer.parentNode;
     if (parent) {
       parent.insertBefore(attributionEl, optionsContainer.nextSibling);
@@ -5153,7 +5153,7 @@ function setupSearchCoverOverlay() {
         }
 
         if (typeof window !== "undefined" && window.console) {
-          console.log("[PRS] Google Books response:", data);
+          console.log("[PRS] Cover search response:", data);
           if (data && data.data && data.data.items) {
             console.log("[PRS] Found items:", data.data.items.length);
           }
@@ -5385,7 +5385,7 @@ function setupSearchCoverOverlay() {
 }
 
 // ---------- Boot ----------
-document.addEventListener("DOMContentLoaded", function () {
+function prsBootMyBook() {
   setupReadingDensityBar();
   setupCoverPlaceholder();
   setupPages();
@@ -5407,4 +5407,10 @@ document.addEventListener("DOMContentLoaded", function () {
   setupLibraryFilterDashboard();
   setupSearchCoverOverlay();
   attachCoverImgGuards();
-});
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", prsBootMyBook);
+} else {
+  prsBootMyBook();
+}

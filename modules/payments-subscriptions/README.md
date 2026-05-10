@@ -3,10 +3,13 @@
 This module implements **creator-defined monthly memberships** and **Mercado Pago recurring billing** with:
 
 - A single monthly tier per creator (`tier_slug = monthly`)
-- Mercado Pago subscriptions (preapproval) + optional plan (direct flow)
+- Mercado Pago subscriptions (preapproval)
 - Webhook ingestion + async processing
 - Internal ledger (`transaction_ledger`) + platform commission/IVA breakdown
 - Integration with `PL_Relationships` (`TYPE_SUBSCRIBE`) to unlock subscriber access
+
+Notes:
+- The settings screen contains **Flow (Chile)** credential fields for historical/back-compat reasons, but **this module currently only uses Mercado Pago** (no Flow gateway implementation in this module).
 
 > Note: The old standalone plugin `politeia-payments-subscriptions` is a shim/no-op. The active code lives in this module.
 
@@ -17,6 +20,7 @@ This module implements **creator-defined monthly memberships** and **Mercado Pag
 UI: `Center-2 → Perfil → Membresía`
 
 - The creator can only set a **monthly CLP amount**.
+- The creator also defines what subscribers can access (MVP): which tabs are visible on the public profile (`/profile/{username}`) via the `pl_policy_subscribe` relationship policy.
 - On save, we upsert a single tier in DB using:
   - `Politeia_PPS_Subscription_Engine::upsert_creator_monthly_tier($creator_user_id, $amount_minor, 'CLP')`
 
@@ -47,9 +51,9 @@ Configured in WP Admin: **Politeia Learning → Pagos**.
 
 ### Hosted (redirect)
 
-- Creates a Mercado Pago **preapproval** without an associated plan
+- Creates a Mercado Pago **preapproval** (subscription) **without an associated plan**
 - Opens checkout to collect payment method
-- Returns `redirect_url` (sandbox or production init point)
+- Returns `redirect_url` (prefers `sandbox_init_point` in TEST; otherwise `init_point`)
 - Uses `success_url` as `back_url` for Mercado Pago. If `success_url`/`cancel_url` are empty, the module auto-creates:
   - `/subscription-success/`
   - `/subscription-cancel/`
@@ -61,7 +65,7 @@ The public **Suscribirme** button opens a modal with two options:
 
 1) **Pagar con tarjeta**: tokenizes the card in the browser using Mercado Pago JS v2 and creates a subscription via REST:
    - `POST /wp-json/politeia/v1/subscriptions/subscribe`
-   - sends `card_token_id` and sets `status=authorized`
+   - sends `card_token_id` (plus optional `payment_method_id` / `issuer_id`) and sets `status=authorized`
    - no redirect required
 2) **Usar mi cuenta Mercado Pago**: continues with Hosted checkout (redirect).
 
@@ -83,6 +87,7 @@ Created/updated by `Politeia_PPS_Activator`:
   - For memberships: `tier_slug = monthly`
 - `wp_politeia_subscriptions` (subscriptions)
   - One row per MP preapproval (`mp_preapproval_id`)
+  - Price changes: when a creator updates the monthly amount, existing subscribers are scheduled to cancel at period end (best-effort) and must re-subscribe to the new price.
 - `wp_politeia_transaction_ledger` (ledger)
   - One row per payment event (`mp_payment_id`) with fee/tax breakdown
 - `wp_politeia_mp_webhook_events` (webhook inbox)
@@ -162,6 +167,29 @@ Section **Webhooks & Ledger** provides:
 - Recent webhook events + "Process/Reprocess"
 - Recent ledger entries
 
+## Production checklist (to make it work end-to-end)
+
+1) **Configure credentials**
+   - WP Admin → **Politeia Learning → Pagos**
+   - Set `Mode` (TEST/LIVE) + matching `Access Token` + `Public Key`.
+   - Set `Expected Seller User ID` to the Mercado Pago `collector_id` for the same environment (helps catch token mixups).
+
+2) **Set return URLs**
+   - Ensure `success_url` / `cancel_url` are valid public URLs.
+   - If left blank, the module auto-creates `/subscription-success/` and `/subscription-cancel/` and stores them in settings.
+
+3) **Register webhook in Mercado Pago**
+   - Point MP webhooks to:
+     - `POST /wp-json/politeia/v1/mercadopago/webhook`
+   - Set `Webhook Secret` in WP settings (recommended) and ensure MP sends `X-Signature` + `X-Request-Id`.
+
+4) **Ensure background processing runs**
+   - Webhooks are stored first and processed by WP-Cron (`politeia_pps_process_pending_webhooks` every 5 minutes).
+   - In production, prefer a real cron (server-level) hitting `wp-cron.php` to avoid missed runs on low-traffic sites.
+
+5) **Run a real payment test**
+   - Creator sets monthly tier → subscriber subscribes (hosted or tokenized) → webhooks arrive → ledger entry created → relationship granted.
+
 ## Background jobs (WP-Cron)
 
 - `politeia_pps_process_pending_webhooks`: processes webhook inbox every 5 minutes
@@ -181,7 +209,7 @@ Source:
    - Creator creates tier → viewer subscribes → MP confirms → webhooks arrive → ledger entry created → viewer becomes subscribed.
 
 3) **Subscription lifecycle UX**
-   - A viewer “Manage subscription” page (cancel, status, next payment date) and a creator dashboard for subscribers/revenue.
+   - A viewer “Manage subscription” page (cancel, status, next payment date) and a creator dashboard for subscribers/revenue (the REST cancel route exists, but there’s no polished UI yet).
 
 4) **Hardening / observability**
    - Better error surfaces in admin (show last error per event, payload viewer, retry/backoff).
@@ -221,10 +249,15 @@ curl -i \
 ```
 
 3) Hosted checkout + TEST buyers
-- Hosted flow is the only supported flow right now (Direct/tokenized is not enabled).
-- For sandbox testing, set `Payer Email Override` to a **buyer test user** email (`...@testuser.com`).
+- In Mercado Pago TEST you often need a **buyer test user** email (`...@testuser.com`).
+  - Easiest: set `Payer Email Override` to a buyer test user email in **Politeia Learning → Pagos**.
+  - Alternative: use the **Card (tokenized)** flow and enter the payer email inside the Mercado Pago Brick.
 
 4) Sandbox instability on `/preapproval`
 - Sometimes Mercado Pago sandbox returns `503 Service Unavailable` (empty body) when creating preapprovals:
   - `POST https://api.mercadopago.com/preapproval`
 - When that happens, the only workaround is to retry later. If you must validate end-to-end immediately, test in LIVE (real charge) using LIVE credentials.
+
+5) Hosted + TEST can fail if MP does not provide `sandbox_init_point`
+- Some TEST preapprovals return only `init_point` (production host), which breaks checkout with test accounts/tokens.
+- When that happens the module returns `mp_missing_sandbox_init_point` and recommends using **Direct (tokenized)** or switching to LIVE for an end-to-end test.

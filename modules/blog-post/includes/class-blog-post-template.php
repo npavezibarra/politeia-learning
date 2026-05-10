@@ -42,7 +42,7 @@ class PL_BP_Blog_Post_Template
 
         wp_enqueue_style(
             'pl-bp-blog-post-fonts',
-            'https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;900&display=swap',
+            'https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,200;6..72,300;6..72,400&family=EB+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;900&display=swap',
             [],
             null
         );
@@ -52,9 +52,15 @@ class PL_BP_Blog_Post_Template
     {
         if (is_singular('post')) {
             $classes[] = 'pl-bp-blog-post-body';
+
+            $post_id = (int) get_queried_object_id();
+            if ($post_id > 0 && has_post_thumbnail($post_id)) {
+                $classes[] = 'pl-bp-blog-post-has-image';
+            } else {
+                $classes[] = 'pl-bp-blog-post-no-image';
+            }
         }
 
         return $classes;
     }
 }
-

@@ -241,54 +241,172 @@
     return false;
   }
 
+  var pollingCfg = cfg.polling || {};
+  var pollTimer = null;
+  var pollDelay = Number(pollingCfg.idleMs || 60000);
+  var pollInFlight = false;
+
+  function getFastDelay() {
+    return Math.max(1500, Number(pollingCfg.fastMs || 3500));
+  }
+
+  function getWatchDelay() {
+    var fallback = Math.max(getFastDelay(), 10000);
+    return Math.max(fallback, Number(pollingCfg.watchMs || fallback));
+  }
+
+  function getIdleDelay() {
+    return Math.max(getWatchDelay(), Number(pollingCfg.idleMs || 60000));
+  }
+
+  function getMaxDelay() {
+    return Math.max(getIdleDelay(), Number(pollingCfg.maxMs || 300000));
+  }
+
+  function isRelevantPage() {
+    return !!pollingCfg.relevantPage;
+  }
+
+  function clearPollTimer() {
+    if (pollTimer) {
+      window.clearTimeout(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  function nextPollDelay(hasWatchState, hadSession) {
+    if (isRelevantPage()) {
+      return getFastDelay();
+    }
+
+    if (hasWatchState) {
+      return getWatchDelay();
+    }
+
+    if (hadSession) {
+      return getWatchDelay();
+    }
+
+    if (pollDelay < getIdleDelay()) {
+      pollDelay = getIdleDelay();
+    } else {
+      pollDelay = Math.min(getMaxDelay(), Math.max(getIdleDelay(), Math.ceil(pollDelay * 1.5)));
+    }
+
+    return pollDelay;
+  }
+
+  function schedulePoll(delay) {
+    clearPollTimer();
+    if (document.hidden && pollingCfg.pauseWhenHidden) {
+      pollTimer = window.setTimeout(function () {
+        schedulePoll(nextPollDelay(!!watchState, false));
+      }, getMaxDelay());
+      return;
+    }
+
+    var wait = Number(delay || 0);
+    if (!Number.isFinite(wait) || wait <= 0) {
+      wait = isRelevantPage() ? getFastDelay() : pollDelay;
+    }
+
+    pollTimer = window.setTimeout(runPollCycle, wait);
+  }
+
+  function runPollCycle() {
+    if (pollInFlight || state.open || state.busy) {
+      schedulePoll(nextPollDelay(!!watchState, false));
+      return;
+    }
+
+    pollInFlight = true;
+    var hadWatchState = !!watchState;
+
+    checkWatch()
+      .then(function (sessionVisible) {
+        if (sessionVisible) {
+          pollDelay = getFastDelay();
+          return true;
+        }
+
+        return apiFetch("/learni/v1/cross-eval/pending", { method: "GET" })
+          .then(function (res) {
+            return fetchJson(res, "Failed to load pending sessions");
+          })
+          .then(function (data) {
+            var sessions = (data && data.sessions) || [];
+            if (!Array.isArray(sessions) || sessions.length === 0) {
+              return false;
+            }
+            var first = sessions[0];
+            if (!first || !first.id) {
+              return false;
+            }
+            showModal(first);
+            pollDelay = getFastDelay();
+            return true;
+          });
+      })
+      .catch(function () {
+        return false;
+      })
+      .then(function () {
+        pollInFlight = false;
+        schedulePoll(nextPollDelay(hadWatchState || !!watchState, false));
+      });
+  }
+
   function checkWatch() {
-    if (!watchState || !watchState.sessionId || !watchState.courseId) return;
-    apiFetch("/learni/v1/cross-eval/sessions/" + String(watchState.sessionId), { method: "GET" })
+    if (!watchState || !watchState.sessionId || !watchState.courseId) {
+      return Promise.resolve(false);
+    }
+
+    return apiFetch("/learni/v1/cross-eval/sessions/" + String(watchState.sessionId), { method: "GET" })
       .then(function (res) { return fetchJson(res, "Failed to load status"); })
       .then(function (data) {
         var st = data && data.session && data.session.status ? String(data.session.status) : "";
-        if (!st) return;
+        if (!st) return false;
         if (st === "completed") {
           var cid = Number(watchState.courseId);
           watchState = null;
           saveWatch(null);
           // Show the same quiz overlay with Initial vs Final comparison for the tested user.
           maybeShowResults(cid);
-          return;
+          return true;
         }
         if (st === "expired" || st === "canceled" || st === "declined") {
           watchState = null;
           saveWatch(null);
         }
+        return false;
       })
-      .catch(function () {});
+      .catch(function () {
+        return false;
+      });
   }
 
-  function poll() {
-    if (state.open || state.busy) return;
-    checkWatch();
-    apiFetch("/learni/v1/cross-eval/pending", { method: "GET" })
-      .then(function (res) {
-        return fetchJson(res, "Failed to load pending sessions");
-      })
-      .then(function (data) {
-        var sessions = (data && data.sessions) || [];
-        if (!Array.isArray(sessions) || sessions.length === 0) return;
-        var first = sessions[0];
-        if (!first || !first.id) return;
-        showModal(first);
-      })
-      .catch(function () {});
+  function handleVisibilityChange() {
+    if (document.hidden) {
+      return;
+    }
+
+    clearPollTimer();
+    pollDelay = isRelevantPage() ? getFastDelay() : getIdleDelay();
+    runPollCycle();
+  }
+
+  if (pollingCfg.pauseWhenHidden && typeof document.addEventListener === "function") {
+    document.addEventListener("visibilitychange", handleVisibilityChange);
   }
 
   // Start polling after DOM is ready.
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () {
-      poll();
-      window.setInterval(poll, 3500);
+      pollDelay = isRelevantPage() ? getFastDelay() : getIdleDelay();
+      runPollCycle();
     });
   } else {
-    poll();
-    window.setInterval(poll, 3500);
+    pollDelay = isRelevantPage() ? getFastDelay() : getIdleDelay();
+    runPollCycle();
   }
 })();

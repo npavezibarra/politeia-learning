@@ -48,14 +48,7 @@ $has_image = $cover['has_image'];
 				</div>
 			<?php endif; ?>
 		</div>
-		<?php /* DISABLED: Google Books/Open Library search
-		<figcaption id="prs-cover-attribution-wrap" class="prs-book-cover__caption <?php echo $cover['source'] ? '' : 'is-hidden'; ?>" aria-hidden="<?php echo $cover['source'] ? 'false' : 'true'; ?>">
-			<a id="prs-cover-attribution" class="prs-book-cover__link <?php echo $cover['source'] ? '' : 'is-hidden'; ?>" <?php echo $cover['source'] ? 'href="' . esc_url( $cover['source'] ) . '"' : ''; ?> target="_blank" rel="noopener noreferrer">
-				<?php esc_html_e( 'View on Google Books', 'politeia-reading' ); ?>
-			</a>
-		</figcaption>
-		*/ ?>
-	</div>
+		</div>
 	<div id="prs-book-identity-slot" class="prs-book-identity-slot"></div>
 </section>
 

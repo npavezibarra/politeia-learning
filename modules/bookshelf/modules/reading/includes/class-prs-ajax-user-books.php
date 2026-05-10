@@ -83,6 +83,10 @@ class PRS_Ajax_User_Books {
                         )
                 );
 
+                if ( function_exists( 'prs_invalidate_library_cache_for_user' ) ) {
+                        prs_invalidate_library_cache_for_user( $user_id );
+                }
+
                 wp_send_json_success(
                         array(
                                 'message'    => __( 'Book removed from your library.', 'politeia-reading' ),
@@ -103,11 +107,14 @@ class PRS_Ajax_User_Books {
 
                 $page   = isset( $_GET['page'] ) ? max( 1, absint( $_GET['page'] ) ) : 1;
                 $offset = ( $page - 1 ) * $per_page;
+                $search = isset( $_GET['q'] ) ? sanitize_text_field( wp_unslash( $_GET['q'] ) ) : '';
 
-                self::render_books_response(
+                self::render_books_json_response(
                         array(
                                 'per_page' => $per_page,
                                 'offset'   => $offset,
+                                'page'     => $page,
+                                'search'   => $search,
                         )
                 );
         }
@@ -132,6 +139,167 @@ class PRS_Ajax_User_Books {
                 }
 
                 wp_die();
+        }
+
+        private static function render_books_json_response( $args = array() ) {
+                if ( ! is_user_logged_in() ) {
+                        wp_send_json_error( array( 'message' => __( 'You must be logged in to view your library.', 'politeia-reading' ) ), 403 );
+                }
+
+                $user_id = get_current_user_id();
+                $per_page = isset( $args['per_page'] ) ? (int) $args['per_page'] : (int) apply_filters( 'politeia_my_books_per_page', 15 );
+                if ( $per_page < 1 ) {
+                        $per_page = 15;
+                }
+
+                $page   = isset( $args['page'] ) ? max( 1, absint( $args['page'] ) ) : 1;
+                $search = isset( $args['search'] ) ? trim( (string) $args['search'] ) : '';
+                $order  = 'title_asc';
+                $cache_key = function_exists( 'prs_get_library_results_cache_key' )
+                        ? prs_get_library_results_cache_key( $user_id, $page, $per_page, $search, $order )
+                        : '';
+
+                if ( '' !== $cache_key ) {
+                        $cached_response = get_transient( $cache_key );
+                        if ( is_array( $cached_response ) ) {
+                                wp_send_json_success( $cached_response );
+                        }
+                }
+
+                $overall_total = prs_get_user_books_for_library_count(
+                        $user_id,
+                        array(
+                        )
+                );
+                $match_total = $overall_total;
+                if ( '' !== $search ) {
+                        $match_total = prs_get_user_books_for_library_count(
+                                $user_id,
+                                array(
+                                        'search' => $search,
+                                )
+                        );
+                }
+
+                $max_pages = max( 1, (int) ceil( $match_total / $per_page ) );
+                if ( $page > $max_pages ) {
+                        $page = $max_pages;
+                }
+                $offset = ( $page - 1 ) * $per_page;
+
+                $books = prs_get_user_books_for_library(
+                        $user_id,
+                        array(
+                                'per_page' => $per_page,
+                                'offset'   => $offset,
+                                'search'   => $search,
+                                'order'    => $order,
+                        )
+                );
+                $labels = prs_get_owning_labels();
+
+                ob_start();
+                foreach ( (array) $books as $book ) {
+                        echo prs_render_book_row( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                                $book,
+                                array(
+                                        'user_id'       => $user_id,
+                                        'owning_labels' => $labels,
+                                )
+                        );
+                }
+                $rows_html = ob_get_clean();
+
+                $pagination_html = '';
+                if ( $max_pages > 1 ) {
+                        $pagination_html = self::render_pagination_html( $page, $max_pages, $search );
+                }
+
+                $response = array(
+                        'rows_html'        => $rows_html,
+                        'pagination_html'  => $pagination_html,
+                        'total'            => $overall_total,
+                        'match_total'      => $match_total,
+                        'page'             => $page,
+                        'per_page'         => $per_page,
+                        'search'           => $search,
+                );
+
+                if ( '' !== $cache_key ) {
+                        set_transient( $cache_key, $response, 10 * MINUTE_IN_SECONDS );
+                }
+
+                wp_send_json_success( $response );
+        }
+
+        private static function render_pagination_html( $current_page, $max_pages, $search = '' ) {
+                $base_url = add_query_arg(
+                        array_filter(
+                                array(
+                                        'action' => 'prs_get_books_page',
+                                        'q'      => '' !== $search ? $search : null,
+                                ),
+                                static function ( $value ) {
+                                        return null !== $value && '' !== $value;
+                                }
+                        ),
+                        admin_url( 'admin-ajax.php' )
+                );
+
+                $links = paginate_links(
+                        array(
+                                'base'      => add_query_arg( 'page', '%#%', $base_url ),
+                                'format'    => '',
+                                'current'   => $current_page,
+                                'total'     => $max_pages,
+                                'mid_size'  => 2,
+                                'end_size'  => 1,
+                                'prev_text' => '',
+                                'next_text' => '',
+                                'type'      => 'array',
+                        )
+                );
+
+                if ( empty( $links ) ) {
+                        return '';
+                }
+
+                ob_start();
+                ?>
+                <nav class="prs-pagination-sheet" aria-label="<?php esc_attr_e( 'Library pagination', 'politeia-reading' ); ?>">
+                        <div class="prs-pagination-sheet__inner">
+                                <div class="prs-pagination-sheet__numbers">
+                                        <?php
+                                        foreach ( (array) $links as $link ) {
+                                                $label = trim( wp_strip_all_tags( $link ) );
+                                                if ( ! is_numeric( $label ) ) {
+                                                        continue;
+                                                }
+
+                                                $is_current = strpos( $link, 'current' ) !== false;
+                                                if ( $is_current ) {
+                                                        printf(
+                                                                '<span class="prs-pagination-sheet__page is-current">%1$s</span>',
+                                                                esc_html( $label )
+                                                        );
+                                                        continue;
+                                                }
+
+                                                if ( preg_match( '/href="([^"]+)"/', $link, $matches ) ) {
+                                                        printf(
+                                                                '<a class="prs-pagination-sheet__page" href="%1$s" data-page="%2$s">%3$s</a>',
+                                                                esc_url( $matches[1] ),
+                                                                esc_attr( $label ),
+                                                                esc_html( $label )
+                                                        );
+                                                }
+                                        }
+                                        ?>
+                                </div>
+                        </div>
+                </nav>
+                <?php
+                return ob_get_clean();
         }
 }
 

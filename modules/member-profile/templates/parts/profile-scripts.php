@@ -26,7 +26,7 @@ if (!defined('ABSPATH')) exit;
 	            { id: 'plans', label: 'Planes', icon: 'list-checks' },
 	            { id: 'book', label: 'Libros', icon: 'book' },
 	            <?php if ($is_own_profile) : ?>
-	            { id: 'requests', label: <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Solicitudes' : 'Requests'); ?>, materialIcon: 'diversity_3' },
+	            { id: 'connections', label: <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Conexiones' : 'Connections'); ?>, materialIcon: 'diversity_3' },
 	            { id: 'friends', label: 'Friends', icon: 'users' },
 	            { id: 'notifications', label: 'Notifications', icon: 'bell' }
 	            <?php endif; ?>
@@ -50,9 +50,7 @@ if (!defined('ABSPATH')) exit;
 	        const specializations = <?php echo json_encode($user_specs); ?>;
 
 	        const thoughts = <?php echo json_encode($book_thoughts); ?>;
-	        const followRequests = <?php echo json_encode($pl_pending_follow_requests); ?>;
-	        const coursePartnerInvites = <?php echo json_encode(array_values($pl_pending_course_partner_invites)); ?>;
-	        const recentAcceptedPartnerInvite = <?php echo json_encode($pl_recent_course_partner_accept); ?>;
+	        const connectionsData = <?php echo json_encode($pl_connections_data); ?>;
 	        const respondNonce = <?php echo json_encode($pl_relationship_respond_nonce); ?>;
 	        const blockNonce = <?php echo json_encode($pl_relationship_block_nonce); ?>;
 	        const coursePartnerInviteNonce = <?php echo json_encode($pl_course_partner_invite_nonce); ?>;
@@ -65,6 +63,7 @@ if (!defined('ABSPATH')) exit;
 
         // --- Core Logic ---
         let currentTab = <?php echo json_encode($initial_tab); ?>;
+        let currentConnectionsView = <?php echo json_encode($initial_connections_view); ?>;
 
 	        window.toggleSidebar = function() {
 	            document.getElementById('politeia-profile-sidebar').classList.toggle('open');
@@ -109,6 +108,13 @@ if (!defined('ABSPATH')) exit;
             if (window.innerWidth < 800) document.getElementById('politeia-profile-sidebar').classList.remove('open');
         };
 
+        window.switchConnectionsView = function(viewId) {
+            currentConnectionsView = viewId;
+            if (currentTab === 'connections') {
+                renderContent();
+            }
+        };
+
 	        function renderSidebar() {
 	            const nav = document.getElementById('pcg-nav-menu');
 	            if (!nav) return;
@@ -135,237 +141,328 @@ if (!defined('ABSPATH')) exit;
 	            wrapper.className = `${profileContainerClass} card-transition`;
 
 	            switch (currentTab) {
-		                case 'requests': {
-		                    const title = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Solicitudes de Follow' : 'Follow Requests'); ?>;
-		                    const partnerTitle = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Invitaciones de Partner de Curso' : 'Course Partner Invitations'); ?>;
-		                    const emptyText = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'No tienes solicitudes pendientes.' : 'No pending requests.'); ?>;
-		                    const acceptLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Aceptar' : 'Accept'); ?>;
-		                    const rejectLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Rechazar' : 'Reject'); ?>;
-		                    const blockLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Bloquear' : 'Block'); ?>;
-		                    const partnerKindLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'partner de curso' : 'course partner'); ?>;
-		                    const goToCourseLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Ir al curso' : 'Go to course'); ?>;
+		                case 'connections': {
+		                    const title = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Conexiones' : 'Connections'); ?>;
+		                    const summary = connectionsData && connectionsData.summary ? connectionsData.summary : {};
+		                    const pendingReceivedCount = Number(summary.pending_received || 0);
+		                    const pendingSentCount = Number(summary.pending_sent || 0);
+		                    const activeProjectsCount = Number(summary.active_projects || 0);
+		                    const membershipsCount = Number(summary.memberships || 0);
+		                    const historyCount = Number(summary.history || 0);
+		                    const emptyText = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'No hay conexiones registradas todavía.' : 'No connections have been recorded yet.'); ?>;
+		                    const pendingReceived = Array.isArray(connectionsData.pending_received) ? connectionsData.pending_received : [];
+		                    const pendingSent = Array.isArray(connectionsData.pending_sent) ? connectionsData.pending_sent : [];
+		                    const activeProjects = Array.isArray(connectionsData.active_projects) ? connectionsData.active_projects : [];
+		                    const memberships = Array.isArray(connectionsData.memberships) ? connectionsData.memberships : [];
+		                    const history = Array.isArray(connectionsData.history) ? connectionsData.history : [];
 
-		                    const hasFollow = Array.isArray(followRequests) && followRequests.length > 0;
-		                    const hasPartnerInvites = Array.isArray(coursePartnerInvites) && coursePartnerInvites.length > 0;
-		                    if (!hasFollow && !hasPartnerInvites) {
+		                    const pendingItems = pendingReceived.concat(pendingSent);
+		                    const projectItems = activeProjects.filter(item => String((item && item.group) || '') === 'project');
+		                    const communityItems = activeProjects.filter(item => String((item && item.group) || '') === 'community');
+		                    const connectionViews = [
+		                        { id: 'pending', label: <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Pendientes' : 'Pending'); ?>, count: pendingReceivedCount + pendingSentCount },
+		                        { id: 'projects', label: <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Proyectos' : 'Projects'); ?>, count: projectItems.length },
+		                        { id: 'community', label: <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Comunidad' : 'Community'); ?>, count: communityItems.length },
+		                        { id: 'memberships', label: <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Membresías' : 'Memberships'); ?>, count: membershipsCount },
+		                        { id: 'history', label: <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Historial' : 'History'); ?>, count: historyCount },
+		                    ];
+		                    const viewIds = connectionViews.map(view => view.id);
+		                    if (!viewIds.includes(currentConnectionsView)) {
+		                        currentConnectionsView = 'pending';
+		                    }
+
+		                    const noData = (pendingItems.length + projectItems.length + communityItems.length + memberships.length + history.length) === 0;
+		                    if (noData) {
 		                        wrapper.innerHTML = `
 		                            <div class="p-8 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
-		                                <h3 class="text-xl font-semibold text-neutral-900 mb-2">${<?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Solicitudes' : 'Requests'); ?>}</h3>
+		                                <h3 class="text-xl font-semibold text-neutral-900 mb-2">${title}</h3>
 		                                <p class="text-sm text-neutral-600">${emptyText}</p>
 		                            </div>
 		                        `;
 		                        break;
 		                    }
 
-		                    const sections = [];
+		                    const stateBadge = (state, label) => {
+		                        const normalized = String(state || '').toLowerCase();
+		                        let classes = 'border-neutral-200 text-neutral-700 bg-white';
+		                        if (normalized === 'active') {
+		                            classes = 'border-black bg-black text-white';
+		                        } else if (normalized === 'pending') {
+		                            classes = 'border-neutral-300 text-neutral-800 bg-neutral-50';
+		                        } else if (normalized === 'revoked' || normalized === 'rejected' || normalized === 'expired') {
+		                            classes = 'border-neutral-200 text-neutral-400 bg-neutral-100';
+		                        }
+		                        return `<span class="inline-flex items-center px-2.5 py-1 text-[10px] uppercase tracking-[0.08em] font-semibold border rounded-[4px] ${classes}">${String(label || state || '')}</span>`;
+		                    };
 
-		                    if (recentAcceptedPartnerInvite && recentAcceptedPartnerInvite.course_id) {
-		                        const inv = recentAcceptedPartnerInvite;
-		                        const courseTitle = String(inv.course_title || '');
-		                        const acceptedAt = inv.accepted_at ? `<span class="text-xs text-neutral-400">${String(inv.accepted_at)}</span>` : '';
-		                        const courseUrl = String(inv.course_url || '#');
-		                        const me = inv.me || {};
-		                        const other = inv.other || {};
+		                    const itemTitle = (item) => {
+		                        const objectTitle = item && item.object && item.object.title ? String(item.object.title) : '';
+		                        if (objectTitle) return objectTitle;
+		                        return String(item && item.title ? item.title : '');
+		                    };
 
-		                        const dropdown = `
-		                            <div class="pl-course-partner-invite-dropdown mt-4 border-t border-neutral-200 pt-4">
-		                                <div class="space-y-4">
-		                                    <div class="flex items-center gap-3">
-		                                        ${other.avatar_url ? `<img src="${String(other.avatar_url)}" alt="" class="w-9 h-9 rounded-full object-cover border border-neutral-200 bg-white" />` : `<div class="w-9 h-9 rounded-full bg-neutral-200 border border-neutral-200"></div>`}
-		                                        <div class="min-w-0 flex-1">
-		                                            <div class="flex items-center justify-between gap-3">
-		                                                <p class="text-sm font-semibold text-neutral-900 truncate">${String(other.name || 'User')}</p>
-		                                                <span class="text-xs text-neutral-500">${Number(other.percent || 0)}%</span>
+		                    const itemSubtitle = (item) => {
+		                        const objectType = String(item && item.object && item.object.type ? item.object.type : item && item.object_type ? item.object_type : '');
+		                        if (objectType === 'course') return <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Curso' : 'Course'); ?>;
+		                        if (objectType === 'reading_plan') return <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Plan de lectura' : 'Reading plan'); ?>;
+		                        if (String(item && item.kind || '') === 'subscription') return <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Membresía pagada' : 'Paid membership'); ?>;
+		                        if (String(item && item.kind || '') === 'relationship') {
+		                            const relType = String(item.rel_type || '');
+		                            if (relType === 'friend') return <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Amistad' : 'Friendship'); ?>;
+		                            return relType || <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Relación' : 'Relationship'); ?>;
+		                        }
+		                        return String(item && item.subtitle ? item.subtitle : '');
+		                    };
+
+		                    const itemDate = (item) => {
+		                        const raw = String(item && (item.created_at || item.expires_at) ? (item.created_at || item.expires_at) : '');
+		                        return raw ? `<span class="text-xs text-neutral-400">${raw}</span>` : '';
+		                    };
+
+		                    const itemAvatar = (user) => {
+		                        const avatar = user && user.avatar_url ? String(user.avatar_url) : '';
+		                        const name = user && user.name ? String(user.name) : 'User';
+		                        return avatar
+		                            ? `<img src="${avatar}" alt="" class="w-10 h-10 rounded-full object-cover border border-neutral-200 bg-white" />`
+		                            : `<div class="w-10 h-10 rounded-full bg-neutral-200 border border-neutral-200 flex items-center justify-center text-[10px] font-semibold text-neutral-500 uppercase">${name.split(' ').map(part => part.charAt(0)).join('').slice(0, 2)}</div>`;
+		                    };
+
+		                    const itemActions = (item) => {
+		                        const acceptLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Aceptar' : 'Accept'); ?>;
+		                        const rejectLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Rechazar' : 'Reject'); ?>;
+		                        const blockLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Bloquear' : 'Block'); ?>;
+		                        const openLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Ver' : 'View'); ?>;
+		                        const itemKind = String(item && item.kind ? item.kind : '');
+		                        const itemState = String(item && item.status ? item.status : '');
+		                        const linkUrl = item && item.object && item.object.url ? String(item.object.url) : '';
+
+		                        if (itemState === 'pending' && itemKind === 'relationship') {
+		                            const direction = String(item.direction || '');
+		                            if (direction !== 'received') {
+		                                return `
+		                                    <span class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-neutral-200 text-neutral-500 bg-neutral-50">${<?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Enviada' : 'Sent'); ?>}</span>
+		                                `;
+		                            }
+		                            const reqId = Number(item.id) || 0;
+		                            const fromUserId = Number(item.user && item.user.user_id ? item.user.user_id : 0);
+		                            const nonceInput = respondNonce ? `<input type="hidden" name="_wpnonce" value="${respondNonce}">` : '';
+		                            const blockNonceInput = blockNonce ? `<input type="hidden" name="_wpnonce" value="${blockNonce}">` : '';
+		                            const redirectTo = (() => {
+		                                try {
+		                                    const url = new URL(window.location.href);
+		                                    url.searchParams.set('tab', 'connections');
+		                                    url.searchParams.set('connections_view', 'pending');
+		                                    return url.toString();
+		                                } catch (e) {
+		                                    return window.location.href;
+		                                }
+		                            })();
+		                            const redirectInput = `<input type="hidden" name="redirect_to" value="${redirectTo.replace(/\"/g, '&quot;')}">`;
+		                            return `
+		                                <div class="flex flex-wrap items-center gap-2">
+		                                    <form method="post" action="${adminPostUrl}" class="m-0">
+		                                        ${nonceInput}
+		                                        ${redirectInput}
+		                                        <input type="hidden" name="action" value="pl_relationship_respond">
+		                                        <input type="hidden" name="request_id" value="${reqId}">
+		                                        <input type="hidden" name="decision" value="accept">
+		                                        <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] bg-black text-white hover:bg-neutral-800">${acceptLabel}</button>
+		                                    </form>
+		                                    <form method="post" action="${adminPostUrl}" class="m-0">
+		                                        ${nonceInput}
+		                                        ${redirectInput}
+		                                        <input type="hidden" name="action" value="pl_relationship_respond">
+		                                        <input type="hidden" name="request_id" value="${reqId}">
+		                                        <input type="hidden" name="decision" value="reject">
+		                                        <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-neutral-200 text-neutral-700 hover:bg-white">${rejectLabel}</button>
+		                                    </form>
+		                                    <form method="post" action="${adminPostUrl}" class="m-0">
+		                                        ${blockNonceInput}
+		                                        ${redirectInput}
+		                                        <input type="hidden" name="action" value="pl_relationship_block">
+		                                        <input type="hidden" name="blocked_user_id" value="${fromUserId}">
+		                                        <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-red-200 text-red-600 hover:bg-white">${blockLabel}</button>
+		                                    </form>
+		                                </div>
+		                            `;
+		                        }
+
+		                        if (itemState === 'pending' && (itemKind === 'partnership' || itemKind === 'reading_plan_invite')) {
+		                            const direction = String(item.direction || '');
+		                            if (itemKind === 'reading_plan_invite') {
+		                                return `
+		                                    <a href="${linkUrl || '#'}" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] bg-black text-white hover:bg-neutral-800 no-underline">${<?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Ver plan' : 'View plan'); ?>}</a>
+		                                `;
+		                            }
+		                            if (direction !== 'received') {
+		                                return `
+		                                    <span class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-neutral-200 text-neutral-500 bg-neutral-50">${<?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Enviada' : 'Sent'); ?>}</span>
+		                                `;
+		                            }
+		                            const inviteId = Number(item.id) || 0;
+		                            const source = String(item.source || 'partnerships');
+		                            const nonceInput = coursePartnerInviteNonce ? `<input type="hidden" name="_wpnonce" value="${coursePartnerInviteNonce}">` : '';
+		                            const redirectInput = `<input type="hidden" name="redirect_to" value="${window.location.href.replace(/\"/g, '&quot;')}">`;
+		                            return `
+		                                <div class="flex flex-wrap items-center gap-2">
+		                                    <form method="post" action="${adminPostUrl}" class="m-0">
+		                                        ${nonceInput}
+		                                        ${redirectInput}
+		                                        <input type="hidden" name="action" value="pl_course_partner_invite_respond">
+		                                        <input type="hidden" name="invite_id" value="${inviteId}">
+		                                        <input type="hidden" name="source" value="${source}">
+		                                        <input type="hidden" name="decision" value="accept">
+		                                        <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] bg-black text-white hover:bg-neutral-800">${acceptLabel}</button>
+		                                    </form>
+		                                    <form method="post" action="${adminPostUrl}" class="m-0">
+		                                        ${nonceInput}
+		                                        ${redirectInput}
+		                                        <input type="hidden" name="action" value="pl_course_partner_invite_respond">
+		                                        <input type="hidden" name="invite_id" value="${inviteId}">
+		                                        <input type="hidden" name="source" value="${source}">
+		                                        <input type="hidden" name="decision" value="reject">
+		                                        <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-neutral-200 text-neutral-700 hover:bg-white">${rejectLabel}</button>
+		                                    </form>
+		                                </div>
+		                            `;
+		                        }
+
+		                        if (linkUrl) {
+		                            return `<a href="${linkUrl}" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] bg-black text-white hover:bg-neutral-800 no-underline">${openLabel}</a>`;
+		                        }
+
+		                        return '';
+		                    };
+
+		                    const renderCard = (item) => {
+		                        const user = item && item.user ? item.user : {};
+		                        const itemState = String(item && item.status ? item.status : '');
+		                        const title = itemTitle(item);
+		                        const subtitle = itemSubtitle(item);
+		                        const dateMarkup = itemDate(item);
+		                        const roleLabel = String(item && item.role ? item.role : '');
+		                        const stateLabel = String(item && item.state_label ? item.state_label : itemState);
+		                        return `
+		                            <div class="p-4 sm:p-5 border border-neutral-200 rounded-[6px] bg-white">
+		                                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+		                                    <div class="min-w-0 flex items-start gap-3">
+		                                        ${itemAvatar(user)}
+		                                        <div class="min-w-0">
+		                                            <div class="flex flex-wrap items-center gap-2">
+		                                                <h4 class="text-sm sm:text-base font-semibold text-neutral-900 truncate">${title || <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Sin título' : 'Untitled'); ?>}</h4>
+		                                                ${stateBadge(itemState, stateLabel)}
 		                                            </div>
-		                                            <div class="w-full bg-neutral-200 h-2 rounded-full mt-2 overflow-hidden">
-		                                                <div class="bg-black h-full rounded-full" style="width:${Math.max(0, Math.min(100, Number(other.percent || 0)))}%"></div>
-		                                            </div>
+		                                            <p class="mt-1 text-xs sm:text-sm text-neutral-500">${subtitle || ''}${roleLabel ? ` • ${roleLabel}` : ''}</p>
+		                                            <p class="mt-1 text-[11px] uppercase tracking-widest text-neutral-400">${String(user && user.name ? user.name : '')}${dateMarkup ? ` • ${String(item.created_at || item.expires_at || '')}` : ''}</p>
 		                                        </div>
 		                                    </div>
-		                                    <div class="flex items-center gap-3">
-		                                        ${me.avatar_url ? `<img src="${String(me.avatar_url)}" alt="" class="w-9 h-9 rounded-full object-cover border border-neutral-200 bg-white" />` : `<div class="w-9 h-9 rounded-full bg-neutral-200 border border-neutral-200"></div>`}
-		                                        <div class="min-w-0 flex-1">
-		                                            <div class="flex items-center justify-between gap-3">
-		                                                <p class="text-sm font-semibold text-neutral-900 truncate">${String(me.name || 'You')}</p>
-		                                                <div class="flex items-center gap-3 shrink-0">
-		                                                    <span class="text-xs text-neutral-500">${Number(me.percent || 0)}%</span>
-		                                                    <a href="${courseUrl}" class="text-[10px] font-semibold uppercase tracking-widest text-neutral-700 hover:text-black no-underline">${goToCourseLabel}</a>
-		                                                </div>
-		                                            </div>
-		                                            <div class="w-full bg-neutral-200 h-2 rounded-full mt-2 overflow-hidden">
-		                                                <div class="bg-black h-full rounded-full" style="width:${Math.max(0, Math.min(100, Number(me.percent || 0)))}%"></div>
-		                                            </div>
-		                                        </div>
+		                                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+		                                        ${itemActions(item)}
 		                                    </div>
 		                                </div>
 		                            </div>
 		                        `;
+		                    };
 
-		                        sections.push(`
-		                            <div class="space-y-4">
-		                                <div class="p-6 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
-		                                    <h3 class="text-xl font-semibold text-neutral-900">${<?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Partner de Curso' : 'Course Partner'); ?>}</h3>
-		                                    <p class="text-sm text-neutral-500 mt-1">${<?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Aceptado recientemente' : 'Recently accepted'); ?>}</p>
-		                                </div>
-		                                <div class="space-y-3">
-		                                    <div class="pl-course-partner-invite-item is-accepted flex items-center justify-between gap-4 p-4 border border-neutral-200 rounded-[6px] bg-neutral-50" data-course-id="${Number(inv.course_id) || 0}">
-		                                        <div class="min-w-0 flex items-center gap-3">
-		                                            ${other.avatar_url ? `<img src="${String(other.avatar_url)}" alt="" class="w-10 h-10 rounded-full object-cover border border-neutral-200 bg-white" />` : `<div class="w-10 h-10 rounded-full bg-neutral-200 border border-neutral-200"></div>`}
-		                                            <div class="min-w-0">
-		                                                <div class="flex items-center gap-2">
-		                                                    <p class="text-sm font-semibold text-neutral-900 truncate">${courseTitle}</p>
-		                                                    ${acceptedAt}
-		                                                </div>
-		                                                <p class="text-xs text-neutral-500">${partnerKindLabel} • ${String(other.name || '')}</p>
-		                                                ${dropdown}
-		                                            </div>
-		                                        </div>
-		                                        <div class="flex items-center gap-2 shrink-0">
-		                                            <a href="${courseUrl}" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] bg-black text-white hover:bg-neutral-800 no-underline">${goToCourseLabel}</a>
-		                                        </div>
-		                                    </div>
-		                                </div>
-		                            </div>
-		                        `);
-		                    }
-
-		                    if (hasPartnerInvites) {
-		                        let redirectToRequests = window.location.href;
-		                        try {
-		                            const u = new URL(window.location.href);
-		                            u.searchParams.set('tab', 'requests');
-		                            redirectToRequests = u.toString();
-		                        } catch (e) {}
-
-		                        const itemsHtml = coursePartnerInvites.map(inv => {
-		                            const fromName = String(inv.from_name || 'User');
-		                            const avatarUrl = String(inv.from_avatar_url || '');
-		                            const created = inv.created_at ? `<span class="text-xs text-neutral-400">${String(inv.created_at)}</span>` : '';
-		                            const courseTitle = String(inv.course_title || '');
-		                            const inviteId = Number(inv.id) || 0;
-		                            const source = String(inv.source || 'partnerships');
-		                            const nonceInput = coursePartnerInviteNonce ? `<input type="hidden" name="_wpnonce" value="${coursePartnerInviteNonce}">` : '';
-		                            const redirectInput = `<input type="hidden" name="redirect_to" value="${redirectToRequests.replace(/\"/g, '&quot;')}">`;
-
+		                    const renderItemList = (items, emptyMsg) => {
+		                        const list = Array.isArray(items) ? items : [];
+		                        if (list.length === 0) {
 		                            return `
-		                                <div class="pl-course-partner-invite-item flex items-center justify-between gap-4 p-4 border border-neutral-200 rounded-[6px] bg-neutral-50" data-course-id="${Number(inv.course_id) || 0}">
-		                                    <div class="min-w-0 flex items-center gap-3">
-		                                        ${avatarUrl ? `<img src="${avatarUrl}" alt="" class="w-10 h-10 rounded-full object-cover border border-neutral-200 bg-white" />` : `<div class="w-10 h-10 rounded-full bg-neutral-200 border border-neutral-200"></div>`}
-		                                        <div class="min-w-0">
-		                                            <div class="flex items-center gap-2">
-		                                                <p class="text-sm font-semibold text-neutral-900 truncate">${courseTitle}</p>
-		                                                ${created}
-		                                            </div>
-		                                            <p class="text-xs text-neutral-500">${partnerKindLabel} • ${fromName}</p>
-		                                        </div>
-		                                    </div>
-		                                    <div class="flex items-center gap-2 shrink-0">
-		                                        <form method="post" action="${adminPostUrl}" class="m-0">
-		                                            ${nonceInput}
-		                                            ${redirectInput}
-		                                            <input type="hidden" name="action" value="pl_course_partner_invite_respond">
-		                                            <input type="hidden" name="invite_id" value="${inviteId}">
-		                                            <input type="hidden" name="source" value="${source}">
-		                                            <input type="hidden" name="decision" value="accept">
-		                                            <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] bg-black text-white hover:bg-neutral-800">${acceptLabel}</button>
-		                                        </form>
-		                                        <form method="post" action="${adminPostUrl}" class="m-0">
-		                                            ${nonceInput}
-		                                            ${redirectInput}
-		                                            <input type="hidden" name="action" value="pl_course_partner_invite_respond">
-		                                            <input type="hidden" name="invite_id" value="${inviteId}">
-		                                            <input type="hidden" name="source" value="${source}">
-		                                            <input type="hidden" name="decision" value="reject">
-		                                            <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-neutral-200 text-neutral-700 hover:bg-white">${rejectLabel}</button>
-		                                        </form>
-		                                    </div>
+		                                <div class="p-6 border border-dashed border-neutral-200 rounded-[6px] text-sm text-neutral-500 bg-neutral-50">
+		                                    ${emptyMsg}
 		                                </div>
 		                            `;
-		                        }).join('');
+		                        }
+		                        return `<div class="space-y-3">${list.map(renderCard).join('')}</div>`;
+		                    };
 
-		                        sections.push(`
-		                            <div class="space-y-4">
-		                                <div class="p-6 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
-		                                    <h3 class="text-xl font-semibold text-neutral-900">${partnerTitle}</h3>
-		                                    <p class="text-sm text-neutral-500 mt-1">${coursePartnerInvites.length} ${coursePartnerInvites.length === 1 ? 'request' : 'requests'}</p>
+		                    const connectionsViewButtons = connectionViews.map(view => `
+		                        <button type="button" onclick="switchConnectionsView('${view.id}')"
+		                            class="flex-none inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-[11px] uppercase tracking-[0.18em] font-semibold border rounded-[6px] ${currentConnectionsView === view.id ? 'bg-black text-white border-black' : 'bg-white text-neutral-500 border-neutral-200 hover:border-black hover:text-black'}">
+		                            <span>${view.label}</span>
+		                            <span class="inline-flex min-w-6 justify-center rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] leading-none ${currentConnectionsView === view.id ? 'text-white border border-white/20' : 'text-neutral-500 border border-neutral-200'}">${Number(view.count || 0)}</span>
+		                        </button>
+		                    `).join('');
+
+		                    const pendingEmpty = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'No tienes conexiones pendientes.' : 'No pending connections.'); ?>;
+		                    const projectEmpty = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'No tienes proyectos conectados todavía.' : 'You have no connected projects yet.'); ?>;
+		                    const communityEmpty = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'No hay conexiones de comunidad activas.' : 'No active community connections.'); ?>;
+		                    const membershipsEmpty = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'No tienes membresías activas.' : 'No active memberships.'); ?>;
+		                    const historyEmpty = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Todavía no hay historial de conexiones.' : 'There is no connection history yet.'); ?>;
+
+		                    let viewMarkup = '';
+		                    if (currentConnectionsView === 'pending') {
+		                        const received = pendingReceived.filter(item => String(item.status || '') === 'pending');
+		                        const sent = pendingSent.filter(item => String(item.status || '') === 'pending');
+		                        viewMarkup = `
+		                            <div class="space-y-6">
+		                                <div>
+		                                    <h3 class="text-lg font-semibold text-neutral-900 mb-3">${<?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Recibidas' : 'Received'); ?>}</h3>
+		                                    ${renderItemList(received, pendingEmpty)}
 		                                </div>
-		                                <div class="space-y-3">${itemsHtml}</div>
+		                                <div>
+		                                    <h3 class="text-lg font-semibold text-neutral-900 mb-3">${<?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Enviadas' : 'Sent'); ?>}</h3>
+		                                    ${renderItemList(sent, pendingEmpty)}
+		                                </div>
 		                            </div>
-		                        `);
+		                        `;
+		                    } else if (currentConnectionsView === 'projects') {
+		                        viewMarkup = renderItemList(projectItems, projectEmpty);
+		                    } else if (currentConnectionsView === 'community') {
+		                        viewMarkup = renderItemList(communityItems, communityEmpty);
+		                    } else if (currentConnectionsView === 'memberships') {
+		                        viewMarkup = renderItemList(memberships, membershipsEmpty);
+		                    } else {
+		                        viewMarkup = renderItemList(history, historyEmpty);
 		                    }
 
-		                    if (hasFollow) {
-		                        const itemsHtml = followRequests.map(req => {
-		                            const name = String(req.from_name || 'User');
-		                            const avatarUrl = String(req.from_avatar_url || '');
-		                            const created = req.created_at ? `<span class="text-xs text-neutral-400">${String(req.created_at)}</span>` : '';
-		                            const reqId = Number(req.id) || 0;
-		                            const fromUserId = Number(req.from_user_id) || 0;
-		                            const nonceInput = respondNonce ? `<input type="hidden" name="_wpnonce" value="${respondNonce}">` : '';
-		                            const blockNonceInput = blockNonce ? `<input type="hidden" name="_wpnonce" value="${blockNonce}">` : '';
-		                            return `
-		                                <div class="flex items-center justify-between gap-4 p-4 border border-neutral-200 rounded-[6px] bg-neutral-50">
-		                                    <div class="min-w-0 flex items-center gap-3">
-		                                        ${avatarUrl ? `<img src="${avatarUrl}" alt="" class="w-10 h-10 rounded-full object-cover border border-neutral-200 bg-white" />` : `<div class="w-10 h-10 rounded-full bg-neutral-200 border border-neutral-200"></div>`}
-		                                        <div class="min-w-0">
-		                                            <div class="flex items-center gap-2">
-		                                                <p class="text-sm font-semibold text-neutral-900 truncate">${name}</p>
-		                                                ${created}
-		                                            </div>
-		                                            <p class="text-xs text-neutral-500">follow</p>
+		                    wrapper.innerHTML = `
+		                        <div class="space-y-6">
+		                            <div class="p-5 sm:p-6 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
+		                                <div class="flex flex-col gap-5">
+		                                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+		                                        <div class="rounded-[6px] border border-neutral-200 bg-neutral-50 p-4">
+		                                            <p class="text-[10px] uppercase tracking-widest text-neutral-500"><?php echo esc_js((strpos(get_locale(), 'es') !== false) ? 'Pendientes' : 'Pending'); ?></p>
+		                                            <p class="mt-2 text-2xl font-semibold text-neutral-900">${pendingReceivedCount + pendingSentCount}</p>
+		                                        </div>
+		                                        <div class="rounded-[6px] border border-neutral-200 bg-neutral-50 p-4">
+		                                            <p class="text-[10px] uppercase tracking-widest text-neutral-500"><?php echo esc_js((strpos(get_locale(), 'es') !== false) ? 'Activas' : 'Active'); ?></p>
+		                                            <p class="mt-2 text-2xl font-semibold text-neutral-900">${activeProjectsCount}</p>
+		                                        </div>
+		                                        <div class="rounded-[6px] border border-neutral-200 bg-neutral-50 p-4">
+		                                            <p class="text-[10px] uppercase tracking-widest text-neutral-500"><?php echo esc_js((strpos(get_locale(), 'es') !== false) ? 'Comunidad' : 'Community'); ?></p>
+		                                            <p class="mt-2 text-2xl font-semibold text-neutral-900">${communityItems.length}</p>
+		                                        </div>
+		                                        <div class="rounded-[6px] border border-neutral-200 bg-neutral-50 p-4">
+		                                            <p class="text-[10px] uppercase tracking-widest text-neutral-500"><?php echo esc_js((strpos(get_locale(), 'es') !== false) ? 'Membresías' : 'Memberships'); ?></p>
+		                                            <p class="mt-2 text-2xl font-semibold text-neutral-900">${membershipsCount}</p>
+		                                        </div>
+		                                        <div class="rounded-[6px] border border-neutral-200 bg-neutral-50 p-4">
+		                                            <p class="text-[10px] uppercase tracking-widest text-neutral-500"><?php echo esc_js((strpos(get_locale(), 'es') !== false) ? 'Historial' : 'History'); ?></p>
+		                                            <p class="mt-2 text-2xl font-semibold text-neutral-900">${historyCount}</p>
 		                                        </div>
 		                                    </div>
-		                                    <div class="flex items-center gap-2 shrink-0">
-		                                        <form method="post" action="${adminPostUrl}" class="m-0">
-		                                            ${nonceInput}
-		                                            <input type="hidden" name="action" value="pl_relationship_respond">
-		                                            <input type="hidden" name="request_id" value="${reqId}">
-		                                            <input type="hidden" name="decision" value="accept">
-		                                            <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] bg-black text-white hover:bg-neutral-800">${acceptLabel}</button>
-		                                        </form>
-		                                        <form method="post" action="${adminPostUrl}" class="m-0">
-		                                            ${nonceInput}
-		                                            <input type="hidden" name="action" value="pl_relationship_respond">
-		                                            <input type="hidden" name="request_id" value="${reqId}">
-		                                            <input type="hidden" name="decision" value="reject">
-		                                            <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-neutral-200 text-neutral-700 hover:bg-white">${rejectLabel}</button>
-		                                        </form>
-		                                        <form method="post" action="${adminPostUrl}" class="m-0">
-		                                            ${blockNonceInput}
-		                                            <input type="hidden" name="action" value="pl_relationship_block">
-		                                            <input type="hidden" name="blocked_user_id" value="${fromUserId}">
-		                                            <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-red-200 text-red-600 hover:bg-white">${blockLabel}</button>
-		                                        </form>
+
+		                                    <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+		                                        ${connectionsViewButtons}
 		                                    </div>
 		                                </div>
-		                            `;
-		                        }).join('');
-
-		                        sections.push(`
-		                            <div class="space-y-4">
-		                                <div class="p-6 bg-white border border-neutral-200 rounded-[6px] shadow-sm">
-		                                    <h3 class="text-xl font-semibold text-neutral-900">${title}</h3>
-		                                    <p class="text-sm text-neutral-500 mt-1">${followRequests.length} ${followRequests.length === 1 ? 'request' : 'requests'}</p>
-		                                </div>
-		                                <div class="space-y-3">${itemsHtml}</div>
 		                            </div>
-		                        `);
-		                    }
 
-		                    wrapper.innerHTML = `<div class="space-y-8">${sections.join('')}</div>`;
+		                            <div class="space-y-4">
+		                                <div class="flex items-center justify-between gap-3">
+		                                    <div>
+		                                        <h3 class="text-xl font-semibold text-neutral-900">${title}</h3>
+		                                        <p class="text-sm text-neutral-500 mt-1">
+		                                            ${currentConnectionsView === 'pending' ? <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Revisa lo que está esperando tu respuesta.' : 'Review what is waiting for your response.'); ?> : <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Explora el estado de tus conexiones.' : 'Explore the status of your connections.'); ?>}
+		                                        </p>
+		                                    </div>
+		                                </div>
+		                                ${viewMarkup}
+		                            </div>
+		                        </div>
+		                    `;
 
-		                    // Toggle dropdown for accepted partner card(s).
-		                    try {
-		                        wrapper.querySelectorAll('.pl-course-partner-invite-item.is-accepted').forEach((item) => {
-		                            item.addEventListener('click', (evt) => {
-		                                const target = evt.target;
-		                                if (target && target.closest && target.closest('a,button,form')) return;
-		                                const dd = item.querySelector('.pl-course-partner-invite-dropdown');
-		                                if (!dd) return;
-		                                dd.classList.toggle('hidden');
-		                            });
-		                        });
-		                    } catch (e) {}
 		                    break;
 		                }
 	                case 'friends':

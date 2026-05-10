@@ -118,12 +118,126 @@ function prs_diagnose_canonical_identity_collisions() {
 	return Politeia_Reading_Book_Repository::diagnose_canonical_identity_collisions();
 }
 
+function prs_library_cache_version_meta_key() {
+	return '_prs_library_cache_version';
+}
+
+function prs_get_library_cache_version( $user_id ) {
+	$user_id = (int) $user_id;
+	if ( $user_id <= 0 ) {
+		return 1;
+	}
+
+	$version = (int) get_user_meta( $user_id, prs_library_cache_version_meta_key(), true );
+	return $version > 0 ? $version : 1;
+}
+
+function prs_bump_library_cache_version( $user_id ) {
+	$user_id = (int) $user_id;
+	if ( $user_id <= 0 ) {
+		return 0;
+	}
+
+	$version = prs_get_library_cache_version( $user_id ) + 1;
+	update_user_meta( $user_id, prs_library_cache_version_meta_key(), $version );
+	return $version;
+}
+
+function prs_invalidate_library_cache_for_user( $user_id ) {
+	return prs_bump_library_cache_version( $user_id );
+}
+
+function prs_invalidate_library_cache_for_book( $book_id ) {
+	global $wpdb;
+
+	$book_id = (int) $book_id;
+	if ( $book_id <= 0 ) {
+		return 0;
+	}
+
+	$table = $wpdb->prefix . 'politeia_user_books';
+	$user_ids = $wpdb->get_col(
+		$wpdb->prepare(
+			"SELECT DISTINCT user_id FROM {$table} WHERE book_id = %d AND deleted_at IS NULL",
+			$book_id
+		)
+	);
+
+	$count = 0;
+	foreach ( (array) $user_ids as $user_id ) {
+		if ( prs_bump_library_cache_version( (int) $user_id ) ) {
+			$count++;
+		}
+	}
+
+	return $count;
+}
+
+function prs_get_library_cache_key( $user_id, $page = 1, $per_page = 15, $force_recent = false ) {
+	$user_id = (int) $user_id;
+	$page    = max( 1, (int) $page );
+	$per_page = max( 1, (int) $per_page );
+	$variant = $force_recent ? 'recent' : 'title';
+	$locale  = function_exists( 'determine_locale' ) ? determine_locale() : get_locale();
+
+	return implode(
+		':',
+		array(
+			'prs_library_ctx',
+			'user' . $user_id,
+			'v' . prs_get_library_cache_version( $user_id ),
+			'p' . $page,
+			'pp' . $per_page,
+			$variant,
+			'l' . sanitize_key( (string) $locale ),
+		)
+	);
+}
+
+function prs_normalize_library_search_query( $search ) {
+	$search = sanitize_text_field( (string) $search );
+	$search = trim( $search );
+
+	if ( '' === $search ) {
+		return '';
+	}
+
+	return function_exists( 'mb_strtolower' ) ? mb_strtolower( $search, 'UTF-8' ) : strtolower( $search );
+}
+
+function prs_get_library_results_cache_key( $user_id, $page = 1, $per_page = 15, $search = '', $order = 'title_asc' ) {
+	$user_id = (int) $user_id;
+	$page    = max( 1, (int) $page );
+	$per_page = max( 1, (int) $per_page );
+	$search_hash = md5( prs_normalize_library_search_query( $search ) );
+	$order_key = sanitize_key( (string) $order );
+	$locale = function_exists( 'determine_locale' ) ? determine_locale() : get_locale();
+
+	return implode(
+		':',
+		array(
+			'prs_library_results',
+			'user' . $user_id,
+			'v' . prs_get_library_cache_version( $user_id),
+			'p' . $page,
+			'pp' . $per_page,
+			'o' . $order_key,
+			'q' . $search_hash,
+			'l' . sanitize_key( (string) $locale ),
+		)
+	);
+}
+
 function prs_ensure_user_book( $user_id, $book_id ) {
 	return Politeia_Reading_Book_Repository::ensure_user_book( $user_id, $book_id );
 }
 
 function prs_get_user_books_for_library( $user_id, $args = array() ) {
 	return Politeia_Reading_Book_Repository::get_user_books_for_library( $user_id, $args );
+}
+
+function prs_get_user_books_for_library_count( $user_id, $args = array() ) {
+	return Politeia_Reading_Book_Repository::get_user_books_for_library_count( $user_id, $args );
 }
 
 function prs_sync_book_author_links( $book_id, $authors, $source = 'candidate' ) {

@@ -27,6 +27,27 @@ if ($current_user_id > 0 && class_exists('Politeia_PPS_Subscription_Engine') && 
     }
 }
 
+// Subscription "content access" (MVP): which Profile tabs are visible for subscribers.
+$membership_tabs = ['main', 'courses', 'writings', 'specializations', 'thoughts', 'plans', 'book'];
+$membership_tabs_selected = $membership_tabs;
+$membership_tabs_labels = [
+    'main' => __('Inicio', 'politeia-learning'),
+    'courses' => __('Mis Cursos', 'politeia-learning'),
+    'writings' => __('Escritos', 'politeia-learning'),
+    'specializations' => __('Especializaciones', 'politeia-learning'),
+    'thoughts' => __('Feed de Pensamientos', 'politeia-learning'),
+    'plans' => __('Planes', 'politeia-learning'),
+    'book' => __('Libros', 'politeia-learning'),
+];
+if ($current_user_id > 0 && class_exists('PL_Relationships') && method_exists('PL_Relationships', 'get_owner_policy')) {
+    $policy = PL_Relationships::get_owner_policy((int) $current_user_id, PL_Relationships::TYPE_SUBSCRIBE);
+    $tabs = isset($policy['profile_tabs']) && is_array($policy['profile_tabs']) ? $policy['profile_tabs'] : [];
+    $tabs = array_values(array_unique(array_filter(array_map('sanitize_key', $tabs))));
+    if ($tabs !== []) {
+        $membership_tabs_selected = $tabs;
+    }
+}
+
 // Fallback (legacy): user meta used when PPS module is missing.
 if ($membership_amount_minor <= 0) {
     $membership_amount_minor = (int) get_user_meta($current_user_id, 'politeia_membership_monthly_amount', true);
@@ -94,6 +115,26 @@ if ($membership_amount_minor <= 0) {
                     <p style="margin-top:10px; color:#a3a3a3; font-size:11px; text-transform: uppercase; letter-spacing: 0.05em;">
                         <?php _e('Este monto será cobrado mensualmente a tus suscriptores.', 'politeia-learning'); ?>
                     </p>
+                </div>
+
+                <div class="pcg-form-group" style="margin-top: 28px;">
+                    <label><?php _e('CONTENIDO INCLUIDO EN LA MEMBRESÍA', 'politeia-learning'); ?></label>
+                    <p style="margin-top:10px; color:#a3a3a3; font-size:11px; text-transform: uppercase; letter-spacing: 0.05em;">
+                        <?php _e('Define qué secciones del perfil (/profile/{username}) se desbloquean para tus suscriptores.', 'politeia-learning'); ?>
+                    </p>
+
+                    <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr; gap: 10px;">
+                        <?php foreach ($membership_tabs as $tab_id): ?>
+                            <?php
+                            $tab_id = sanitize_key((string) $tab_id);
+                            $label = isset($membership_tabs_labels[$tab_id]) ? (string) $membership_tabs_labels[$tab_id] : $tab_id;
+                            ?>
+                            <label style="display:flex; align-items:center; gap:10px; padding:10px 12px; border: 1px solid #f0f0f0; border-radius: 10px; background: #fff;">
+                                <input type="checkbox" name="pl_policy_subscribe_tabs[]" value="<?php echo esc_attr($tab_id); ?>" <?php checked(in_array($tab_id, $membership_tabs_selected, true)); ?> />
+                                <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.02em;"><?php echo esc_html($label); ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
 
                 <div class="pt-8 mt-8" style="border-top: 1px solid #f0f0f0;">

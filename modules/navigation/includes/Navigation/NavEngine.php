@@ -84,7 +84,14 @@ class NavEngine
             'classes' => ['menu-item', 'pl-menu-item-my-books'],
         ];
 
-        // 3. User Specific items
+        // 3. Blog
+        $items[] = [
+            'label' => __('BLOG', 'politeia-learning'),
+            'url' => home_url('/blog/'),
+            'classes' => ['menu-item', 'pl-menu-item-blog'],
+        ];
+
+        // 4. User Specific items
         if (is_user_logged_in()) {
             $center_url = self::get_center_url();
             if ($center_url !== '') {

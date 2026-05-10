@@ -252,7 +252,7 @@ wp_localize_script(
 			'remove_book_confirm'   => __( 'Are you sure you want to remove this book from your library?', 'politeia-reading' ),
 			'remove_book_removing'  => __( 'Removing...', 'politeia-reading' ),
 			'remove_book_error'     => __( 'Error removing book.', 'politeia-reading' ),
-			'images_from_google'    => __( 'Images from Google Books', 'politeia-reading' ),
+				'images_from_google'    => __( 'Images from external sources', 'politeia-reading' ),
 			'no_covers_found'       => __( 'No covers found.', 'politeia-reading' ),
 			'cover_save_failed'     => __( 'Unable to save cover.', 'politeia-reading' ),
 			'error_owning_status'   => __( 'Error updating owning status.', 'politeia-reading' ),
@@ -678,20 +678,7 @@ wp_add_inline_script(
                                 <?php echo do_shortcode( '[prs_cover_button]' ); ?>
                         </div>
                 <?php endif; ?>
-                        <figcaption
-                                id="prs-cover-attribution-wrap"
-                                class="prs-book-cover__caption <?php echo $cover_source ? '' : 'is-hidden'; ?>"
-                                aria-hidden="<?php echo $cover_source ? 'false' : 'true'; ?>">
-                                <a
-                                        id="prs-cover-attribution"
-                                        class="prs-book-cover__link <?php echo $cover_source ? '' : 'is-hidden'; ?>"
-                                        <?php echo $cover_source ? 'href="' . esc_url( $cover_source ) . '"' : ''; ?>
-                                        target="_blank"
-                                        rel="noopener noreferrer">
-                                        <?php esc_html_e( 'View on Google Books', 'politeia-reading' ); ?>
-                                </a>
-                        </figcaption>
-                </figure>
+	                </figure>
                 <?php if ( $has_image ) : ?>
                 <div class="prs-cover-overlay">
                         <?php echo do_shortcode( '[prs_cover_button show_search="true"]' ); ?>

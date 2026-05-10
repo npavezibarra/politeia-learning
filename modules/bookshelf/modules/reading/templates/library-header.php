@@ -11,13 +11,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 <div class="prs-library__header">
 	<div class="prs-library__header-inner">
 		<div class="prs-library__header-center">
-			<input
-				type="text"
-				id="my-library-search"
-				class="prs-library__search"
-				placeholder="<?php esc_attr_e( 'Search by Title or Author…', 'politeia-reading' ); ?>"
-				onkeyup="filterLibrary()"
-			/>
+				<input
+					type="text"
+					id="my-library-search"
+					class="prs-library__search"
+					placeholder="<?php esc_attr_e( 'Search by Title or Author…', 'politeia-reading' ); ?>"
+				/>
 			<span
 				id="prs-book-count"
 				class="prs-book-count"

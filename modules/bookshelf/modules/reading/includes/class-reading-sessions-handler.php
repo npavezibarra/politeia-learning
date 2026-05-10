@@ -127,6 +127,10 @@ class Politeia_Reading_Sessions_Handler {
 			$now_gmt
 		);
 
+		if ( function_exists( 'prs_invalidate_library_cache_for_user' ) ) {
+			prs_invalidate_library_cache_for_user( $user_id );
+		}
+
 		Politeia_Reading_Sessions_Utils::json_success(
 			array(
 				'session_id' => $session_id,
@@ -410,6 +414,10 @@ class Politeia_Reading_Sessions_Handler {
 		}
 
 		self::mark_planned_session_accomplished( $user_id, $book_id, $start_gmt );
+
+		if ( function_exists( 'prs_invalidate_library_cache_for_user' ) ) {
+			prs_invalidate_library_cache_for_user( $user_id );
+		}
 
 		return array(
 			'session_id' => (int) $session_id,

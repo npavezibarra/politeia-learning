@@ -44,6 +44,12 @@ class Politeia_Reading_Sessions_Utils {
 	public static function update_user_book_fields( $user_book_id, $data ) {
 		global $wpdb;
 		$t = $wpdb->prefix . 'politeia_user_books';
+		$user_id = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT user_id FROM {$t} WHERE id = %d LIMIT 1",
+				(int) $user_book_id
+			)
+		);
 
 		// Si las columnas extra no existen, no las mandamos
 		if ( isset( $data['finish_mode'] ) || isset( $data['finished_at'] ) ) {
@@ -54,6 +60,9 @@ class Politeia_Reading_Sessions_Utils {
 		$data['updated_at'] = current_time( 'mysql' );
 
 		$wpdb->update( $t, $data, array( 'id' => (int) $user_book_id ) );
+		if ( $user_id > 0 && function_exists( 'prs_invalidate_library_cache_for_user' ) ) {
+			prs_invalidate_library_cache_for_user( $user_id );
+		}
 	}
 
 	public static function table_has_columns( $basename, $cols ) {

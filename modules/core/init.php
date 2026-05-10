@@ -29,4 +29,7 @@ add_action('plugins_loaded', function () {
     if (class_exists('PL_Core_Admin')) {
         new PL_Core_Admin();
     }
+    if (class_exists('PL_Core_UI_Inventory')) {
+        new PL_Core_UI_Inventory();
+    }
 }, 10);

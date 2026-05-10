@@ -9,6 +9,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Politeia_Reading_Sessions_Stats {
 
 	public static function coverage_stats( $user_id, $book_id, $total_pages ) {
+		return self::coverage_stats_from_intervals( self::fetch_intervals( $user_id, $book_id ), $total_pages );
+	}
+
+	public static function coverage_stats_from_intervals( array $intervals, $total_pages ) {
 		$total_pages = (int) $total_pages;
 		if ( $total_pages <= 0 ) {
 			return array(
@@ -17,7 +21,6 @@ class Politeia_Reading_Sessions_Stats {
 				'full'    => false,
 			);
 		}
-		$intervals = self::fetch_intervals( $user_id, $book_id );
 
 		// normalizar y clamp
 		$norm = array();
@@ -49,7 +52,7 @@ class Politeia_Reading_Sessions_Stats {
 		for ( $i = 1; $i < count( $norm ); $i++ ) {
 			$iv = $norm[ $i ];
 			if ( $iv[0] <= $cur[1] + 1 ) {
-				// solapa o adyacente → unir
+				// solapa o adyacente -> unir
 				$cur[1] = max( $cur[1], $iv[1] );
 			} else {
 				$merged[] = $cur;
@@ -133,6 +136,29 @@ class Politeia_Reading_Sessions_Stats {
 
 		$percent = ( $covered / $total ) * 100;
 		$percent = round( $percent );
+
+		if ( $percent < 0 ) {
+			return 0;
+		}
+
+		if ( $percent > 100 ) {
+			return 100;
+		}
+
+		return (int) $percent;
+	}
+
+	public static function calculate_progress_percent_from_intervals( array $intervals, $total_pages ) {
+		$coverage = self::coverage_stats_from_intervals( $intervals, $total_pages );
+
+		$covered = isset( $coverage['covered'] ) ? (int) $coverage['covered'] : 0;
+		$total   = isset( $coverage['total'] ) ? (int) $coverage['total'] : (int) $total_pages;
+
+		if ( $total <= 0 ) {
+			return 0;
+		}
+
+		$percent = round( ( $covered / $total ) * 100 );
 
 		if ( $percent < 0 ) {
 			return 0;

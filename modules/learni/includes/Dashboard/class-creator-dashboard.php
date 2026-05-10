@@ -78,6 +78,20 @@ class PL_CC_Creator_Dashboard
             $this->redirect_membership_settings($error);
         }
 
+        // Save "what content is unlocked" for subscribers (MVP): profile tabs policy.
+        if (class_exists('PL_Relationships')) {
+            $raw_tabs = $_POST['pl_policy_subscribe_tabs'] ?? [];
+            if (!is_array($raw_tabs)) {
+                $raw_tabs = [];
+            }
+            $tabs = array_values(array_unique(array_filter(array_map('sanitize_key', $raw_tabs))));
+            // Always include main tab for sanity.
+            if (!in_array('main', $tabs, true)) {
+                array_unshift($tabs, 'main');
+            }
+            update_user_meta($creator_user_id, PL_Relationships::META_POLICY_SUBSCRIBE, ['profile_tabs' => $tabs]);
+        }
+
         $this->redirect_membership_settings('');
     }
 

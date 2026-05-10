@@ -311,6 +311,10 @@ class Politeia_Reading_Sessions_Recorder {
 
 		self::deregister_active_session( $session_id );
 
+		if ( function_exists( 'prs_invalidate_library_cache_for_user' ) && $owner_id > 0 ) {
+			prs_invalidate_library_cache_for_user( $owner_id );
+		}
+
 		error_log( sprintf( '[PRS_SR] auto_stop session_id=%d user_id=%d trigger=%s', $session_id, $owner_id, $trigger ) );
 		do_action(
 			'politeia_reading_session_auto_stopped',

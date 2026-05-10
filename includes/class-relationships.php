@@ -496,9 +496,10 @@ class PL_Relationships
         $owner_user_id = (int) get_current_user_id();
         $request_id = isset($_POST['request_id']) ? absint($_POST['request_id']) : 0;
         $decision = isset($_POST['decision']) ? sanitize_key((string) $_POST['decision']) : '';
+        $redirect_to = isset($_POST['redirect_to']) ? esc_url_raw((string) wp_unslash($_POST['redirect_to'])) : '';
 
         $ok = self::respond_to_request($owner_user_id, $request_id, $decision);
-        self::redirect_back(['pl_rel' => $ok ? 'updated' : 'error']);
+        self::redirect_back(['pl_rel' => $ok ? 'updated' : 'error'], $redirect_to !== '' ? $redirect_to : null);
     }
 
     public static function handle_block(): void
@@ -510,8 +511,9 @@ class PL_Relationships
 
         $owner_user_id = (int) get_current_user_id();
         $blocked_user_id = isset($_POST['blocked_user_id']) ? absint($_POST['blocked_user_id']) : 0;
+        $redirect_to = isset($_POST['redirect_to']) ? esc_url_raw((string) wp_unslash($_POST['redirect_to'])) : '';
         $ok = self::set_block($owner_user_id, $blocked_user_id, true);
-        self::redirect_back(['pl_rel' => $ok ? 'blocked' : 'error']);
+        self::redirect_back(['pl_rel' => $ok ? 'blocked' : 'error'], $redirect_to !== '' ? $redirect_to : null);
     }
 
     public static function handle_unblock(): void
@@ -523,17 +525,21 @@ class PL_Relationships
 
         $owner_user_id = (int) get_current_user_id();
         $blocked_user_id = isset($_POST['blocked_user_id']) ? absint($_POST['blocked_user_id']) : 0;
+        $redirect_to = isset($_POST['redirect_to']) ? esc_url_raw((string) wp_unslash($_POST['redirect_to'])) : '';
         $ok = self::set_block($owner_user_id, $blocked_user_id, false);
-        self::redirect_back(['pl_rel' => $ok ? 'unblocked' : 'error']);
+        self::redirect_back(['pl_rel' => $ok ? 'unblocked' : 'error'], $redirect_to !== '' ? $redirect_to : null);
     }
 
     /**
      * @param array<string,string> $args
      */
-    private static function redirect_back(array $args = []): void
+    private static function redirect_back(array $args = [], ?string $fallback_url = null): void
     {
         $ref = wp_get_referer();
-        $url = is_string($ref) && $ref !== '' ? $ref : home_url('/');
+        $url = is_string($ref) && $ref !== '' ? $ref : ($fallback_url !== null && $fallback_url !== '' ? $fallback_url : home_url('/'));
+        if ($fallback_url !== null && $fallback_url !== '') {
+            $url = $fallback_url;
+        }
         foreach ($args as $k => $v) {
             $url = add_query_arg($k, $v, $url);
         }
@@ -541,4 +547,3 @@ class PL_Relationships
         exit;
     }
 }
-

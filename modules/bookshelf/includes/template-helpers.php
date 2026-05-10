@@ -31,7 +31,9 @@ function prs_template_open(): void
     $theme_header_html = '';
     if (function_exists('do_blocks')) {
         $theme_header_html = (string) do_blocks('<!-- wp:template-part {"slug":"header","area":"header"} /-->');
-        $prs_theme_footer_html = (string) do_blocks('<!-- wp:template-part {"slug":"footer","area":"footer"} /-->');
+        if (!get_query_var('prs_my_plans_ver_2')) {
+            $prs_theme_footer_html = (string) do_blocks('<!-- wp:template-part {"slug":"footer","area":"footer"} /-->');
+        }
     }
 
     ?><!doctype html>
@@ -64,7 +66,12 @@ function prs_template_close(): void
 
     $is_block_theme = function_exists('wp_is_block_theme') && wp_is_block_theme();
     if (!$is_block_theme) {
-        get_footer();
+        if (!get_query_var('prs_my_plans_ver_2')) {
+            get_footer();
+        } else {
+            wp_footer();
+            echo '</body></html>';
+        }
         return;
     }
 
@@ -79,4 +86,3 @@ function prs_template_close(): void
     </html>
     <?php
 }
-

@@ -73,6 +73,15 @@ class PL_Core_Admin
             'pcg-modules-options',
             [$this, 'render_modules_options']
         );
+
+        add_submenu_page(
+            'politeia-learning',
+            __('UI Inventory', 'politeia-learning'),
+            __('UI Inventory', 'politeia-learning'),
+            'manage_options',
+            'pl-ui-inventory',
+            [$this, 'render_ui_inventory']
+        );
     }
 
     /**
@@ -80,7 +89,12 @@ class PL_Core_Admin
      */
     public function enqueue_assets($hook)
     {
-        if ('toplevel_page_politeia-learning' !== $hook && 'politeia-learning_page_pcg-style-options' !== $hook) {
+        $allowed = [
+            'toplevel_page_politeia-learning',
+            'politeia-learning_page_pcg-style-options',
+            'politeia-learning_page_pl-ui-inventory',
+        ];
+        if (!in_array((string) $hook, $allowed, true)) {
             return;
         }
 
@@ -192,6 +206,36 @@ class PL_Core_Admin
         $current_settings = get_option('pcg_modules_visibility', $default_settings);
 
         include PL_CORE_PATH . 'templates/modules-options.php';
+    }
+
+    public function render_ui_inventory()
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Unauthorized', 'politeia-learning'));
+        }
+
+        $created_id = 0;
+        $error = '';
+
+        if (isset($_POST['pl_ui_inventory_create']) && check_admin_referer(PL_Core_UI_Inventory::NONCE_ACTION_CREATE_PAGE)) {
+            if (class_exists('PL_Core_UI_Inventory')) {
+                $created_id = PL_Core_UI_Inventory::create_page_if_missing();
+                if ($created_id <= 0) {
+                    $error = __('Could not create page.', 'politeia-learning');
+                }
+            } else {
+                $error = __('UI Inventory is unavailable.', 'politeia-learning');
+            }
+        }
+
+        if (isset($_POST['pl_ui_inventory_rescan']) && check_admin_referer(PL_Core_UI_Inventory::NONCE_ACTION_RESCAN)) {
+            delete_transient('pl_ui_inventory_scan_v1');
+        }
+
+        $page_id = class_exists('PL_Core_UI_Inventory') ? PL_Core_UI_Inventory::get_page_id() : 0;
+        $page_link = ($page_id > 0) ? get_permalink($page_id) : '';
+
+        include PL_CORE_PATH . 'templates/ui-inventory.php';
     }
 
     /**

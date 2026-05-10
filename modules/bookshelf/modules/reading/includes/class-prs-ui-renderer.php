@@ -126,7 +126,8 @@ class Politeia_Reading_UI_Renderer {
 		$pages           = $book->pages ? (int) $book->pages : null;
 		$book_total_page = isset( $book->book_total_pages ) ? (int) $book->book_total_pages : 0;
 		$effective_pages = $book_total_page > 0 ? $book_total_page : ( $pages ?? 0 );
-		$progress        = 0;
+		$progress        = null;
+		$progress_base   = null;
 
 		$owning_status   = isset( $book->owning_status ) ? (string) $book->owning_status : '';
 		$row_owning_attr = $owning_status ? $owning_status : 'in_shelf';
@@ -134,10 +135,22 @@ class Politeia_Reading_UI_Renderer {
 		$author_value    = $authors_value;
 		$title_value     = isset( $book->title ) ? (string) $book->title : '';
 
-		if ( class_exists( 'Politeia_Reading_Sessions_Stats' ) && $effective_pages > 0 ) {
-			$progress = Politeia_Reading_Sessions_Stats::calculate_progress_percent( $user_id, (int) $book->book_id, $effective_pages );
+		if ( isset( $book->progress_percent ) ) {
+			$progress = (int) $book->progress_percent;
 		}
-		$progress_base = $progress;
+		if ( isset( $book->progress_base_percent ) ) {
+			$progress_base = (int) $book->progress_base_percent;
+		}
+
+		if ( null === $progress ) {
+			$progress = 0;
+			if ( class_exists( 'Politeia_Reading_Sessions_Stats' ) && $effective_pages > 0 ) {
+				$progress = Politeia_Reading_Sessions_Stats::calculate_progress_percent( $user_id, (int) $book->book_id, $effective_pages );
+			}
+		}
+		if ( null === $progress_base ) {
+			$progress_base = $progress;
+		}
 		if ( 'finished' === $reading_status ) {
 			$progress = 100;
 		}
@@ -275,39 +288,30 @@ class Politeia_Reading_UI_Renderer {
 		>
 			<td class="prs-library__info">
 			<div class="prs-library__cover">
-			<?php
-			if ( $has_user_cover ) {
-				if ( $user_cover_url ) {
-					echo '<img class="prs-library__cover-image" src="' . esc_url( $user_cover_url ) . '" alt="' . esc_attr( $book->title ) . '" />';
-					if ( $user_cover_source ) {
-						echo '<div class="prs-library__cover-attribution"><a href="' . esc_url( $user_cover_source ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'View on Google Books', 'politeia-reading' ) . '</a></div>';
+				<?php
+				if ( $has_user_cover ) {
+					if ( $user_cover_url ) {
+						echo '<img class="prs-library__cover-image" src="' . esc_url( $user_cover_url ) . '" alt="' . esc_attr( $book->title ) . '" />';
+					} else {
+						echo wp_get_attachment_image(
+							$user_cover_id,
+							'medium',
+							false,
+							array(
+								'class' => 'prs-library__cover-image',
+								'alt'   => esc_attr( $book->title ),
+							)
+						);
 					}
-				} else {
-					echo wp_get_attachment_image(
-						$user_cover_id,
-						'medium',
-						false,
-						array(
-							'class' => 'prs-library__cover-image',
-							'alt'   => esc_attr( $book->title ),
-						)
-					);
-					if ( $user_cover_source ) {
-						echo '<div class="prs-library__cover-attribution"><a href="' . esc_url( $user_cover_source ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'View on Google Books', 'politeia-reading' ) . '</a></div>';
-					}
-				}
-			} elseif ( $book_cover_id ) {
-				if ( $book_cover_url ) {
-					echo '<img class="prs-library__cover-image" src="' . esc_url( $book_cover_url ) . '" alt="' . esc_attr( $book->title ) . '" />';
-					if ( $book_cover_source ) {
-						echo '<div class="prs-library__cover-attribution"><a href="' . esc_url( $book_cover_source ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'View on Google Books', 'politeia-reading' ) . '</a></div>';
+				} elseif ( $book_cover_id ) {
+					if ( $book_cover_url ) {
+						echo '<img class="prs-library__cover-image" src="' . esc_url( $book_cover_url ) . '" alt="' . esc_attr( $book->title ) . '" />';
+					} else {
+						echo '<div class="prs-library__cover-placeholder" aria-hidden="true"></div>';
 					}
 				} else {
 					echo '<div class="prs-library__cover-placeholder" aria-hidden="true"></div>';
 				}
-			} else {
-				echo '<div class="prs-library__cover-placeholder" aria-hidden="true"></div>';
-			}
 			?>
 			</div>
 			<div class="prs-library__details">

@@ -191,16 +191,12 @@ class Politeia_Reading_Book_Single_Controller {
 		$user_source = '';
 		$user_id     = 0;
 
-		// Parse legacy JSON cover_reference if present
+		// Parse cover_reference values saved by older flows (URL, attachment ID, JSON).
 		if ( ! empty( $ub->cover_reference ) ) {
-			$decoded = json_decode( $ub->cover_reference, true );
-			if ( is_array( $decoded ) ) {
-				$user_url    = ! empty( $decoded['url'] ) ? $decoded['url'] : '';
-				$user_source = ! empty( $decoded['source'] ) ? $decoded['source'] : '';
-				$user_id     = ! empty( $decoded['attachment_id'] ) ? (int) $decoded['attachment_id'] : 0;
-			} else {
-				$user_source = $ub->cover_reference;
-			}
+			$parsed_reference = self::parse_cover_reference( $ub->cover_reference );
+			$user_url         = ! empty( $parsed_reference['url'] ) ? $parsed_reference['url'] : '';
+			$user_source      = ! empty( $parsed_reference['source'] ) ? $parsed_reference['source'] : '';
+			$user_id          = ! empty( $parsed_reference['attachment_id'] ) ? (int) $parsed_reference['attachment_id'] : 0;
 		}
 
 		// Fallback to explicit columns
@@ -255,6 +251,64 @@ class Politeia_Reading_Book_Single_Controller {
 			'scheme'     => $scheme,
 			'force_http' => $force_http,
 		);
+	}
+
+	/**
+	 * Normalize the different cover_reference formats used across add/upload flows.
+	 */
+	private static function parse_cover_reference( $raw ) {
+		if ( method_exists( 'PRS_Cover_Upload_Feature', 'parse_cover_value' ) ) {
+			return PRS_Cover_Upload_Feature::parse_cover_value( $raw );
+		}
+
+		$result = array(
+			'attachment_id' => 0,
+			'url'           => '',
+			'source'        => '',
+		);
+
+		if ( is_array( $raw ) ) {
+			$result['attachment_id'] = ! empty( $raw['attachment_id'] ) ? (int) $raw['attachment_id'] : 0;
+			$result['url']           = ! empty( $raw['url'] ) ? esc_url_raw( (string) $raw['url'] ) : '';
+			$result['source']        = ! empty( $raw['source'] ) ? sanitize_text_field( (string) $raw['source'] ) : '';
+			if ( ! $result['url'] && ! empty( $raw['external_cover'] ) ) {
+				$result['url'] = esc_url_raw( (string) $raw['external_cover'] );
+			}
+			return $result;
+		}
+
+		if ( ! is_string( $raw ) && ! is_numeric( $raw ) ) {
+			return $result;
+		}
+
+		$trimmed = trim( (string) $raw );
+		if ( '' === $trimmed ) {
+			return $result;
+		}
+
+		$maybe_unserialized = maybe_unserialize( $trimmed );
+		if ( is_array( $maybe_unserialized ) ) {
+			return self::parse_cover_reference( $maybe_unserialized );
+		}
+
+		$decoded = json_decode( $trimmed, true );
+		if ( JSON_ERROR_NONE === json_last_error() && is_array( $decoded ) ) {
+			return self::parse_cover_reference( $decoded );
+		}
+
+		if ( preg_match( '/^\d+$/', $trimmed ) ) {
+			$result['attachment_id'] = (int) $trimmed;
+			return $result;
+		}
+
+		if ( filter_var( $trimmed, FILTER_VALIDATE_URL ) ) {
+			$result['url']    = esc_url_raw( $trimmed );
+			$result['source'] = sanitize_text_field( $trimmed );
+			return $result;
+		}
+
+		$result['source'] = sanitize_text_field( $trimmed );
+		return $result;
 	}
 
 	/**
@@ -352,7 +406,7 @@ class Politeia_Reading_Book_Single_Controller {
 			'remove_book_confirm'       => __( 'Are you sure you want to remove this book from your library?', 'politeia-reading' ),
 			'remove_book_removing'      => __( 'Removing...', 'politeia-reading' ),
 			'remove_book_error'         => __( 'Error removing book.', 'politeia-reading' ),
-			'images_from_google'        => __( 'Images from Google Books', 'politeia-reading' ),
+			'images_from_google'        => __( 'Images from external sources', 'politeia-reading' ),
 			'no_covers_found'           => __( 'No covers found.', 'politeia-reading' ),
 			'cover_save_failed'         => __( 'Unable to save cover.', 'politeia-reading' ),
 			'error_owning_status'       => __( 'Error updating owning status.', 'politeia-reading' ),

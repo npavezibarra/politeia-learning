@@ -40,7 +40,7 @@ class Installer
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
-            KEY idx_title (title),
+            KEY idx_title_id (title, id),
             UNIQUE KEY uniq_slug (slug)
         ) %s;',
                                 $books_table,
@@ -87,8 +87,7 @@ class Installer
             deleted_at DATETIME NULL DEFAULT NULL,
             PRIMARY KEY  (id),
             UNIQUE KEY uniq_user_book (user_id, book_id),
-            KEY idx_user (user_id),
-            KEY idx_book (book_id)
+            KEY idx_user_deleted_book (user_id, deleted_at, book_id)
         ) %s;',
                                 $user_books_table,
                                 $charset_collate
@@ -108,7 +107,7 @@ class Installer
             deleted_at DATETIME NULL DEFAULT NULL,
             PRIMARY KEY  (id),
             KEY idx_user_book_time (user_id, user_book_id, start_time),
-            KEY user_book_id (user_book_id)
+            KEY idx_user_book_deleted_end (user_book_id, deleted_at, end_time)
         ) %s;',
                                 $sessions_table,
                                 $charset_collate

@@ -26,5 +26,8 @@ add_action('plugins_loaded', function () {
     if (class_exists('PL_BP_Blog_Post_Template')) {
         new PL_BP_Blog_Post_Template();
     }
-}, 20);
 
+    if (class_exists('PL_BP_Blog_Archive_Template')) {
+        new PL_BP_Blog_Archive_Template();
+    }
+}, 20);
