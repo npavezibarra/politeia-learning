@@ -6,6 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Politeia_PPS_Settings {
 	const OPTION_KEY = 'politeia_pps_settings';
 	const TEST_RESULT_TRANSIENT = 'politeia_pps_mp_test_result';
+	const FLOW_TEST_RESULT_TRANSIENT = 'politeia_pps_flow_test_result';
 	const MENU_PARENT = 'politeia-learning';
 	const MENU_SLUG   = 'pl-payment-gateways';
 
@@ -28,6 +29,7 @@ class Politeia_PPS_Settings {
 		add_action( 'admin_menu', array( __CLASS__, 'register_menu' ), 20 );
 		add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
 		add_action( 'admin_post_politeia_pps_test_mp', array( __CLASS__, 'handle_test_mp' ) );
+		add_action( 'admin_post_politeia_pps_test_flow', array( __CLASS__, 'handle_test_flow' ) );
 		add_action( 'wp_ajax_politeia_pps_test_mp_token', array( __CLASS__, 'ajax_test_mp_token' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin_assets' ) );
 	}
@@ -100,6 +102,16 @@ class Politeia_PPS_Settings {
 	public static function get_public_key( $mode = null ) {
 		$mode = $mode ? $mode : self::get_mode();
 		return 'live' === $mode ? (string) self::get( 'mp_public_key_live', '' ) : (string) self::get( 'mp_public_key_test', '' );
+	}
+
+	public static function get_flow_api_key( $mode = null ) {
+		$mode = $mode ? $mode : self::get_mode();
+		return 'live' === $mode ? (string) self::get( 'flow_api_key_live', '' ) : (string) self::get( 'flow_api_key_test', '' );
+	}
+
+	public static function get_flow_secret( $mode = null ) {
+		$mode = $mode ? $mode : self::get_mode();
+		return 'live' === $mode ? (string) self::get( 'flow_secret_live', '' ) : (string) self::get( 'flow_secret_test', '' );
 	}
 
 	public static function register_menu() {
@@ -638,6 +650,9 @@ class Politeia_PPS_Settings {
 		$access_set      = (bool) self::get_access_token();
 		$webhook_set     = (bool) self::get( 'mp_webhook_secret', '' );
 		$test_result     = get_transient( self::TEST_RESULT_TRANSIENT );
+		$flow_key_set    = (bool) self::get_flow_api_key();
+		$flow_secret_set = (bool) self::get_flow_secret();
+		$flow_test       = get_transient( self::FLOW_TEST_RESULT_TRANSIENT );
 		$webhooks_notice = isset( $_GET['pps_webhooks_notice'] ) ? sanitize_key( (string) wp_unslash( $_GET['pps_webhooks_notice'] ) ) : '';
 		?>
 		<div class="wrap">
@@ -673,6 +688,37 @@ class Politeia_PPS_Settings {
 					<p><strong><?php echo esc_html__( 'Mercado Pago Test:', 'politeia-payments-subscriptions' ); ?></strong> <?php echo esc_html( (string) $test_result['message'] ); ?></p>
 					<?php if ( ! empty( $test_result['details'] ) ) : ?>
 						<pre style="white-space:pre-wrap;max-width:100%;overflow:auto;"><?php echo esc_html( wp_json_encode( $test_result['details'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) ); ?></pre>
+					<?php endif; ?>
+				</div>
+			<?php endif; ?>
+
+			<div class="notice notice-info">
+				<p>
+					<strong><?php echo esc_html__( 'Flow status:', 'politeia-payments-subscriptions' ); ?></strong>
+					<?php
+					echo esc_html__( 'API Key', 'politeia-payments-subscriptions' ) . ': ' . ( $flow_key_set ? esc_html__( 'configured', 'politeia-payments-subscriptions' ) : esc_html__( 'missing', 'politeia-payments-subscriptions' ) ) . ' — ';
+					echo esc_html__( 'Secret', 'politeia-payments-subscriptions' ) . ': ' . ( $flow_secret_set ? esc_html__( 'configured', 'politeia-payments-subscriptions' ) : esc_html__( 'missing', 'politeia-payments-subscriptions' ) );
+					?>
+				</p>
+				<p class="description">
+					<?php echo esc_html__( 'Keys are intentionally not shown in the fields after saving. Use the status above to confirm they are stored.', 'politeia-payments-subscriptions' ); ?>
+				</p>
+				<p>
+					<?php if ( $flow_key_set && $flow_secret_set ) : ?>
+						<a class="button button-secondary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=politeia_pps_test_flow' ), 'politeia_pps_test_flow' ) ); ?>">
+							<?php echo esc_html__( 'Test Flow Connection', 'politeia-payments-subscriptions' ); ?>
+						</a>
+					<?php else : ?>
+						<span class="description"><?php echo esc_html__( 'Add API Key + Secret to enable connection testing.', 'politeia-payments-subscriptions' ); ?></span>
+					<?php endif; ?>
+				</p>
+			</div>
+
+			<?php if ( is_array( $flow_test ) && ! empty( $flow_test['message'] ) ) : ?>
+				<div class="notice <?php echo ! empty( $flow_test['ok'] ) ? 'notice-success' : 'notice-error'; ?>">
+					<p><strong><?php echo esc_html__( 'Flow Test:', 'politeia-payments-subscriptions' ); ?></strong> <?php echo esc_html( (string) $flow_test['message'] ); ?></p>
+					<?php if ( ! empty( $flow_test['details'] ) ) : ?>
+						<pre style="white-space:pre-wrap;max-width:100%;overflow:auto;"><?php echo esc_html( wp_json_encode( $flow_test['details'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) ); ?></pre>
 					<?php endif; ?>
 				</div>
 			<?php endif; ?>
@@ -858,6 +904,56 @@ class Politeia_PPS_Settings {
 		}
 
 		set_transient( self::TEST_RESULT_TRANSIENT, $result, 60 );
+		wp_safe_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG ) );
+		exit;
+	}
+
+	public static function handle_test_flow() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( 'Forbidden', 403 );
+		}
+		check_admin_referer( 'politeia_pps_test_flow' );
+
+		$mode   = self::get_mode();
+		$api    = self::get_flow_api_key( $mode );
+		$secret = self::get_flow_secret( $mode );
+
+		$result = array(
+			'ok'      => false,
+			'message' => '',
+			'details' => null,
+		);
+
+		if ( '' === trim( (string) $api ) || '' === trim( (string) $secret ) ) {
+			$result['ok']      = false;
+			$result['message'] = 'Missing Flow API Key / Secret for current mode.';
+			set_transient( self::FLOW_TEST_RESULT_TRANSIENT, $result, 60 );
+			wp_safe_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG ) );
+			exit;
+		}
+
+		if ( ! class_exists( 'Politeia_PPS_Flow_Client' ) ) {
+			$result['ok']      = false;
+			$result['message'] = 'Flow client not available.';
+			set_transient( self::FLOW_TEST_RESULT_TRANSIENT, $result, 60 );
+			wp_safe_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG ) );
+			exit;
+		}
+
+		$client = new Politeia_PPS_Flow_Client();
+		$res    = $client->test_connection( $api, $secret, $mode );
+
+		$result['ok']      = ! empty( $res['ok'] );
+		$result['message'] = $result['ok'] ? 'Connection OK' : 'Connection failed';
+		$result['details'] = array(
+			'mode'   => $mode,
+			'status' => $res['status'] ?? null,
+			'url'    => $res['url'] ?? null,
+			'body'   => $res['body'] ?? null,
+			'raw'    => ( empty( $res['body'] ) ? ( $res['raw'] ?? null ) : null ),
+		);
+
+		set_transient( self::FLOW_TEST_RESULT_TRANSIENT, $result, 60 );
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG ) );
 		exit;
 	}

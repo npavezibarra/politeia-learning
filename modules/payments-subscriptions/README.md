@@ -13,6 +13,11 @@ Notes:
 
 > Note: The old standalone plugin `politeia-payments-subscriptions` is a shim/no-op. The active code lives in this module.
 
+## Gateways
+
+- Mercado Pago (current)
+- Flow (planned): see `modules/payments-subscriptions/flow/README.md`
+
 ## What users do
 
 ### 1) Creator sets monthly price
@@ -189,6 +194,51 @@ Section **Webhooks & Ledger** provides:
 
 5) **Run a real payment test**
    - Creator sets monthly tier → subscriber subscribes (hosted or tokenized) → webhooks arrive → ledger entry created → relationship granted.
+
+## Current status (Mercado Pago) — 2026-05-10
+
+We reached a clear integration checkpoint while attempting to run a **real recurring charge** (monthly CLP 1000) on `https://politeia.cl`.
+
+### What is confirmed working
+
+- The creator’s tier is persisted correctly in `wp_politeia_subscription_meta` (`amount_minor=1000`, `currency=CLP`, `tier_slug=monthly`).
+- The “membership included content” policy is persisted correctly in `wp_usermeta` under `pl_policy_subscribe` and is readable via WordPress (`get_user_meta`).
+- Mercado Pago card tokenization (Brick / JS v2) can succeed in browser and returns `live_mode=true` when using an `APP_USR` public key.
+
+### The blocker we found
+
+Creating the Mercado Pago subscription (`POST https://api.mercadopago.com/preapproval`) fails with:
+
+- `400 Bad Request`: `Both payer and collector must be real or test users`
+
+We verified that our **configured LIVE access token** (stored in `politeia_pps_settings.mp_access_token_live`) identifies a **test user collector**:
+
+- `GET https://api.mercadopago.com/users/me` returns `"tags":["test_user", ...]`
+
+This explains the error when trying to charge a real card: Mercado Pago rejects mixing a **test collector** with a **real payer / real card**.
+
+### Last Mercado Pago step (not yet re-tested)
+
+To complete a real recurring charge test with Mercado Pago, we still need to:
+
+1) Replace the LIVE credentials with a **real Mercado Pago collector** (not a `test_user`).
+2) Update `Expected Seller User ID` to the real collector id.
+3) Re-test `preapproval` creation and the full webhook → ledger → relationship flow.
+
+This final step has **not been executed yet** as of 2026-05-10.
+
+## Roadmap: Alternative subscription gateway
+
+Even after resolving the collector/test mismatch, Mercado Pago recurring subscriptions (`preapproval`) have proven operationally fragile for our product requirements and testing workflow.
+
+We will implement an additional payment gateway for subscriptions (monthly memberships) to reduce risk and complexity, while keeping the current data model and access control semantics:
+
+- Keep tiers/subscriptions/ledger tables as the source of truth
+- Keep `PL_Relationships::TYPE_SUBSCRIBE` for access control
+- Gateways plug into the same lifecycle:
+  - create subscription → confirm payment → record ledger → grant relationship → handle renewals/cancellations
+
+Next step: define the new gateway interface + implementation plan (flows, webhooks, and cancellation sync) before writing code.
 
 ## Background jobs (WP-Cron)
 

@@ -139,7 +139,7 @@ class Politeia_PPS_Subscription_Engine {
 
 		$existing = self::get_creator_tier_by_slug( $creator_user_id, $tier_slug );
 		if ( ! $existing ) {
-			return self::create_tier(
+			$tier_id = self::create_tier(
 				$creator_user_id,
 				array(
 					'tier_name'      => $tier_name,
@@ -150,6 +150,20 @@ class Politeia_PPS_Subscription_Engine {
 					'interval_count' => 1,
 				)
 			);
+
+			if ( is_wp_error( $tier_id ) ) {
+				return $tier_id;
+			}
+
+			// Phase 2: sync Flow plan if Flow is configured (best-effort unless configured and failing).
+			if ( class_exists( 'Politeia_PPS_Flow_Engine' ) ) {
+				$flow_res = Politeia_PPS_Flow_Engine::upsert_plan_for_tier( (int) $tier_id );
+				if ( is_wp_error( $flow_res ) ) {
+					return $flow_res;
+				}
+			}
+
+			return (int) $tier_id;
 		}
 
 		$now          = current_time( 'mysql' );
@@ -188,6 +202,14 @@ class Politeia_PPS_Subscription_Engine {
 
 		if ( $ok === false ) {
 			return new WP_Error( 'db_update_failed', 'Failed to update tier.', array( 'error' => $wpdb->last_error ) );
+		}
+
+		// Phase 2: sync Flow plan if Flow is configured (best-effort unless configured and failing).
+		if ( class_exists( 'Politeia_PPS_Flow_Engine' ) ) {
+			$flow_res = Politeia_PPS_Flow_Engine::upsert_plan_for_tier( (int) $existing['id'] );
+			if ( is_wp_error( $flow_res ) ) {
+				return $flow_res;
+			}
 		}
 
 		return (int) $existing['id'];

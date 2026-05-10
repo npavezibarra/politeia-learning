@@ -46,6 +46,7 @@ class Politeia_PPS_Activator {
 			interval_count SMALLINT UNSIGNED NOT NULL DEFAULT 1,
 			status VARCHAR(20) NOT NULL DEFAULT 'active',
 			mp_plan_id VARCHAR(120) NULL,
+			flow_plan_id VARCHAR(120) NULL,
 			external_reference VARCHAR(190) NOT NULL,
 			created_at DATETIME NOT NULL,
 			updated_at DATETIME NOT NULL,
@@ -60,18 +61,25 @@ class Politeia_PPS_Activator {
 			creator_user_id BIGINT UNSIGNED NOT NULL,
 			subscriber_user_id BIGINT UNSIGNED NOT NULL,
 			tier_id BIGINT UNSIGNED NOT NULL,
-			mp_preapproval_id VARCHAR(120) NOT NULL,
+			gateway VARCHAR(30) NOT NULL DEFAULT 'mercadopago',
+			mp_preapproval_id VARCHAR(120) NULL,
+			flow_subscription_id VARCHAR(120) NULL,
 			status VARCHAR(30) NOT NULL DEFAULT 'pending',
 			current_period_end DATETIME NULL,
 			cancel_at_period_end TINYINT(1) NOT NULL DEFAULT 0,
+			cancelled_at DATETIME NULL,
+			gateway_cancelled_at DATETIME NULL,
+			cancellation_reason VARCHAR(255) NULL,
 			created_at DATETIME NOT NULL,
 			updated_at DATETIME NOT NULL,
 			PRIMARY KEY (id),
 			UNIQUE KEY uniq_mp_preapproval (mp_preapproval_id),
+			UNIQUE KEY uniq_flow_subscription (flow_subscription_id),
 			KEY idx_subscriber (subscriber_user_id),
 			KEY idx_creator (creator_user_id),
 			KEY idx_tier (tier_id),
-			KEY idx_status (status)
+			KEY idx_status (status),
+			KEY idx_gateway (gateway)
 		) {$charset_collate};";
 
 		$sql_ledger = "CREATE TABLE {$ledger_table} (
@@ -125,4 +133,3 @@ class Politeia_PPS_Activator {
 		dbDelta( $sql_webhook_events );
 	}
 }
-

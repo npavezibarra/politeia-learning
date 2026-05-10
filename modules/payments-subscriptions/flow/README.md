@@ -1,0 +1,120 @@
+# Flow Gateway (Payments Subscriptions submodule)
+
+This folder is the **Flow payment gateway implementation** for the Politeia Learning module:
+
+`payments-subscriptions` → `flow/`
+
+Purpose:
+
+- Keep **all Flow-specific code** (API client, signatures, settings, webhooks, subscription lifecycle, admin tools) contained in a single place.
+- Provide a clean alternative to Mercado Pago for **monthly memberships** (recurring billing).
+- Preserve the existing platform semantics:
+  - Local DB tables remain the source of truth (`wp_politeia_subscription_meta`, `wp_politeia_subscriptions`, `wp_politeia_transaction_ledger`, `wp_politeia_*webhook*`).
+  - Access control continues to be granted/revoked through `PL_Relationships::TYPE_SUBSCRIBE`.
+
+## Why this exists
+
+Mercado Pago recurring subscriptions (`preapproval`) introduced operational friction during real-payments testing and is not a reliable single dependency for Politeia’s membership product.
+
+Flow is a Chile-first provider with explicit subscription APIs, including cancellation options such as:
+
+- Cancel immediately
+- Cancel at period end (`at_period_end`)
+
+This submodule is where we will implement the full Flow subscription lifecycle.
+
+## Folder contract (expected structure)
+
+The exact structure will evolve, but the intention is:
+
+- `includes/`
+  - `class-flow-client.php` (HTTP client, signing, idempotency, error handling)
+  - `class-flow-engine.php` (business logic: create plan, create subscription, cancel, reconcile)
+  - `class-flow-webhooks.php` (webhook ingestion + verification + processing)
+  - `class-flow-settings.php` (WP Admin settings fields + validation)
+  - `class-flow-mapper.php` (maps Flow statuses → local statuses)
+- `assets/`
+  - Optional UI assets (admin screens, subscriber screens if needed)
+
+## Data mapping (first pass)
+
+We will represent the Flow identifiers in our existing tables:
+
+- Tier / plan:
+  - `wp_politeia_subscription_meta.flow_plan_id` (new column) or a dedicated meta table if we want to avoid schema changes.
+- Subscription:
+  - `wp_politeia_subscriptions.flow_subscription_id` (new column)
+
+For cancellations:
+
+- Store:
+  - `cancel_at_period_end`
+  - `cancelled_at`
+  - `flow_cancelled_at`
+  - `cancellation_reason`
+
+## Implementation plan (phases)
+
+This is a phased rollout plan to reduce risk and keep production safe.
+
+### Phase 0 — Discovery & contract
+
+- Confirm which Flow subscription endpoints we will use (plan/subscription/cancel/webhooks).
+- Define the gateway interface in `payments-subscriptions` (provider-agnostic).
+- Decide schema strategy (new columns vs meta table).
+- Define status model + mapping (Flow → local).
+
+### Phase 1 — Settings + connectivity
+
+- Add Flow credentials in WP Admin (separate TEST/LIVE).
+- Add a “Test connection” button (server-side).
+- Add robust logging (request id, signature verification results, retry strategy).
+
+### Phase 2 — Create plan (tier sync)
+
+- When creator saves monthly membership tier:
+  - Create/update Flow plan for that creator’s monthly amount.
+  - Persist `flow_plan_id` against `tier_slug=monthly`.
+- Add reconciliation job to ensure local tier ↔ Flow plan stay consistent.
+
+### Phase 3 — Subscribe flow
+
+- Implement subscriber checkout flow for Flow:
+  - Create Flow subscription for the selected tier.
+  - Redirect user to Flow checkout (or Flow-hosted step).
+  - Confirm subscription activation on return + via webhook.
+- Create local `wp_politeia_subscriptions` row early, then finalize on webhook confirmation.
+
+### Phase 4 — Webhooks + ledger
+
+- Implement Flow webhooks:
+  - Verify signature
+  - Store raw event
+  - Process asynchronously
+- Write transaction ledger entries for successful recurring payments.
+- Grant/renew `PL_Relationships` on successful charge.
+
+### Phase 5 — Cancellation (immediate vs period-end)
+
+- Add “Cancel subscription” in UI:
+  - immediate cancellation
+  - cancel at period end
+- Sync cancellation state with Flow and handle late webhooks safely.
+
+### Phase 6 — Migration / fallback strategy
+
+- Decide how to handle existing Mercado Pago subscribers:
+  - keep as-is
+  - migrate on next renewal
+  - force re-subscribe
+- Add admin tools for reconciliation and manual remediation.
+
+## Approval gate
+
+We should implement phases in order, shipping each phase behind feature flags when needed.
+
+**Before writing code**, confirm:
+
+- Whether we will deprecate Mercado Pago subscriptions entirely or keep it as a fallback.
+- Which Flow mode to support first: TEST-only or directly LIVE-ready.
+
