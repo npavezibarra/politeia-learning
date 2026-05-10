@@ -346,7 +346,12 @@ class Politeia_PPS_Subscription_Engine {
 		// - If admin configured an override (useful for MP test buyers), prefer it.
 		// - Otherwise default to the logged-in WP user's email.
 		$override_email = (string) Politeia_PPS_Settings::get( 'payer_email_override', '' );
-		if ( $override_email !== '' && is_email( $override_email ) ) {
+		$mode           = method_exists( 'Politeia_PPS_Settings', 'get_mode' ) ? (string) Politeia_PPS_Settings::get_mode() : 'test';
+		$mode           = in_array( $mode, array( 'test', 'live' ), true ) ? $mode : 'test';
+
+		// Safety: payer_email_override is intended only for TEST buyers.
+		// In LIVE, never override the payer email (prevents payer/collector env mismatch).
+		if ( $mode === 'test' && $override_email !== '' && is_email( $override_email ) ) {
 			$payer_email = $override_email;
 		}
 		if ( ! $payer_email ) {

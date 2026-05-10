@@ -433,7 +433,22 @@ class Politeia_PPS_Settings {
 			}
 			if ( in_array( $key, array( 'payer_email_override' ), true ) ) {
 				$email = is_string( $value ) ? trim( $value ) : '';
-				$out[ $key ] = $email ? sanitize_email( $email ) : '';
+				$email = $email ? sanitize_email( $email ) : '';
+
+				// Guardrail: the UI placeholder must never be treated as a real value.
+				if ( $email === 'buyer_test_xxx@testuser.com' ) {
+					$email = '';
+				}
+
+				// Guardrail: never allow test-user payer overrides while in LIVE mode.
+				$mode_raw = is_array( $input ) && isset( $input['mode'] ) ? (string) $input['mode'] : ( isset( $existing['mode'] ) ? (string) $existing['mode'] : 'test' );
+				$mode_raw = trim( $mode_raw );
+				$mode     = in_array( $mode_raw, array( 'test', 'live' ), true ) ? $mode_raw : 'test';
+				if ( $mode === 'live' && $email !== '' && str_ends_with( strtolower( $email ), '@testuser.com' ) ) {
+					$email = '';
+				}
+
+				$out[ $key ] = $email;
 				continue;
 			}
 			if ( in_array( $key, array( 'exchange_rate_provider', 'exchange_rate_api_key' ), true ) ) {
