@@ -57,6 +57,9 @@ class Renderer
         }
         $rendered = true;
 
+        $user = wp_get_current_user();
+        $user_email = ($user && isset($user->user_email)) ? sanitize_email((string) $user->user_email) : '';
+
         $notice_code = (string) sanitize_key((string) wp_unslash($_GET['pl_auth_notice'] ?? ''));
         $error_code = (string) sanitize_key((string) wp_unslash($_GET['pl_auth_error'] ?? ''));
         $force_open = isset($_GET['pl_auth_unverified']) && sanitize_key((string) wp_unslash($_GET['pl_auth_unverified'])) === '1';
@@ -79,9 +82,15 @@ class Renderer
         $message = '';
         $message_type = '';
         if ($notice_code === 'verification_sent') {
-            $message = $is_spanish
-                ? 'Te enviamos un correo de confirmación. Por favor revisa tu bandeja de entrada.'
-                : 'We sent a confirmation email. Please check your inbox.';
+            if ($is_spanish) {
+                $message = $user_email !== ''
+                    ? 'Te enviamos un correo de confirmación a ' . $user_email . '. Por favor revisa tu bandeja de entrada.'
+                    : 'Te enviamos un correo de confirmación. Por favor revisa tu bandeja de entrada.';
+            } else {
+                $message = $user_email !== ''
+                    ? 'We sent a confirmation email to ' . $user_email . '. Please check your inbox.'
+                    : 'We sent a confirmation email. Please check your inbox.';
+            }
             $message_type = 'success';
         } elseif ($error_code === 'resend_throttled') {
             $message = $is_spanish
