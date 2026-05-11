@@ -37,6 +37,10 @@ class Politeia_PPS_Settings {
 	public static function defaults() {
 		return array(
 			'mode'                     => 'test', // test|live
+			// Active subscription gateway for new subscriptions.
+			// - mercadopago: current default (legacy)
+			// - flow: Chile-first recurring billing
+			'subscription_gateway'     => 'mercadopago', // mercadopago|flow
 			'subscription_flow'        => 'hosted', // hosted|direct
 			// General redirects (optional; used as defaults in gateway flows).
 			'success_url'              => '',
@@ -147,6 +151,17 @@ class Politeia_PPS_Settings {
 		);
 
 		add_settings_section( 'politeia_pps_general', __( 'General', 'politeia-payments-subscriptions' ), '__return_false', 'politeia-pps' );
+		add_settings_field(
+			'subscription_gateway',
+			__( 'Subscription Gateway', 'politeia-payments-subscriptions' ),
+			array( __CLASS__, 'field_subscription_gateway' ),
+			'politeia-pps',
+			'politeia_pps_general',
+			array(
+				'key'  => 'subscription_gateway',
+				'help' => __( 'Select which gateway is used for new memberships (default: Mercado Pago).', 'politeia-payments-subscriptions' ),
+			)
+		);
 		add_settings_field(
 			'success_url',
 			__( 'Success URL (optional)', 'politeia-payments-subscriptions' ),
@@ -398,6 +413,23 @@ class Politeia_PPS_Settings {
 				'help' => __( 'If enabled, IVA is calculated as (mp_fee * iva_rate).', 'politeia-payments-subscriptions' ),
 			)
 		);
+	}
+
+	public static function field_subscription_gateway( $args ) {
+		$key  = isset( $args['key'] ) ? (string) $args['key'] : 'subscription_gateway';
+		$val  = (string) self::get( $key, 'mercadopago' );
+		$help = isset( $args['help'] ) ? (string) $args['help'] : '';
+
+		$name = self::OPTION_KEY . '[' . esc_attr( $key ) . ']';
+		?>
+		<select name="<?php echo esc_attr( $name ); ?>">
+			<option value="mercadopago" <?php selected( $val, 'mercadopago' ); ?>>Mercado Pago</option>
+			<option value="flow" <?php selected( $val, 'flow' ); ?>>Flow</option>
+		</select>
+		<?php if ( $help ) : ?>
+			<p class="description"><?php echo esc_html( $help ); ?></p>
+		<?php endif; ?>
+		<?php
 	}
 
 	public static function sanitize( $input ) {

@@ -38,6 +38,17 @@ class Politeia_PPS_Profile_Subscribe {
 		// the profile subscribe link pointing to admin-post.php?action=pl_pps_subscribe_creator.
 		wp_enqueue_style( 'politeia-pps' );
 		wp_enqueue_script( 'politeia-pps-profile-subscribe-modal' );
+
+		$mode = method_exists( 'Politeia_PPS_Settings', 'get_mode' ) ? (string) Politeia_PPS_Settings::get_mode() : 'test';
+		$mode = in_array( $mode, array( 'test', 'live' ), true ) ? $mode : 'test';
+		$flow_api_key = (string) Politeia_PPS_Settings::get( 'flow_api_key_' . $mode, '' );
+		$flow_secret  = (string) Politeia_PPS_Settings::get( 'flow_secret_' . $mode, '' );
+		$flow_enabled = '' !== trim( $flow_api_key ) && '' !== trim( $flow_secret );
+
+		$mp_token      = (string) Politeia_PPS_Settings::get_access_token();
+		$mp_enabled    = '' !== trim( $mp_token );
+		$active_gateway = class_exists( 'Politeia_PPS_Gateway_Registry' ) ? Politeia_PPS_Gateway_Registry::get_active_gateway_key() : 'mercadopago';
+
 		wp_localize_script(
 			'politeia-pps-profile-subscribe-modal',
 			'PoliteiaPPSProfileSubscribe',
@@ -46,6 +57,9 @@ class Politeia_PPS_Profile_Subscribe {
 				'tiersUrl'  => esc_url_raw( rest_url( 'politeia/v1/subscriptions/tiers' ) ),
 				'nonce'     => wp_create_nonce( 'wp_rest' ),
 				'publicKey' => (string) Politeia_PPS_Settings::get_public_key(),
+				'activeGateway' => $active_gateway,
+				'enableFlow'    => $flow_enabled,
+				'enableMP'      => $mp_enabled,
 			)
 		);
 	}
@@ -67,18 +81,31 @@ class Politeia_PPS_Profile_Subscribe {
 			return '';
 		}
 
-		// Require MP configured; otherwise hide the CTA.
-		$token = (string) Politeia_PPS_Settings::get_access_token();
-		if ( $token === '' ) {
-			self::debug(
-				'cta_hidden_missing_token',
-				array(
-					'creator_user_id' => $creator_user_id,
-					'viewer_user_id'  => $viewer_user_id,
-					'mode'            => method_exists( 'Politeia_PPS_Settings', 'get_mode' ) ? Politeia_PPS_Settings::get_mode() : 'unknown',
-				)
-			);
-			return '';
+		$active_gateway = class_exists( 'Politeia_PPS_Gateway_Registry' ) ? Politeia_PPS_Gateway_Registry::get_active_gateway_key() : 'mercadopago';
+		$mode           = method_exists( 'Politeia_PPS_Settings', 'get_mode' ) ? (string) Politeia_PPS_Settings::get_mode() : 'test';
+		$mode           = in_array( $mode, array( 'test', 'live' ), true ) ? $mode : 'test';
+
+		if ( 'flow' === $active_gateway ) {
+			$flow_api_key = (string) Politeia_PPS_Settings::get( 'flow_api_key_' . $mode, '' );
+			$flow_secret  = (string) Politeia_PPS_Settings::get( 'flow_secret_' . $mode, '' );
+			if ( '' === trim( $flow_api_key ) || '' === trim( $flow_secret ) ) {
+				self::debug( 'cta_hidden_missing_flow', array( 'creator_user_id' => $creator_user_id, 'viewer_user_id' => $viewer_user_id, 'mode' => $mode ) );
+				return '';
+			}
+		} else {
+			// Require MP configured; otherwise hide the CTA.
+			$token = (string) Politeia_PPS_Settings::get_access_token();
+			if ( $token === '' ) {
+				self::debug(
+					'cta_hidden_missing_token',
+					array(
+						'creator_user_id' => $creator_user_id,
+						'viewer_user_id'  => $viewer_user_id,
+						'mode'            => $mode,
+					)
+				);
+				return '';
+			}
 		}
 
 		// Require the creator monthly tier to exist.
@@ -141,8 +168,11 @@ class Politeia_PPS_Profile_Subscribe {
 			self::redirect_back( $creator_user_id, 'tier_not_found' );
 		}
 
-		// Hosted option: keep existing behavior (redirect to Mercado Pago checkout).
-		$res = Politeia_PPS_Subscription_Engine::subscribe( $subscriber_user_id, (int) $tier['id'] );
+		$active_gateway = class_exists( 'Politeia_PPS_Gateway_Registry' ) ? Politeia_PPS_Gateway_Registry::get_active_gateway_key() : 'mercadopago';
+
+		// Hosted option: default to the active gateway. For Flow this will return a redirect_url to Flow enrollment.
+		$subscribe_args = ( 'flow' === $active_gateway ) ? array( 'gateway' => 'flow' ) : array();
+		$res            = Politeia_PPS_Subscription_Engine::subscribe( $subscriber_user_id, (int) $tier['id'], '', $subscribe_args );
 		if ( is_wp_error( $res ) ) {
 			$redirect_code = $res->get_error_code();
 			$data          = $res->get_error_data();

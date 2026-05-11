@@ -62,11 +62,7 @@
 			'    <div class="politeia-pps__modal-status" aria-live="polite"></div>',
 			'    <div class="politeia-pps__modal-step politeia-pps__modal-step--choices">',
 			'      <p class="politeia-pps__muted" style="margin-top:0">Si tu email de Politeia no coincide con tu cuenta Mercado Pago, elige “Pagar con tarjeta” o inicia sesión en Mercado Pago al continuar.</p>',
-			'      <div class="politeia-pps__modal-actions">',
-			'        <button type="button" class="politeia-pps__btn politeia-pps__btn--primary" data-pps-choice="card">Pagar con tarjeta (recomendado)</button>',
-			'        <button type="button" class="politeia-pps__btn politeia-pps__btn--secondary" data-pps-choice="mp">Mercado Pago (redirigir)</button>',
-			'        <button type="button" class="politeia-pps__btn politeia-pps__btn--secondary" data-pps-choice="flow">Flow (redirigir)</button>',
-			'      </div>',
+			'      <div class="politeia-pps__modal-actions" data-pps-actions></div>',
 			'    </div>',
 			'    <div class="politeia-pps__modal-step politeia-pps__modal-step--card" style="display:none">',
 			'      <div class="politeia-pps__hint" style="margin-top:0">El formulario de tarjeta es provisto por Mercado Pago (PCI). Politeia recibe solo un token (<code>card_token_id</code>), nunca el número o CVV.</div>',
@@ -80,6 +76,26 @@
 		].join('');
 
 		document.body.appendChild(overlay);
+
+		// Render action buttons depending on enabled gateways.
+		try {
+			var cfg = window.PoliteiaPPSProfileSubscribe || {};
+			var actions = q('[data-pps-actions]', overlay);
+			if (actions) {
+				var btns = [];
+				if (cfg.enableMP) {
+					btns.push('<button type="button" class="politeia-pps__btn politeia-pps__btn--primary" data-pps-choice="card">Pagar con tarjeta (recomendado)</button>');
+					btns.push('<button type="button" class="politeia-pps__btn politeia-pps__btn--secondary" data-pps-choice="mp">Mercado Pago (redirigir)</button>');
+				}
+				if (cfg.enableFlow) {
+					btns.push('<button type="button" class="politeia-pps__btn politeia-pps__btn--secondary" data-pps-choice="flow">Flow (redirigir)</button>');
+				}
+				if (btns.length === 0) {
+					btns.push('<div class="politeia-pps__muted">No hay pasarelas de pago configuradas.</div>');
+				}
+				actions.innerHTML = btns.join('');
+			}
+		} catch (e) {}
 
 		overlay.addEventListener('click', function (e) {
 			if (e.target === overlay) {
@@ -350,6 +366,11 @@
 				return;
 			}
 			if (choice === 'card') {
+				var cfg2 = window.PoliteiaPPSProfileSubscribe || {};
+				if (!cfg2.enableMP) {
+					setStatus('Mercado Pago no está configurado.', true);
+					return;
+				}
 				showStep('card');
 				setStatus('Cargando Mercado Pago…', false);
 				renderCardPaymentBrick(overlay).catch(function (err) {

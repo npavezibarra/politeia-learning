@@ -15,8 +15,12 @@ class Politeia_PPS_Gateway_Registry {
 	 * @return string
 	 */
 	public static function get_active_gateway_key() {
-		// Phase 0: keep current behavior.
-		// Phase 1 will introduce an explicit setting (e.g. pps_settings.subscription_gateway).
+		if ( class_exists( 'Politeia_PPS_Settings' ) ) {
+			$key = sanitize_key( (string) Politeia_PPS_Settings::get( 'subscription_gateway', 'mercadopago' ) );
+			if ( in_array( $key, array( 'mercadopago', 'flow' ), true ) ) {
+				return $key;
+			}
+		}
 		return 'mercadopago';
 	}
 
@@ -36,4 +40,3 @@ class Politeia_PPS_Gateway_Registry {
 		return null;
 	}
 }
-
