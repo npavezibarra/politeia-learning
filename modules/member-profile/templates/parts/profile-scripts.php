@@ -51,6 +51,8 @@ if (!defined('ABSPATH')) exit;
 
 	        const thoughts = <?php echo json_encode($book_thoughts); ?>;
 	        const connectionsData = <?php echo json_encode($pl_connections_data); ?>;
+	        const ppsCancelUrl = <?php echo json_encode(rest_url('politeia/v1/subscriptions/cancel')); ?>;
+	        const ppsRestNonce = <?php echo json_encode(wp_create_nonce('wp_rest')); ?>;
 	        const respondNonce = <?php echo json_encode($pl_relationship_respond_nonce); ?>;
 	        const blockNonce = <?php echo json_encode($pl_relationship_block_nonce); ?>;
 	        const coursePartnerInviteNonce = <?php echo json_encode($pl_course_partner_invite_nonce); ?>;
@@ -235,6 +237,8 @@ if (!defined('ABSPATH')) exit;
 		                        const itemKind = String(item && item.kind ? item.kind : '');
 		                        const itemState = String(item && item.status ? item.status : '');
 		                        const linkUrl = item && item.object && item.object.url ? String(item.object.url) : '';
+		                        const cancelNowLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Cancelar ahora' : 'Cancel now'); ?>;
+		                        const cancelEndLabel = <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Cancelar al fin del período' : 'Cancel at period end'); ?>;
 
 		                        if (itemState === 'pending' && itemKind === 'relationship') {
 		                            const direction = String(item.direction || '');
@@ -283,6 +287,47 @@ if (!defined('ABSPATH')) exit;
 		                                        <input type="hidden" name="blocked_user_id" value="${fromUserId}">
 		                                        <button type="submit" class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-red-200 text-red-600 hover:bg-white">${blockLabel}</button>
 		                                    </form>
+		                                </div>
+		                            `;
+		                        }
+
+		                        if (itemKind === 'subscription' && itemState === 'active') {
+		                            const direction = String(item.direction || '');
+		                            if (direction !== 'outgoing') {
+		                                return '';
+		                            }
+		                            const gateway = String(item.gateway || 'mercadopago');
+		                            const mpId = String(item.mp_preapproval_id || '');
+		                            const flowId = String(item.flow_subscription_id || '');
+		                            const cancelScheduled = !!item.cancel_at_period_end;
+		                            const subId = Number(item.id) || 0;
+		                            const payloadAttr = gateway === 'flow'
+		                                ? `data-pps-flow-subscription-id="${flowId.replace(/\"/g, '&quot;')}"`
+		                                : `data-pps-mp-preapproval-id="${mpId.replace(/\"/g, '&quot;')}"`;
+
+		                            const scheduledTag = cancelScheduled
+		                                ? `<span class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-neutral-200 text-neutral-500 bg-neutral-50">${<?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Cancelación programada' : 'Cancellation scheduled'); ?>}</span>`
+		                                : '';
+
+		                            return `
+		                                <div class="flex flex-wrap items-center gap-2">
+		                                    ${scheduledTag}
+		                                    <button type="button"
+		                                        class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] border border-neutral-200 text-neutral-700 hover:bg-white"
+		                                        data-pps-cancel
+		                                        data-pps-subscription-id="${subId}"
+		                                        data-pps-gateway="${gateway}"
+		                                        data-pps-at-period-end="1"
+		                                        ${payloadAttr}
+		                                    >${cancelEndLabel}</button>
+		                                    <button type="button"
+		                                        class="inline-flex items-center px-3 py-2 text-xs font-semibold rounded-[6px] bg-black text-white hover:bg-neutral-800"
+		                                        data-pps-cancel
+		                                        data-pps-subscription-id="${subId}"
+		                                        data-pps-gateway="${gateway}"
+		                                        data-pps-at-period-end="0"
+		                                        ${payloadAttr}
+		                                    >${cancelNowLabel}</button>
 		                                </div>
 		                            `;
 		                        }
@@ -709,11 +754,76 @@ if (!defined('ABSPATH')) exit;
 	            if (window.lucide) lucide.createIcons();
 	        }
 
+	        async function cancelMembership(btn) {
+	            if (!btn) return;
+	            if (!ppsCancelUrl || !ppsRestNonce) {
+	                window.showToast && window.showToast('Cancelación no disponible.');
+	                return;
+	            }
+
+	            const gateway = String(btn.getAttribute('data-pps-gateway') || '');
+	            const atPeriodEnd = Number(btn.getAttribute('data-pps-at-period-end') || '0');
+	            const mpPreapprovalId = String(btn.getAttribute('data-pps-mp-preapproval-id') || '');
+	            const flowSubscriptionId = String(btn.getAttribute('data-pps-flow-subscription-id') || '');
+
+	            const confirmMsg = atPeriodEnd === 1
+	                ? <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? '¿Programar cancelación al final del período actual?' : 'Schedule cancellation at the end of the current period?'); ?>
+	                : <?php echo json_encode((strpos(get_locale(), 'es') !== false) ? '¿Cancelar la suscripción ahora?' : 'Cancel the subscription now?'); ?>;
+
+	            if (!window.confirm(confirmMsg)) return;
+
+	            btn.disabled = true;
+	            btn.classList.add('opacity-60');
+
+	            try {
+	                const payload = {
+	                    gateway: gateway || (flowSubscriptionId ? 'flow' : 'mercadopago'),
+	                    at_period_end: atPeriodEnd,
+	                };
+	                if (payload.gateway === 'flow') {
+	                    payload.flow_subscription_id = flowSubscriptionId;
+	                } else {
+	                    payload.mp_preapproval_id = mpPreapprovalId;
+	                }
+
+	                const res = await fetch(String(ppsCancelUrl), {
+	                    method: 'POST',
+	                    headers: {
+	                        'Content-Type': 'application/json',
+	                        'X-WP-Nonce': String(ppsRestNonce),
+	                    },
+	                    body: JSON.stringify(payload),
+	                });
+	                const data = await res.json().catch(() => null);
+	                if (!res.ok || (data && data.error)) {
+	                    const msg = data && (data.message || data.error) ? String(data.message || data.error) : 'No se pudo cancelar.';
+	                    window.showToast && window.showToast(msg);
+	                    btn.disabled = false;
+	                    btn.classList.remove('opacity-60');
+	                    return;
+	                }
+
+	                window.showToast && window.showToast(<?php echo json_encode((strpos(get_locale(), 'es') !== false) ? 'Suscripción actualizada.' : 'Subscription updated.'); ?>);
+	                window.location.reload();
+	            } catch (e) {
+	                window.showToast && window.showToast('No se pudo cancelar.');
+	                btn.disabled = false;
+	                btn.classList.remove('opacity-60');
+	            }
+	        }
+
         // Use DOMContentLoaded to ensure we run after standard WP init if needed
 	        if (document.readyState === 'loading') {
 	            document.addEventListener('DOMContentLoaded', init);
 	        } else {
 	            init();
 	        }
+
+	        document.addEventListener('click', function (e) {
+	            const btn = e.target && e.target.closest ? e.target.closest('[data-pps-cancel]') : null;
+	            if (!btn) return;
+	            e.preventDefault();
+	            cancelMembership(btn);
+	        });
     })();
 </script>

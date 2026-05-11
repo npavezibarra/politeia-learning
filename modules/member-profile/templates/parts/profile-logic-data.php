@@ -836,7 +836,7 @@ if ($is_own_profile && $logged_in_user_id > 0) {
             $join_tier = $tiers_exists ? "LEFT JOIN {$tiers_table} t ON t.id = s.tier_id" : "";
             $rows = $wpdb->get_results(
                 $wpdb->prepare(
-                    "SELECT s.id, s.creator_user_id, s.subscriber_user_id, s.tier_id, s.mp_preapproval_id, s.status, s.current_period_end, s.cancel_at_period_end, s.created_at, s.updated_at {$select_tier}
+                    "SELECT s.id, s.creator_user_id, s.subscriber_user_id, s.tier_id, s.gateway, s.mp_preapproval_id, s.flow_subscription_id, s.status, s.current_period_end, s.cancel_at_period_end, s.cancelled_at, s.gateway_cancelled_at, s.cancellation_reason, s.created_at, s.updated_at {$select_tier}
                      FROM {$subscriptions_table} s
                      {$join_tier}
                      WHERE s.creator_user_id = %d OR s.subscriber_user_id = %d
@@ -871,8 +871,13 @@ if ($is_own_profile && $logged_in_user_id > 0) {
                     'subtitle' => $direction === 'outgoing' ? __('Tu suscripción', 'politeia-learning') : __('Te suscriben', 'politeia-learning'),
                     'created_at' => (string) ($row['created_at'] ?? ''),
                     'expires_at' => (string) ($row['current_period_end'] ?? ''),
+                    'gateway' => (string) ($row['gateway'] ?? 'mercadopago'),
                     'mp_preapproval_id' => (string) ($row['mp_preapproval_id'] ?? ''),
+                    'flow_subscription_id' => (string) ($row['flow_subscription_id'] ?? ''),
                     'cancel_at_period_end' => !empty($row['cancel_at_period_end']),
+                    'cancelled_at' => (string) ($row['cancelled_at'] ?? ''),
+                    'gateway_cancelled_at' => (string) ($row['gateway_cancelled_at'] ?? ''),
+                    'cancellation_reason' => (string) ($row['cancellation_reason'] ?? ''),
                 ];
 
                 if ($state === 'active') {
