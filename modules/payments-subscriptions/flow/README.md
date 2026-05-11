@@ -119,6 +119,37 @@ This is a phased rollout plan to reduce risk and keep production safe.
   - force re-subscribe
 - Add admin tools for reconciliation and manual remediation.
 
+## TODO (current gaps)
+
+Status note (as of 2026-05-11):
+
+- Phases 0–2 are implemented and verified (settings connectivity + tier → Flow plan sync).
+- Phase 3 is implemented but **blocked** in production until Flow enables the commerce contract for **Cobro Automático / Suscripciones**.
+- Phases 4–5 are implemented but **not verified end-to-end** because we cannot create real Flow recurring subscriptions yet.
+- Phase 6 is not implemented.
+
+### Remaining work
+
+- **Flow contract enablement**
+  - Flow must enable **Cobro Automático / Suscripciones** for the commerce (otherwise API returns `code=7001` on `customer/register`).
+  - After enablement, run a full LIVE test: register card → create subscription → first charge → callback → ledger → relationship.
+
+- **Phase 4 verification + payload mapping**
+  - Confirm Flow callback token resolution (`payment/getStatusExtended`) includes a stable `subscriptionId` (or equivalent).
+  - Adjust extraction/mapping logic if Flow uses different keys/structure for subscription payment events.
+  - Confirm fee/amount fields and currency mapping into `wp_politeia_transaction_ledger`.
+  - Confirm access renewal via `pl_subscription_payment_completed` is correct for recurring events.
+
+- **Phase 5 verification (cancellation)**
+  - Validate immediate cancel vs `at_period_end=1` behavior in LIVE.
+  - Ensure local fields (`cancel_at_period_end`, `cancelled_at`, `gateway_cancelled_at`, `cancellation_reason`) mirror Flow correctly.
+  - Validate late callbacks after scheduled cancellation do not re-grant access incorrectly.
+
+- **Phase 6 (migration / fallback from Mercado Pago)**
+  - Implement automatic fallback when Flow is selected but unavailable (e.g. `code=7001`), and/or a UI toggle that only offers configured providers.
+  - Decide policy for existing Mercado Pago subscribers (keep, re-subscribe, migrate-on-renewal).
+  - Add admin reconciliation tools for cross-gateway auditing (active subs, cancelled, ledger completeness).
+
 ## Approval gate
 
 We should implement phases in order, shipping each phase behind feature flags when needed.
