@@ -21,9 +21,11 @@ if (!defined('ABSPATH')) {
                 <p class="pl-auth-unverified__text"><?php echo esc_html($data['body']); ?></p>
 
                 <?php if (!empty($data['message'])) : ?>
-                    <p class="pl-auth-unverified__notice pl-auth-unverified__notice--<?php echo esc_attr($data['message_type'] ?: 'info'); ?>">
-                        <?php echo esc_html($data['message']); ?>
-                    </p>
+                    <div class="pl-auth-unverified__notice">
+                        <p class="pl-auth-unverified__notice-text pl-auth-unverified__notice-text--<?php echo esc_attr($data['message_type'] ?: 'info'); ?>">
+                            <?php echo esc_html($data['message']); ?>
+                        </p>
+                    </div>
                 <?php endif; ?>
                 
                 <form method="post" action="<?php echo esc_url($data['action_url']); ?>" class="pl-auth-unverified__actions">
@@ -33,33 +35,35 @@ if (!defined('ABSPATH')) {
                     <button type="submit" class="pl-auth-unverified__btn"><?php echo esc_html($data['cta']); ?></button>
                 </form>
 
-                <form method="post" action="<?php echo esc_url($data['action_url']); ?>" class="pl-auth-unverified__token">
-                    <input type="hidden" name="action" value="pl_auth_confirm_token">
-                    <input type="hidden" name="pl_auth_confirm_nonce" value="<?php echo esc_attr($data['confirm_nonce']); ?>">
-                    <input type="hidden" name="redirect_to" value="<?php echo esc_attr($data['redirect_to']); ?>">
-                    <label class="pl-auth-unverified__token-label" for="pl-auth-unverified-token">
-                        <?php echo esc_html__('If your email provider blocks the button, paste the token here:', 'politeia-learning'); ?>
-                    </label>
-                    <div class="pl-auth-unverified__token-row">
-                        <input id="pl-auth-unverified-token" name="pl_auth_token" type="text" class="pl-auth-unverified__token-input" inputmode="text" autocomplete="one-time-code" placeholder="<?php echo esc_attr__('Paste token', 'politeia-learning'); ?>">
-                        <button type="submit" class="pl-auth-unverified__token-btn">
-                            <?php echo esc_html__('Confirm', 'politeia-learning'); ?>
-                        </button>
-                    </div>
-                    <?php if (!empty($data['user_email'])) : ?>
-                        <p class="pl-auth-unverified__token-help">
-                            <?php
-                            echo esc_html(
-                                sprintf(
-                                    /* translators: 1: email */
-                                    __('This will verify: %1$s', 'politeia-learning'),
-                                    (string) $data['user_email']
-                                )
-                            );
-                            ?>
-                        </p>
-                    <?php endif; ?>
-                </form>
+                <?php if (!empty($data['show_token_form'])) : ?>
+                    <form method="post" action="<?php echo esc_url($data['action_url']); ?>" class="pl-auth-unverified__token">
+                        <input type="hidden" name="action" value="pl_auth_confirm_token">
+                        <input type="hidden" name="pl_auth_confirm_nonce" value="<?php echo esc_attr($data['confirm_nonce']); ?>">
+                        <input type="hidden" name="redirect_to" value="<?php echo esc_attr($data['redirect_to']); ?>">
+                        <label class="pl-auth-unverified__token-label" for="pl-auth-unverified-token">
+                            <?php echo esc_html__('If your email provider blocks the button, paste the token here:', 'politeia-learning'); ?>
+                        </label>
+                        <div class="pl-auth-unverified__token-row">
+                            <input id="pl-auth-unverified-token" name="pl_auth_token" type="text" class="pl-auth-unverified__token-input" inputmode="text" autocomplete="one-time-code" placeholder="<?php echo esc_attr__('Paste token', 'politeia-learning'); ?>">
+                            <button type="submit" class="pl-auth-unverified__token-btn">
+                                <?php echo esc_html__('Confirm', 'politeia-learning'); ?>
+                            </button>
+                        </div>
+                        <?php if (!empty($data['user_email'])) : ?>
+                            <p class="pl-auth-unverified__token-help">
+                                <?php
+                                echo esc_html(
+                                    sprintf(
+                                        /* translators: 1: email */
+                                        __('This will verify: %1$s', 'politeia-learning'),
+                                        (string) $data['user_email']
+                                    )
+                                );
+                                ?>
+                            </p>
+                        <?php endif; ?>
+                    </form>
+                <?php endif; ?>
             </div>
         </div>
     </div>

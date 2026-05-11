@@ -116,6 +116,8 @@ class Renderer
             || $notice_code === 'verification_sent'
             || $error_code !== '';
 
+        $show_token_form = $notice_code === 'verification_sent';
+
         // Data for the template
         $data = [
             'title' => $is_spanish ? 'Aún no has verificado tu cuenta' : 'Your account is not verified yet',
@@ -129,6 +131,7 @@ class Renderer
             'message_type' => $message_type,
             'should_open' => $should_open,
             'user_email' => $user_email,
+            'show_token_form' => $show_token_form,
         ];
 
         ob_start();

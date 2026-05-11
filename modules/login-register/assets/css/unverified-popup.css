@@ -81,28 +81,30 @@
 .pl-auth-unverified__inner {
     padding: 28px 28px 26px;
     position: relative;
+    text-align: center;
 }
 
 .pl-auth-unverified__close {
     position: absolute;
     right: 14px;
     top: 12px;
-    width: 42px;
-    height: 42px;
-    border-radius: 999px;
+    width: 34px;
+    height: 34px;
+    border-radius: 0;
     border: 0;
-    background: rgba(15, 23, 42, 0.06);
+    background: transparent;
     cursor: pointer;
-    font-size: 18px;
+    font-size: 22px;
     line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s ease;
+    color: #0f172a;
+    transition: opacity 0.2s ease;
 }
 
 .pl-auth-unverified__close:hover {
-    background: rgba(15, 23, 42, 0.12);
+    opacity: 0.75;
 }
 
 .pl-auth-unverified__title {
@@ -122,28 +124,26 @@
 
 .pl-auth-unverified__notice {
     margin: 0 0 18px;
-    padding: 12px 14px;
-    border-radius: 14px;
+}
+
+.pl-auth-unverified__notice-text {
+    margin: 0;
     font-size: 14px;
-    line-height: 1.4;
-    border: 1px solid rgba(15, 23, 42, 0.10);
-    background: rgba(15, 23, 42, 0.04);
+    line-height: 1.45;
     color: #0f172a;
+    font-weight: 600;
 }
 
-.pl-auth-unverified__notice--success {
-    border-color: rgba(16, 185, 129, 0.25);
-    background: rgba(16, 185, 129, 0.12);
+.pl-auth-unverified__notice-text--success {
+    color: #065f46;
 }
 
-.pl-auth-unverified__notice--warning {
-    border-color: rgba(245, 158, 11, 0.30);
-    background: rgba(245, 158, 11, 0.14);
+.pl-auth-unverified__notice-text--warning {
+    color: #92400e;
 }
 
-.pl-auth-unverified__notice--error {
-    border-color: rgba(239, 68, 68, 0.30);
-    background: rgba(239, 68, 68, 0.12);
+.pl-auth-unverified__notice-text--error {
+    color: #991b1b;
 }
 
 .pl-auth-unverified__actions {
@@ -162,12 +162,16 @@
     line-height: 1.35;
     color: #475569;
     font-weight: 600;
+    text-align: center;
 }
 
 .pl-auth-unverified__token-row {
     display: flex;
     gap: 10px;
     align-items: center;
+    justify-content: center;
+    max-width: 520px;
+    margin: 0 auto;
 }
 
 .pl-auth-unverified__token-input {
@@ -208,6 +212,7 @@
     margin: 8px 0 0;
     font-size: 12px;
     color: #94a3b8;
+    text-align: center;
 }
 
 .pl-auth-unverified__btn {
