@@ -88,7 +88,21 @@ class Politeia_PPS_Flow_Subscribe {
 		);
 
 		if ( empty( $reg['ok'] ) || ! is_array( $reg['body'] ) ) {
-			return new WP_Error( 'flow_register_failed', 'Flow card registration failed.', $reg );
+			$body = is_array( $reg['body'] ?? null ) ? $reg['body'] : array();
+			$code = isset( $body['code'] ) ? (int) $body['code'] : 0;
+			if ( 7001 === $code ) {
+				return new WP_Error(
+					'flow_missing_automatic_charge_contract',
+					'Flow: este comercio no tiene habilitado Cobro Automático/Suscripciones. Debes solicitar a Flow la activación del contrato de cobro automático para poder crear membresías.',
+					$reg
+				);
+			}
+
+			return new WP_Error(
+				'flow_register_failed',
+				'Flow: no se pudo iniciar el registro de tarjeta para cobro automático.',
+				$reg
+			);
 		}
 
 		$url   = (string) ( $reg['body']['url'] ?? '' );
@@ -303,4 +317,3 @@ class Politeia_PPS_Flow_Subscribe {
 		return home_url( '/' . Politeia_PPS_Return_Pages::FLOW_RETURN_SLUG . '/' );
 	}
 }
-

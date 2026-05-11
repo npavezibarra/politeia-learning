@@ -23,6 +23,16 @@ Flow is a Chile-first provider with explicit subscription APIs, including cancel
 
 This submodule is where we will implement the full Flow subscription lifecycle.
 
+## Operational requirement (Flow contract)
+
+Flow recurring subscriptions require the merchant/commerce to have the **Cobro Automático / Suscripciones** contract enabled.
+
+If the commerce does not have it enabled, Flow can return errors like:
+
+- `code=7001` `"Commerce has not automatic charge contract"`
+
+In that scenario, Flow can still show plans/customers in the dashboard, but **card registration and recurring charges will fail** until Flow enables the contract.
+
 ## Folder contract (expected structure)
 
 The exact structure will evolve, but the intention is:
@@ -117,4 +127,3 @@ We should implement phases in order, shipping each phase behind feature flags wh
 
 - Whether we will deprecate Mercado Pago subscriptions entirely or keep it as a fallback.
 - Which Flow mode to support first: TEST-only or directly LIVE-ready.
-
