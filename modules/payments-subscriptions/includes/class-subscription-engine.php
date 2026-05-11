@@ -601,9 +601,27 @@ class Politeia_PPS_Subscription_Engine {
 		);
 	}
 
-	public static function cancel_subscription( $subscriber_user_id, $mp_preapproval_id ) {
+	public static function cancel_subscription( $subscriber_user_id, $args ) {
 		$subscriber_user_id = (int) $subscriber_user_id;
-		$mp_preapproval_id  = sanitize_text_field( $mp_preapproval_id );
+		$args               = is_array( $args ) ? $args : array();
+
+		$gateway       = sanitize_key( (string) ( $args['gateway'] ?? 'mercadopago' ) );
+		$at_period_end = isset( $args['at_period_end'] ) ? (int) $args['at_period_end'] : 0;
+		$reason        = sanitize_text_field( (string) ( $args['reason'] ?? '' ) );
+
+		if ( 'flow' === $gateway ) {
+			$flow_subscription_id = sanitize_text_field( (string) ( $args['flow_subscription_id'] ?? '' ) );
+			if ( '' === $flow_subscription_id ) {
+				return new WP_Error( 'flow_subscription_id_required', 'flow_subscription_id_required' );
+			}
+
+			return self::cancel_flow_subscription( $subscriber_user_id, $flow_subscription_id, $at_period_end, $reason );
+		}
+
+		$mp_preapproval_id = sanitize_text_field( (string) ( $args['mp_preapproval_id'] ?? '' ) );
+		if ( ! $mp_preapproval_id ) {
+			return new WP_Error( 'mp_preapproval_id_required', 'mp_preapproval_id_required' );
+		}
 
 		$client = new Politeia_PPS_MercadoPago_Client();
 		$res    = $client->update_preapproval( $mp_preapproval_id, array( 'status' => 'cancelled' ) );
@@ -614,6 +632,97 @@ class Politeia_PPS_Subscription_Engine {
 		self::set_subscription_status_by_mp_id( $mp_preapproval_id, 'cancelled' );
 		do_action( 'politeia_pps_subscription_status_changed', $mp_preapproval_id, $subscriber_user_id, 'cancelled', $res );
 		return array( 'ok' => true, 'raw' => $res );
+	}
+
+	private static function cancel_flow_subscription( $subscriber_user_id, $flow_subscription_id, $at_period_end, $reason ) {
+		global $wpdb;
+
+		$subscriber_user_id   = (int) $subscriber_user_id;
+		$flow_subscription_id = sanitize_text_field( (string) $flow_subscription_id );
+		$at_period_end        = (int) $at_period_end ? 1 : 0;
+		$reason               = sanitize_text_field( (string) $reason );
+
+		$table = self::subs_table();
+		$sub   = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE gateway = 'flow' AND flow_subscription_id = %s LIMIT 1",
+				$flow_subscription_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! is_array( $sub ) ) {
+			return new WP_Error( 'subscription_not_found', 'Subscription not found.' );
+		}
+		if ( (int) ( $sub['subscriber_user_id'] ?? 0 ) !== $subscriber_user_id ) {
+			return new WP_Error( 'forbidden', 'Forbidden', array( 'status' => 403 ) );
+		}
+
+		if ( ! class_exists( 'Politeia_PPS_Settings' ) || ! class_exists( 'Politeia_PPS_Flow_Client' ) ) {
+			return new WP_Error( 'missing_dependencies', 'Missing Flow dependencies.' );
+		}
+
+		$mode   = Politeia_PPS_Settings::get_mode();
+		$api    = Politeia_PPS_Settings::get_flow_api_key( $mode );
+		$secret = Politeia_PPS_Settings::get_flow_secret( $mode );
+		if ( '' === trim( (string) $api ) || '' === trim( (string) $secret ) ) {
+			return new WP_Error( 'flow_not_configured', 'Flow is not configured.' );
+		}
+
+		$client = new Politeia_PPS_Flow_Client();
+		$res    = $client->cancel_subscription( $flow_subscription_id, $at_period_end, $api, $secret, $mode );
+
+		if ( empty( $res['ok'] ) ) {
+			return new WP_Error( 'flow_cancel_failed', 'Flow cancel failed.', $res );
+		}
+
+		$now = current_time( 'mysql' );
+
+		$update = array(
+			'cancel_at_period_end' => $at_period_end,
+			'updated_at'           => $now,
+		);
+		$formats = array( '%d', '%s' );
+
+		if ( 0 === $at_period_end ) {
+			$update['status']       = 'cancelled';
+			$update['cancelled_at'] = $now;
+			$formats[]              = '%s';
+			$formats[]              = '%s';
+		} else {
+			// Keep as active but mark cancellation scheduled.
+			$update['status'] = 'active';
+			$formats[]        = '%s';
+		}
+
+		if ( $reason !== '' ) {
+			$update['cancellation_reason'] = $reason;
+			$formats[]                    = '%s';
+		}
+
+		$gateway_cancel_at = null;
+		if ( is_array( $res['body'] ?? null ) ) {
+			$gateway_cancel_at = self::normalize_datetime( (string) ( $res['body']['cancel_at'] ?? '' ) );
+		}
+		if ( $gateway_cancel_at ) {
+			$update['gateway_cancelled_at'] = $gateway_cancel_at;
+			$formats[]                      = '%s';
+		}
+
+		$ok = $wpdb->update( $table, $update, array( 'id' => (int) $sub['id'] ), $formats, array( '%d' ) );
+		if ( $ok === false ) {
+			return new WP_Error( 'db_update_failed', 'Failed to update subscription.', array( 'error' => $wpdb->last_error ) );
+		}
+
+		do_action( 'politeia_pps_subscription_status_changed', $flow_subscription_id, $subscriber_user_id, $at_period_end ? 'cancel_scheduled' : 'cancelled', $res );
+
+		return array(
+			'ok'                   => true,
+			'gateway'               => 'flow',
+			'flow_subscription_id'  => $flow_subscription_id,
+			'at_period_end'         => $at_period_end,
+			'raw'                  => $res,
+		);
 	}
 
 	public static function record_ledger_entry( $entry ) {

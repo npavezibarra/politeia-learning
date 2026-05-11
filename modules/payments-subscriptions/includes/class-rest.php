@@ -180,12 +180,26 @@ class Politeia_PPS_REST {
 			error_log( '[PPS][DEBUG][rest_subscribe] user_id=' . $user_id . ' body=' . wp_json_encode( $params ) );
 		}
 
+		$gateway = sanitize_key( (string) ( $params['gateway'] ?? '' ) );
 		$mp_preapproval_id = sanitize_text_field( $params['mp_preapproval_id'] ?? '' );
-		if ( ! $mp_preapproval_id ) {
-			return new WP_REST_Response( array( 'error' => 'mp_preapproval_id_required' ), 400 );
+		$flow_subscription_id = sanitize_text_field( $params['flow_subscription_id'] ?? '' );
+		$at_period_end = isset( $params['at_period_end'] ) ? (int) $params['at_period_end'] : 0;
+		$reason = sanitize_text_field( (string) ( $params['reason'] ?? '' ) );
+
+		if ( '' === $gateway ) {
+			$gateway = $flow_subscription_id ? 'flow' : 'mercadopago';
 		}
 
-		$res = Politeia_PPS_Subscription_Engine::cancel_subscription( $user_id, $mp_preapproval_id );
+		$res = Politeia_PPS_Subscription_Engine::cancel_subscription(
+			$user_id,
+			array(
+				'gateway'              => $gateway,
+				'mp_preapproval_id'    => $mp_preapproval_id,
+				'flow_subscription_id' => $flow_subscription_id,
+				'at_period_end'        => $at_period_end,
+				'reason'               => $reason,
+			)
+		);
 		if ( is_wp_error( $res ) ) {
 			$data   = $res->get_error_data();
 			$status = 400;

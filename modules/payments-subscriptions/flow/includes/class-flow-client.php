@@ -176,6 +176,32 @@ class Politeia_PPS_Flow_Client {
 		);
 	}
 
+	/**
+	 * Cancel a subscription in Flow.
+	 *
+	 * Endpoint: POST /subscription/cancel
+	 *
+	 * @param string $subscription_id
+	 * @param int $at_period_end 0 immediate, 1 at period end
+	 * @param string $api_key
+	 * @param string $secret_key
+	 * @param string $mode
+	 * @return array
+	 */
+	public function cancel_subscription( $subscription_id, $at_period_end, $api_key, $secret_key, $mode ) {
+		return $this->request(
+			'POST',
+			'/subscription/cancel',
+			array(
+				'subscriptionId' => (string) $subscription_id,
+				'at_period_end'  => (int) $at_period_end,
+			),
+			$api_key,
+			$secret_key,
+			$mode
+		);
+	}
+
 	private function debug( $event, array $context = array() ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( '[PPS][Flow] ' . sanitize_key( (string) $event ) . ' ' . wp_json_encode( $context ) );

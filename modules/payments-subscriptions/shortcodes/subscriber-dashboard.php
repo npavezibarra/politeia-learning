@@ -29,7 +29,8 @@ add_shortcode(
 							<th><?php echo esc_html__( 'Creator', 'politeia-payments-subscriptions' ); ?></th>
 							<th><?php echo esc_html__( 'Tier', 'politeia-payments-subscriptions' ); ?></th>
 							<th><?php echo esc_html__( 'Status', 'politeia-payments-subscriptions' ); ?></th>
-							<th><?php echo esc_html__( 'Mercado Pago ID', 'politeia-payments-subscriptions' ); ?></th>
+							<th><?php echo esc_html__( 'Gateway', 'politeia-payments-subscriptions' ); ?></th>
+							<th><?php echo esc_html__( 'Subscription ID', 'politeia-payments-subscriptions' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -38,7 +39,8 @@ add_shortcode(
 								<td><?php echo esc_html( (string) $sub['creator_user_id'] ); ?></td>
 								<td><?php echo esc_html( (string) $sub['tier_id'] ); ?></td>
 								<td><?php echo esc_html( (string) $sub['status'] ); ?></td>
-								<td><code><?php echo esc_html( (string) $sub['mp_preapproval_id'] ); ?></code></td>
+								<td><code><?php echo esc_html( (string) ( $sub['gateway'] ?? 'mercadopago' ) ); ?></code></td>
+								<td><code><?php echo esc_html( (string) ( ( $sub['gateway'] ?? '' ) === 'flow' ? ( $sub['flow_subscription_id'] ?? '' ) : ( $sub['mp_preapproval_id'] ?? '' ) ) ); ?></code></td>
 							</tr>
 						<?php endforeach; ?>
 					</tbody>
@@ -46,11 +48,10 @@ add_shortcode(
 			<?php endif; ?>
 
 			<p class="politeia-pps__hint">
-				<?php echo esc_html__( 'Pause / payment-method updates are coming next. Cancellation is available via REST (politeia/v1/subscriptions/cancel).', 'politeia-payments-subscriptions' ); ?>
+				<?php echo esc_html__( 'Cancellation is available via REST (politeia/v1/subscriptions/cancel) for Mercado Pago and Flow.', 'politeia-payments-subscriptions' ); ?>
 			</p>
 		</div>
 		<?php
 		return ob_get_clean();
 	}
 );
-
