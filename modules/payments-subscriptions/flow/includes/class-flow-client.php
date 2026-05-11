@@ -154,6 +154,28 @@ class Politeia_PPS_Flow_Client {
 		);
 	}
 
+	/**
+	 * Flow callback tokens should be resolved via payment/getStatusExtended.
+	 *
+	 * @param string $token
+	 * @param string $api_key
+	 * @param string $secret_key
+	 * @param string $mode
+	 * @return array
+	 */
+	public function get_payment_status_extended( $token, $api_key, $secret_key, $mode ) {
+		return $this->request(
+			'GET',
+			'/payment/getStatusExtended',
+			array(
+				'token' => (string) $token,
+			),
+			$api_key,
+			$secret_key,
+			$mode
+		);
+	}
+
 	private function debug( $event, array $context = array() ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( '[PPS][Flow] ' . sanitize_key( (string) $event ) . ' ' . wp_json_encode( $context ) );

@@ -661,6 +661,29 @@ class Politeia_PPS_Subscription_Engine {
 		);
 	}
 
+	/**
+	 * Lookup a Flow subscription row by Flow subscription id.
+	 *
+	 * @param string $flow_subscription_id
+	 * @return array|null
+	 */
+	public static function get_subscription_by_flow_id( $flow_subscription_id ) {
+		global $wpdb;
+		$table = self::subs_table();
+		$flow_subscription_id = sanitize_text_field( (string) $flow_subscription_id );
+		if ( '' === $flow_subscription_id ) {
+			return null;
+		}
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE gateway = 'flow' AND flow_subscription_id = %s ORDER BY id DESC LIMIT 1",
+				$flow_subscription_id
+			),
+			ARRAY_A
+		);
+		return is_array( $row ) ? $row : null;
+	}
+
 	public static function is_active_subscription( $subscriber_user_id, $creator_user_id = null ) {
 		global $wpdb;
 		$table              = self::subs_table();

@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 }
 
 define('PL_PPS_IN_POLITEIA_LEARNING', true);
-define('PL_PPS_VERSION', '0.1.7');
+define('PL_PPS_VERSION', '0.1.8');
 define('PL_PPS_PATH', plugin_dir_path(__FILE__));
 define('PL_PPS_URL', plugin_dir_url(__FILE__));
 
@@ -39,6 +39,7 @@ require_once PL_PPS_PATH . 'includes/gateways/class-gateway-registry.php';
 require_once PL_PPS_PATH . 'flow/includes/class-flow-client.php';
 require_once PL_PPS_PATH . 'flow/includes/class-flow-engine.php';
 require_once PL_PPS_PATH . 'flow/includes/class-flow-subscribe.php';
+require_once PL_PPS_PATH . 'flow/includes/class-flow-callbacks.php';
 require_once PL_PPS_PATH . 'includes/class-mercadopago-client.php';
 require_once PL_PPS_PATH . 'includes/class-subscription-engine.php';
 require_once PL_PPS_PATH . 'includes/class-webhooks.php';
@@ -74,6 +75,9 @@ add_action('init', static function (): void {
     }
     if (class_exists('Politeia_PPS_Return_Pages')) {
         Politeia_PPS_Return_Pages::init();
+    }
+    if ( class_exists( 'Politeia_PPS_Flow_Callbacks' ) ) {
+        Politeia_PPS_Flow_Callbacks::init();
     }
 }, 0);
 

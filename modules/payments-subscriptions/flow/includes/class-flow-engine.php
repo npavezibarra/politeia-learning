@@ -72,6 +72,7 @@ class Politeia_PPS_Flow_Engine {
 			'currency'       => $currency,
 			'interval'       => 3, // mensual
 			'interval_count' => 1,
+			'urlCallback'    => class_exists( 'Politeia_PPS_Flow_Callbacks' ) ? Politeia_PPS_Flow_Callbacks::callback_url() : '',
 		);
 
 		$client = new Politeia_PPS_Flow_Client();
@@ -138,4 +139,3 @@ class Politeia_PPS_Flow_Engine {
 		return false !== strpos( $raw, 'exist' ) || false !== strpos( $raw, 'ya existe' );
 	}
 }
-
