@@ -144,4 +144,3 @@ class PL_Under_Construction_Guard
         );
     }
 }
-

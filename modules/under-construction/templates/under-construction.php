@@ -50,6 +50,8 @@ $message = 'Estamos construyendo este sitio.';
             font-weight: 700;
             letter-spacing: .02em;
             cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
         }
         .pl-uc-button:focus { outline: 2px solid #111111; outline-offset: 2px; }
     </style>
@@ -65,15 +67,14 @@ $message = 'Estamos construyendo este sitio.';
 
         <p class="pl-uc-message"><?php echo esc_html($message); ?></p>
 
-        <button
+        <a
             class="pl-uc-button"
-            type="button"
-            onclick="if(window.PLAuthOpenModal){window.PLAuthOpenModal('login');}else{window.location.href=<?php echo wp_json_encode((string) $login_fallback_url); ?>;}"
+            href="<?php echo esc_url($login_fallback_url); ?>"
+            onclick="if(window.PLAuthOpenModal){window.PLAuthOpenModal('login');return false;}return true;"
         >
             <?php echo esc_html__('INGRESAR', 'politeia-learning'); ?>
-        </button>
+        </a>
     </main>
     <?php wp_footer(); ?>
 </body>
 </html>
-
