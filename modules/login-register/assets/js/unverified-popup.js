@@ -12,6 +12,12 @@
         document.cookie = "pl_auth_unverified_dismissed=1; expires=" + date.toUTCString() + "; path=/";
     }
 
+    function closeOverlay() {
+        if (!overlay.classList.contains('is-open')) return;
+        overlay.classList.remove('is-open');
+        setDismissedCookie();
+    }
+
     try {
         if (overlay.classList.contains('is-open') && window.history && window.history.replaceState) {
             var url = new URL(window.location.href);
@@ -26,15 +32,19 @@
     var btn = overlay.querySelector('[data-pl-auth-unverified-close]');
     if (btn) {
         btn.addEventListener('click', function () {
-            overlay.classList.remove('is-open');
-            setDismissedCookie();
+            closeOverlay();
         });
     }
 
     overlay.addEventListener('click', function (event) {
         if (event.target === overlay) {
-            overlay.classList.remove('is-open');
-            setDismissedCookie();
+            closeOverlay();
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeOverlay();
         }
     });
 })();

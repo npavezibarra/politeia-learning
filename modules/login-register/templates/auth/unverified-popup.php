@@ -12,6 +12,12 @@ if (!defined('ABSPATH')) {
             <button type="button" class="pl-auth-unverified__close" aria-label="<?php echo esc_attr__('Close', 'politeia-learning'); ?>" data-pl-auth-unverified-close>×</button>
             <h3 class="pl-auth-unverified__title"><?php echo esc_html($data['title']); ?></h3>
             <p class="pl-auth-unverified__text"><?php echo esc_html($data['body']); ?></p>
+
+            <?php if (!empty($data['message'])) : ?>
+                <p class="pl-auth-unverified__notice pl-auth-unverified__notice--<?php echo esc_attr($data['message_type'] ?: 'info'); ?>">
+                    <?php echo esc_html($data['message']); ?>
+                </p>
+            <?php endif; ?>
             
             <form method="post" action="<?php echo esc_url($data['action_url']); ?>" class="pl-auth-unverified__actions">
                 <input type="hidden" name="action" value="pl_auth_resend_confirmation">

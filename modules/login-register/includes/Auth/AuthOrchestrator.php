@@ -63,40 +63,44 @@ final class AuthOrchestrator
 
     public function enqueue_assets(): void
     {
-        if (is_admin() || is_user_logged_in()) {
+        if (is_admin()) {
             return;
         }
 
-        wp_enqueue_style('pl-auth-poppins', 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap', [], null);
-        
-        wp_enqueue_style(
-            'pl-auth-modal-css',
-            PL_AUTH_URL . 'assets/css/auth-modal.css',
-            ['pl-auth-poppins'],
-            filemtime(PL_AUTH_PATH . 'assets/css/auth-modal.css')
-        );
-
-        wp_enqueue_script(
-            'pl-auth-modal-js',
-            PL_AUTH_URL . 'assets/js/auth-modal.js',
-            ['jquery'],
-            filemtime(PL_AUTH_PATH . 'assets/js/auth-modal.js'),
-            true
-        );
-
         $is_spanish = strpos(get_locale(), 'es') === 0;
-        wp_localize_script('pl-auth-modal-js', 'plAuthData', [
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'forgotNonce' => wp_create_nonce('pl_auth_forgot_password'),
-            'isSpanish' => $is_spanish,
-            'loginUrl' => AuthUtils::build_modal_url('login'),
-            'registerUrl' => AuthUtils::build_modal_url('register'),
-            'labels' => $this->get_localization_labels($is_spanish),
-            'messages' => [
-                'email_mismatch' => __('The email addresses do not match.', 'politeia-learning'),
-                'password_mismatch' => __('The passwords do not match.', 'politeia-learning'),
-            ]
-        ]);
+
+        // Auth modal assets (only for logged out users)
+        if (!is_user_logged_in()) {
+            wp_enqueue_style('pl-auth-poppins', 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap', [], null);
+
+            wp_enqueue_style(
+                'pl-auth-modal-css',
+                PL_AUTH_URL . 'assets/css/auth-modal.css',
+                ['pl-auth-poppins'],
+                filemtime(PL_AUTH_PATH . 'assets/css/auth-modal.css')
+            );
+
+            wp_enqueue_script(
+                'pl-auth-modal-js',
+                PL_AUTH_URL . 'assets/js/auth-modal.js',
+                ['jquery'],
+                filemtime(PL_AUTH_PATH . 'assets/js/auth-modal.js'),
+                true
+            );
+
+            wp_localize_script('pl-auth-modal-js', 'plAuthData', [
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'forgotNonce' => wp_create_nonce('pl_auth_forgot_password'),
+                'isSpanish' => $is_spanish,
+                'loginUrl' => AuthUtils::build_modal_url('login'),
+                'registerUrl' => AuthUtils::build_modal_url('register'),
+                'labels' => $this->get_localization_labels($is_spanish),
+                'messages' => [
+                    'email_mismatch' => __('The email addresses do not match.', 'politeia-learning'),
+                    'password_mismatch' => __('The passwords do not match.', 'politeia-learning'),
+                ]
+            ]);
+        }
 
         // Unverified popup assets (only for logged in users)
         if (is_user_logged_in()) {

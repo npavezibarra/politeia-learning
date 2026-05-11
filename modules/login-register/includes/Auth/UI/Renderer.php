@@ -64,8 +64,6 @@ class Renderer
 
         $notice_code = (string) sanitize_key((string) wp_unslash($_GET['pl_auth_notice'] ?? ''));
         $error_code = (string) sanitize_key((string) wp_unslash($_GET['pl_auth_error'] ?? ''));
-        $force_open = isset($_GET['pl_auth_unverified']) && sanitize_key((string) wp_unslash($_GET['pl_auth_unverified'])) === '1';
-        $open_after_quiz = isset($_GET['pl_auth_unverified_after_quiz']) && sanitize_key((string) wp_unslash($_GET['pl_auth_unverified_after_quiz'])) === '1';
         $action_url = admin_url('admin-post.php');
         $nonce = wp_create_nonce('pl_auth_resend_confirmation');
         
@@ -78,19 +76,37 @@ class Renderer
         ], $redirect_to);
 
         $is_spanish = strpos(get_locale(), 'es') === 0;
+
+        $message = '';
+        $message_type = '';
+        if ($notice_code === 'verification_sent') {
+            $message = $is_spanish
+                ? 'Te enviamos un correo de confirmación. Por favor revisa tu bandeja de entrada.'
+                : 'We sent a confirmation email. Please check your inbox.';
+            $message_type = 'success';
+        } elseif ($error_code === 'resend_throttled') {
+            $message = $is_spanish
+                ? 'Espera un momento antes de reenviar el correo.'
+                : 'Please wait a moment before resending.';
+            $message_type = 'warning';
+        } elseif ($error_code !== '') {
+            $message = $is_spanish
+                ? 'Algo salió mal. Por favor, inténtalo de nuevo.'
+                : 'Something went wrong. Please try again.';
+            $message_type = 'error';
+        }
         
         // Data for the template
         $data = [
             'title' => $is_spanish ? 'Aún no has verificado tu cuenta' : 'Your account is not verified yet',
             'body' => $is_spanish ? 'Para mayor seguridad revisa tu correo y verifica la creación de tu cuenta en Politeia.' : 'For your security, please check your email and verify the creation of your Politeia account.',
-            'cta' => $is_spanish ? 'Enviar correo de confirmación' : 'Send confirmation email',
-            'sent' => $is_spanish ? 'Te enviamos un correo de confirmación. Por favor revisa tu bandeja de entrada.' : 'We sent a confirmation email. Please check your inbox.',
-            'throttled' => $is_spanish ? 'Espera un momento antes de reenviar el correo.' : 'Please wait a moment before resending.',
-            'generic_err' => $is_spanish ? 'Algo salió mal. Por favor, inténtalo de nuevo.' : 'Something went wrong. Please try again.',
+            'cta' => $is_spanish ? 'Reenviar confirmación' : 'Resend confirmation',
             'action_url' => $action_url,
             'nonce' => $nonce,
             'redirect_to' => $redirect_to_for_form,
-            'should_open' => $force_open || $open_after_quiz || ($error_code === 'resend_throttled' || $error_code === 'invalid_nonce')
+            'message' => $message,
+            'message_type' => $message_type,
+            'should_open' => true,
         ];
 
         ob_start();
