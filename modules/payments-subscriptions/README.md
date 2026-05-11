@@ -9,14 +9,14 @@ This module implements **creator-defined monthly memberships** and **Mercado Pag
 - Integration with `PL_Relationships` (`TYPE_SUBSCRIBE`) to unlock subscriber access
 
 Notes:
-- The settings screen contains **Flow (Chile)** credential fields for historical/back-compat reasons, but **this module currently only uses Mercado Pago** (no Flow gateway implementation in this module).
+- The settings screen contains **Flow (Chile)** credential fields. Flow gateway code lives in `modules/payments-subscriptions/flow/` and is now wired for subscription enrollment (card registration + subscription create).
 
 > Note: The old standalone plugin `politeia-payments-subscriptions` is a shim/no-op. The active code lives in this module.
 
 ## Gateways
 
-- Mercado Pago (current)
-- Flow (planned): see `modules/payments-subscriptions/flow/README.md`
+- Mercado Pago
+- Flow: see `modules/payments-subscriptions/flow/README.md`
 
 ## What users do
 

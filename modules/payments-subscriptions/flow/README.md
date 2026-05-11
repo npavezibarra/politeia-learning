@@ -124,15 +124,15 @@ This is a phased rollout plan to reduce risk and keep production safe.
 Status note (as of 2026-05-11):
 
 - Phases 0–2 are implemented and verified (settings connectivity + tier → Flow plan sync).
-- Phase 3 is implemented but **blocked** in production until Flow enables the commerce contract for **Cobro Automático / Suscripciones**.
-- Phases 4–5 are implemented but **not verified end-to-end** because we cannot create real Flow recurring subscriptions yet.
+- Phase 3 is implemented and **verified up to the Flow-hosted card registration redirect** (i.e. `/customer/register` returns `url + token` and the user reaches Flow’s disclaimer/registration screen).
+- Phases 4–5 are implemented but **not verified end-to-end** (needs a complete LIVE run: register card → return callback → create subscription → webhook/ledger/relationship).
 - Phase 6 is not implemented.
 
 ### Remaining work
 
-- **Flow contract enablement**
-  - Flow must enable **Cobro Automático / Suscripciones** for the commerce (otherwise API returns `code=7001` on `customer/register`).
-  - After enablement, run a full LIVE test: register card → create subscription → first charge → callback → ledger → relationship.
+- **End-to-end LIVE verification**
+  - Complete a full LIVE run: register card → create subscription → first charge/webhook → ledger → relationship.
+  - Verify that the return URL/callback reliably finalizes the pending subscription row.
 
 - **Phase 4 verification + payload mapping**
   - Confirm Flow callback token resolution (`payment/getStatusExtended`) includes a stable `subscriptionId` (or equivalent).
@@ -149,6 +149,30 @@ Status note (as of 2026-05-11):
   - Implement automatic fallback when Flow is selected but unavailable (e.g. `code=7001`), and/or a UI toggle that only offers configured providers.
   - Decide policy for existing Mercado Pago subscribers (keep, re-subscribe, migrate-on-renewal).
   - Add admin reconciliation tools for cross-gateway auditing (active subs, cancelled, ledger completeness).
+
+## Troubleshooting (known gotchas)
+
+### `code=7001` from Flow (`/customer/register`)
+
+If Flow returns:
+
+- `{"code":7001,"message":"Commerce has not automatic charge contract"}`
+
+then the commerce does not have **Cobro Automático / Suscripciones** enabled. Enable it in Flow dashboard (or via Flow commercial support) and retry.
+
+### WordPress REST vs Flow API
+
+- Flow endpoints are called **server-side** by this plugin (e.g. `/customer/register`).
+- The browser calls the WordPress REST route:
+  - `POST /wp-json/politeia/v1/subscriptions/subscribe`
+  - Requires being logged-in + a valid `wp_rest` nonce (`X-WP-Nonce`).
+  - A browser `GET` to that URL may return `rest_no_route` because the route only registers `POST`.
+
+### DB schema: `mp_preapproval_id` NOT NULL (legacy)
+
+Some production DBs may have `wp_politeia_subscriptions.mp_preapproval_id` as **NOT NULL**.
+
+For Flow subscriptions we do not have an MP preapproval id, so the implementation stores an empty string (`''`) for `mp_preapproval_id` on the **pending Flow row** to avoid insert failures.
 
 ## Approval gate
 
