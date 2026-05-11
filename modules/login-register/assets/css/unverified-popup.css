@@ -126,6 +126,10 @@
     margin: 0 0 18px;
 }
 
+.pl-auth-unverified__notice + .pl-auth-unverified__token {
+    margin-top: 0;
+}
+
 .pl-auth-unverified__notice-text {
     margin: 0;
     font-size: 14px;
