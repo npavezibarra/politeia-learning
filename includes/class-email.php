@@ -165,9 +165,19 @@ class PL_Email
             );
         }
 
-        return (bool) wp_mail($email, __('Confirm your Politeia account', 'politeia-learning'), $html, [
+        $site_name = wp_specialchars_decode((string) get_bloginfo('name'), ENT_QUOTES);
+        $host = (string) wp_parse_url(home_url('/'), PHP_URL_HOST);
+        $from_email = $host !== '' ? 'no-reply@' . preg_replace('/^www\\./', '', $host) : '';
+
+        $headers = [
             'Content-Type: text/html; charset=UTF-8',
-        ]);
+        ];
+        if ($from_email !== '' && is_email($from_email)) {
+            $headers[] = 'From: ' . $site_name . ' <' . $from_email . '>';
+            $headers[] = 'Reply-To: ' . $site_name . ' <' . $from_email . '>';
+        }
+
+        return (bool) wp_mail($email, __('Confirm your Politeia account', 'politeia-learning'), $html, $headers);
     }
 }
 

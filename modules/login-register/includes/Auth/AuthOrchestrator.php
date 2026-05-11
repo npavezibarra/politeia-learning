@@ -234,7 +234,12 @@ final class AuthOrchestrator
         }
 
         $token = VerificationHandler::issue_token($user_id);
-        VerificationHandler::send_confirmation($user_id, (string) $user->user_email, (string) $user->display_name, $redirect_to, $token);
+        $sent = VerificationHandler::send_confirmation($user_id, (string) $user->user_email, (string) $user->display_name, $redirect_to, $token);
+
+        if (!$sent) {
+            wp_safe_redirect(add_query_arg(['pl_auth_error' => 'verification_send_failed', 'pl_auth_unverified' => '1'], $redirect_to));
+            exit;
+        }
 
         wp_safe_redirect(add_query_arg(['pl_auth_notice' => 'verification_sent', 'pl_auth_unverified' => '1'], $redirect_to));
         exit;

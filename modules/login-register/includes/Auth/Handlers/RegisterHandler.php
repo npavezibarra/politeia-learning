@@ -61,7 +61,11 @@ class RegisterHandler
             }
 
             $token = VerificationHandler::issue_token((int) $existing_user->ID);
-            VerificationHandler::send_confirmation((int) $existing_user->ID, $email, (string) $existing_user->display_name, $redirect_to, $token);
+            $sent = VerificationHandler::send_confirmation((int) $existing_user->ID, $email, (string) $existing_user->display_name, $redirect_to, $token);
+            if (!$sent) {
+                wp_safe_redirect(AuthUtils::build_modal_url('login', $redirect_to, ['pl_auth_error' => 'verification_send_failed']));
+                exit;
+            }
             wp_safe_redirect(AuthUtils::build_modal_url('login', $redirect_to, ['pl_auth_notice' => 'verification_sent']));
             exit;
         }
@@ -85,7 +89,7 @@ class RegisterHandler
         $token = VerificationHandler::issue_token((int) $user_id);
         $display_name = trim($first_name . ' ' . $last_name) ?: $username;
 
-        VerificationHandler::send_confirmation((int) $user_id, $email, $display_name, $redirect_to, $token);
+        $sent = VerificationHandler::send_confirmation((int) $user_id, $email, $display_name, $redirect_to, $token);
         wp_new_user_notification((int) $user_id, null, 'admin');
 
         // Auto-login after registration
@@ -94,6 +98,10 @@ class RegisterHandler
         $u = get_user_by('id', (int) $user_id);
         if ($u instanceof WP_User) {
             do_action('wp_login', $u->user_login, $u);
+        }
+
+        if (!$sent) {
+            $redirect_to = add_query_arg(['pl_auth_error' => 'verification_send_failed', 'pl_auth_unverified' => '1'], $redirect_to);
         }
 
         $redirect_to = add_query_arg(['pl_auth_registered' => '1'], $redirect_to);

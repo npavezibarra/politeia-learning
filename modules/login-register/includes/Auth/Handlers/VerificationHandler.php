@@ -56,7 +56,7 @@ class VerificationHandler
     /**
      * Sends a verification email to the user.
      */
-    public static function send_confirmation(int $user_id, string $email, string $display_name, string $redirect_to, string $token): void
+    public static function send_confirmation(int $user_id, string $email, string $display_name, string $redirect_to, string $token): bool
     {
         $verification_url = add_query_arg([
             'pl_auth_action' => 'confirm',
@@ -66,14 +66,17 @@ class VerificationHandler
         ], home_url('/'));
 
         $switched_locale = switch_to_user_locale($user_id);
-        
+
+        $sent = false;
         if (class_exists('PL_Email')) {
-            PL_Email::send_auth_confirmation($email, $display_name, $verification_url, $token);
+            $sent = (bool) PL_Email::send_auth_confirmation($email, $display_name, $verification_url, $token);
         }
         
         if ($switched_locale) {
             restore_previous_locale();
         }
+
+        return $sent;
     }
 
     /**

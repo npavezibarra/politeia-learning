@@ -97,6 +97,11 @@ class Renderer
                 ? 'Espera un momento antes de reenviar el correo.'
                 : 'Please wait a moment before resending.';
             $message_type = 'warning';
+        } elseif ($error_code === 'verification_send_failed') {
+            $message = $is_spanish
+                ? 'No pudimos enviar el correo de confirmación en este momento. Por favor revisa tu carpeta de Spam/No deseado o inténtalo de nuevo más tarde.'
+                : 'We could not send the confirmation email right now. Please check your Spam/Junk folder or try again later.';
+            $message_type = 'error';
         } elseif ($error_code !== '') {
             $message = $is_spanish
                 ? 'Algo salió mal. Por favor, inténtalo de nuevo.'
