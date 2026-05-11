@@ -239,6 +239,7 @@ class PL_Module_Loader
         'member-profile' => true,
         'payments-subscriptions' => true,
         'email-log' => true,
+        'email-smtp' => true,
     ];
 
     /**
