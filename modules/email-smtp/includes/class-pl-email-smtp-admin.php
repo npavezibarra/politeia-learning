@@ -363,7 +363,8 @@ final class PL_Email_SMTP_Admin
             'state' => $state,
         ], 'https://accounts.google.com/o/oauth2/v2/auth');
 
-        wp_safe_redirect($auth_url);
+        // OAuth is an external redirect (accounts.google.com). wp_safe_redirect() would block it.
+        wp_redirect($auth_url);
         exit;
     }
 
