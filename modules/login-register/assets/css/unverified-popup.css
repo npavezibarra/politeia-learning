@@ -151,6 +151,65 @@
     justify-content: center;
 }
 
+.pl-auth-unverified__token {
+    margin-top: 14px;
+}
+
+.pl-auth-unverified__token-label {
+    display: block;
+    margin: 0 0 8px;
+    font-size: 13px;
+    line-height: 1.35;
+    color: #475569;
+    font-weight: 600;
+}
+
+.pl-auth-unverified__token-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.pl-auth-unverified__token-input {
+    flex: 1 1 auto;
+    height: 44px;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    padding: 0 12px;
+    font-size: 13px;
+    color: #0f172a;
+    outline: none;
+}
+
+.pl-auth-unverified__token-input:focus {
+    border-color: rgba(59, 130, 246, 0.55);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+.pl-auth-unverified__token-btn {
+    appearance: none;
+    border: 1px solid rgba(17, 24, 39, 0.12);
+    background: #111827;
+    color: #fff;
+    border-radius: 12px;
+    height: 44px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.pl-auth-unverified__token-btn:hover {
+    filter: brightness(1.02);
+}
+
+.pl-auth-unverified__token-help {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
 .pl-auth-unverified__btn {
     appearance: none;
     border: 1px solid rgba(17, 24, 39, 0.12);

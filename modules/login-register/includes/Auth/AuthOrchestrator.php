@@ -44,6 +44,8 @@ final class AuthOrchestrator
         // Verification / Resend
         add_action('admin_post_pl_auth_resend_confirmation', [$this, 'handle_resend_confirmation']);
         add_action('admin_post_nopriv_pl_auth_resend_confirmation', [$this, 'handle_resend_confirmation_nopriv']);
+        add_action('admin_post_pl_auth_confirm_token', [$this, 'handle_confirm_token']);
+        add_action('admin_post_nopriv_pl_auth_confirm_token', [$this, 'handle_confirm_token_nopriv']);
         add_action('template_redirect', [$this, 'handle_confirmation_link'], 1);
         
         // AJAX
@@ -203,6 +205,54 @@ final class AuthOrchestrator
     {
         $redirect_to = AuthUtils::resolve_redirect_to((string) wp_unslash($_REQUEST['redirect_to'] ?? ''));
         wp_safe_redirect(AuthUtils::build_modal_url('login', $redirect_to));
+        exit;
+    }
+
+    public function handle_confirm_token_nopriv(): void
+    {
+        $redirect_to = AuthUtils::resolve_redirect_to((string) wp_unslash($_REQUEST['redirect_to'] ?? ''));
+        wp_safe_redirect(AuthUtils::build_modal_url('login', $redirect_to));
+        exit;
+    }
+
+    public function handle_confirm_token(): void
+    {
+        if (!is_user_logged_in()) {
+            $this->handle_confirm_token_nopriv();
+        }
+
+        if (!isset($_POST['pl_auth_confirm_nonce']) || !wp_verify_nonce((string) wp_unslash($_POST['pl_auth_confirm_nonce']), 'pl_auth_confirm_token')) {
+            $redirect_to = AuthUtils::resolve_redirect_to((string) wp_unslash($_POST['redirect_to'] ?? ''));
+            wp_safe_redirect(add_query_arg(['pl_auth_error' => 'invalid_nonce', 'pl_auth_unverified' => '1'], $redirect_to));
+            exit;
+        }
+
+        $token = isset($_POST['pl_auth_token']) ? trim((string) wp_unslash($_POST['pl_auth_token'])) : '';
+        $token = sanitize_text_field($token);
+
+        $redirect_to = AuthUtils::resolve_redirect_to((string) wp_unslash($_POST['redirect_to'] ?? ''));
+
+        if ($token === '') {
+            wp_safe_redirect(add_query_arg(['pl_auth_error' => 'invalid_token', 'pl_auth_unverified' => '1'], $redirect_to));
+            exit;
+        }
+
+        $user = wp_get_current_user();
+        $email = $user && isset($user->user_email) ? sanitize_email((string) $user->user_email) : '';
+        if ($email === '' || !is_email($email)) {
+            wp_safe_redirect(add_query_arg(['pl_auth_error' => 'invalid_token', 'pl_auth_unverified' => '1'], $redirect_to));
+            exit;
+        }
+
+        // Redirect to the same confirmation handler used by email links.
+        $confirm_url = add_query_arg([
+            'pl_auth_action' => 'confirm',
+            'email' => $email,
+            'token' => $token,
+            'redirect_to' => $redirect_to,
+        ], home_url('/'));
+
+        wp_safe_redirect($confirm_url);
         exit;
     }
 

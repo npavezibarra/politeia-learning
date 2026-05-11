@@ -65,7 +65,7 @@ $pl_email_document_title = (string) __('Confirm your account', 'politeia-learnin
 
                         <tr>
                             <td align="center" class="poppins" style="padding:0 40px 60px;font-size:13px;line-height:1.6;color:#666666;">
-                                <?php echo esc_html__('If the button does not work, paste this token into the confirmation form:', 'politeia-learning'); ?>
+                                <?php echo esc_html__('If your email provider blocks the button, paste this token in the verification popup on the site:', 'politeia-learning'); ?>
                                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:12px;">
                                     <tr>
                                         <td align="center" bgcolor="#f9fafb" style="padding:12px; border:1px dashed #d1d5db; border-radius:4px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px; color:#374151; word-break: break-all;">

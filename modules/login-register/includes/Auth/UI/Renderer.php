@@ -66,6 +66,7 @@ class Renderer
         $open_after_quiz = isset($_GET['pl_auth_unverified_after_quiz']) && sanitize_key((string) wp_unslash($_GET['pl_auth_unverified_after_quiz'])) === '1';
         $action_url = admin_url('admin-post.php');
         $nonce = wp_create_nonce('pl_auth_resend_confirmation');
+        $confirm_nonce = wp_create_nonce('pl_auth_confirm_token');
         
         $redirect_to = AuthUtils::resolve_redirect_to((string) wp_unslash($_GET['redirect_to'] ?? ''));
         $redirect_to_for_form = remove_query_arg([
@@ -122,10 +123,12 @@ class Renderer
             'cta' => $is_spanish ? 'Reenviar confirmación' : 'Resend confirmation',
             'action_url' => $action_url,
             'nonce' => $nonce,
+            'confirm_nonce' => $confirm_nonce,
             'redirect_to' => $redirect_to_for_form,
             'message' => $message,
             'message_type' => $message_type,
             'should_open' => $should_open,
+            'user_email' => $user_email,
         ];
 
         ob_start();
