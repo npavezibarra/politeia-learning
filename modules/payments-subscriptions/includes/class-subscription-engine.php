@@ -863,7 +863,9 @@ class Politeia_PPS_Subscription_Engine {
 			'subscriber_user_id'   => (int) $subscriber_user_id,
 			'tier_id'              => (int) $tier_id,
 			'gateway'              => 'flow',
-			'mp_preapproval_id'    => null,
+			// Back-compat: older schemas may have mp_preapproval_id NOT NULL.
+			// For Flow subscriptions we keep this as an empty string.
+			'mp_preapproval_id'    => '',
 			'flow_subscription_id' => null,
 			'flow_register_token'  => $register_token,
 			'status'               => 'pending',
