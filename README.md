@@ -22,4 +22,5 @@ El plugin sigue una arquitectura modular: la mayoría de las funcionalidades viv
 - `member-profile`: perfiles públicos `/profile/{username}` + portfolio.
 - `payments-subscriptions`: suscripciones pagadas (PPS) + marketplace/shortcodes.
 - `email-log`: log de correos enviados (tabla + UI admin).
+- `under-construction`: modo under construction (toggle + allowlist admin/editor).
 - `woo`: ajustes/extensiones WooCommerce (métricas, templates, emails, etc.).

@@ -282,7 +282,8 @@ function initPlAuth() {
             account_exists: 'Ya existe una cuenta con ese correo electrónico.',
             create_failed: 'No pudimos crear tu cuenta. Por favor, inténtalo de nuevo.',
             invalid_token: 'El enlace de confirmación no es válido o ha expirado.',
-            token_expired: 'El enlace de confirmación ha expirado.'
+            token_expired: 'El enlace de confirmación ha expirado.',
+            pl_uc_role_blocked: 'Solo administradores o editores pueden ingresar mientras el sitio está en construcción.'
         } : {
             invalid_nonce: 'We could not verify your request. Please try again.',
             missing_login: 'Please enter your email and password.',
@@ -296,7 +297,8 @@ function initPlAuth() {
             account_exists: 'An account already exists with that email address.',
             create_failed: 'We could not create your account. Please try again.',
             invalid_token: 'The confirmation link is invalid or expired.',
-            token_expired: 'The confirmation link is invalid or expired.'
+            token_expired: 'The confirmation link is invalid or expired.',
+            pl_uc_role_blocked: 'Only administrators or editors can log in while the site is under construction.'
         };
         setMessage('error', messageMap[error] || (isSpanish ? 'Algo salió mal. Por favor, inténtalo de nuevo.' : 'Something went wrong. Please try again.'));
     }

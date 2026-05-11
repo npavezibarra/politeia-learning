@@ -225,6 +225,7 @@ class PL_Module_Loader
     private static $modules = [
         'learni' => true,
         'core' => true,
+        'under-construction' => true,
         'navigation' => true,
         'blog-post' => true,
         'login-register' => true,
