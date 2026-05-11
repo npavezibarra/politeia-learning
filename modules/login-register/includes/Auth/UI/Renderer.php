@@ -51,11 +51,6 @@ class Renderer
             return '';
         }
 
-        // Optimization: check if user dismissed the popup in this session
-        if (isset($_COOKIE['pl_auth_unverified_dismissed']) && !isset($_GET['pl_auth_unverified'])) {
-            return '';
-        }
-
         $user_id = (int) get_current_user_id();
         if ($user_id <= 0 || VerificationHandler::is_verified($user_id) || !VerificationHandler::requires_verification($user_id)) {
             return '';
@@ -64,6 +59,8 @@ class Renderer
 
         $notice_code = (string) sanitize_key((string) wp_unslash($_GET['pl_auth_notice'] ?? ''));
         $error_code = (string) sanitize_key((string) wp_unslash($_GET['pl_auth_error'] ?? ''));
+        $force_open = isset($_GET['pl_auth_unverified']) && sanitize_key((string) wp_unslash($_GET['pl_auth_unverified'])) === '1';
+        $open_after_quiz = isset($_GET['pl_auth_unverified_after_quiz']) && sanitize_key((string) wp_unslash($_GET['pl_auth_unverified_after_quiz'])) === '1';
         $action_url = admin_url('admin-post.php');
         $nonce = wp_create_nonce('pl_auth_resend_confirmation');
         
@@ -76,6 +73,8 @@ class Renderer
         ], $redirect_to);
 
         $is_spanish = strpos(get_locale(), 'es') === 0;
+
+        $dismissed = isset($_COOKIE['pl_auth_unverified_dismissed']) && !$force_open;
 
         $message = '';
         $message_type = '';
@@ -96,6 +95,12 @@ class Renderer
             $message_type = 'error';
         }
         
+        $should_open = !$dismissed
+            || $force_open
+            || $open_after_quiz
+            || $notice_code === 'verification_sent'
+            || $error_code !== '';
+
         // Data for the template
         $data = [
             'title' => $is_spanish ? 'Aún no has verificado tu cuenta' : 'Your account is not verified yet',
@@ -106,7 +111,7 @@ class Renderer
             'redirect_to' => $redirect_to_for_form,
             'message' => $message,
             'message_type' => $message_type,
-            'should_open' => true,
+            'should_open' => $should_open,
         ];
 
         ob_start();
