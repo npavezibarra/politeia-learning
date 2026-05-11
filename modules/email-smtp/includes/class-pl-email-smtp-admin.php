@@ -50,6 +50,8 @@ final class PL_Email_SMTP_Admin
             'oauth_connected' => __('Gmail connected successfully.', 'politeia-learning'),
             'oauth_disconnected' => __('Gmail disconnected.', 'politeia-learning'),
             'oauth_missing_refresh' => __('OAuth completed, but no refresh token was returned. Try again with "prompt=consent" and ensure you are not reusing an old grant.', 'politeia-learning'),
+            'oauth_not_connected' => __('Connect Gmail first, then send a test email.', 'politeia-learning'),
+            'oauth_missing_client' => __('Please save OAuth Client ID and Secret first.', 'politeia-learning'),
         ];
 
         $notice_key = isset($_GET['pl_notice']) ? sanitize_key((string) $_GET['pl_notice']) : '';
@@ -60,6 +62,12 @@ final class PL_Email_SMTP_Admin
         $error_key = isset($_GET['pl_error']) ? sanitize_key((string) $_GET['pl_error']) : '';
         if ($error_key === 'test_fail') {
             echo '<div class="notice notice-error is-dismissible"><p>' . esc_html($notices['test_fail']) . '</p></div>';
+        }
+        if ($error_key === 'oauth_not_connected') {
+            echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html($notices['oauth_not_connected']) . '</p></div>';
+        }
+        if ($error_key === 'oauth_missing_client') {
+            echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html($notices['oauth_missing_client']) . '</p></div>';
         }
 
         $action_url = admin_url('admin-post.php');
@@ -297,6 +305,13 @@ final class PL_Email_SMTP_Admin
             exit;
         }
 
+        $settings = class_exists('PL_Email_SMTP') ? PL_Email_SMTP::get_settings() : [];
+        if (!empty($settings['enabled']) && (($settings['mode'] ?? '') === 'gmail_oauth') && empty($settings['oauth_refresh_token'])) {
+            $url = add_query_arg(['page' => self::PAGE_SLUG, 'pl_error' => 'oauth_not_connected'], admin_url('admin.php'));
+            wp_safe_redirect($url);
+            exit;
+        }
+
         $sent = (bool) wp_mail(
             $to,
             __('Politeia test email', 'politeia-learning'),
@@ -324,7 +339,7 @@ final class PL_Email_SMTP_Admin
         $client_secret = isset($settings['oauth_client_secret']) ? (string) $settings['oauth_client_secret'] : '';
 
         if ($client_id === '' || $client_secret === '') {
-            $url = add_query_arg(['page' => self::PAGE_SLUG, 'pl_error' => 'test_fail'], admin_url('admin.php'));
+            $url = add_query_arg(['page' => self::PAGE_SLUG, 'pl_error' => 'oauth_missing_client'], admin_url('admin.php'));
             wp_safe_redirect($url);
             exit;
         }
