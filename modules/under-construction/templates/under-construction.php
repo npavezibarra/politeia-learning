@@ -43,12 +43,13 @@ $message = 'Estamos construyendo este sitio.';
         .pl-uc-button {
             appearance: none;
             border: 0;
-            border-radius: 999px;
+            border-radius: 6px;
             padding: 12px 18px;
             background: #111111;
             color: #ffffff;
-            font-weight: 700;
-            letter-spacing: .02em;
+            font-weight: 500;
+            letter-spacing: 2px;
+            font-size: 13px;
             cursor: pointer;
             text-decoration: none;
             display: inline-block;
