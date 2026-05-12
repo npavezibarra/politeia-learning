@@ -1628,3 +1628,40 @@ msgstr "READING PLANNER"
 #: modules/navigation/includes/Navigation/NavEngine.php:0
 msgid "Planificador de Lecturas"
 msgstr "Reading Planner"
+
+#: templates/emails/auth-confirmation.php
+msgid "NEW USER"
+msgstr "NEW USER"
+
+#: templates/emails/auth-confirmation.php
+msgid "Confirm your email"
+msgstr "Confirm your email"
+
+#: templates/emails/auth-confirmation.php
+msgid "Welcome to Politeia"
+msgstr "Welcome to Politeia"
+
+#: templates/emails/auth-confirmation.php
+#, php-format
+msgid "Hi %1$s, thanks for creating your account."
+msgstr "Hi %1$s, thanks for creating your account."
+
+#: templates/emails/auth-confirmation.php
+msgid "To activate your account, please confirm your email:"
+msgstr "To activate your account, please confirm your email:"
+
+#: templates/emails/auth-confirmation.php
+msgid "Confirm email"
+msgstr "Confirm email"
+
+#: templates/emails/auth-confirmation.php
+msgid "Until you confirm, you will see an “Unverified account” notice while browsing."
+msgstr "Until you confirm, you will see an “Unverified account” notice while browsing."
+
+#: templates/emails/auth-confirmation.php
+msgid "If your email provider blocks the button, copy this token and paste it into the verification notice on the site:"
+msgstr "If your email provider blocks the button, copy this token and paste it into the verification notice on the site:"
+
+#: templates/emails/auth-confirmation.php
+msgid "If you did not create this account, you can ignore this email."
+msgstr "If you did not create this account, you can ignore this email."

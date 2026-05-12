@@ -1570,3 +1570,40 @@ msgstr "PLANIFICADOR DE LECTURAS"
 #: modules/navigation/includes/Navigation/NavEngine.php:0
 msgid "Planificador de Lecturas"
 msgstr "Planificador de Lecturas"
+
+#: templates/emails/auth-confirmation.php
+msgid "NEW USER"
+msgstr "NUEVO USUARIO"
+
+#: templates/emails/auth-confirmation.php
+msgid "Confirm your email"
+msgstr "Confirma tu correo"
+
+#: templates/emails/auth-confirmation.php
+msgid "Welcome to Politeia"
+msgstr "Bienvenido/a a Politeia"
+
+#: templates/emails/auth-confirmation.php
+#, php-format
+msgid "Hi %1$s, thanks for creating your account."
+msgstr "Hola %1$s, gracias por crear tu cuenta."
+
+#: templates/emails/auth-confirmation.php
+msgid "To activate your account, please confirm your email:"
+msgstr "Para activar tu cuenta, por favor confirma tu correo:"
+
+#: templates/emails/auth-confirmation.php
+msgid "Confirm email"
+msgstr "Confirmar correo"
+
+#: templates/emails/auth-confirmation.php
+msgid "Until you confirm, you will see an “Unverified account” notice while browsing."
+msgstr "Hasta que confirmes, verás un aviso de “Cuenta sin verificar” mientras navegas."
+
+#: templates/emails/auth-confirmation.php
+msgid "If your email provider blocks the button, copy this token and paste it into the verification notice on the site:"
+msgstr "Si tu proveedor de correo bloquea el botón, copia este token y pégalo en el aviso de verificación dentro del sitio:"
+
+#: templates/emails/auth-confirmation.php
+msgid "If you did not create this account, you can ignore this email."
+msgstr "Si tú no creaste esta cuenta, puedes ignorar este correo."
