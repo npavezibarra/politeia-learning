@@ -54,7 +54,7 @@ $subject_title = (string) __('Confirm your email', 'politeia-learning');
                             <td align="left" style="padding:0 0 18px;">
                                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
-                                        <td align="left" valign="middle" class="pl-h" style="font-weight:600; font-size:12px; color:#000000; letter-spacing:0.18em; text-transform:uppercase;">
+                                        <td align="left" valign="middle" class="pl-h" style="font-family:'Poppins','Trebuchet MS',Helvetica,Arial,sans-serif; font-weight:600; font-size:12px; color:#000000; letter-spacing:0.18em; text-transform:uppercase;">
                                             <?php echo esc_html__('NEW USER', 'politeia-learning'); ?>
                                         </td>
                                         <td align="right" valign="middle">
@@ -74,7 +74,7 @@ $subject_title = (string) __('Confirm your email', 'politeia-learning');
                                         <td align="center" style="padding:44px 40px 14px;">
                                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                                                 <tr>
-                                                    <td align="center" class="pl-h-lg" style="font-weight:600; font-size:34px; line-height:1.15; color:#000000;">
+                                                    <td align="center" class="pl-h-lg" style="font-family:'Poppins','Trebuchet MS',Helvetica,Arial,sans-serif; font-weight:600; font-size:34px; line-height:1.15; color:#000000;">
                                                         <?php echo esc_html__('Welcome to Politeia', 'politeia-learning'); ?>
                                                     </td>
                                                 </tr>
@@ -83,7 +83,7 @@ $subject_title = (string) __('Confirm your email', 'politeia-learning');
                                     </tr>
 
                                     <tr>
-                                        <td align="center" class="pl-b" style="padding:0 52px 18px; font-size:18px; color:#111827;">
+                                        <td align="center" class="pl-b" style="font-family:'Newsreader',Georgia,'Times New Roman',serif; line-height:1.6; padding:0 52px 18px; font-size:18px; color:#111827;">
                                             <?php
                                             echo esc_html(
                                                 sprintf(
@@ -97,7 +97,7 @@ $subject_title = (string) __('Confirm your email', 'politeia-learning');
                                     </tr>
 
                                     <tr>
-                                        <td align="center" class="pl-b" style="padding:0 52px 26px; font-size:18px; color:#111827;">
+                                        <td align="center" class="pl-b" style="font-family:'Newsreader',Georgia,'Times New Roman',serif; line-height:1.6; padding:0 52px 26px; font-size:18px; color:#111827;">
                                             <?php echo esc_html__('To activate your account, please confirm your email:', 'politeia-learning'); ?>
                                         </td>
                                     </tr>
@@ -109,7 +109,7 @@ $subject_title = (string) __('Confirm your email', 'politeia-learning');
                                                     <td align="center" bgcolor="#000000" style="border-radius:9px;">
                                                         <a href="<?php echo esc_url($verification_url); ?>"
                                                             class="pl-h"
-                                                            style="display:inline-block; background-color:#000000; border:1px solid #000000; border-radius:9px; color:#ffffff !important; padding:14px 28px; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:0.12em;">
+                                                            style="font-family:'Poppins','Trebuchet MS',Helvetica,Arial,sans-serif; display:inline-block; background-color:#000000; border:1px solid #000000; border-radius:9px; color:#ffffff !important; padding:14px 28px; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:0.12em;">
                                                             <?php echo esc_html__('Confirm email', 'politeia-learning'); ?>
                                                         </a>
                                                     </td>
@@ -119,13 +119,13 @@ $subject_title = (string) __('Confirm your email', 'politeia-learning');
                                     </tr>
 
                                     <tr>
-                                        <td align="center" class="pl-b" style="padding:0 52px 6px; font-size:15px; color:#334155;">
+                                        <td align="center" class="pl-b" style="font-family:'Newsreader',Georgia,'Times New Roman',serif; line-height:1.6; padding:0 52px 6px; font-size:15px; color:#334155;">
                                             <?php echo esc_html__('Until you confirm, you will see an “Unverified account” notice while browsing.', 'politeia-learning'); ?>
                                         </td>
                                     </tr>
 
                                     <tr>
-                                        <td align="center" class="pl-b" style="padding:0 52px 24px; font-size:14px; color:#64748b;">
+                                        <td align="center" class="pl-b" style="font-family:'Newsreader',Georgia,'Times New Roman',serif; line-height:1.6; padding:0 52px 24px; font-size:14px; color:#64748b;">
                                             <?php echo esc_html__('If your email provider blocks the button, copy this token and paste it into the verification notice on the site:', 'politeia-learning'); ?>
                                         </td>
                                     </tr>
@@ -143,13 +143,13 @@ $subject_title = (string) __('Confirm your email', 'politeia-learning');
                                     </tr>
 
                                     <tr>
-                                        <td align="center" class="pl-b" style="padding:0 52px 8px; font-size:13px; color:#94a3b8;">
+                                        <td align="center" class="pl-b" style="font-family:'Newsreader',Georgia,'Times New Roman',serif; line-height:1.6; padding:0 52px 8px; font-size:13px; color:#94a3b8;">
                                             <?php echo esc_html__('If you did not create this account, you can ignore this email.', 'politeia-learning'); ?>
                                         </td>
                                     </tr>
 
                                     <tr>
-                                        <td align="center" class="pl-b" style="padding:0 52px 40px; font-size:13px; color:#94a3b8;">
+                                        <td align="center" class="pl-b" style="font-family:'Newsreader',Georgia,'Times New Roman',serif; line-height:1.6; padding:0 52px 40px; font-size:13px; color:#94a3b8;">
                                             <a href="<?php echo esc_url($verification_url); ?>" style="color:#000000 !important; text-decoration:underline !important;">
                                                 <?php echo esc_html($verification_url); ?>
                                             </a>
@@ -160,7 +160,7 @@ $subject_title = (string) __('Confirm your email', 'politeia-learning');
                         </tr>
 
                         <tr>
-                            <td align="center" class="pl-b" style="padding:22px 10px 0; font-size:12px; color:#9ca3af;">
+                            <td align="center" class="pl-b" style="font-family:'Newsreader',Georgia,'Times New Roman',serif; line-height:1.6; padding:22px 10px 0; font-size:12px; color:#9ca3af;">
                                 <?php
                                 echo esc_html(
                                     sprintf(
