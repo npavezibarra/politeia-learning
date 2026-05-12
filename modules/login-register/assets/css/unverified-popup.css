@@ -51,7 +51,7 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: rgba(15, 23, 42, 0.68);
+    background: rgb(24 24 24 / 68%);
     backdrop-filter: blur(10px);
     opacity: 0;
     pointer-events: none;
