@@ -157,8 +157,12 @@ final class PL_Email_Log_Admin
             if ($slug !== '') {
                 $html = PL_Email::render($slug, $this->get_template_render_vars($key));
                 if ($html !== '') {
+                    $subject_label = $key;
+                    if ($key === 'new_user_user') {
+                        $subject_label = (string) __('Confirm your email', 'politeia-learning');
+                    }
                     return [
-                        'subject' => sprintf('[%s] %s', $site_name, $key),
+                        'subject' => sprintf('[%s] %s', $site_name, $subject_label),
                         'message_html' => wp_kses($html, $this->get_email_template_allowed_html()),
                         'message_text' => wp_strip_all_tags($html),
                     ];
