@@ -79,7 +79,7 @@
 }
 
 .pl-auth-unverified__inner {
-    padding: 28px 28px 26px;
+    padding: 50px;
     position: relative;
     text-align: center;
 }
@@ -224,10 +224,10 @@
     border: 1px solid rgba(17, 24, 39, 0.12);
     background: #111827;
     color: #fff;
-    border-radius: 12px;
-    height: 48px;
+    border-radius: 6px;
+    height: 42px;
     padding: 0 24px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
