@@ -138,16 +138,31 @@ final class PL_Email_Log_Admin
         $username = $user && $user->user_login ? (string) $user->user_login : 'usuario';
         $user_email = $user && $user->user_email ? (string) $user->user_email : (string) get_option('admin_email');
 
-        // Check if a dedicated template exists
+        $catalog = $this->get_test_emails_catalog();
+        $default_template_path = isset($catalog[$key]['default_template']) ? trim((string) $catalog[$key]['default_template']) : '';
+
+        $template_settings = $this->get_test_email_template_settings($key);
+        $custom_enabled = !empty($template_settings['enabled']);
+        $custom_template = trim((string) ($template_settings['template'] ?? ''));
+
+        $template_path = $custom_enabled && $custom_template !== '' ? $custom_template : $default_template_path;
+
+        // Render using our template system when a template is configured.
         if (class_exists('PL_Email')) {
-            $html = PL_Email::render($key, $this->get_template_render_vars($key));
-            
-            if ($html !== '') {
-                return [
-                    'subject' => sprintf('[%s] %s', $site_name, $key),
-                    'message_html' => wp_kses($html, $this->get_email_template_allowed_html()),
-                    'message_text' => wp_strip_all_tags($html),
-                ];
+            $slug = '';
+            if ($template_path !== '' && preg_match('#^templates/emails/([a-z0-9\\-]+)\\.php$#i', $template_path, $m)) {
+                $slug = sanitize_key((string) $m[1]);
+            }
+
+            if ($slug !== '') {
+                $html = PL_Email::render($slug, $this->get_template_render_vars($key));
+                if ($html !== '') {
+                    return [
+                        'subject' => sprintf('[%s] %s', $site_name, $key),
+                        'message_html' => wp_kses($html, $this->get_email_template_allowed_html()),
+                        'message_text' => wp_strip_all_tags($html),
+                    ];
+                }
             }
         }
 
