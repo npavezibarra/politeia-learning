@@ -8,9 +8,7 @@ if (!defined('ABSPATH')) {
 ?>
 <div id="pl-auth-unverified" class="pl-auth-unverified<?php echo $data['should_open'] ? ' is-open' : ''; ?>">
     <button type="button" class="pl-auth-unverified__tab" aria-label="<?php echo esc_attr($data['title']); ?>" data-pl-auth-unverified-open>
-        <svg class="pl-auth-unverified__tab-icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path fill="currentColor" d="M12 1a9 9 0 0 0-9 9c0 1.9.6 3.7 1.7 5.2.3.4.9.5 1.3.2.4-.3.5-.9.2-1.3A7.1 7.1 0 0 1 4.8 10 7.2 7.2 0 0 1 12 2.8 7.2 7.2 0 0 1 19.2 10c0 1.5-.5 2.9-1.3 4.1-.3.4-.2 1 .2 1.3.4.3 1 .2 1.3-.2A8.9 8.9 0 0 0 21 10a9 9 0 0 0-9-9Zm0 4a5 5 0 0 0-5 5c0 .7.1 1.3.4 1.9.2.5.8.7 1.3.5.5-.2.7-.8.5-1.3-.1-.3-.2-.7-.2-1.1a3.2 3.2 0 0 1 3.2-3.2 3.2 3.2 0 0 1 3.2 3.2c0 .9-.4 1.8-1 2.4l-2.4 2.4a3.7 3.7 0 0 0-1.1 2.6v.8c0 .5.4.9.9.9s.9-.4.9-.9v-.8c0-.5.2-1 .6-1.4l2.4-2.4A5 5 0 0 0 17 10a5 5 0 0 0-5-5Zm0 14a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z"/>
-        </svg>
+        <span class="material-symbols-outlined pl-auth-unverified__tab-icon" aria-hidden="true">mark_email_read</span>
     </button>
 
     <div class="pl-auth-unverified__overlay" role="dialog" aria-modal="true" aria-label="<?php echo esc_attr($data['title']); ?>">

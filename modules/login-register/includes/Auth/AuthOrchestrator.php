@@ -109,6 +109,12 @@ final class AuthOrchestrator
             $user_id = (int) get_current_user_id();
             if (!VerificationHandler::is_verified($user_id) && VerificationHandler::requires_verification($user_id)) {
                 wp_enqueue_style(
+                    'pl-auth-material-symbols',
+                    'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=mark_email_read',
+                    [],
+                    null
+                );
+                wp_enqueue_style(
                     'pl-auth-unverified-css',
                     PL_AUTH_URL . 'assets/css/unverified-popup.css',
                     [],

@@ -23,7 +23,7 @@
     height: 48px;
     border: 0;
     border-radius: 0 16px 16px 0;
-    background: #ef4444;
+    background: linear-gradient(135deg, #783F27, #B87333, #E5AA70);
     color: #fff;
     cursor: pointer;
     box-shadow: 0 16px 40px rgba(15, 23, 42, 0.25);
@@ -42,6 +42,8 @@
 
 .pl-auth-unverified__tab-icon {
     display: block;
+    font-size: 22px;
+    line-height: 1;
 }
 
 .pl-auth-unverified__overlay {
