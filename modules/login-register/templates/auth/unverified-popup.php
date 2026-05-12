@@ -43,12 +43,12 @@ if (!defined('ABSPATH')) {
                         <input type="hidden" name="pl_auth_confirm_nonce" value="<?php echo esc_attr($data['confirm_nonce']); ?>">
                         <input type="hidden" name="redirect_to" value="<?php echo esc_attr($data['redirect_to']); ?>">
                         <label class="pl-auth-unverified__token-label" for="pl-auth-unverified-token">
-                            <?php echo esc_html__('If your email provider blocks the button, paste the token here:', 'politeia-learning'); ?>
+                            <?php echo esc_html((string) ($data['token_label'] ?? '')); ?>
                         </label>
                         <div class="pl-auth-unverified__token-row">
-                            <input id="pl-auth-unverified-token" name="pl_auth_token" type="text" class="pl-auth-unverified__token-input" inputmode="text" autocomplete="one-time-code" placeholder="<?php echo esc_attr__('Paste token', 'politeia-learning'); ?>">
+                            <input id="pl-auth-unverified-token" name="pl_auth_token" type="text" class="pl-auth-unverified__token-input" inputmode="text" autocomplete="one-time-code" placeholder="<?php echo esc_attr((string) ($data['token_placeholder'] ?? '')); ?>">
                             <button type="submit" class="pl-auth-unverified__token-btn">
-                                <?php echo esc_html__('Confirm', 'politeia-learning'); ?>
+                                <?php echo esc_html((string) ($data['token_confirm'] ?? '')); ?>
                             </button>
                         </div>
                         <?php if (!empty($data['user_email'])) : ?>
@@ -57,7 +57,7 @@ if (!defined('ABSPATH')) {
                                 echo esc_html(
                                     sprintf(
                                         /* translators: 1: email */
-                                        __('This will verify: %1$s', 'politeia-learning'),
+                                        (string) ($data['token_help'] ?? ''),
                                         (string) $data['user_email']
                                     )
                                 );

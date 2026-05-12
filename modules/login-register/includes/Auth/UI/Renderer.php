@@ -118,6 +118,15 @@ class Renderer
 
         $show_token_form = $notice_code === 'verification_sent';
 
+        $token_label = $is_spanish
+            ? 'Si tu proveedor de correo bloquea el botón, pega el token aquí:'
+            : 'If your email provider blocks the button, paste the token here:';
+        $token_placeholder = $is_spanish ? 'Pegar token' : 'Paste token';
+        $token_confirm = $is_spanish ? 'Confirmar' : 'Confirm';
+        $token_help = $is_spanish
+            ? 'Esto verificará: %1$s'
+            : 'This will verify: %1$s';
+
         // Data for the template
         $data = [
             'title' => $is_spanish ? 'Aún no has verificado tu cuenta' : 'Your account is not verified yet',
@@ -132,6 +141,10 @@ class Renderer
             'should_open' => $should_open,
             'user_email' => $user_email,
             'show_token_form' => $show_token_form,
+            'token_label' => $token_label,
+            'token_placeholder' => $token_placeholder,
+            'token_confirm' => $token_confirm,
+            'token_help' => $token_help,
         ];
 
         ob_start();
