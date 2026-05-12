@@ -82,13 +82,12 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  filter: grayscale(100%);
-  transition: filter 0.45s ease;
+  filter: none;
   display: block;
 }
 
 .pl-bp-ba-featuredLink:hover .pl-bp-ba-featuredMedia img {
-  filter: grayscale(0%);
+  filter: none;
 }
 
 .pl-bp-ba-imgFallback {
@@ -215,7 +214,7 @@
   width: 100%;
   aspect-ratio: 3 / 2;
   object-fit: cover;
-  filter: grayscale(100%);
+  filter: none;
   display: block;
 }
 .pl-bp-ba-cardTitle {
