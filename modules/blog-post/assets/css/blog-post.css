@@ -151,15 +151,16 @@
 
 .pl-bp-blog-post-body .pl-bp-blog-post-related {
     margin: 80px auto 24px;
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
 }
 
 .pl-bp-blog-post-body .pl-bp-blog-post-related-title {
     margin: 0 0 48px;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
     font-size: clamp(1.5rem, 2vw, 1.875rem);
     font-weight: 600;
     letter-spacing: -0.02em;
-    text-align: left;
+    text-align: center;
     color: #111827;
 }
 
@@ -202,6 +203,7 @@
     bottom: 12px;
     background: rgba(255, 255, 255, 0.88);
     color: #111827;
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
@@ -211,7 +213,7 @@
 
 .pl-bp-blog-post-body .pl-bp-blog-post-card-title {
     margin: 0;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
     font-size: 1.125rem;
     line-height: 1.35;
     font-weight: 500;
@@ -224,7 +226,7 @@
     align-items: center;
     gap: 8px;
     margin-top: 8px;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
     font-size: 12px;
     line-height: 1.4;
     text-transform: uppercase;
