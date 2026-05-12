@@ -13,6 +13,9 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+
+$current_user = wp_get_current_user();
+$default_to_email = $current_user && !empty($current_user->user_email) ? (string) $current_user->user_email : (string) get_option('admin_email');
 ?>
 <p style="margin-top: 12px;">
     <?php echo esc_html__('Lista unificada de correos automáticos (WP core / WooCommerce / Learni). Todos se muestran, incluso si no tienen template.', 'politeia-learning'); ?>
@@ -280,6 +283,41 @@ if (!defined('ABSPATH')) {
     <textarea id="pl-copy-email-instructions-text" style="position:absolute;left:-9999px;top:-9999px;"><?php echo esc_textarea($instructions); ?></textarea>
 </div>
 
+<div id="pl-html-sandbox" style="margin-top: 10px; margin-bottom: 14px; padding: 16px 18px; background:#fff; border:1px solid #e2e8f0; border-radius: 12px;">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap: 12px; flex-wrap: wrap;">
+        <div style="min-width: 260px; flex: 1 1 auto;">
+            <div style="font-size:12px; font-weight:800; letter-spacing: 0.16em; text-transform: uppercase; color:#0f172a;">
+                <?php echo esc_html__('HTML Sandbox', 'politeia-learning'); ?>
+            </div>
+            <div style="margin-top: 6px; font-size:13px; color:#475569; line-height:1.4;">
+                <?php echo esc_html__('Pega tu HTML + CSS completo aquí para previsualizarlo y enviarte un correo de prueba.', 'politeia-learning'); ?>
+            </div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
+            <label style="display:flex; flex-direction:column; gap:4px;">
+                <span style="font-size:11px; color:#64748b; font-weight:600;"><?php echo esc_html__('To', 'politeia-learning'); ?></span>
+                <input id="pl-html-sandbox-to" type="email" value="<?php echo esc_attr($default_to_email); ?>" style="width: 260px;">
+            </label>
+            <label style="display:flex; flex-direction:column; gap:4px;">
+                <span style="font-size:11px; color:#64748b; font-weight:600;"><?php echo esc_html__('Subject', 'politeia-learning'); ?></span>
+                <input id="pl-html-sandbox-subject" type="text" value="<?php echo esc_attr__('Test email (Custom HTML)', 'politeia-learning'); ?>" style="width: 260px;">
+            </label>
+            <div style="display:flex; gap:10px; align-items:flex-end;">
+                <button type="button" class="button" id="pl-html-sandbox-preview"><?php echo esc_html__('Preview', 'politeia-learning'); ?></button>
+                <button type="button" class="button button-primary" id="pl-html-sandbox-send"><?php echo esc_html__('Send test email', 'politeia-learning'); ?></button>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 12px;">
+        <textarea id="pl-html-sandbox-code" rows="10" style="width:100%; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;" placeholder="<!doctype html>\n<html>\n  <head>\n    <style>/* CSS */</style>\n  </head>\n  <body>\n    ...\n  </body>\n</html>"></textarea>
+        <div style="margin-top: 6px; font-size:12px; color:#64748b;">
+            <?php echo esc_html__('Tip: usa HTML completo (<html><head>...) para simular clientes reales. Scripts se bloquean por seguridad.', 'politeia-learning'); ?>
+        </div>
+        <div id="pl-html-sandbox-status" style="margin-top: 8px; font-size:12px; color:#64748b;"></div>
+    </div>
+</div>
+
 <div class="pl-test-emails-layout" style="display:flex; gap:16px; align-items:flex-start; margin-top: 12px;">
     <div class="pl-test-emails-list" style="flex: 1 1 720px; max-width: 720px;">
         <div class="pl-email-cards">
@@ -443,6 +481,81 @@ if (!defined('ABSPATH')) {
         const emailRows = Array.from(document.querySelectorAll('.pl-test-email-card'));
         const originStorageKey = 'pl_test_emails_origin_filter_v1';
         const recipientStorageKey = 'pl_test_emails_recipient_filter_v1';
+        const htmlSandboxCode = document.getElementById('pl-html-sandbox-code');
+        const htmlSandboxTo = document.getElementById('pl-html-sandbox-to');
+        const htmlSandboxSubject = document.getElementById('pl-html-sandbox-subject');
+        const htmlSandboxPreview = document.getElementById('pl-html-sandbox-preview');
+        const htmlSandboxSend = document.getElementById('pl-html-sandbox-send');
+        const htmlSandboxStatus = document.getElementById('pl-html-sandbox-status');
+        const htmlSandboxStorageKey = 'pl_test_emails_html_sandbox_v1';
+
+        function setHtmlSandboxStatus(message, tone) {
+            if (!htmlSandboxStatus) return;
+            htmlSandboxStatus.textContent = message || '';
+            htmlSandboxStatus.style.color = tone === 'error' ? '#b91c1c' : (tone === 'success' ? '#047857' : '#64748b');
+        }
+
+        if (htmlSandboxCode) {
+            try {
+                const saved = localStorage.getItem(htmlSandboxStorageKey);
+                if (saved) htmlSandboxCode.value = saved;
+            } catch (e) {}
+
+            htmlSandboxCode.addEventListener('input', function() {
+                try { localStorage.setItem(htmlSandboxStorageKey, htmlSandboxCode.value || ''); } catch (e) {}
+            });
+        }
+
+        if (htmlSandboxPreview && htmlSandboxCode && frame) {
+            htmlSandboxPreview.addEventListener('click', function() {
+                const html = (htmlSandboxCode.value || '').trim();
+                if (!html) {
+                    setHtmlSandboxStatus(<?php echo wp_json_encode(__('Pega HTML primero.', 'politeia-learning')); ?>, 'error');
+                    return;
+                }
+                frame.srcdoc = html;
+                setHtmlSandboxStatus(<?php echo wp_json_encode(__('Preview actualizado.', 'politeia-learning')); ?>, 'success');
+            });
+        }
+
+        if (htmlSandboxSend && htmlSandboxCode && htmlSandboxTo && htmlSandboxSubject) {
+            htmlSandboxSend.addEventListener('click', async function() {
+                const html = (htmlSandboxCode.value || '').trim();
+                const to = (htmlSandboxTo.value || '').trim();
+                const subject = (htmlSandboxSubject.value || '').trim();
+
+                if (!html) {
+                    setHtmlSandboxStatus(<?php echo wp_json_encode(__('Pega HTML primero.', 'politeia-learning')); ?>, 'error');
+                    return;
+                }
+
+                setHtmlSandboxStatus(<?php echo wp_json_encode(__('Enviando...', 'politeia-learning')); ?>, 'info');
+
+                const form = new URLSearchParams();
+                form.set('action', 'pl_send_custom_test_email');
+                form.set('nonce', nonce);
+                form.set('to', to);
+                form.set('subject', subject);
+                form.set('html', html);
+
+                try {
+                    const res = await fetch(ajaxurl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                        body: form.toString(),
+                        credentials: 'same-origin',
+                    });
+                    const data = await res.json();
+                    if (data && data.success) {
+                        setHtmlSandboxStatus(<?php echo wp_json_encode(__('Enviado a:', 'politeia-learning')); ?> + ' ' + (data.data && data.data.to ? data.data.to : to), 'success');
+                        return;
+                    }
+                    setHtmlSandboxStatus((data && data.data && data.data.message) ? data.data.message : <?php echo wp_json_encode(__('Falló el envío.', 'politeia-learning')); ?>, 'error');
+                } catch (e) {
+                    setHtmlSandboxStatus(<?php echo wp_json_encode(__('Error de red al enviar.', 'politeia-learning')); ?>, 'error');
+                }
+            });
+        }
 
         function setOriginPanelOpen(open) {
             if (!originFilterToggle || !originFilterPanelWrap) return;

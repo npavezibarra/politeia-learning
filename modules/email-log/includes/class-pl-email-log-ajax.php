@@ -21,6 +21,7 @@ final class PL_Email_Log_Ajax
         add_action('wp_ajax_pl_get_email_content', [$this, 'ajax_get_email_content']);
         add_action('wp_ajax_pl_get_test_email_preview', [$this, 'ajax_get_test_email_preview']);
         add_action('wp_ajax_pl_send_test_email', [$this, 'ajax_send_test_email']);
+        add_action('wp_ajax_pl_send_custom_test_email', [$this, 'ajax_send_custom_test_email']);
         add_action('wp_ajax_pl_get_test_email_template', [$this, 'ajax_get_test_email_template']);
         add_action('wp_ajax_pl_save_test_email_template', [$this, 'ajax_save_test_email_template']);
         add_action('wp_ajax_pl_set_test_email_template_mode', [$this, 'ajax_set_test_email_template_mode']);
@@ -132,6 +133,42 @@ final class PL_Email_Log_Ajax
         } else {
             wp_send_json_error(['message' => 'Failed to send']);
         }
+    }
+
+    public function ajax_send_custom_test_email(): void
+    {
+        check_ajax_referer(PL_Email_Log_Admin::TEST_EMAIL_NONCE_ACTION, 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'No permission']);
+        }
+
+        $to = isset($_POST['to']) ? sanitize_email((string) wp_unslash($_POST['to'])) : '';
+        if ($to === '' || !is_email($to)) {
+            wp_send_json_error(['message' => 'Invalid recipient']);
+        }
+
+        $subject = isset($_POST['subject']) ? sanitize_text_field((string) wp_unslash($_POST['subject'])) : '';
+        if ($subject === '') {
+            $subject = (string) __('Test email', 'politeia-learning');
+        }
+
+        $html = isset($_POST['html']) ? (string) wp_unslash($_POST['html']) : '';
+        $html = trim($html);
+        if ($html === '') {
+            wp_send_json_error(['message' => 'Empty HTML']);
+        }
+
+        $safe_html = wp_kses($html, $this->admin->get_test_email_allowed_html());
+        $headers = ['Content-Type: text/html; charset=UTF-8'];
+
+        $sent = wp_mail($to, $subject, $safe_html, $headers);
+
+        if ($sent) {
+            wp_send_json_success(['to' => $to]);
+        }
+
+        wp_send_json_error(['message' => 'Failed to send']);
     }
 
     public function ajax_get_test_email_template(): void

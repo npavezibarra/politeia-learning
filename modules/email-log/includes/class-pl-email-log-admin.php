@@ -490,6 +490,11 @@ final class PL_Email_Log_Admin
         return $allowed;
     }
 
+    public function get_test_email_allowed_html(): array
+    {
+        return $this->get_email_template_allowed_html();
+    }
+
     /**
      * Replacement logic for custom templates
      */
