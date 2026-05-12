@@ -7,6 +7,12 @@
     padding-top: 48px;
 }
 
+@media (max-width: 899px) {
+    .pl-bp-blog-post-body #pcg-blog-post-root {
+        padding-top: 30px;
+    }
+}
+
 .pl-bp-blog-post-body .pl-bp-blog-post-main {
     max-width: var(--wp--style--global--wide-size, 1280px);
     margin: 0 auto;
