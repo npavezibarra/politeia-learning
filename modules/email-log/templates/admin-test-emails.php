@@ -836,11 +836,19 @@ $default_to_email = $current_user && !empty($current_user->user_email) ? (string
             if (codeNote) codeNote.textContent = 'Cargando código…';
             setStatus('', false);
 
-            fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>?action=pl_get_test_email_source&key=' + encodeURIComponent(key) + '&nonce=' + encodeURIComponent(nonce))
-                .then(r => r.json())
-                .then(data => {
+            fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>?action=pl_get_test_email_source&key=' + encodeURIComponent(key) + '&nonce=' + encodeURIComponent(nonce), { credentials: 'same-origin' })
+                .then(r => r.text())
+                .then(text => {
+                    let data = null;
+                    try {
+                        data = JSON.parse(text);
+                    } catch (e) {
+                        if (codeNote) codeNote.textContent = 'No se pudo cargar el código. Respuesta: ' + (text ? text.slice(0, 120) : '(vacía)');
+                        return;
+                    }
                     if (!data || !data.success || !data.data) {
-                        if (codeNote) codeNote.textContent = 'No se pudo cargar el código.';
+                        const msg = data && data.data && data.data.message ? data.data.message : 'No se pudo cargar el código.';
+                        if (codeNote) codeNote.textContent = msg;
                         return;
                     }
                     const payload = data.data;

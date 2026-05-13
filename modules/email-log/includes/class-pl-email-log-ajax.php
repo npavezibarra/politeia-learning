@@ -174,7 +174,9 @@ final class PL_Email_Log_Ajax
 
     public function ajax_get_test_email_source(): void
     {
-        check_ajax_referer(PL_Email_Log_Admin::TEST_EMAIL_NONCE_ACTION, 'nonce');
+        if (!check_ajax_referer(PL_Email_Log_Admin::TEST_EMAIL_NONCE_ACTION, 'nonce', false)) {
+            wp_send_json_error(['message' => 'Bad nonce']);
+        }
 
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'No permission']);
