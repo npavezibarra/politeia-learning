@@ -261,7 +261,7 @@ final class PL_Email_Log_Ajax
             wp_send_json_error();
         }
 
-        $template = isset($_POST['template']) ? (string) $_POST['template'] : '';
+        $template = isset($_POST['template']) ? (string) wp_unslash($_POST['template']) : '';
         $enabled = !empty($_POST['enabled']);
 
         $templates = get_option(PL_Email_Log_Admin::TEST_EMAIL_TEMPLATES_OPTION, []);
