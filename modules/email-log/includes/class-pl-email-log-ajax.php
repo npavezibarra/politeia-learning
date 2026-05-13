@@ -22,6 +22,7 @@ final class PL_Email_Log_Ajax
         add_action('wp_ajax_pl_get_test_email_preview', [$this, 'ajax_get_test_email_preview']);
         add_action('wp_ajax_pl_send_test_email', [$this, 'ajax_send_test_email']);
         add_action('wp_ajax_pl_send_custom_test_email', [$this, 'ajax_send_custom_test_email']);
+        add_action('wp_ajax_pl_get_test_email_source', [$this, 'ajax_get_test_email_source']);
         add_action('wp_ajax_pl_get_test_email_template', [$this, 'ajax_get_test_email_template']);
         add_action('wp_ajax_pl_save_test_email_template', [$this, 'ajax_save_test_email_template']);
         add_action('wp_ajax_pl_set_test_email_template_mode', [$this, 'ajax_set_test_email_template_mode']);
@@ -169,6 +170,63 @@ final class PL_Email_Log_Ajax
         }
 
         wp_send_json_error(['message' => 'Failed to send']);
+    }
+
+    public function ajax_get_test_email_source(): void
+    {
+        check_ajax_referer(PL_Email_Log_Admin::TEST_EMAIL_NONCE_ACTION, 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'No permission']);
+        }
+
+        $key = isset($_GET['key']) ? sanitize_key((string) $_GET['key']) : '';
+        if ($key === '') {
+            wp_send_json_error(['message' => 'No key']);
+        }
+
+        $catalog = $this->admin->get_test_emails_catalog();
+        if (!isset($catalog[$key]) || !is_array($catalog[$key])) {
+            wp_send_json_error(['message' => 'Unknown key']);
+        }
+
+        $settings = $this->admin->get_test_email_template_settings($key);
+        $custom_enabled = !empty($settings['enabled']);
+        $custom_template = isset($settings['template']) ? (string) $settings['template'] : '';
+
+        // If custom is enabled, show/edit that.
+        if ($custom_enabled) {
+            wp_send_json_success([
+                'key' => $key,
+                'mode' => 'custom',
+                'editable' => true,
+                'template' => $custom_template,
+            ]);
+        }
+
+        // Otherwise, return the effective HTML that would be used (rendered),
+        // so users can tweak it and save as Custom if desired.
+        $preview = $this->admin->get_test_email_preview($key);
+        if (empty($preview)) {
+            wp_send_json_error(['message' => 'No preview']);
+        }
+
+        $settings = $this->admin->get_test_email_template_settings($key);
+        $html = '';
+
+        if ($settings['enabled'] && !empty($settings['template'])) {
+            $html = $this->admin->build_custom_email_html($key, $preview, $settings['template']);
+        } else {
+            $html = $this->admin->render_test_email_preview_html($preview);
+        }
+
+        wp_send_json_success([
+            'key' => $key,
+            'mode' => 'traditional',
+            'editable' => true,
+            'template' => $html,
+            'note' => 'This is the rendered HTML. Saving will store it as a Custom override.',
+        ]);
     }
 
     public function ajax_get_test_email_template(): void

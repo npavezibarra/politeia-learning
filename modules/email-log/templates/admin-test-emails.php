@@ -410,46 +410,30 @@ $default_to_email = $current_user && !empty($current_user->user_email) ? (string
 
     <div class="pl-test-emails-preview" style="flex: 1 1 auto; min-width: 420px; position: sticky; top: 32px; align-self: flex-start;">
         <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
-            <div style="padding:10px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
-                <strong><?php echo esc_html__('Preview', 'politeia-learning'); ?></strong>
-                <span id="pl-test-emails-status" style="font-size:12px;color:#64748b;"></span>
-            </div>
-            <div style="height: calc(100vh - 220px); min-height: 520px; background: #f1f5f9;">
-                <iframe id="pl-test-email-preview-frame" style="width:100%;height:100%;border:none;background:#f1f5f9;" src="about:blank"></iframe>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="pl-test-email-template-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
-    <div style="background:#fff; width: 92%; max-width: 980px; height: 86%; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
-        <div style="padding: 15px 18px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin:0; font-size: 1.1rem; color: #1e293b;"><?php echo esc_html__('Template de Email', 'politeia-learning'); ?></h3>
-            <button type="button" class="pl-close-template" style="background:none;border:none;font-size:28px;cursor:pointer;color:#94a3b8;">&times;</button>
-        </div>
-        <div style="flex-grow:1; background:#fff; padding: 16px 18px; overflow: auto;">
-            <input type="hidden" id="pl-template-key" value="">
-
-            <p class="description" style="margin-top:0;">
-                <?php echo esc_html__('Variables disponibles: {{site_name}}, {{site_url}}, {{username}}, {{user_email}}, {{subject}}, {{message}} (HTML), {{message_text}}.', 'politeia-learning'); ?>
-            </p>
-
-            <div style="display:flex; gap:14px; align-items:flex-start; margin-top: 12px;">
-                <div style="flex: 1 1 auto;">
-                    <label for="pl-template" style="display:block;font-weight:600;margin-bottom:6px;">
-                        <?php echo esc_html__('HTML + CSS', 'politeia-learning'); ?>
-                    </label>
-                    <textarea id="pl-template" rows="18" style="width:100%;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;" placeholder="<style>/* CSS aquí */</style>\n<div>...HTML...</div>"></textarea>
+            <div style="padding:10px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                    <strong id="pl-test-emails-panel-title"><?php echo esc_html__('Preview', 'politeia-learning'); ?></strong>
+                    <span id="pl-test-emails-status" style="font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex:0 0 auto;">
+                    <button type="button" class="button" id="pl-test-emails-mode-preview"><?php echo esc_html__('Preview', 'politeia-learning'); ?></button>
+                    <button type="button" class="button" id="pl-test-emails-mode-code"><?php echo esc_html__('Edit code', 'politeia-learning'); ?></button>
                 </div>
             </div>
-
-            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 12px;">
-                <label style="display:flex; align-items:center; gap:8px; margin-right:auto;">
-                    <input type="checkbox" id="pl-template-enabled" value="1">
-                    <?php echo esc_html__('Activar Custom Template', 'politeia-learning'); ?>
-                </label>
-                <button type="button" class="button pl-template-cancel"><?php echo esc_html__('Cancelar', 'politeia-learning'); ?></button>
-                <button type="button" class="button button-primary pl-template-save"><?php echo esc_html__('Guardar', 'politeia-learning'); ?></button>
+            <div id="pl-test-emails-preview-pane" style="height: calc(100vh - 220px); min-height: 520px; background: #f1f5f9;">
+                <iframe id="pl-test-email-preview-frame" style="width:100%;height:100%;border:none;background:#f1f5f9;" src="about:blank"></iframe>
+            </div>
+            <div id="pl-test-emails-code-pane" style="display:none; height: calc(100vh - 220px); min-height: 520px; background:#ffffff;">
+                <div style="padding:12px;border-bottom:1px solid #e2e8f0;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+                    <div id="pl-test-emails-code-note" style="font-size:12px;color:#64748b;">
+                        <?php echo esc_html__('Edit the HTML and save to store it as a Custom override for this email.', 'politeia-learning'); ?>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <button type="button" class="button" id="pl-test-emails-code-cancel"><?php echo esc_html__('Cancel', 'politeia-learning'); ?></button>
+                        <button type="button" class="button button-primary" id="pl-test-emails-code-save"><?php echo esc_html__('Save', 'politeia-learning'); ?></button>
+                    </div>
+                </div>
+                <textarea id="pl-test-emails-code-editor" spellcheck="false" style="width:100%;height:calc(100% - 54px);border:0;resize:none;padding:14px 16px;box-sizing:border-box;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;font-size:12px;line-height:1.5;"></textarea>
             </div>
         </div>
     </div>
@@ -463,13 +447,16 @@ $default_to_email = $current_user && !empty($current_user->user_email) ? (string
         const copyBtn = document.getElementById('pl-copy-email-instructions');
         const copyStatus = document.getElementById('pl-copy-email-instructions-status');
         const copyText = document.getElementById('pl-copy-email-instructions-text');
-        const overlay = document.getElementById('pl-test-email-template-overlay');
-        const templateKeyInput = document.getElementById('pl-template-key');
-        const templateInput = document.getElementById('pl-template');
-        const enabledInput = document.getElementById('pl-template-enabled');
-        const closeTemplateBtn = document.querySelector('.pl-close-template');
-        const cancelTemplateBtn = document.querySelector('.pl-template-cancel');
-        const saveTemplateBtn = document.querySelector('.pl-template-save');
+        const panelTitle = document.getElementById('pl-test-emails-panel-title');
+        const previewPane = document.getElementById('pl-test-emails-preview-pane');
+        const codePane = document.getElementById('pl-test-emails-code-pane');
+        const codeEditor = document.getElementById('pl-test-emails-code-editor');
+        const codeNote = document.getElementById('pl-test-emails-code-note');
+        const modePreviewBtn = document.getElementById('pl-test-emails-mode-preview');
+        const modeCodeBtn = document.getElementById('pl-test-emails-mode-code');
+        const codeSaveBtn = document.getElementById('pl-test-emails-code-save');
+        const codeCancelBtn = document.getElementById('pl-test-emails-code-cancel');
+        let activeKey = '';
         const originFilterToggle = document.getElementById('pl-test-emails-origin-filter-toggle');
         const originFilterPanelWrap = document.getElementById('pl-test-emails-origin-filter-panel');
         const originAll = document.querySelector('#pl-test-emails-origin-filter-panel .pl-test-emails-origin-all');
@@ -815,31 +802,61 @@ $default_to_email = $current_user && !empty($current_user->user_email) ? (string
             }
         });
 
-        function openTemplateModal() {
-            overlay.style.display = 'flex';
+        function setPanelMode(mode) {
+            const showCode = mode === 'code';
+            if (previewPane) previewPane.style.display = showCode ? 'none' : 'block';
+            if (codePane) codePane.style.display = showCode ? 'block' : 'none';
+            if (panelTitle) panelTitle.textContent = showCode ? 'Edit code' : 'Preview';
         }
 
-        function closeTemplateModal() {
-            overlay.style.display = 'none';
-            templateKeyInput.value = '';
+        function loadPreview(key) {
+            if (!key) return;
+            activeKey = key;
+            setPanelMode('preview');
+            frame.src = 'about:blank';
+            setStatus('Cargando preview…', false);
+
+            fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>?action=pl_get_test_email_preview&key=' + encodeURIComponent(key) + '&nonce=' + encodeURIComponent(nonce))
+                .then(r => r.text())
+                .then(html => {
+                    const doc = frame.contentWindow.document;
+                    doc.open();
+                    doc.write(html);
+                    doc.close();
+                    setStatus('', false);
+                })
+                .catch(() => setStatus('No se pudo cargar el preview.', true));
+        }
+
+        function loadSourceIntoEditor(key) {
+            if (!key) return;
+            activeKey = key;
+            setPanelMode('code');
+            if (codeEditor) codeEditor.value = '';
+            if (codeNote) codeNote.textContent = 'Cargando código…';
+            setStatus('', false);
+
+            fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>?action=pl_get_test_email_source&key=' + encodeURIComponent(key) + '&nonce=' + encodeURIComponent(nonce))
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || !data.success || !data.data) {
+                        if (codeNote) codeNote.textContent = 'No se pudo cargar el código.';
+                        return;
+                    }
+                    const payload = data.data;
+                    if (codeEditor) codeEditor.value = payload.template || '';
+                    if (codeNote) {
+                        codeNote.textContent = payload.note ? payload.note : 'Edit the HTML and save to store it as a Custom override for this email.';
+                    }
+                })
+                .catch(() => {
+                    if (codeNote) codeNote.textContent = 'No se pudo cargar el código.';
+                });
         }
 
         document.querySelectorAll('.pl-test-email-view').forEach(btn => {
             btn.addEventListener('click', function() {
-                const key = this.getAttribute('data-key');
-                frame.src = 'about:blank';
-                setStatus('Cargando preview…', false);
-
-                fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>?action=pl_get_test_email_preview&key=' + encodeURIComponent(key) + '&nonce=' + encodeURIComponent(nonce))
-                    .then(r => r.text())
-                    .then(html => {
-                        const doc = frame.contentWindow.document;
-                        doc.open();
-                        doc.write(html);
-                        doc.close();
-                        setStatus('', false);
-                    })
-                    .catch(() => setStatus('No se pudo cargar el preview.', true));
+                loadPreview(this.getAttribute('data-key'));
             });
         });
 
@@ -891,62 +908,61 @@ $default_to_email = $current_user && !empty($current_user->user_email) ? (string
 
         document.querySelectorAll('.pl-test-email-template').forEach(btn => {
             btn.addEventListener('click', function() {
-                const key = this.getAttribute('data-key');
-                templateKeyInput.value = key;
-                templateInput.value = '';
-                enabledInput.checked = false;
-                openTemplateModal();
-
-                fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>?action=pl_get_test_email_template&key=' + encodeURIComponent(key) + '&nonce=' + encodeURIComponent(nonce))
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data && data.success && data.data) {
-                            templateInput.value = data.data.template || '';
-                            enabledInput.checked = !!data.data.enabled;
-                        }
-                    })
-                    .catch(() => {});
+                loadSourceIntoEditor(this.getAttribute('data-key'));
             });
         });
 
-        saveTemplateBtn.addEventListener('click', function() {
-            const key = templateKeyInput.value;
-            if (!key) return;
+        if (modePreviewBtn) {
+            modePreviewBtn.addEventListener('click', function() {
+                if (activeKey) loadPreview(activeKey);
+                else setPanelMode('preview');
+            });
+        }
 
-            const body = new URLSearchParams();
-            body.set('action', 'pl_save_test_email_template');
-            body.set('nonce', nonce);
-            body.set('key', key);
-            body.set('template', templateInput.value || '');
-            body.set('enabled', enabledInput.checked ? '1' : '0');
+        if (modeCodeBtn) {
+            modeCodeBtn.addEventListener('click', function() {
+                if (activeKey) loadSourceIntoEditor(activeKey);
+                else setPanelMode('code');
+            });
+        }
 
-            setStatus('Guardando template…', false);
-            fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-                body: body.toString()
-            })
-                .then(r => r.json())
-                .then(data => {
-                    if (data && data.success) {
-                        setStatus('Template guardado.', false);
-                        const modeSelect = document.querySelector('.pl-test-email-mode[data-key=\"' + key + '\"]');
-                        if (modeSelect) {
-                            modeSelect.value = enabledInput.checked ? 'custom' : 'traditional';
-                        }
-                        closeTemplateModal();
-                    } else {
-                        setStatus('No se pudo guardar el template.', true);
-                    }
+        if (codeCancelBtn) {
+            codeCancelBtn.addEventListener('click', function() {
+                if (activeKey) loadPreview(activeKey);
+                else setPanelMode('preview');
+            });
+        }
+
+        if (codeSaveBtn) {
+            codeSaveBtn.addEventListener('click', function() {
+                if (!activeKey) return;
+                const body = new URLSearchParams();
+                body.set('action', 'pl_save_test_email_template');
+                body.set('nonce', nonce);
+                body.set('key', activeKey);
+                body.set('template', (codeEditor && codeEditor.value) ? codeEditor.value : '');
+                body.set('enabled', '1');
+
+                setStatus('Guardando template…', false);
+                fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: body.toString()
                 })
-                .catch(() => setStatus('No se pudo guardar el template.', true));
-        });
-
-        cancelTemplateBtn.addEventListener('click', closeTemplateModal);
-        closeTemplateBtn.addEventListener('click', closeTemplateModal);
-        overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) closeTemplateModal();
-        });
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.success) {
+                            setStatus('Template guardado.', false);
+                            const modeSelect = document.querySelector('.pl-test-email-mode[data-key=\"' + activeKey + '\"]');
+                            if (modeSelect) modeSelect.value = 'custom';
+                            loadPreview(activeKey);
+                        } else {
+                            setStatus('No se pudo guardar el template.', true);
+                        }
+                    })
+                    .catch(() => setStatus('No se pudo guardar el template.', true));
+            });
+        }
 
         // --- Custom Email Logo Selector Logic ---
         const selectLogoBtn = document.getElementById('pl-select-email-logo');

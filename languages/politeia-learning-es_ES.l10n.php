@@ -28,5 +28,9 @@ return [
         'Hello %1$s,' => 'Hola %1$s,',
         'We received a request to reset your password. If this was you, use the button below to continue:' => 'Recibimos una solicitud para restablecer tu contraseña. Si fuiste tú, usa el botón de abajo para continuar con el proceso:',
         'If you did not request this, you can safely ignore this email.' => 'Si no fuiste tú, puedes ignorar este correo de forma segura.',
+        'Edit code' => 'Editar código',
+        'Cancel' => 'Cancelar',
+        'Save' => 'Guardar',
+        'Edit the HTML and save to store it as a Custom override for this email.' => 'Edita el HTML y guarda para almacenarlo como override Custom para este correo.',
     ],
 ];
