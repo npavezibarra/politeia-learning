@@ -21,11 +21,14 @@ if (defined('PL_BOOKSHELF_MODULE_ENABLED') && !PL_BOOKSHELF_MODULE_ENABLED) {
     return;
 }
 
-// If Bookshelf plugin (or another copy) already loaded these modules, avoid double boot.
+// If another copy already loaded these modules, avoid double boot.
+//
+// IMPORTANT:
+// Some environments define legacy constants (e.g. POLITEIA_READING_PATH) even when the
+// module classes are not actually loaded. We only guard on class existence to avoid
+// disabling the module accidentally.
 if (
-    defined('POLITEIA_READING_PATH')
-    || defined('POLITEIA_CHATGPT_DIR')
-    || class_exists('\\Politeia\\Reading\\Init')
+    class_exists('\\Politeia\\Reading\\Init')
     || class_exists('\\Politeia\\ChatGPT\\Init')
     || class_exists('\\Politeia\\UserBaseline\\Init')
 ) {
