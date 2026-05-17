@@ -41,19 +41,41 @@ require_once __DIR__ . '/admin/google-books-settings.php';
 // Bookshelf admin menu + settings screens.
 require_once __DIR__ . '/bookshelf-admin.php';
 
+// Safe require helper (prevents production fatals when some submodules are not deployed).
+$pl_bookshelf_require_if_exists = static function (string $path, string $label): bool {
+    if (file_exists($path)) {
+        require_once $path;
+        return true;
+    }
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[Bookshelf] Missing module file: ' . $label . ' (' . $path . ')');
+    }
+    return false;
+};
+
 // Core modules.
-require_once __DIR__ . '/modules/user-baseline/init.php';
-require_once __DIR__ . '/modules/user-baseline/user-baseline.php';
-if (class_exists('\\Politeia\\UserBaseline\\Init') && method_exists('\\Politeia\\UserBaseline\\Init', 'register')) {
+if (
+    $pl_bookshelf_require_if_exists(__DIR__ . '/modules/user-baseline/init.php', 'user-baseline/init.php')
+    && $pl_bookshelf_require_if_exists(__DIR__ . '/modules/user-baseline/user-baseline.php', 'user-baseline/user-baseline.php')
+    && class_exists('\\Politeia\\UserBaseline\\Init')
+    && method_exists('\\Politeia\\UserBaseline\\Init', 'register')
+) {
     \Politeia\UserBaseline\Init::register();
 }
 
-require_once __DIR__ . '/modules/reading/Init.php';
-if (class_exists('\\Politeia\\Reading\\Init') && method_exists('\\Politeia\\Reading\\Init', 'register')) {
+if (
+    $pl_bookshelf_require_if_exists(__DIR__ . '/modules/reading/Init.php', 'reading/Init.php')
+    && class_exists('\\Politeia\\Reading\\Init')
+    && method_exists('\\Politeia\\Reading\\Init', 'register')
+) {
     \Politeia\Reading\Init::register();
 }
 
-require_once __DIR__ . '/modules/chatgpt/init.php';
-if (class_exists('\\Politeia\\ChatGPT\\Init') && method_exists('\\Politeia\\ChatGPT\\Init', 'register')) {
+// ChatGPT module is optional in production (may be deployed later).
+if (
+    $pl_bookshelf_require_if_exists(__DIR__ . '/modules/chatgpt/init.php', 'chatgpt/init.php')
+    && class_exists('\\Politeia\\ChatGPT\\Init')
+    && method_exists('\\Politeia\\ChatGPT\\Init', 'register')
+) {
     \Politeia\ChatGPT\Init::register();
 }
