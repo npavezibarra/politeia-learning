@@ -2,7 +2,7 @@
 namespace Politeia\UserBaseline;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+        return;
 }
 
 class Init {

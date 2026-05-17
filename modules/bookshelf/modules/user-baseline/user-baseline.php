@@ -2,7 +2,7 @@
 namespace Politeia\UserBaseline;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+        return;
 }
 
 if ( ! defined( 'POLITEIA_USER_BASELINE_DB_VERSION' ) ) {

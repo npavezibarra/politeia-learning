@@ -77,31 +77,21 @@ class NavEngine
             'classes' => ['menu-item', 'pl-menu-item-courses'],
         ];
 
-        // 2. My Books
-        $items[] = [
-            'label' => __('My Books', 'politeia-learning'),
-            'url' => home_url('/my-books/'),
-            'classes' => ['menu-item', 'pl-menu-item-my-books'],
-        ];
+        // 2. Blog (optional)
+        // If the Front Page already *is* the "blog" page, don't show a redundant BLOG menu item.
+        $front_page_id = (int) get_option('page_on_front');
+        $front_slug = $front_page_id ? (string) get_post_field('post_name', $front_page_id) : '';
+        if ($front_slug !== 'blog') {
+            $items[] = [
+                'label' => __('BLOG', 'politeia-learning'),
+                'url' => home_url('/blog/'),
+                'classes' => ['menu-item', 'pl-menu-item-blog'],
+            ];
+        }
 
-        // 3. Blog
-        $items[] = [
-            'label' => __('BLOG', 'politeia-learning'),
-            'url' => home_url('/blog/'),
-            'classes' => ['menu-item', 'pl-menu-item-blog'],
-        ];
-
-        // 4. User Specific items
+        // 3. User Specific items
         if (is_user_logged_in()) {
             $center_url = self::get_center_url();
-            if ($center_url !== '') {
-                $items[] = [
-                    'label' => __('Center', 'politeia-learning'),
-                    'url' => $center_url,
-                    'classes' => ['menu-item', 'pl-center-menu-item'],
-                ];
-            }
-
             $items[] = [
                 'type' => 'user',
                 'label' => self::get_user_display_name(),
@@ -171,9 +161,23 @@ class NavEngine
         }
 
         $items = [];
+
+        $center_url = self::get_center_url();
+        if ($center_url !== '') {
+            $items[] = [
+                'label' => __('Center', 'politeia-learning'),
+                'url' => $center_url,
+            ];
+        }
+
         $items[] = [
             'label' => __('Mi Perfil', 'politeia-learning'),
             'url' => home_url('/profile/' . $user->user_nicename),
+        ];
+
+        $items[] = [
+            'label' => __('My Books', 'politeia-learning'),
+            'url' => home_url('/my-books/'),
         ];
 
         $items[] = [
