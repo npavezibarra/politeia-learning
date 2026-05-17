@@ -6,15 +6,18 @@
  * - Run Bookshelf functionality as a module within `politeia-learning`.
  * - Keep `politeia-bookshelf` installed as a shim, but avoid redundant/conflicting code.
  *
- * Enable with:
- * - define('PL_BOOKSHELF_MODULE_ENABLED', true);
+ * Enablement:
+ * - Enabled by default when the module is present.
+ * - To disable explicitly, set:
+ *   define('PL_BOOKSHELF_MODULE_ENABLED', false);
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!defined('PL_BOOKSHELF_MODULE_ENABLED') || !PL_BOOKSHELF_MODULE_ENABLED) {
+// Default: enabled. Allow explicit disable via constant.
+if (defined('PL_BOOKSHELF_MODULE_ENABLED') && !PL_BOOKSHELF_MODULE_ENABLED) {
     return;
 }
 
@@ -54,4 +57,3 @@ require_once __DIR__ . '/modules/chatgpt/init.php';
 if (class_exists('\\Politeia\\ChatGPT\\Init') && method_exists('\\Politeia\\ChatGPT\\Init', 'register')) {
     \Politeia\ChatGPT\Init::register();
 }
-
