@@ -152,7 +152,7 @@ $last_end_page = $context['last_end_page'];
 
 		<div id="prs-sr-row-actions" class="prs-sr-actions">
 			<a href="#" role="button" id="prs-sr-start" class="prs-sr-btn prs-sr-btn--start" aria-disabled="true" aria-label="<?php esc_attr_e( 'Start Reading', 'politeia-reading' ); ?>">
-				<span class="material-symbols-outlined prs-sr-start-icon" aria-hidden="true">play_arrow</span>
+				<span class="material-symbols-outlined prs-sr-start-icon" aria-hidden="true">play_circle</span>
 			</a>
 			<a href="#" role="button" id="prs-sr-stop" class="prs-sr-btn prs-sr-btn--stop" style="display:none;"
 				aria-disabled="false">

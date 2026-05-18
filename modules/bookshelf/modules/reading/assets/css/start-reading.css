@@ -202,6 +202,9 @@
 	border: none;
 	color: inherit;
 	cursor: pointer;
+	text-decoration: none !important;
+	border-bottom: none !important;
+	box-shadow: none !important;
 	text-transform: uppercase;
 	letter-spacing: 0.25em;
 	font-size: 18px;
@@ -218,6 +221,14 @@
 
 .prs-sr-btn:active {
 	transform: scale(0.98);
+}
+
+.prs-sr-btn:hover,
+.prs-sr-btn:focus,
+.prs-sr-btn:focus-visible {
+	text-decoration: none !important;
+	border-bottom: none !important;
+	box-shadow: none !important;
 }
 
 .prs-sr-btn-icon {
@@ -261,7 +272,7 @@
 .prs-sr-start-icon {
 	display: inline-block;
 	line-height: 1;
-	font-size: 35px; /* ~25% larger than previous 28px SVG */
+	font-size: 40px; /* bigger icon-only start */
 	font-variation-settings:
 		'FILL' 0,
 		'wght' 400,
@@ -271,6 +282,8 @@
 	-webkit-background-clip: text;
 	background-clip: text;
 	color: transparent;
+	text-decoration: none !important;
+	border-bottom: none !important;
 }
 
 .prs-sr-btn--stop .prs-sr-btn-icon {
