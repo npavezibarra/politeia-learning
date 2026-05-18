@@ -28,6 +28,9 @@ class NavOrchestrator
 
     private function init_hooks(): void
     {
+        // Canonical homepage redirect: politeia.cl/ -> politeia.cl/blog/
+        add_action('template_redirect', [$this, 'maybe_redirect_home_to_blog'], 0);
+
         // Assets with max priority
         add_action('wp_enqueue_scripts', [$this, 'enqueue_assets'], 1);
         add_action('wp_head', [$this, 'inject_emergency_styles'], 1);
@@ -43,6 +46,38 @@ class NavOrchestrator
 
         // Mobile / Smartphone Specific
         add_action('wp_body_open', [MobileRenderer::class, 'render_header'], 1);
+    }
+
+    /**
+     * Forces the site root (/) to redirect to /blog/.
+     *
+     * This keeps the canonical public entrypoint stable without relying on .htaccess.
+     */
+    public function maybe_redirect_home_to_blog(): void
+    {
+        if (is_admin()) {
+            return;
+        }
+
+        if (defined('WP_CLI') && WP_CLI) {
+            return;
+        }
+
+        if (wp_doing_ajax() || wp_is_json_request() || (defined('REST_REQUEST') && REST_REQUEST) || (defined('DOING_CRON') && DOING_CRON)) {
+            return;
+        }
+
+        $request_uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = (string) wp_parse_url($request_uri, PHP_URL_PATH);
+
+        // Only redirect the site root.
+        if ($path !== '' && $path !== '/') {
+            return;
+        }
+
+        $target = home_url('/blog/');
+        wp_safe_redirect($target, 301);
+        exit;
     }
 
     /**
