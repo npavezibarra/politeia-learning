@@ -86,7 +86,7 @@
 	max-width: 460px;
 	background: #1a1a1a;
 	border: none;
-	border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+	border-bottom: none;
 	border-radius: 0;
 	padding: 12px 0;
 	font-size: 34px;
@@ -98,7 +98,7 @@
 .prs-sr-input:focus {
 	outline: none;
 	background: #1a1a1a;
-	border-bottom-color: #c79f32;
+	border-bottom: none;
 	box-shadow: none;
 }
 
