@@ -88,6 +88,8 @@ body {
 	height: 100%;
 	object-fit: cover;
 	display: block;
+	position: relative;
+	z-index: 1;
 }
 
 .prs-cover-placeholder {
@@ -125,6 +127,7 @@ body {
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 0.2s ease;
+	z-index: 3;
 }
 
 .prs-cover-overlay .prs-cover-actions {
