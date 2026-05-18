@@ -28,11 +28,28 @@ $has_image = $cover['has_image'];
 							$cover_alt = $meta_alt;
 						}
 					}
-					printf(
-						'<img src="%1$s" class="prs-cover-img" id="prs-cover-img" alt="%2$s" />',
-						esc_url( $cover_img_url ),
-						esc_attr( $cover_alt )
-					);
+					if ( $cover['id'] ) {
+						// Use WP responsive image markup (srcset/sizes/width/height) for better LCP.
+						echo wp_get_attachment_image(
+							(int) $cover['id'],
+							'medium_large',
+							false,
+							array(
+								'id'            => 'prs-cover-img',
+								'class'         => 'prs-cover-img',
+								'alt'           => $cover_alt,
+								'loading'       => 'eager',
+								'fetchpriority' => 'high',
+								'decoding'      => 'async',
+							)
+						);
+					} else {
+						printf(
+							'<img src="%1$s" class="prs-cover-img" id="prs-cover-img" alt="%2$s" loading="eager" fetchpriority="high" decoding="async" />',
+							esc_url( $cover_img_url ),
+							esc_attr( $cover_alt )
+						);
+					}
 					?>
 				<?php else : ?>
 					<div id="prs-cover-placeholder" class="prs-cover-placeholder" role="img" aria-label="<?php esc_attr_e( 'Default book cover', 'politeia-reading' ); ?>">

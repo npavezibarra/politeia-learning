@@ -4774,26 +4774,36 @@ function setupSearchCoverOverlay() {
     renderMessage("Searching covers…", "prs-search-cover-loading");
   }
 
-  function sanitizeCoverImage(img) {
+  function sanitizeCoverImage(img, opts = {}) {
     if (!img) {
       return;
     }
 
-    img.removeAttribute("width");
-    img.removeAttribute("height");
-    img.removeAttribute("srcset");
-    img.removeAttribute("sizes");
+    const stripResponsive = opts.stripResponsive !== false;
+
+    // Only strip responsive attrs when we inject an external URL (e.g. Google Books).
+    // For attachment-based covers (`srcset`/`sizes`), keeping them significantly improves LCP.
+    if (stripResponsive) {
+      img.removeAttribute("width");
+      img.removeAttribute("height");
+      img.removeAttribute("srcset");
+      img.removeAttribute("sizes");
+    }
 
     if (img.style && typeof img.style.removeProperty === "function") {
-      img.style.removeProperty("width");
-      img.style.removeProperty("height");
-      img.style.removeProperty("max-width");
-      img.style.removeProperty("max-height");
+      if (stripResponsive) {
+        img.style.removeProperty("width");
+        img.style.removeProperty("height");
+        img.style.removeProperty("max-width");
+        img.style.removeProperty("max-height");
+      }
     } else if (img.style) {
-      img.style.width = "";
-      img.style.height = "";
-      img.style.maxWidth = "";
-      img.style.maxHeight = "";
+      if (stripResponsive) {
+        img.style.width = "";
+        img.style.height = "";
+        img.style.maxWidth = "";
+        img.style.maxHeight = "";
+      }
     }
 
     const classesToRemove = [
@@ -4827,7 +4837,7 @@ function setupSearchCoverOverlay() {
       return;
     }
 
-    sanitizeCoverImage(img);
+    sanitizeCoverImage(img, { stripResponsive: false });
 
     const currentSrc = img.getAttribute("src") || "";
     const normalized = prsNormalizeCoverUrl(currentSrc);
@@ -5022,7 +5032,7 @@ function setupSearchCoverOverlay() {
       figure.insertBefore(img, figure.firstChild || null);
     }
 
-    sanitizeCoverImage(img);
+    sanitizeCoverImage(img, { stripResponsive: true });
 
     const normalizedUrl = prsNormalizeCoverUrl(url);
     const finalUrl = normalizedUrl || (url ? String(url) : "");
