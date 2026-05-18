@@ -6,16 +6,17 @@
  * - Mirror `politeia-bookshelf/modules/reading-planner` inside `politeia-learning`.
  * - Avoid double-registration while `politeia-bookshelf` is still active.
  *
- * Enable with:
- * - define('PL_READING_PLANNER_MODULE_ENABLED', true);
+ * Enabled by default unless explicitly disabled:
+ * - define('PL_READING_PLANNER_MODULE_ENABLED', false);
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!defined('PL_READING_PLANNER_MODULE_ENABLED') || !PL_READING_PLANNER_MODULE_ENABLED) {
-    return;
+// Allow opt-out in environments where another plugin handles reading plans.
+if (defined('PL_READING_PLANNER_MODULE_ENABLED') && !PL_READING_PLANNER_MODULE_ENABLED) {
+	return;
 }
 
 // If Bookshelf (or another copy) already loaded Reading Planner, don't register twice.
