@@ -332,6 +332,15 @@ class Politeia_Reading_Book_Single_Controller {
 		wp_enqueue_style( 'prs-notes-feed', POLITEIA_READING_URL . 'assets/css/notes-feed.css', array(), self::asset_version( 'assets/css/notes-feed.css' ) );
 		wp_enqueue_style( 'politeia-material-symbols', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200', array(), null );
 
+		// Critical overrides for cover hover actions (prevents stale/combined CSS in production from hiding buttons).
+		wp_add_inline_style(
+			'prs-book-single-v2',
+			'#prs-cover-frame{position:relative}'
+			. '#prs-cover-frame .prs-cover-overlay{z-index:50}'
+			. '#prs-cover-frame .prs-cover-overlay .prs-cover-actions{opacity:1;transform:translateY(0)}'
+			. '#prs-cover-frame[data-cover-state="image"] .prs-cover-remove{display:inline-flex}'
+		);
+
 		wp_enqueue_script( 'prs-book-single-v2', POLITEIA_READING_URL . 'assets/js/my-book-single-v2.js', array( 'jquery' ), self::asset_version( 'assets/js/my-book-single-v2.js' ), true );
 		wp_enqueue_script( 'prs-notes-feed', POLITEIA_READING_URL . 'assets/js/notes-feed.js', array( 'jquery' ), self::asset_version( 'assets/js/notes-feed.js' ), true );
 
