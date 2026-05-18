@@ -56,7 +56,9 @@ class Politeia_Reading_Shortcode_Start_Reading {
 	 */
 	private static function enqueue_assets( $context ) {
 		wp_enqueue_style( 'politeia-reading' );
-		wp_enqueue_style( 'politeia-start-reading', POLITEIA_READING_URL . 'assets/css/start-reading.css', array(), '1.0.0' );
+		$css_path = trailingslashit( POLITEIA_READING_PATH ) . 'assets/css/start-reading.css';
+		$css_ver  = file_exists( $css_path ) ? (string) filemtime( $css_path ) : '1.0.0';
+		wp_enqueue_style( 'politeia-start-reading', POLITEIA_READING_URL . 'assets/css/start-reading.css', array(), $css_ver );
 		wp_enqueue_script( 'politeia-start-reading' );
 
 		wp_localize_script(
