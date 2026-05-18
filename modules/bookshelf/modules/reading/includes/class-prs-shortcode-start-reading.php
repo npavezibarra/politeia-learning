@@ -59,6 +59,21 @@ class Politeia_Reading_Shortcode_Start_Reading {
 		$css_path = trailingslashit( POLITEIA_READING_PATH ) . 'assets/css/start-reading.css';
 		$css_ver  = file_exists( $css_path ) ? (string) filemtime( $css_path ) : '1.0.0';
 		wp_enqueue_style( 'politeia-start-reading', POLITEIA_READING_URL . 'assets/css/start-reading.css', array(), $css_ver );
+
+		// Hard override for theme link underlines inside the recorder modal.
+		// This prevents the "white line" under the play icon regardless of theme CSS.
+		wp_add_inline_style(
+			'politeia-start-reading',
+			'#prs-sr-start{'
+			. 'text-decoration:none!important;'
+			. 'border-bottom:none!important;'
+			. 'background-image:none!important;'
+			. 'box-shadow:none!important;'
+			. '}'
+			. '#prs-sr-start::before,#prs-sr-start::after{content:none!important;display:none!important;}'
+			. '.prs-sr-start-icon{font-size:70px!important;text-decoration:none!important;border-bottom:none!important;}'
+		);
+
 		wp_enqueue_script( 'politeia-start-reading' );
 
 		wp_localize_script(
