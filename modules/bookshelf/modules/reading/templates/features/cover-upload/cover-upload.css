@@ -23,12 +23,22 @@
 .prs-cover-frame.has-image:hover .prs-cover-actions,
 .prs-cover-frame.has-image:focus-within .prs-cover-actions,
 .prs-cover-frame[data-cover-state="image"]:hover .prs-cover-actions,
-.prs-cover-frame[data-cover-state="image"]:focus-within .prs-cover-actions{
+.prs-cover-frame[data-cover-state="image"]:focus-within .prs-cover-actions,
+/* v2 uses `.cover-frame` instead of `.prs-cover-frame` */
+.cover-frame.has-image:hover .prs-cover-actions,
+.cover-frame.has-image:focus-within .prs-cover-actions,
+.cover-frame[data-cover-state="image"]:hover .prs-cover-actions,
+.cover-frame[data-cover-state="image"]:focus-within .prs-cover-actions{
         opacity:1;
         transform:translateY(0);
 }
 .prs-cover-overlay .prs-cover-actions{
         margin-top:0;
+}
+.prs-cover-overlay .prs-cover-actions{
+	/* Ensure buttons are visible inside overlay regardless of stylesheet load order */
+	opacity: 1;
+	transform: translateY(0);
 }
 .prs-cover-btn{
         background:#000000;
@@ -76,19 +86,28 @@
 }
 .prs-cover-remove{
         display:none;
-        font-size:12px;
+        align-items:center;
+        justify-content:center;
+        width:34px;
+        height:34px;
+        border-radius:999px;
+        background:rgba(0,0,0,0.75);
         color:#fff;
-        text-decoration:underline;
+        text-decoration:none;
         align-self:center;
-        margin-top:4px;
+        margin-top:2px;
 }
 .prs-cover-frame[data-cover-state="image"] .prs-cover-remove{
         display:inline-block;
 }
+/* v2 uses `.cover-frame` instead of `.prs-cover-frame` */
+.cover-frame[data-cover-state="image"] .prs-cover-remove{
+	display:inline-block;
+}
 .prs-cover-remove:hover,
 .prs-cover-remove:focus-visible{
+        background:#C79F32;
         color:#fff;
-        text-decoration:none;
 }
 .prs-cover-remove.is-disabled{
         opacity:0.6;

@@ -68,7 +68,9 @@ class PRS_Cover_Upload_Feature {
 			if ( $show_search ) : ?>
 				<button type="button" id="prs-cover-search" class="prs-btn prs-cover-btn prs-cover-search-button"><?php echo esc_html( $search_label ); ?></button>
 			<?php endif; */ ?>
-			<a href="#" id="prs-cover-remove" class="prs-cover-remove"><?php echo esc_html( $remove_label ); ?></a>
+			<a href="#" id="prs-cover-remove" class="prs-cover-remove" aria-label="<?php echo esc_attr( $remove_label ); ?>" title="<?php echo esc_attr( $remove_label ); ?>">
+				<span class="material-symbols-outlined" aria-hidden="true">delete</span>
+			</a>
 		</div>
 		<?php
 		return ob_get_clean();
