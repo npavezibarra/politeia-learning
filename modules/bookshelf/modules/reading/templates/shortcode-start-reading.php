@@ -151,13 +151,8 @@ $last_end_page = $context['last_end_page'];
 		</div>
 
 		<div id="prs-sr-row-actions" class="prs-sr-actions">
-			<a href="#" role="button" id="prs-sr-start" class="prs-sr-btn prs-sr-btn--start" aria-disabled="true">
-				<span class="prs-sr-btn-icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-						<polygon points="8,5 20,12 8,19"></polygon>
-					</svg>
-				</span>
-				<span class="prs-sr-btn-label"><?php esc_html_e( 'Start Reading', 'politeia-reading' ); ?></span>
+			<a href="#" role="button" id="prs-sr-start" class="prs-sr-btn prs-sr-btn--start" aria-disabled="true" aria-label="<?php esc_attr_e( 'Start Reading', 'politeia-reading' ); ?>">
+				<span class="material-symbols-outlined prs-sr-start-icon" aria-hidden="true">play_arrow</span>
 			</a>
 			<a href="#" role="button" id="prs-sr-stop" class="prs-sr-btn prs-sr-btn--stop" style="display:none;"
 				aria-disabled="false">

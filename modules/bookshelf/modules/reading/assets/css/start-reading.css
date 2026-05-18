@@ -258,6 +258,21 @@
 	color: #C79F32;
 }
 
+.prs-sr-start-icon {
+	display: inline-block;
+	line-height: 1;
+	font-size: 35px; /* ~25% larger than previous 28px SVG */
+	font-variation-settings:
+		'FILL' 0,
+		'wght' 400,
+		'GRAD' 0,
+		'opsz' 24;
+	background: linear-gradient(135deg, #8A6B1E, #C79F32, #E9D18A);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
 .prs-sr-btn--stop .prs-sr-btn-icon {
 	color: #B87333;
 }
