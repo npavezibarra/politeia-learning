@@ -7,6 +7,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Controller for the Single Book view.
  */
 class Politeia_Reading_Book_Single_Controller {
+	/**
+	 * Cache-busting asset version based on file modification time.
+	 * Prevents long-lived CDN/browser caches from serving stale CSS/JS after deploys.
+	 */
+	private static function asset_version( $relative_path ) {
+		$path = trailingslashit( POLITEIA_READING_PATH ) . ltrim( (string) $relative_path, '/' );
+		if ( file_exists( $path ) ) {
+			return (string) filemtime( $path );
+		}
+
+		return defined( 'POLITEIA_READING_VERSION' ) ? (string) POLITEIA_READING_VERSION : null;
+	}
 
 	/**
 	 * Prepare data and render the single book template.
@@ -316,12 +328,12 @@ class Politeia_Reading_Book_Single_Controller {
 	 */
 	private static function enqueue_assets( $data ) {
 		wp_enqueue_style( 'politeia-reading' );
-		wp_enqueue_style( 'prs-book-single-v2', POLITEIA_READING_URL . 'assets/css/my-book-single-v2.css', array(), POLITEIA_READING_VERSION );
-		wp_enqueue_style( 'prs-notes-feed', POLITEIA_READING_URL . 'assets/css/notes-feed.css', array(), POLITEIA_READING_VERSION );
+		wp_enqueue_style( 'prs-book-single-v2', POLITEIA_READING_URL . 'assets/css/my-book-single-v2.css', array(), self::asset_version( 'assets/css/my-book-single-v2.css' ) );
+		wp_enqueue_style( 'prs-notes-feed', POLITEIA_READING_URL . 'assets/css/notes-feed.css', array(), self::asset_version( 'assets/css/notes-feed.css' ) );
 		wp_enqueue_style( 'politeia-material-symbols', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200', array(), null );
 
-		wp_enqueue_script( 'prs-book-single-v2', POLITEIA_READING_URL . 'assets/js/my-book-single-v2.js', array( 'jquery' ), POLITEIA_READING_VERSION, true );
-		wp_enqueue_script( 'prs-notes-feed', POLITEIA_READING_URL . 'assets/js/notes-feed.js', array( 'jquery' ), POLITEIA_READING_VERSION, true );
+		wp_enqueue_script( 'prs-book-single-v2', POLITEIA_READING_URL . 'assets/js/my-book-single-v2.js', array( 'jquery' ), self::asset_version( 'assets/js/my-book-single-v2.js' ), true );
+		wp_enqueue_script( 'prs-notes-feed', POLITEIA_READING_URL . 'assets/js/notes-feed.js', array( 'jquery' ), self::asset_version( 'assets/js/notes-feed.js' ), true );
 
 		wp_localize_script(
 			'prs-book-single-v2',

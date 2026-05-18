@@ -14,7 +14,8 @@ class Politeia_Reading_Cover_Upload_Assets {
 		}
 
 		$base_url = POLITEIA_READING_URL;
-		$version  = '0.2.0';
+		$css_path = trailingslashit( POLITEIA_READING_PATH ) . 'templates/features/cover-upload/cover-upload.css';
+		$version  = file_exists( $css_path ) ? (string) filemtime( $css_path ) : '0.2.0';
 
 		wp_enqueue_style( 'prs-cover-upload', $base_url . 'templates/features/cover-upload/cover-upload.css', array(), $version );
 
@@ -32,11 +33,13 @@ class Politeia_Reading_Cover_Upload_Assets {
 		$prev_handle = 'prs-cover-constants';
 		foreach ( $scripts as $handle => $path ) {
 			$actual_handle = ( 'main' === $handle ) ? 'prs-cover-upload' : 'prs-cover-' . $handle;
+			$script_path   = trailingslashit( POLITEIA_READING_PATH ) . ltrim( (string) $path, '/' );
+			$script_ver    = file_exists( $script_path ) ? (string) filemtime( $script_path ) : $version;
 			wp_enqueue_script(
 				$actual_handle,
 				$base_url . $path,
 				( 'constants' === $handle ) ? array( 'jquery' ) : array( $prev_handle ),
-				$version,
+				$script_ver,
 				true
 			);
 			$prev_handle = $actual_handle;
