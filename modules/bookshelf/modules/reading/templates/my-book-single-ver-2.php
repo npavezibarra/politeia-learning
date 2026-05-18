@@ -20,6 +20,14 @@ if ( ! isset( $data ) ) {
 }
 
 prs_template_open();
+
+// Back-compat for sub-templates that still expect "classic" variables/globals.
+// (Many components were extracted from the original single template.)
+global $book, $ub, $user_id, $sessions;
+$book     = $data['book'];
+$ub       = $data['ub'];
+$user_id  = $data['user_id'];
+$sessions = $data['sessions'];
 ?>
 
 <div class="prs-page-wrap prs-page-wrap--ver2">
