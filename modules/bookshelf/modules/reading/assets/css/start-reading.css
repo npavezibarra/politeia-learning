@@ -231,6 +231,20 @@
 	box-shadow: none !important;
 }
 
+/* Some themes add link-underlines via background-image / pseudo elements. Kill them explicitly. */
+#prs-sr-start {
+	text-decoration: none !important;
+	border-bottom: none !important;
+	box-shadow: none !important;
+	background-image: none !important;
+}
+
+#prs-sr-start::before,
+#prs-sr-start::after {
+	content: none !important;
+	display: none !important;
+}
+
 .prs-sr-btn-icon {
 	display: inline-flex;
 	align-items: center;
