@@ -93,7 +93,9 @@
         border-radius:999px;
         background:rgba(0,0,0,0.75);
         color:#fff;
-        text-decoration:none;
+        text-decoration:none !important;
+		border: none !important;
+		box-shadow: none !important;
         align-self:center;
         margin-top:2px;
 }
@@ -108,6 +110,9 @@
 .prs-cover-remove:focus-visible{
         background:#C79F32;
         color:#fff;
+		text-decoration:none !important;
+		border: none !important;
+		box-shadow: none !important;
 }
 .prs-cover-remove.is-disabled{
         opacity:0.6;
