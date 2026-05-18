@@ -59,6 +59,41 @@ prs_template_open();
 </div>
 
 <?php
+// Session recorder modal (matches v1 behavior but used by the v2 layout).
+$book = $data['book'];
+?>
+
+<div
+	id="prs-session-modal"
+	class="prs-session-modal"
+	role="dialog"
+	aria-modal="true"
+	aria-hidden="true"
+	aria-label="<?php esc_attr_e( 'Session recorder', 'politeia-reading' ); ?>"
+>
+	<div class="prs-session-modal__content">
+		<button
+			type="button"
+			id="prs-session-recorder-close"
+			class="prs-session-modal__close"
+			aria-label="<?php esc_attr_e( 'Close session recorder', 'politeia-reading' ); ?>"
+		>
+			×
+		</button>
+		<?php echo do_shortcode( '[politeia_start_reading book_id="' . (int) $book->id . '"]' ); ?>
+	</div>
+</div>
+
+<script>
+	document.addEventListener('DOMContentLoaded', function () {
+		var params = new URLSearchParams(window.location.search || '');
+		if (params.get('prs_start_session') === '1') {
+			document.dispatchEvent(new CustomEvent('prs-session-modal:open', { detail: { focusClose: true } }));
+		}
+	});
+</script>
+
+<?php
 // Note: CSS and JS are now enqueued via the Controller using external files.
 prs_template_close();
 ?>

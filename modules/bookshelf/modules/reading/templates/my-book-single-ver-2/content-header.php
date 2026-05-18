@@ -15,7 +15,7 @@ $reading_disabled_title = $reading_disabled ? ' title="' . esc_attr( $reading_di
 		<div id="book-identity">
 			<div id="book-title-row">
 				<h1><?php echo esc_html( $book->title ); ?></h1>
-				<span role="button" tabindex="0" id="prs-session-recorder-open" class="prs-session-recorder-trigger material-symbols-outlined" aria-label="<?php esc_attr_e( 'Open session recorder', 'politeia-reading' ); ?>" aria-controls="prs-manual-session-modal" aria-expanded="false">play_circle</span>
+				<span role="button" tabindex="0" id="prs-session-recorder-open" class="prs-session-recorder-trigger material-symbols-outlined" aria-label="<?php esc_attr_e( 'Open session recorder', 'politeia-reading' ); ?>" aria-controls="prs-session-modal" aria-expanded="false">play_circle</span>
 			</div>
 			<p id="book-author">
 				<?php echo ! empty( $book->authors ) ? esc_html( $book->authors ) : esc_html__( 'Unknown Author', 'politeia-reading' ); ?>

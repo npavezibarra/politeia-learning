@@ -2888,12 +2888,10 @@ function setupSessionsAjax() {
 // ---------- Session recorder modal ----------
 function setupSessionRecorderModal() {
   const trigger = qs("#prs-session-recorder-open");
-  // v1 template uses `#prs-session-modal`; v2 template uses `#prs-manual-session-modal`.
-  // Keep backwards-compat while ensuring the play button works in both templates.
-  const modal = qs("#prs-session-modal") || qs("#prs-manual-session-modal");
+  const modal = qs("#prs-session-modal");
   if (!trigger || !modal) return;
 
-  const closeBtn = qs("#prs-session-recorder-close", modal) || qs("#prs-manual-session-close", modal);
+  const closeBtn = qs("#prs-session-recorder-close", modal);
 
   function handleKeydown(event) {
     if (event.key === "Escape") {
