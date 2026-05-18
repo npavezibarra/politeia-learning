@@ -541,7 +541,8 @@ wp_add_inline_script(
         .prs-box h2{ margin:0 0 8px; }
         .prs-book-title{ display:flex; align-items:center; gap:12px; margin:0; }
         .prs-book-title__text{ flex:1 1 auto; }
-        .prs-session-recorder-trigger{ display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; background:#000; color:#C79F32; border:none; border-radius:6px; cursor:pointer; padding:0; font-size:18px; line-height:1; }
+        .prs-session-recorder-trigger{ display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; background:#000; border:none; border-radius:6px; cursor:pointer; padding:0; line-height:0; text-decoration:none; }
+        .prs-session-recorder-trigger svg{ width:28px; height:28px; display:block; }
         .prs-session-recorder-trigger:hover,
         .prs-session-recorder-trigger:focus{ background:#111; color:#E9D18A; }
         .prs-session-recorder-trigger:focus{ outline:2px solid #fff; outline-offset:2px; }
@@ -692,7 +693,16 @@ wp_add_inline_script(
                 <h2 class="prs-book-title">
                         <span class="prs-book-title__text"><?php echo esc_html( $book->title ); ?></span>
                         <button type="button" id="prs-session-recorder-open" class="prs-session-recorder-trigger" aria-label="<?php esc_attr_e( 'Open session recorder', 'politeia-reading' ); ?>" aria-controls="prs-session-modal" aria-expanded="false">
-                                <span aria-hidden="true">▶</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true" focusable="false">
+                                        <defs>
+                                                <linearGradient id="prs-gold-play-gradient-v1" x1="0" y1="0" x2="1" y2="1">
+                                                        <stop offset="0%" stop-color="#8A6B1E" />
+                                                        <stop offset="50%" stop-color="#C79F32" />
+                                                        <stop offset="100%" stop-color="#E9D18A" />
+                                                </linearGradient>
+                                        </defs>
+                                        <path fill="url(#prs-gold-play-gradient-v1)" d="m383-310 267-170-267-170v340Zm97 230q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-83 31.5-156t86-127Q252-817 325-848.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 82-31.5 155T763-197.5q-54 54.5-127 86T480-80Zm0-60q142 0 241-99.5T820-480q0-142-99-241t-241-99q-141 0-240.5 99T140-480q0 141 99.5 240.5T480-140Zm0-340Z"/>
+                                </svg>
                                 <span class="screen-reader-text"><?php esc_html_e( 'Open session recorder', 'politeia-reading' ); ?></span>
                         </button>
                 </h2>

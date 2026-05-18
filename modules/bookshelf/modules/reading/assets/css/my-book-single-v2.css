@@ -511,15 +511,20 @@ tbody td {
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
-	color: #C79F32;
-	font-size: 35px;
-	line-height: 1;
-	font-variation-settings: "FILL" 1, "wght" 600, "opsz" 24;
+	text-decoration: none !important;
+	border-bottom: none !important;
+	line-height: 0;
 }
 
 .prs-session-recorder-trigger:hover,
 .prs-session-recorder-trigger:focus {
-	color: #E9D18A;
+	text-decoration: none !important;
+}
+
+.prs-session-recorder-trigger svg {
+	width: 44px; /* ~25% larger than previous 35px icon */
+	height: 44px;
+	display: block;
 }
 
 #book-title-row {
