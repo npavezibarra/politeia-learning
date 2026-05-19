@@ -43,24 +43,38 @@ $sessions = $data['sessions'];
 		<section class="content">
 			<?php include __DIR__ . '/my-book-single-ver-2/content-header.php'; ?>
 
-			<div id="prs-book-content" class="prs-content-card">
-				<div class="tabs" role="tablist" aria-label="<?php esc_attr_e( 'Book sections', 'politeia-reading' ); ?>">
-					<button class="tab active" type="button" data-tab="reading-sessions" role="tab" aria-selected="true"><?php esc_html_e( 'Reading Sessions', 'politeia-reading' ); ?></button>
-					<button class="tab" type="button" data-tab="book-stats" role="tab" aria-selected="false"><?php esc_html_e( 'Book Stats', 'politeia-reading' ); ?></button>
-					<button class="tab" type="button" data-tab="notes-feed" role="tab" aria-selected="false"><?php esc_html_e( 'Notes Feed', 'politeia-reading' ); ?></button>
-				</div>
+			<div id="prs-book-content" class="prs-dashboard">
+				<header class="prs-dashboard__header">
+					<div class="prs-dashboard__brand" aria-label="<?php esc_attr_e( 'Dashboard', 'politeia-reading' ); ?>">
+						<span class="prs-dashboard__brand-mark" aria-hidden="true"><span class="prs-dashboard__brand-dot"></span></span>
+						<span class="prs-dashboard__brand-text"><?php echo esc_html( strtoupper( 'Politeia' ) ); ?></span>
+					</div>
 
-				<div class="prs-tab-content is-active" data-tab="reading-sessions">
-					<?php include __DIR__ . '/my-book-single-ver-2/reading-sessions.php'; ?>
-				</div>
+					<div class="tabs prs-dashboard__tabs" role="tablist" aria-label="<?php esc_attr_e( 'Book sections', 'politeia-reading' ); ?>">
+						<button class="tab active" type="button" data-tab="book-stats" role="tab" aria-selected="true"><?php esc_html_e( 'Book Stats', 'politeia-reading' ); ?></button>
+						<button class="tab" type="button" data-tab="notes-feed" role="tab" aria-selected="false"><?php esc_html_e( 'Notes Feed', 'politeia-reading' ); ?></button>
+						<button class="tab" type="button" data-tab="reading-sessions" role="tab" aria-selected="false"><?php esc_html_e( 'Reading Sessions', 'politeia-reading' ); ?></button>
+					</div>
+				</header>
 
-				<div class="prs-tab-content" data-tab="book-stats">
-					<?php include __DIR__ . '/my-book-single-ver-2/book-stats.php'; ?>
-				</div>
+				<main class="prs-dashboard__main">
+					<div class="prs-tab-content is-active" data-tab="book-stats">
+						<?php include __DIR__ . '/my-book-single-ver-2/book-stats.php'; ?>
+					</div>
 
-				<div class="prs-tab-content" data-tab="notes-feed">
-					<?php include __DIR__ . '/my-book-single-ver-2/notes-feed.php'; ?>
-				</div>
+					<div class="prs-tab-content" data-tab="notes-feed">
+						<?php include __DIR__ . '/my-book-single-ver-2/notes-feed.php'; ?>
+					</div>
+
+					<div class="prs-tab-content" data-tab="reading-sessions">
+						<?php include __DIR__ . '/my-book-single-ver-2/reading-sessions.php'; ?>
+					</div>
+				</main>
+
+				<footer class="prs-dashboard__footer">
+					<span><?php esc_html_e( 'Book', 'politeia-reading' ); ?>: <?php echo esc_html( (string) $book->title ); ?></span>
+					<span><?php echo esc_html( sprintf( __( '%d%% completed', 'politeia-reading' ), (int) $data['progress_percent'] ) ); ?></span>
+				</footer>
 			</div>
 		</section>
 	</div>

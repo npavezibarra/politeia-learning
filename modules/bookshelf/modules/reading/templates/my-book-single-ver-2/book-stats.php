@@ -2,598 +2,187 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-?>
-<style>
-	@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-	:root {
-		--pure-black: #000000;
-		--deep-gray: #333333;
-		--metallic-gold: #C79F32;
-		--accent-orange: #FF8C00;
-		--light-gray: #A8A8A8;
-		--subtle-gray: #F5F5F5;
-		--off-white: #FEFEFF;
-	}
+global $sessions;
 
-	.prs-book-stats {
-		font-family: 'Inter', sans-serif;
-		background-color: var(--off-white);
-		color: var(--deep-gray);
-		padding: 24px;
-	}
+$book_title = '';
+if ( isset( $data['book']->title ) ) {
+	$book_title = (string) $data['book']->title;
+}
 
-	@media (min-width: 768px) {
-		.prs-book-stats {
-			padding: 20px 0px 0px;
-		}
-	}
+$total_seconds     = 0;
+$total_pages_read  = 0;
+$valid_sessions    = 0;
+$first_session_ts  = 0;
+$last_session_ts   = 0;
+$minutes_by_month  = array(); // yyyy-mm => minutes
 
-	@media (max-width: 767px) {
-		.prs-book-stats {
-			font-family: 'Inter', sans-serif;
-			background-color: var(--off-white);
-			color: var(--deep-gray);
-			padding: 24px 0px;
-		}
-	}
-
-	.prs-book-stats__container {
-		max-width: 72rem;
-		margin: 0 auto;
-	}
-
-	.prs-book-stats__grid {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 24px;
-	}
-
-	@media (min-width: 768px) {
-		.prs-book-stats__grid {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-		}
-	}
-
-	@media (min-width: 1200px) {
-		.prs-book-stats__grid {
-			grid-template-columns: repeat(4, minmax(0, 1fr));
-		}
-	}
-
-	@media (max-width: 767px) {
-		.prs-book-stats__grid {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-			gap: 16px;
-		}
-
-		.prs-book-stats__metric-card {
-			padding: 14px;
-		}
-
-		.prs-book-stats__metric-icon {
-			width: 44px;
-			height: 44px;
-			margin-bottom: 12px;
-		}
-
-		.prs-book-stats__metric-value {
-			font-size: 1.35rem;
-		}
-
-		.prs-book-stats__metric-label {
-			font-size: 0.55rem;
-			letter-spacing: 0.12em;
-		}
-	}
-
-	.prs-book-stats__charts-grid {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 24px;
-		margin-top: 24px;
-	}
-
-	@media (min-width: 768px) {
-		.prs-book-stats__charts-grid {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-		}
-	}
-
-	.chart-container {
-		display: flex;
-		align-items: flex-end;
-		gap: 8px;
-		height: 150px;
-	}
-
-	.prs-book-stats__chart--month {
-		gap: 2px;
-	}
-
-	.bar {
-		background: var(--metallic-gold);
-		border-radius: 2px 2px 0 0;
-		transition: all 0.3s ease;
-		position: relative;
-		flex: 1 1 0;
-	}
-
-	.bar:hover {
-		background: var(--accent-orange);
-		transform: scaleY(1.05);
-	}
-
-	/* Tooltip-like effect on hover */
-	.bar:hover::after {
-		content: attr(data-value);
-		position: absolute;
-		top: -25px;
-		left: 50%;
-		transform: translateX(-50%);
-		background: transparent;
-		color: var(--pure-black);
-		font-size: 10px;
-		padding: 0;
-		border-radius: 0;
-		white-space: nowrap;
-	}
-
-	.card {
-		background: #ffffff;
-		border: 1px solid #e4e4e4;
-		border-radius: 12px;
-		padding: 24px;
-		transition: border-color 0.2s ease;
-	}
-
-	.card:hover {
-		border-color: var(--metallic-gold);
-	}
-
-	.prs-book-stats__kpi {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-	}
-
-	.prs-book-stats__kpi-row {
-		display: flex;
-		align-items: center;
-		gap: 16px;
-	}
-
-	.prs-book-stats__icon {
-		padding: 12px;
-		background: #000;
-		border-radius: 8px;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.prs-book-stats__label {
-		font-size: 12px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.12em;
-		opacity: 0.7;
-		margin-bottom: 0;
-	}
-
-	.prs-book-stats__metric {
-		font-size: 1.875rem;
-		line-height: 1.2;
-		margin-bottom: 0;
-	}
-
-	.headline {
-		color: var(--pure-black);
-		font-weight: 700;
-	}
-
-	.subtitle {
-		color: var(--deep-gray);
-		font-weight: 500;
-	}
-
-	.prs-book-stats__metric-card {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		text-align: center;
-		padding: 18px;
-		border-radius: 16px;
-		border: 1px solid #e2e8f0;
-		background: #ffffff;
-		box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
-		transition: box-shadow 0.2s ease, transform 0.2s ease;
-	}
-
-	.prs-book-stats__metric-card:hover {
-		box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
-		transform: translateY(-2px);
-	}
-
-	.prs-book-stats__metric-icon {
-		width: 56px;
-		height: 56px;
-		border-radius: 999px;
-		background: #000000;
-		color: var(--metallic-gold);
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		margin-bottom: 20px;
-		transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease;
-	}
-
-	.prs-book-stats__metric-card:hover .prs-book-stats__metric-icon {
-		transform: scale(1.1);
-		background: var(--metallic-gold);
-		color: #ffffff;
-	}
-
-	.prs-book-stats__metric-value {
-		font-size: 1.875rem;
-		font-weight: 700;
-		color: var(--pure-black);
-		margin: 0 0 8px;
-	}
-
-	.prs-book-stats__metric-label {
-		font-size: 0.65rem;
-		font-weight: 700;
-		letter-spacing: 0.18em;
-		text-transform: uppercase;
-		color: var(--deep-gray);
-		margin: 0;
-		line-height: 1.4;
-	}
-
-	.prs-book-stats__section-title {
-		font-size: 1.125rem;
-		margin: 0 0 6px;
-	}
-
-	.prs-book-stats__total {
-		margin-left: 6px;
-	}
-
-	.prs-book-stats__section-subtitle {
-		font-size: 10px;
-		margin: 0;
-		opacity: 0.7;
-	}
-
-	.prs-book-stats__labels {
-		display: flex;
-		gap: 8px;
-		margin-top: 16px;
-		font-size: 10px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-	}
-
-	.prs-book-stats__labels span {
-		flex: 1 1 0;
-		text-align: center;
-	}
-
-	.prs-book-stats__month-scale {
-		display: flex;
-		justify-content: space-between;
-		margin-top: 16px;
-		padding: 0 4px;
-		font-size: 10px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-	}
-
-	.prs-book-stats .material-symbols-outlined {
-		font-family: 'Material Symbols Outlined';
-		font-weight: normal;
-		font-style: normal;
-		line-height: 1;
-		text-transform: none;
-		display: inline-block;
-		white-space: nowrap;
-		word-wrap: normal;
-		direction: ltr;
-		-webkit-font-feature-settings: 'liga';
-		-webkit-font-smoothing: antialiased;
-		font-variation-settings:
-			'FILL' 0,
-			'wght' 400,
-			'GRAD' 0,
-			'opsz' 24;
-	}
-</style>
-
-<?php
-$avg_session_minutes = null;
-$avg_pages_per_hour = null;
-$session_duration_total = 0;
-$session_duration_count = 0;
-$session_pages_total = 0;
-$session_pages_count = 0;
-$session_rate_duration_total = 0;
-$session_rate_pages_total = 0;
-$weekly_pages = array_fill( 0, 7, 0 );
-$weekly_date_range = '';
-$monthly_pages = array();
-$monthly_date_range = '';
-$month_last_day = 0;
-$weekly_total = 0;
-$monthly_total = 0;
-
-if ( ! empty( $sessions ) ) {
+if ( ! empty( $sessions ) && is_array( $sessions ) ) {
 	foreach ( $sessions as $session ) {
-		if ( empty( $session->start_time ) || empty( $session->end_time ) ) {
-			continue;
+		$start_ts = ! empty( $session->start_time ) ? strtotime( (string) $session->start_time ) : 0;
+		$end_ts   = ! empty( $session->end_time ) ? strtotime( (string) $session->end_time ) : 0;
+
+		if ( $start_ts > 0 && ( 0 === $first_session_ts || $start_ts < $first_session_ts ) ) {
+			$first_session_ts = $start_ts;
 		}
-		$start_timestamp = strtotime( $session->start_time );
-		$end_timestamp   = strtotime( $session->end_time );
-		if ( ! $start_timestamp || ! $end_timestamp ) {
-			continue;
+		if ( $start_ts > 0 && $start_ts > $last_session_ts ) {
+			$last_session_ts = $start_ts;
 		}
-		$duration = $end_timestamp - $start_timestamp;
-		if ( $duration < 0 ) {
-			$duration = 0;
+
+		$duration = 0;
+		if ( $start_ts && $end_ts && $end_ts >= $start_ts ) {
+			$duration = (int) ( $end_ts - $start_ts );
 		}
-		$session_duration_total += $duration;
-		$session_duration_count++;
+
+		$pages = 0;
 		$start_page = isset( $session->start_page ) ? (int) $session->start_page : null;
 		$end_page   = isset( $session->end_page ) ? (int) $session->end_page : null;
-		if ( null !== $start_page && null !== $end_page ) {
-			$page_delta = $end_page - $start_page;
-			if ( $page_delta < 0 ) {
-				$page_delta = 0;
-			}
-			$session_pages_total += $page_delta;
-			$session_pages_count++;
-			if ( $duration > 0 ) {
-				$session_rate_pages_total += $page_delta;
-				$session_rate_duration_total += $duration;
-			}
+		if ( null !== $start_page && null !== $end_page && $end_page >= $start_page ) {
+			$pages = (int) ( $end_page - $start_page );
+		}
+
+		if ( $duration > 0 || $pages > 0 ) {
+			$valid_sessions++;
+		}
+
+		$total_seconds    += max( 0, $duration );
+		$total_pages_read += max( 0, $pages );
+
+		if ( $start_ts ) {
+			$month_key = wp_date( 'Y-m', $start_ts );
+			$minutes_by_month[ $month_key ] = ( $minutes_by_month[ $month_key ] ?? 0 ) + (int) floor( max( 0, $duration ) / 60 );
 		}
 	}
 }
 
-if ( $session_duration_count > 0 ) {
-	$avg_session_minutes = (int) round( ( $session_duration_total / $session_duration_count ) / 60 );
-}
-if ( $session_rate_duration_total > 0 ) {
-	$avg_pages_per_hour = (int) round( ( $session_rate_pages_total / $session_rate_duration_total ) * 3600 );
-}
-if ( $session_duration_total > 0 ) {
-	$total_session_minutes = (int) round( $session_duration_total / 60 );
-} else {
-	$total_session_minutes = 0;
+$avg_minutes = 0;
+if ( $valid_sessions > 0 ) {
+	$avg_minutes = (int) round( ( $total_seconds / 60 ) / $valid_sessions );
 }
 
-$week_start_ts = strtotime( 'monday this week', current_time( 'timestamp' ) );
-$week_end_ts   = $week_start_ts + ( 6 * DAY_IN_SECONDS );
-$weekly_date_range = date_i18n( 'M j', $week_start_ts ) . ' - ' . date_i18n( 'M j, Y', $week_end_ts );
+$total_hours = 0.0;
+if ( $total_seconds > 0 ) {
+	$total_hours = (float) ( $total_seconds / 3600 );
+}
 
-if ( ! empty( $sessions ) && $week_start_ts ) {
-	foreach ( $sessions as $session ) {
-		if ( empty( $session->start_time ) ) {
-			continue;
-		}
-		$start_timestamp = strtotime( $session->start_time );
-		if ( ! $start_timestamp ) {
-			continue;
-		}
-		$session_day_ts = strtotime( date( 'Y-m-d', $start_timestamp ) );
-		if ( $session_day_ts < $week_start_ts || $session_day_ts > $week_end_ts ) {
-			continue;
-		}
-		$day_index = (int) floor( ( $session_day_ts - $week_start_ts ) / DAY_IN_SECONDS );
-		if ( $day_index < 0 || $day_index > 6 ) {
-			continue;
-		}
-		$start_page = isset( $session->start_page ) ? (int) $session->start_page : null;
-		$end_page   = isset( $session->end_page ) ? (int) $session->end_page : null;
-		if ( null === $start_page || null === $end_page ) {
-			continue;
-		}
-		$page_delta = $end_page - $start_page;
-		if ( $page_delta < 0 ) {
-			$page_delta = 0;
-		}
-		$weekly_pages[ $day_index ] += $page_delta;
+$pages_per_hour = 0;
+if ( $total_hours > 0.0 ) {
+	$pages_per_hour = (int) round( $total_pages_read / $total_hours );
+}
+
+// Build month range: from first session month to current month (cap to last 18 months).
+$months = array();
+if ( $first_session_ts ) {
+	$start = new DateTimeImmutable( wp_date( 'Y-m-01 00:00:00', $first_session_ts ) );
+	$end   = new DateTimeImmutable( wp_date( 'Y-m-01 00:00:00', time() ) );
+	$diff  = (int) $start->diff( $end )->format( '%m' ) + ( 12 * (int) $start->diff( $end )->format( '%y' ) );
+	$count = max( 0, $diff ) + 1;
+
+	if ( $count > 18 ) {
+		$start = $end->modify( '-17 months' );
+		$count = 18;
+	}
+
+	for ( $i = 0; $i < $count; $i++ ) {
+		$month_date = $start->modify( sprintf( '+%d months', $i ) );
+		$month_key  = $month_date->format( 'Y-m' );
+		$minutes    = (int) ( $minutes_by_month[ $month_key ] ?? 0 );
+
+		$months[] = array(
+			'key'     => $month_key,
+			'label'   => wp_date( 'M', $month_date->getTimestamp() ),
+			'minutes' => $minutes,
+		);
 	}
 }
 
-$weekly_max = max( $weekly_pages );
-$weekly_total = array_sum( $weekly_pages );
-
-$month_start_ts = strtotime( date_i18n( 'Y-m-01', current_time( 'timestamp' ) ) );
-$month_last_day = (int) date_i18n( 't', $month_start_ts );
-$month_end_ts   = strtotime( date_i18n( 'Y-m-t', $month_start_ts ) );
-$monthly_date_range = date_i18n( 'M 1', $month_start_ts ) . ' - ' . date_i18n( 'M j, Y', $month_end_ts );
-$monthly_pages = array_fill( 0, $month_last_day, 0 );
-
-if ( ! empty( $sessions ) && $month_start_ts ) {
-	foreach ( $sessions as $session ) {
-		if ( empty( $session->start_time ) ) {
-			continue;
-		}
-		$start_timestamp = strtotime( $session->start_time );
-		if ( ! $start_timestamp ) {
-			continue;
-		}
-		$session_day_ts = strtotime( date( 'Y-m-d', $start_timestamp ) );
-		if ( $session_day_ts < $month_start_ts || $session_day_ts > $month_end_ts ) {
-			continue;
-		}
-		$day_index = (int) date( 'j', $session_day_ts ) - 1;
-		if ( $day_index < 0 || $day_index >= $month_last_day ) {
-			continue;
-		}
-		$start_page = isset( $session->start_page ) ? (int) $session->start_page : null;
-		$end_page   = isset( $session->end_page ) ? (int) $session->end_page : null;
-		if ( null === $start_page || null === $end_page ) {
-			continue;
-		}
-		$page_delta = $end_page - $start_page;
-		if ( $page_delta < 0 ) {
-			$page_delta = 0;
-		}
-		$monthly_pages[ $day_index ] += $page_delta;
+$max_minutes = 0;
+foreach ( $months as $m ) {
+	if ( $m['minutes'] > $max_minutes ) {
+		$max_minutes = $m['minutes'];
 	}
 }
-
-$monthly_max = max( $monthly_pages );
-$monthly_total = array_sum( $monthly_pages );
 ?>
 
-<section class="prs-book-stats">
-	<div class="prs-book-stats__container">
-		<!-- 4-up Metrics Grid -->
-		<div class="prs-book-stats__grid">
+<section class="prs-dash-stats">
+	<div class="prs-dash-stats__heading">
+		<h2 class="prs-dash-stats__title"><?php esc_html_e( 'Book Stats', 'politeia-reading' ); ?></h2>
+		<p class="prs-dash-stats__subtitle"><?php echo esc_html( sprintf( __( 'Métricas de lectura para “%s”.', 'politeia-reading' ), $book_title ) ); ?></p>
+	</div>
 
-			<!-- Card 1: Average Session Time -->
-			<div class="prs-book-stats__metric-card">
-				<div class="prs-book-stats__metric-icon">
-					<span class="material-symbols-outlined">timer</span>
-				</div>
-				<p class="prs-book-stats__metric-value">
+	<div class="prs-dash-stats__kpis">
+		<div class="prs-dash-kpi">
+			<div class="prs-dash-kpi__value"><?php echo esc_html( $avg_minutes ? ( $avg_minutes . 'm' ) : '—' ); ?></div>
+			<div class="prs-dash-kpi__rule" aria-hidden="true"></div>
+			<div class="prs-dash-kpi__label"><?php esc_html_e( 'Tiempo promedio de sesión', 'politeia-reading' ); ?></div>
+		</div>
+		<div class="prs-dash-kpi">
+			<div class="prs-dash-kpi__value">
+				<?php
+				if ( $total_hours > 0 ) {
+					echo esc_html( number_format_i18n( $total_hours, $total_hours < 10 ? 1 : 0 ) . 'h' );
+				} else {
+					echo '—';
+				}
+				?>
+			</div>
+			<div class="prs-dash-kpi__rule" aria-hidden="true"></div>
+			<div class="prs-dash-kpi__label"><?php esc_html_e( 'Tiempo total de lectura', 'politeia-reading' ); ?></div>
+		</div>
+		<div class="prs-dash-kpi">
+			<div class="prs-dash-kpi__value"><?php echo esc_html( $pages_per_hour ? (string) $pages_per_hour : '—' ); ?></div>
+			<div class="prs-dash-kpi__rule" aria-hidden="true"></div>
+			<div class="prs-dash-kpi__label"><?php esc_html_e( 'Páginas por hora', 'politeia-reading' ); ?></div>
+		</div>
+		<div class="prs-dash-kpi">
+			<div class="prs-dash-kpi__value"><?php echo esc_html( $total_pages_read ? (string) $total_pages_read : '—' ); ?></div>
+			<div class="prs-dash-kpi__rule" aria-hidden="true"></div>
+			<div class="prs-dash-kpi__label"><?php esc_html_e( 'Total de páginas leídas', 'politeia-reading' ); ?></div>
+		</div>
+	</div>
+
+	<div class="prs-dash-activity">
+		<div class="prs-dash-activity__header">
+			<span class="prs-dash-activity__label"><?php esc_html_e( 'Actividad (por mes)', 'politeia-reading' ); ?></span>
+			<?php if ( $first_session_ts ) : ?>
+				<span class="prs-dash-activity__range">
 					<?php
-					echo null !== $avg_session_minutes
-						? esc_html( sprintf( __( '%d min', 'politeia-reading' ), $avg_session_minutes ) )
-						: '—';
+					echo esc_html(
+						sprintf(
+							'%s – %s',
+							wp_date( 'M Y', $first_session_ts ),
+							wp_date( 'M Y', time() )
+						)
+					);
 					?>
-				</p>
-				<p class="prs-book-stats__metric-label"><?php esc_html_e( 'Avg Session Time', 'politeia-reading' ); ?></p>
-			</div>
-
-			<!-- Card 2: Total Session Time -->
-			<div class="prs-book-stats__metric-card">
-				<div class="prs-book-stats__metric-icon">
-					<span class="material-symbols-outlined">history</span>
-				</div>
-				<p class="prs-book-stats__metric-value">
-					<?php
-					echo $total_session_minutes > 0
-						? esc_html( sprintf( __( '%d min', 'politeia-reading' ), $total_session_minutes ) )
-						: '—';
-					?>
-				</p>
-				<p class="prs-book-stats__metric-label"><?php esc_html_e( 'Total Session Time', 'politeia-reading' ); ?></p>
-			</div>
-
-			<!-- Card 3: Pages per Hour -->
-			<div class="prs-book-stats__metric-card">
-				<div class="prs-book-stats__metric-icon">
-					<span class="material-symbols-outlined">overview</span>
-				</div>
-				<p class="prs-book-stats__metric-value">
-					<?php echo null !== $avg_pages_per_hour ? esc_html( (string) $avg_pages_per_hour ) : '—'; ?>
-				</p>
-				<p class="prs-book-stats__metric-label"><?php esc_html_e( 'Pages per Hour', 'politeia-reading' ); ?></p>
-			</div>
-
-			<!-- Card 4: Total Pages Read -->
-			<div class="prs-book-stats__metric-card">
-				<div class="prs-book-stats__metric-icon">
-					<span class="material-symbols-outlined">menu_book</span>
-				</div>
-				<p class="prs-book-stats__metric-value">
-			<?php echo $session_pages_total > 0 ? esc_html( (string) $session_pages_total ) : '—'; ?>
-				</p>
-				<p class="prs-book-stats__metric-label"><?php esc_html_e( 'Total Pages Read', 'politeia-reading' ); ?></p>
-			</div>
-
+				</span>
+			<?php endif; ?>
 		</div>
 
-		<!-- Charts Row -->
-		<div class="prs-book-stats__charts-grid">
-			<!-- Div 3: Weekly Chart -->
-			<div id="weekly-chart" class="card">
-				<div class="prs-book-stats__section">
-					<h3 class="prs-book-stats__section-title headline">
-						<?php
-						printf(
-							/* translators: %s: total pages. */
-							esc_html__( 'Pages This Week: %s', 'politeia-reading' ),
-							esc_html( (string) $weekly_total )
-						);
-						?>
-					</h3>
-					<p class="prs-book-stats__section-subtitle subtitle" id="weekly-date-range"><?php echo esc_html( $weekly_date_range ); ?></p>
-				</div>
-				<div class="chart-container" id="week-bars">
-					<?php
-					foreach ( $weekly_pages as $value ) :
-						$height_percent = $weekly_max > 0 ? ( $value / $weekly_max ) * 90 : 0;
-						?>
-						<div class="bar" data-value="<?php echo esc_attr( $value ); ?>" style="height: <?php echo esc_attr( number_format( $height_percent, 2, '.', '' ) ); ?>%;"></div>
-					<?php endforeach; ?>
-				</div>
-				<div class="prs-book-stats__labels subtitle">
-					<span><?php esc_html_e( 'Mon', 'politeia-reading' ); ?></span>
-					<span><?php esc_html_e( 'Tue', 'politeia-reading' ); ?></span>
-					<span><?php esc_html_e( 'Wed', 'politeia-reading' ); ?></span>
-					<span><?php esc_html_e( 'Thu', 'politeia-reading' ); ?></span>
-					<span><?php esc_html_e( 'Fri', 'politeia-reading' ); ?></span>
-					<span><?php esc_html_e( 'Sat', 'politeia-reading' ); ?></span>
-					<span><?php esc_html_e( 'Sun', 'politeia-reading' ); ?></span>
-				</div>
+		<?php if ( empty( $months ) ) : ?>
+			<p class="prs-dash-activity__empty"><?php esc_html_e( 'Aún no hay sesiones registradas para este libro.', 'politeia-reading' ); ?></p>
+		<?php else : ?>
+			<div class="prs-dash-bars" role="img" aria-label="<?php esc_attr_e( 'Monthly reading activity', 'politeia-reading' ); ?>">
+				<?php foreach ( $months as $m ) :
+					$height = 14;
+					if ( $max_minutes > 0 ) {
+						$height = (int) round( 12 + ( ( $m['minutes'] / $max_minutes ) * 88 ) );
+					}
+					$tooltip = $m['minutes'] ? sprintf( __( '%d min', 'politeia-reading' ), (int) $m['minutes'] ) : __( '0 min', 'politeia-reading' );
+					?>
+					<div class="prs-dash-bars__col">
+						<div class="prs-dash-bars__bar-wrap">
+							<div class="prs-dash-bars__bar<?php echo ( $m['minutes'] === $max_minutes && $max_minutes > 0 ) ? ' is-peak' : ''; ?>"
+								style="<?php echo esc_attr( 'height:' . $height . '%' ); ?>"
+								data-tooltip="<?php echo esc_attr( $tooltip ); ?>"></div>
+						</div>
+						<div class="prs-dash-bars__tick<?php echo ( $m['minutes'] === $max_minutes && $max_minutes > 0 ) ? ' is-peak' : ''; ?>">
+							<?php echo esc_html( $m['label'] ); ?>
+						</div>
+					</div>
+				<?php endforeach; ?>
 			</div>
-
-			<!-- Div 4: Monthly Chart -->
-			<div id="monthly-chart" class="card">
-				<div class="prs-book-stats__section">
-					<h3 class="prs-book-stats__section-title headline" id="monthly-title">
-						<span id="monthly-title-text"><?php esc_html_e( 'Pages This Month:', 'politeia-reading' ); ?></span>
-						<span class="prs-book-stats__total"><?php echo esc_html( (string) $monthly_total ); ?></span>
-					</h3>
-					<p class="prs-book-stats__section-subtitle subtitle" id="monthly-date-range"><?php echo esc_html( $monthly_date_range ); ?></p>
-				</div>
-				<div class="chart-container prs-book-stats__chart--month" id="month-bars">
-					<?php
-					foreach ( $monthly_pages as $value ) :
-						$height_percent = $monthly_max > 0 ? ( $value / $monthly_max ) * 90 : 0;
-						?>
-						<div class="bar" data-value="<?php echo esc_attr( $value ); ?>" style="height: <?php echo esc_attr( number_format( $height_percent, 2, '.', '' ) ); ?>%;"></div>
-					<?php endforeach; ?>
-				</div>
-				<div class="prs-book-stats__month-scale subtitle">
-					<span>1</span>
-					<span>15</span>
-					<span id="month-last-day"><?php echo esc_html( (string) $month_last_day ); ?></span>
-				</div>
-			</div>
-		</div>
+		<?php endif; ?>
 	</div>
 </section>
 
-<script>
-	// Setup dates for dynamic headers
-	const now = new Date();
-	const monthNames = <?php
-		$month_names = array();
-		for ( $m = 1; $m <= 12; $m++ ) {
-			$label = date_i18n( 'F', mktime( 0, 0, 0, $m, 1 ) );
-			$month_names[] = function_exists( 'mb_strtoupper' ) ? mb_strtoupper( $label ) : strtoupper( $label );
-		}
-		echo wp_json_encode( $month_names );
-	?>;
-	const monthlyLabelTemplate = <?php echo wp_json_encode( __( 'Pages %s:', 'politeia-reading' ) ); ?>;
-
-	/**
-	 * -------------------------------------------------------------------------
-	 * DATA INTEGRATION POINT: MONTHLY CHART
-	 * Data is rendered server-side based on this month's sessions.
-	 * -------------------------------------------------------------------------
-	 */
-	const monthlyTitle = document.getElementById('monthly-title-text');
-	if (monthlyTitle) {
-		const monthName = monthNames[now.getMonth()] || '';
-		monthlyTitle.textContent = monthlyLabelTemplate.replace('%s', monthName);
-	}
-</script>
