@@ -620,6 +620,7 @@ h4.prs-sessions-mobile__title {
 	justify-content: space-between;
 	gap: 10px;
 	margin-bottom: 14px;
+	flex-wrap: wrap;
 }
 
 .prs-dash-activity__label {
@@ -628,6 +629,45 @@ h4.prs-sessions-mobile__title {
 	letter-spacing: 0.14em;
 	text-transform: uppercase;
 	color: #000000;
+}
+
+.prs-dash-activity__controls {
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.prs-dash-activity__control {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.prs-dash-activity__control-label {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.10em;
+	text-transform: uppercase;
+	color: #9ca3af;
+}
+
+.prs-dash-activity__month {
+	height: 28px;
+	border-radius: 8px;
+	border: 1px solid rgba(229, 231, 235, 0.9);
+	padding: 0 10px;
+	font-size: 12px;
+	color: #111827;
+	background: #ffffff;
+}
+
+.prs-dash-activity__month:focus,
+.prs-dash-activity__month:focus-visible {
+	outline: none;
+	border-color: #111827;
+	box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.08);
 }
 
 .prs-dash-activity__range {

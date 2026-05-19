@@ -102,6 +102,13 @@ foreach ( $months as $m ) {
 		$max_minutes = $m['minutes'];
 	}
 }
+
+$min_month_key = '';
+$max_month_key = '';
+if ( ! empty( $months ) ) {
+	$min_month_key = (string) $months[0]['key'];
+	$max_month_key = (string) $months[ count( $months ) - 1 ]['key'];
+}
 ?>
 
 <section class="prs-dash-stats">
@@ -144,25 +151,35 @@ foreach ( $months as $m ) {
 	<div class="prs-dash-activity">
 		<div class="prs-dash-activity__header">
 			<span class="prs-dash-activity__label"><?php esc_html_e( 'Actividad (por mes)', 'politeia-reading' ); ?></span>
-			<?php if ( $first_session_ts ) : ?>
-				<span class="prs-dash-activity__range">
+			<div class="prs-dash-activity__controls">
+				<?php if ( $min_month_key && $max_month_key ) : ?>
+					<label class="prs-dash-activity__control">
+						<span class="prs-dash-activity__control-label"><?php esc_html_e( 'Desde', 'politeia-reading' ); ?></span>
+						<input class="prs-dash-activity__month" type="month" id="prs-activity-from" value="<?php echo esc_attr( $min_month_key ); ?>" min="<?php echo esc_attr( $min_month_key ); ?>" max="<?php echo esc_attr( $max_month_key ); ?>">
+					</label>
+					<label class="prs-dash-activity__control">
+						<span class="prs-dash-activity__control-label"><?php esc_html_e( 'Hasta', 'politeia-reading' ); ?></span>
+						<input class="prs-dash-activity__month" type="month" id="prs-activity-to" value="<?php echo esc_attr( $max_month_key ); ?>" min="<?php echo esc_attr( $min_month_key ); ?>" max="<?php echo esc_attr( $max_month_key ); ?>">
+					</label>
+				<?php endif; ?>
+				<span class="prs-dash-activity__range" id="prs-activity-range-label">
 					<?php
-					echo esc_html(
-						sprintf(
-							'%s – %s',
-							wp_date( 'M Y', $first_session_ts ),
-							wp_date( 'M Y', time() )
-						)
-					);
+					if ( $min_month_key && $max_month_key ) {
+						$start_label = wp_date( 'M Y', strtotime( $min_month_key . '-01' ) );
+						$end_label   = wp_date( 'M Y', strtotime( $max_month_key . '-01' ) );
+						echo esc_html( sprintf( '%s – %s', $start_label, $end_label ) );
+					}
 					?>
 				</span>
-			<?php endif; ?>
+			</div>
 		</div>
 
 		<?php if ( empty( $months ) ) : ?>
 			<p class="prs-dash-activity__empty"><?php esc_html_e( 'Aún no hay sesiones registradas para este libro.', 'politeia-reading' ); ?></p>
 		<?php else : ?>
-			<div class="prs-dash-bars" role="img" aria-label="<?php esc_attr_e( 'Monthly reading activity', 'politeia-reading' ); ?>">
+			<div class="prs-dash-bars" role="img"
+				aria-label="<?php esc_attr_e( 'Monthly reading activity', 'politeia-reading' ); ?>"
+				data-months="<?php echo esc_attr( wp_json_encode( $months ) ); ?>">
 				<?php foreach ( $months as $m ) :
 					$height = 14;
 					if ( $max_minutes > 0 ) {
@@ -185,4 +202,3 @@ foreach ( $months as $m ) {
 		<?php endif; ?>
 	</div>
 </section>
-
